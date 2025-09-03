@@ -50,3 +50,8 @@ if uploaded_members:
         st.info("Bitte auch eine Einteilungsdatei hochladen.")
 else:
     st.warning("Bitte zuerst die Standesliste hochladen.")
+
+if "Nicht eingeteilt" in df_overview.columns:
+    st.subheader("⚠️ Nicht eingeteilte Mitglieder")
+    namen = df_overview["Nicht eingeteilt"].dropna().astype(str).tolist()
+    st.dataframe(pd.DataFrame(namen, columns=["Mitglied"]))
