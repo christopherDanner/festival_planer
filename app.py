@@ -1,57 +1,37 @@
 import streamlit as st
 import pandas as pd
+from streamlit_drag_and_drop_lists import dnd_list
 
-st.set_page_config(page_title="Musikverein Personaleinteilung", layout="wide")
+st.set_page_config(page_title="Personaleinteilung", layout="wide")
 st.title("🎶 Musikverein – Personaleinteilung")
 
-st.sidebar.header("📂 Daten hochladen")
-uploaded_members = st.sidebar.file_uploader("Standesliste (Excel)", type=["xlsx"])
-uploaded_assign = st.sidebar.file_uploader("Einteilung (Excel)", type=["xlsx"])
+uploaded = st.file_uploader("📂 Lade deine Einteilungs-Excel hoch", type=["xlsx"])
 
-if uploaded_members:
-    df_mitglieder = pd.read_excel(uploaded_members)
+if uploaded:
+    # Lade das Blatt "Übersicht"
+    df = pd.read_excel(uploaded, sheet_name="Übersicht")
+    # Alle Spalten außer leere
+    stationen = [c for c in df.columns if "Unnamed" not in c and str(c).strip() != ""]
 
-    if {"Vorname", "Nachname"}.issubset(df_mitglieder.columns):
-        df_mitglieder["Mitglied"] = df_mitglieder["Vorname"].astype(str) + " " + df_mitglieder["Nachname"].astype(str)
-    else:
-        df_mitglieder["Mitglied"] = df_mitglieder.iloc[:,0].astype(str)
+    # Session State initialisieren
+    if "zuordnung" not in st.session_state:
+        st.session_state["zuordnung"] = {s: df[s].dropna().astype(str).tolist() for s in stationen}
 
-    st.subheader("👥 Mitgliederliste")
-    st.dataframe(df_mitglieder[["Mitglied"]])
+    st.subheader("📌 Drag & Drop Einteilung")
+    cols = st.columns(len(stationen))
+    for i, station in enumerate(stationen):
+        with cols[i]:
+            st.markdown(f"### {station}")
+            result = dnd_list(st.session_state["zuordnung"][station], key=f"station_{i}")
+            st.session_state["zuordnung"][station] = result
 
-    if uploaded_assign:
-        df_einteilung = pd.read_excel(uploaded_assign)
-
-        st.subheader("📋 Eingeteilte Personen")
-        st.dataframe(df_einteilung)
-
-        st.subheader("📌 Übersicht pro Station")
-
-        # Lies das Blatt "Übersicht"
-        df_overview = pd.read_excel(uploaded_assign, sheet_name="Übersicht")
-        
-        # Gehe jede Spalte durch (jede Spalte = Station)
-        for col in df_overview.columns:
-            if col not in ["Unnamed: 12"]:  # leere Spalten ignorieren
-                st.markdown(f"### {col}")
-                namen = df_overview[col].dropna().astype(str).tolist()
-                for n in namen:
-                    if n.strip() != "" and n.lower() != "nan":
-                        st.write("–", n)
-
-        eingeteilt = set(df_einteilung["Name"].dropna().astype(str))
-        nicht_eingeteilt = [m for m in df_mitglieder["Mitglied"] if m not in eingeteilt]
-
-        st.subheader("⚠️ Nicht eingeteilt")
-        st.write(len(nicht_eingeteilt), "Person(en)")
-        st.dataframe(pd.DataFrame(nicht_eingeteilt, columns=["Mitglied"]))
-
-    else:
-        st.info("Bitte auch eine Einteilungsdatei hochladen.")
+    # Export
+    if st.button("📥 Exportieren als Excel"):
+        max_len = max(len(v) for v in st.session_state["zuordnung"].values())
+        data = {s: st.session_state["zuordnung"][s] + [""]*(max_len-len(st.session_state["zuordnung"][s]))
+                for s in stationen}
+        out = pd.DataFrame(data)
+        out.to_excel("Neue-Einteilung.xlsx", index=False)
+        st.success("✅ Datei 'Neue-Einteilung.xlsx' gespeichert! (liegt im Arbeitsverzeichnis)")
 else:
-    st.warning("Bitte zuerst die Standesliste hochladen.")
-
-if "Nicht eingeteilt" in df_overview.columns:
-    st.subheader("⚠️ Nicht eingeteilte Mitglieder")
-    namen = df_overview["Nicht eingeteilt"].dropna().astype(str).tolist()
-    st.dataframe(pd.DataFrame(namen, columns=["Mitglied"]))
+    st.info("Bitte zuerst eine Excel-Datei hochladen (z. B. Fest-Personaleinteilung.xlsx)")
