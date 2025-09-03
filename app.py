@@ -26,11 +26,18 @@ if uploaded_members:
         st.dataframe(df_einteilung)
 
         st.subheader("📌 Übersicht pro Station")
-        overview = df_einteilung.groupby("Station")["Name"].apply(list).reset_index()
-        for _, row in overview.iterrows():
-            st.markdown(f"**{row['Station']}**")
-            for n in row["Name"]:
-                st.write("–", n)
+
+        # Lies das Blatt "Übersicht"
+        df_overview = pd.read_excel(uploaded_assign, sheet_name="Übersicht")
+        
+        # Gehe jede Spalte durch (jede Spalte = Station)
+        for col in df_overview.columns:
+            if col not in ["Unnamed: 12"]:  # leere Spalten ignorieren
+                st.markdown(f"### {col}")
+                namen = df_overview[col].dropna().astype(str).tolist()
+                for n in namen:
+                    if n.strip() != "" and n.lower() != "nan":
+                        st.write("–", n)
 
         eingeteilt = set(df_einteilung["Name"].dropna().astype(str))
         nicht_eingeteilt = [m for m in df_mitglieder["Mitglied"] if m not in eingeteilt]
