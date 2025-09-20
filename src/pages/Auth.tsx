@@ -72,7 +72,8 @@ const Auth = () => {
         }
       } else {
         toast.success('Erfolgreich angemeldet!');
-        navigate('/dashboard');
+        // Let the auth context handle navigation to onboarding or dashboard
+        navigate('/onboarding');
       }
     } catch (error) {
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
