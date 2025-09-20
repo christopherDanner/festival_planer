@@ -35,7 +35,7 @@ import {
   type Member,
 } from "@/lib/memberService";
 
-const Members: React.FC = () => {
+const Members = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
