@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import {
 
 export default function Index() {
   const [showWizard, setShowWizard] = useState(false);
+  const navigate = useNavigate();
 
   if (showWizard) {
     return (
@@ -73,15 +75,16 @@ export default function Index() {
               <Button 
                 size="lg" 
                 variant="festival"
-                onClick={() => setShowWizard(true)}
+                onClick={() => navigate("/auth")}
                 className="text-lg px-8 py-4"
               >
-                Jetzt Fest planen
+                Jetzt anmelden
                 <ArrowRight className="h-5 w-5" />
               </Button>
               <Button 
                 size="lg" 
                 variant="outline"
+                onClick={() => setShowWizard(true)}
                 className="text-lg px-8 py-4 bg-white/10 border-white/30 text-white hover:bg-white/20"
               >
                 Demo ansehen
@@ -267,10 +270,10 @@ export default function Index() {
           <Button 
             size="lg" 
             variant="secondary"
-            onClick={() => setShowWizard(true)}
+            onClick={() => navigate("/auth")}
             className="text-lg px-8 py-4"
           >
-            Jetzt kostenlos testen
+            Jetzt kostenlos anmelden
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
