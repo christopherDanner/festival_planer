@@ -1,11 +1,9 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
+import heroImage from "@/assets/hero-festival.jpg";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import FestivalWizard from "@/components/FestivalWizard";
-import Navigation from "@/components/Navigation";
-import heroImage from "@/assets/hero-festival.jpg";
 import { 
   Calendar, 
   Users, 
@@ -19,33 +17,11 @@ import {
 } from "lucide-react";
 
 export default function Index() {
-  const [showWizard, setShowWizard] = useState(false);
   const navigate = useNavigate();
-
-  if (showWizard) {
-    return (
-      <div className="min-h-screen bg-background py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowWizard(false)}
-              className="mb-4"
-            >
-              ← Zurück zur Startseite
-            </Button>
-            <h1 className="text-3xl font-bold mb-2">Neues Fest erstellen</h1>
-            <p className="text-muted-foreground">In 3 einfachen Schritten zu deinem Festplan</p>
-          </div>
-          <FestivalWizard />
-        </div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div 
@@ -75,21 +51,21 @@ export default function Index() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                variant="festival"
-                onClick={() => setShowWizard(true)}
-                className="text-lg px-8 py-4"
+                onClick={() => navigate(user ? '/dashboard' : '/auth')}
+                className="text-lg px-8 py-6"
               >
                 Jetzt kostenlos starten
-                <ArrowRight className="h-5 w-5" />
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-lg px-8 py-4 bg-white/10 border-white/30 text-white hover:bg-white/20"
-                onClick={() => navigate("/dashboard")}
-              >
-                Demo ansehen
-              </Button>
+              {user && (
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  onClick={() => navigate('/dashboard')}
+                  className="text-lg px-8 py-6"
+                >
+                  Zum Dashboard
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -108,7 +84,7 @@ export default function Index() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="shadow-card hover:shadow-festival transition-shadow">
+            <Card className="shadow-card hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <ClipboardList className="h-6 w-6 text-primary" />
@@ -121,22 +97,22 @@ export default function Index() {
               <CardContent>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     Feuerwehr-, Musik- & Dorffest Templates
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     Zeitgesteuerte Erinnerungen
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     KI-basierte Mengenplanung
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card className="shadow-card hover:shadow-festival transition-shadow">
+            <Card className="shadow-card hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <Users className="h-6 w-6 text-primary" />
@@ -149,22 +125,22 @@ export default function Index() {
               <CardContent>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     Excel/CSV Import
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     Automatische Fairness-Verteilung
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     PDF-Export für Aushang
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card className="shadow-card hover:shadow-festival transition-shadow">
+            <Card className="shadow-card hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <Smartphone className="h-6 w-6 text-primary" />
@@ -177,15 +153,15 @@ export default function Index() {
               <CardContent>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     Touch-optimierte Bedienung
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     Echtzeit Bestellweiterleitung
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                     Automatische Bon-Erstellung
                   </li>
                 </ul>
@@ -260,18 +236,17 @@ export default function Index() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-hero text-white">
+      <section className="py-20 bg-gradient-to-br from-primary/10 to-secondary/10">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4">
             Bereit für dein nächstes Fest?
           </h2>
-          <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
+          <p className="text-xl mb-8 text-muted-foreground max-w-2xl mx-auto">
             Starte jetzt und erstelle deinen ersten Festplan in unter einer Minute.
           </p>
           <Button 
             size="lg" 
-            variant="secondary"
-            onClick={() => setShowWizard(true)}
+            onClick={() => navigate(user ? '/dashboard' : '/auth')}
             className="text-lg px-8 py-4"
           >
             Jetzt kostenlos starten

@@ -14,7 +14,174 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      checklist_items: {
+        Row: {
+          category: string
+          completed: boolean
+          created_at: string
+          due_date: string
+          festival_id: string
+          id: string
+          priority: string
+          task: string
+        }
+        Insert: {
+          category: string
+          completed?: boolean
+          created_at?: string
+          due_date: string
+          festival_id: string
+          id?: string
+          priority: string
+          task: string
+        }
+        Update: {
+          category?: string
+          completed?: boolean
+          created_at?: string
+          due_date?: string
+          festival_id?: string
+          id?: string
+          priority?: string
+          task?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festivals: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string | null
+          start_date: string
+          type: string
+          updated_at: string
+          user_id: string
+          visitor_count: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string | null
+          start_date: string
+          type: string
+          updated_at?: string
+          user_id: string
+          visitor_count: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string | null
+          start_date?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          visitor_count?: string
+        }
+        Relationships: []
+      }
+      resources: {
+        Row: {
+          created_at: string
+          einheit: string
+          festival_id: string
+          id: string
+          item: string
+          kosten: string
+          lieferant: string
+          menge: string
+          priority: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          einheit: string
+          festival_id: string
+          id?: string
+          item: string
+          kosten: string
+          lieferant: string
+          menge: string
+          priority: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          einheit?: string
+          festival_id?: string
+          id?: string
+          item?: string
+          kosten?: string
+          lieferant?: string
+          menge?: string
+          priority?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      station_assignments: {
+        Row: {
+          bedarf: number
+          bereich: string
+          created_at: string
+          festival_id: string
+          id: string
+          personen: string[]
+          priority: string
+          status: string
+          zeit: string
+        }
+        Insert: {
+          bedarf: number
+          bereich: string
+          created_at?: string
+          festival_id: string
+          id?: string
+          personen?: string[]
+          priority: string
+          status?: string
+          zeit: string
+        }
+        Update: {
+          bedarf?: number
+          bereich?: string
+          created_at?: string
+          festival_id?: string
+          id?: string
+          personen?: string[]
+          priority?: string
+          status?: string
+          zeit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "station_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
