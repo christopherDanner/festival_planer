@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
+import Members from "./pages/Members";
 import MobileWaiter from "./pages/MobileWaiter";
 import FestivalResults from "./pages/FestivalResults";
 import Auth from "./pages/Auth";
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/members" element={<Members />} />
             <Route path="/festival-results" element={<FestivalResults />} />
             <Route path="/mobile-waiter" element={<MobileWaiter />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

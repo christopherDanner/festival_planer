@@ -91,6 +91,48 @@ export type Database = {
         }
         Relationships: []
       }
+      members: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
+          notes: string | null
+          phone: string | null
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          last_name: string
+          notes?: string | null
+          phone?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          notes?: string | null
+          phone?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       resources: {
         Row: {
           created_at: string
@@ -181,6 +223,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      station_member_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string
+          station_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id: string
+          station_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          station_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
