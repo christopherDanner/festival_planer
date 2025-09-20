@@ -44,7 +44,7 @@ const Members = () => {
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [tagFilter, setTagFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('all-tags');
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showImport, setShowImport] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
@@ -105,7 +105,7 @@ const Members = () => {
     }
 
     // Tag filter
-    if (tagFilter) {
+    if (tagFilter && tagFilter !== 'all-tags') {
       filtered = filtered.filter(member =>
         member.tags.some(tag => tag.toLowerCase().includes(tagFilter.toLowerCase()))
       );
@@ -407,7 +407,7 @@ const Members = () => {
                     <SelectValue placeholder="Alle Tags" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Alle Tags</SelectItem>
+                    <SelectItem value="all-tags">Alle Tags</SelectItem>
                     {allTags.map(tag => (
                       <SelectItem key={tag} value={tag}>{tag}</SelectItem>
                     ))}
@@ -434,7 +434,7 @@ const Members = () => {
                   variant="outline"
                   onClick={() => {
                     setSearchTerm('');
-                    setTagFilter('');
+                    setTagFilter('all-tags');
                     setActiveFilter('all');
                   }}
                 >
