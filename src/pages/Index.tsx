@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import FestivalWizard from "@/components/FestivalWizard";
 import Navigation from "@/components/Navigation";
 import heroImage from "@/assets/hero-festival.jpg";
+import { useNavigate } from "react-router-dom";
 import { 
   Calendar, 
   Users, 
@@ -19,6 +20,7 @@ import {
 
 export default function Index() {
   const [showWizard, setShowWizard] = useState(false);
+  const navigate = useNavigate();
 
   if (showWizard) {
     return (
@@ -73,7 +75,7 @@ export default function Index() {
               <Button 
                 size="lg" 
                 variant="festival"
-                onClick={() => setShowWizard(true)}
+                onClick={() => navigate('/auth')}
                 className="text-lg px-8 py-4"
               >
                 Jetzt Fest planen
@@ -267,7 +269,7 @@ export default function Index() {
           <Button 
             size="lg" 
             variant="secondary"
-            onClick={() => setShowWizard(true)}
+            onClick={() => navigate('/auth')}
             className="text-lg px-8 py-4"
           >
             Jetzt kostenlos testen
