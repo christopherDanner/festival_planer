@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, LayoutDashboard, Smartphone, Users } from "lucide-react";
+import { Home, LayoutDashboard, Smartphone, Users, Calendar } from "lucide-react";
 
 export default function Navigation() {
   const navigate = useNavigate();
@@ -32,6 +32,14 @@ export default function Navigation() {
         onClick={() => navigate("/members")}
       >
         <Users className="h-4 w-4" />
+      </Button>
+      
+      <Button
+        variant={isActive("/scheduling") ? "festival" : "outline"}
+        size="sm"
+        onClick={() => navigate("/scheduling")}
+      >
+        <Calendar className="h-4 w-4" />
       </Button>
       
       <Button

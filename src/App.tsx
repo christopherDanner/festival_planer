@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
+import Scheduling from "./pages/Scheduling";
 import MobileWaiter from "./pages/MobileWaiter";
 import FestivalResults from "./pages/FestivalResults";
 import Auth from "./pages/Auth";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/members" element={<Members />} />
+            <Route path="/scheduling" element={<Scheduling />} />
             <Route path="/festival-results" element={<FestivalResults />} />
             <Route path="/mobile-waiter" element={<MobileWaiter />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
