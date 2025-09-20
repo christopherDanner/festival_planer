@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import FestivalWizard from "@/components/FestivalWizard";
+import Navigation from "@/components/Navigation";
 import { Festival, getUserFestivals } from "@/lib/festivalService";
 
 export default function Dashboard() {
@@ -59,6 +60,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+      <Navigation />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Fest-Planer Dashboard</h1>
