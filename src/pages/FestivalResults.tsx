@@ -17,85 +17,55 @@ import {
   Plus,
   Edit
 } from "lucide-react";
-
-// Test seed data
-const testCheckliste = [
-  { id: 1, task: "Genehmigung beim Amt beantragen", completed: true, dueDate: "2024-05-15", category: "Behörden" },
-  { id: 2, task: "Versicherung abschließen", completed: true, dueDate: "2024-05-20", category: "Versicherung" },
-  { id: 3, task: "Zelt und Bühne organisieren", completed: false, dueDate: "2024-06-01", category: "Ausstattung" },
-  { id: 4, task: "Getränke bestellen", completed: false, dueDate: "2024-06-05", category: "Verpflegung" },
-  { id: 5, task: "Musik/DJ buchen", completed: true, dueDate: "2024-05-25", category: "Entertainment" },
-  { id: 6, task: "Flyer und Plakate drucken", completed: false, dueDate: "2024-06-10", category: "Marketing" },
-  { id: 7, task: "Helfer einteilen", completed: false, dueDate: "2024-06-12", category: "Personal" },
-  { id: 8, task: "Sicherheitsdienst organisieren", completed: false, dueDate: "2024-06-01", category: "Sicherheit" },
-];
-
-const testEinteilung = [
-  { 
-    id: 1, 
-    bereich: "Kassa", 
-    zeit: "Samstag 16:00-20:00", 
-    personen: ["Maria Huber", "Johann Steiner"], 
-    bedarf: 2,
-    status: "complete" 
-  },
-  { 
-    id: 2, 
-    bereich: "Kassa", 
-    zeit: "Samstag 20:00-24:00", 
-    personen: ["Franz Wimmer"], 
-    bedarf: 2,
-    status: "incomplete" 
-  },
-  { 
-    id: 3, 
-    bereich: "Grill", 
-    zeit: "Sonntag 11:00-15:00", 
-    personen: ["Peter Maier", "Klaus Weber", "Anna Schmidt"], 
-    bedarf: 3,
-    status: "complete" 
-  },
-  { 
-    id: 4, 
-    bereich: "Ausschank", 
-    zeit: "Sonntag 15:00-19:00", 
-    personen: ["Lisa Bauer"], 
-    bedarf: 2,
-    status: "incomplete" 
-  },
-];
-
-const testRessourcen = [
-  { id: 1, item: "Bier (Fass 50l)", menge: "12", einheit: "Stück", status: "bestellt", lieferant: "Brauerei Stainz", kosten: "€ 1.200" },
-  { id: 2, item: "Würstel", menge: "500", einheit: "Stück", status: "offen", lieferant: "Fleischerei Huber", kosten: "€ 850" },
-  { id: 3, item: "Garnituren (Tisch + 2 Bänke)", menge: "20", einheit: "Sets", status: "bestellt", lieferant: "Zeltverleih Graz", kosten: "€ 400" },
-  { id: 4, item: "Zelt 10x20m", menge: "1", einheit: "Stück", status: "bestellt", lieferant: "Zeltverleih Graz", kosten: "€ 800" },
-  { id: 5, item: "Geschirr (Teller, Besteck)", menge: "300", einheit: "Sets", status: "offen", lieferant: "Gastro Service", kosten: "€ 180" },
-  { id: 6, item: "Servietten", menge: "1000", einheit: "Stück", status: "bestellt", lieferant: "Papierhaus", kosten: "€ 45" },
-];
+import { generateFestivalPlan, type ChecklistItem, type StationAssignment, type Resource } from "@/lib/festivalPlanGenerator";
 
 export default function FestivalResults() {
   const navigate = useNavigate();
   const [festivalData, setFestivalData] = useState<any>(null);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [stations, setStations] = useState<StationAssignment[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem("currentFestival");
+    let data;
     if (stored) {
-      setFestivalData(JSON.parse(stored));
+      data = JSON.parse(stored);
     } else {
       // Fallback test data if no festival in localStorage
-      setFestivalData({
+      data = {
         type: "feuerwehr",
         startDate: "2024-06-15",
         endDate: "2024-06-16",
         visitorCount: "large"
-      });
+      };
     }
+    
+    setFestivalData(data);
+    
+    // Generate AI-based plans
+    const generatedPlan = generateFestivalPlan(data);
+    setChecklist(generatedPlan.checklist);
+    setStations(generatedPlan.stations);
+    setResources(generatedPlan.resources);
   }, []);
 
-  const completedTasks = testCheckliste.filter(task => task.completed).length;
-  const totalTasks = testCheckliste.length;
-  const completionPercentage = Math.round((completedTasks / totalTasks) * 100);
+  const completedTasks = checklist.filter(task => task.completed).length;
+  const totalTasks = checklist.length;
+  const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const getPriorityColor = (priority: 'green' | 'yellow' | 'red') => {
+    switch (priority) {
+      case 'green': return 'text-green-500';
+      case 'yellow': return 'text-yellow-500';
+      case 'red': return 'text-red-500';
+      default: return 'text-gray-500';
+    }
+  };
+
+  const getPriorityIcon = (priority: 'green' | 'yellow' | 'red') => {
+    return <div className={`w-2 h-2 rounded-full ${priority === 'green' ? 'bg-green-500' : priority === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'}`} />;
+  };
 
   const getFestivalTypeName = (type: string) => {
     const types: { [key: string]: string } = {
@@ -219,13 +189,16 @@ export default function FestivalResults() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {testCheckliste.map((task) => (
+                  {checklist.map((task) => (
                     <div key={task.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                      {task.completed ? (
-                        <CheckCircle2 className="h-5 w-5 text-success" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
-                      )}
+                      <div className="flex items-center gap-2">
+                        {getPriorityIcon(task.priority)}
+                        {task.completed ? (
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
                       <div className="flex-1">
                         <p className={`font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                           {task.task}
@@ -258,11 +231,14 @@ export default function FestivalResults() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {testEinteilung.map((schicht) => (
+                  {stations.map((schicht) => (
                     <div key={schicht.id} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h3 className="font-semibold">{schicht.bereich}</h3>
+                          <div className="flex items-center gap-2">
+                            {getPriorityIcon(schicht.priority)}
+                            <h3 className="font-semibold">{schicht.bereich}</h3>
+                          </div>
                           <p className="text-sm text-muted-foreground">{schicht.zeit}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -306,11 +282,14 @@ export default function FestivalResults() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {testRessourcen.map((item) => (
+                  {resources.map((item) => (
                     <div key={item.id} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold">{item.item}</h3>
+                          <div className="flex items-center gap-2 mb-1">
+                            {getPriorityIcon(item.priority)}
+                            <h3 className="font-semibold">{item.item}</h3>
+                          </div>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                             <span>Menge: {item.menge} {item.einheit}</span>
                             <span>Lieferant: {item.lieferant}</span>
