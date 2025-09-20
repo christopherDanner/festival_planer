@@ -13,7 +13,9 @@ import {
   BarChart3,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
+  Plus,
+  ArrowRight
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -26,73 +28,91 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Feuerwehrfest 2024</h1>
-            <p className="text-muted-foreground">15. - 16. Juni 2024 • 300-800 Besucher erwartet</p>
+            <h1 className="text-3xl font-bold">Meine Feste</h1>
+            <p className="text-muted-foreground">Übersicht aller geplanten Veranstaltungen</p>
           </div>
-          <Badge variant="secondary" className="px-4 py-2">
+          <Button 
+            variant="festival" 
+            onClick={() => navigate("/")}
+            className="px-6"
+          >
             <Clock className="h-4 w-4 mr-2" />
-            42 Tage bis zum Fest
-          </Badge>
+            + Neues Fest
+          </Button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-success/10 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-success" />
-                </div>
+        {/* Aktuelle Feste */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card 
+            className="hover:shadow-festival transition-shadow cursor-pointer"
+            onClick={() => navigate("/festival-results")}
+          >
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold">12/20</p>
-                  <p className="text-sm text-muted-foreground">Aufgaben erledigt</p>
+                  <CardTitle>Feuerwehrfest 2024</CardTitle>
+                  <CardDescription>15. - 16. Juni 2024 • 300-800 Besucher</CardDescription>
+                </div>
+                <Badge variant="secondary">
+                  <Clock className="h-3 w-3 mr-1" />
+                  42 Tage
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-success">60%</p>
+                  <p className="text-xs text-muted-foreground">Aufgaben</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">87%</p>
+                  <p className="text-xs text-muted-foreground">Personal</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-accent">67%</p>
+                  <p className="text-xs text-muted-foreground">Bestellungen</p>
                 </div>
               </div>
-              <Progress value={60} className="mt-4" />
+              <Button variant="outline" className="w-full">
+                Fest verwalten
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
+          <Card className="hover:shadow-festival transition-shadow cursor-pointer">
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold">24/35</p>
-                  <p className="text-sm text-muted-foreground">Personen eingeteilt</p>
+                  <CardTitle>Musikfest Herbst</CardTitle>
+                  <CardDescription>12. Oktober 2024 • 100-300 Besucher</CardDescription>
+                </div>
+                <Badge variant="secondary">
+                  <Clock className="h-3 w-3 mr-1" />
+                  159 Tage
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-success">25%</p>
+                  <p className="text-xs text-muted-foreground">Aufgaben</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">0%</p>
+                  <p className="text-xs text-muted-foreground">Personal</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">0%</p>
+                  <p className="text-xs text-muted-foreground">Bestellungen</p>
                 </div>
               </div>
-              <Progress value={69} className="mt-4" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-accent/10 rounded-lg">
-                  <ShoppingCart className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">8/15</p>
-                  <p className="text-sm text-muted-foreground">Bestellungen bestätigt</p>
-                </div>
-              </div>
-              <Progress value={53} className="mt-4" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-warning/10 rounded-lg">
-                  <AlertCircle className="h-6 w-6 text-warning" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">3</p>
-                  <p className="text-sm text-muted-foreground">Offene Punkte</p>
-                </div>
-              </div>
+              <Button variant="outline" className="w-full">
+                Fest verwalten
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </CardContent>
           </Card>
         </div>

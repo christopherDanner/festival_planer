@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import FestivalWizard from "@/components/FestivalWizard";
 import Navigation from "@/components/Navigation";
 import heroImage from "@/assets/hero-festival.jpg";
@@ -19,6 +20,7 @@ import {
 
 export default function Index() {
   const [showWizard, setShowWizard] = useState(false);
+  const navigate = useNavigate();
 
   if (showWizard) {
     return (
@@ -66,7 +68,8 @@ export default function Index() {
             </h1>
             
             <p className="text-xl lg:text-2xl mb-8 text-white/90 max-w-2xl mx-auto">
-              Die einfachste Art, Vereinsfeste zu planen. Von der ersten Idee bis zur Abrechnung – alles in einer App.
+              <strong>3 Schritte. 5 Minuten. Fertig.</strong><br/>
+              Erstelle automatisch Checklisten, Schichtpläne und Bestelllisten für dein Vereinsfest.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -76,13 +79,14 @@ export default function Index() {
                 onClick={() => setShowWizard(true)}
                 className="text-lg px-8 py-4"
               >
-                Jetzt Fest planen
+                Jetzt kostenlos starten
                 <ArrowRight className="h-5 w-5" />
               </Button>
               <Button 
                 size="lg" 
                 variant="outline"
                 className="text-lg px-8 py-4 bg-white/10 border-white/30 text-white hover:bg-white/20"
+                onClick={() => navigate("/dashboard")}
               >
                 Demo ansehen
               </Button>
@@ -270,7 +274,7 @@ export default function Index() {
             onClick={() => setShowWizard(true)}
             className="text-lg px-8 py-4"
           >
-            Jetzt kostenlos testen
+            Jetzt kostenlos starten
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>

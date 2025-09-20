@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Flame, Music, Grape, Church } from "lucide-react";
+import { Calendar, Users, Flame, Music, Grape, Church, Snowflake } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const festivalTypes = [
@@ -10,6 +10,7 @@ const festivalTypes = [
   { id: "musik", name: "Musikfest", icon: Music, color: "bg-blue-500" },
   { id: "kirtag", name: "Dorf-/Kirtag", icon: Church, color: "bg-green-500" },
   { id: "wein", name: "Weinfest", icon: Grape, color: "bg-purple-500" },
+  { id: "weihnachten", name: "Weihnachtsmarkt", icon: Snowflake, color: "bg-blue-300" },
 ];
 
 const visitorRanges = [
@@ -41,10 +42,12 @@ export default function FestivalWizard() {
   };
 
   const handleVisitorSelect = (visitorCount: string) => {
-    setFestivalData({ ...festivalData, visitorCount });
-    // Here we would typically save to database and navigate to dashboard
-    console.log("Festival created:", { ...festivalData, visitorCount });
-    navigate("/dashboard");
+    const finalFestivalData = { ...festivalData, visitorCount };
+    setFestivalData(finalFestivalData);
+    // Store festival data and navigate to results page
+    localStorage.setItem("currentFestival", JSON.stringify(finalFestivalData));
+    console.log("Festival created:", finalFestivalData);
+    navigate("/festival-results");
   };
 
   return (
