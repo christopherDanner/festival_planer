@@ -47,6 +47,13 @@ export interface Resource {
 }
 
 export async function createFestival(festivalData: FestivalData, userId: string): Promise<string> {
+  // Get user's members for shift generation
+  const { data: members } = await supabase
+    .from('members')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+
   // Create festival record
   const { data: festival, error: festivalError } = await supabase
     .from('festivals')
@@ -65,8 +72,8 @@ export async function createFestival(festivalData: FestivalData, userId: string)
     throw new Error('Fehler beim Erstellen des Festes');
   }
 
-  // Generate plan data
-  const plan = generateFestivalPlan(festivalData);
+  // Generate plan data with members
+  const plan = generateFestivalPlan(festivalData, members || []);
 
   // Insert checklist items
   const checklistInserts = plan.checklist.map(item => ({
@@ -86,23 +93,66 @@ export async function createFestival(festivalData: FestivalData, userId: string)
     throw new Error('Fehler beim Erstellen der Checkliste');
   }
 
-  // Insert station assignments
-  const stationInserts = plan.stations.map(station => ({
+  // Insert shifts
+  const shiftInserts = plan.shifts.map(shift => ({
     festival_id: festival.id,
-    bereich: station.bereich,
-    zeit: station.zeit,
-    personen: station.personen,
-    bedarf: station.bedarf,
-    status: station.status,
-    priority: station.priority
+    name: shift.name,
+    start_date: shift.start_date,
+    start_time: shift.start_time,
+    end_time: shift.end_time
   }));
 
-  const { error: stationError } = await supabase
-    .from('station_assignments')
-    .insert(stationInserts);
+  const { data: insertedShifts, error: shiftError } = await supabase
+    .from('shifts')
+    .insert(shiftInserts)
+    .select();
+
+  if (shiftError) {
+    throw new Error('Fehler beim Erstellen der Schichten');
+  }
+
+  // Insert stations  
+  const stationInserts = plan.shiftStations.map(station => ({
+    festival_id: festival.id,
+    name: station.name,
+    required_people: station.required_people,
+    description: station.description
+  }));
+
+  const { data: insertedStations, error: stationError } = await supabase
+    .from('stations')
+    .insert(stationInserts)
+    .select();
 
   if (stationError) {
     throw new Error('Fehler beim Erstellen der Stationen');
+  }
+
+  // Create shift assignments for each shift-station combination
+  const assignmentInserts: any[] = [];
+  if (insertedShifts && insertedStations) {
+    for (const shift of insertedShifts) {
+      for (const station of insertedStations) {
+        // Create empty assignments for each required position
+        for (let position = 1; position <= station.required_people; position++) {
+          assignmentInserts.push({
+            festival_id: festival.id,
+            shift_id: shift.id,
+            station_id: station.id,
+            position: position,
+            member_id: null // Initially no member assigned
+          });
+        }
+      }
+    }
+
+    const { error: assignmentError } = await supabase
+      .from('shift_assignments')
+      .insert(assignmentInserts);
+
+    if (assignmentError) {
+      throw new Error('Fehler beim Erstellen der Schichtzuordnungen');
+    }
   }
 
   // Insert resources

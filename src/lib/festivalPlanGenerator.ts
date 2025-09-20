@@ -35,12 +35,14 @@ export interface FestivalData {
   visitorCount: string;
 }
 
-export function generateFestivalPlan(festivalData: FestivalData) {
+export function generateFestivalPlan(festivalData: FestivalData, members: any[] = []) {
   const checklist = generateChecklist(festivalData);
   const stations = generateStations(festivalData);
   const resources = generateResources(festivalData);
+  const shifts = generateShifts(festivalData);
+  const shiftStations = generateShiftStations(festivalData);
   
-  return { checklist, stations, resources };
+  return { checklist, stations, resources, shifts, shiftStations };
 }
 
 function generateChecklist(festivalData: FestivalData): ChecklistItem[] {
@@ -285,4 +287,96 @@ function generateRandomNames(count: number): string[] {
   
   const shuffled = names.sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
+}
+
+function generateShifts(festivalData: FestivalData) {
+  const shifts = [];
+  const startDate = new Date(festivalData.startDate);
+  const endDate = festivalData.endDate ? new Date(festivalData.endDate) : startDate;
+  
+  // Generate shifts for each day
+  const currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const dayName = currentDate.toLocaleDateString('de-AT', { weekday: 'short' });
+    
+    // Morning shift
+    shifts.push({
+      name: `${dayName} Vormittag`,
+      start_date: currentDate.toISOString().split('T')[0],
+      start_time: '09:00:00',
+      end_time: '13:00:00'
+    });
+    
+    // Afternoon shift
+    shifts.push({
+      name: `${dayName} Nachmittag`,
+      start_date: currentDate.toISOString().split('T')[0],
+      start_time: '13:00:00',
+      end_time: '17:00:00'
+    });
+    
+    // Evening shift
+    shifts.push({
+      name: `${dayName} Abend`,
+      start_date: currentDate.toISOString().split('T')[0],
+      start_time: '17:00:00',
+      end_time: '22:00:00'
+    });
+    
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return shifts;
+}
+
+function generateShiftStations(festivalData: FestivalData) {
+  const baseStations = [
+    { name: "Kassa", required_people: 2, description: "Eingangsbereich und Zahlungsabwicklung" },
+    { name: "Ausschank", required_people: 2, description: "Getränkeausgabe" },
+    { name: "Grill", required_people: 3, description: "Essensausgabe und Grillstation" }
+  ];
+  
+  const festivalStations = getFestivalSpecificShiftStations(festivalData.type);
+  const visitorStations = getVisitorSpecificShiftStations(festivalData.visitorCount);
+  
+  return [...baseStations, ...festivalStations, ...visitorStations];
+}
+
+function getFestivalSpecificShiftStations(type: string) {
+  const stations: { [key: string]: any[] } = {
+    feuerwehr: [
+      { name: "Feuerwehrshow", required_people: 4, description: "Präsentation der Feuerwehraktivitäten" }
+    ],
+    musik: [
+      { name: "Bühne/Technik", required_people: 3, description: "Tontechnik und Bühnenverwaltung" },
+      { name: "Einlass", required_people: 2, description: "Ticketkontrolle und Einlass" }
+    ],
+    kirtag: [
+      { name: "Karussell", required_people: 2, description: "Betreuung der Fahrgeschäfte" },
+      { name: "Tombola", required_people: 2, description: "Losverkauf und Preisausgabe" }
+    ],
+    wein: [
+      { name: "Weinverkostung", required_people: 3, description: "Weinberatung und -verkauf" }
+    ],
+    weihnachten: [
+      { name: "Glühweinstand", required_people: 2, description: "Glühwein und warme Getränke" },
+      { name: "Kekse & Süßes", required_people: 1, description: "Verkauf von Süßwaren" }
+    ]
+  };
+  
+  return stations[type] || [];
+}
+
+function getVisitorSpecificShiftStations(visitorCount: string) {
+  const stations: { [key: string]: any[] } = {
+    large: [
+      { name: "Parkplatz", required_people: 2, description: "Parkplatzeinweisung" }
+    ],
+    xlarge: [
+      { name: "Sicherheit", required_people: 4, description: "Sicherheitsdienst und Ordnung" },
+      { name: "Erste Hilfe", required_people: 2, description: "Sanitätsdienst" }
+    ]
+  };
+  
+  return stations[visitorCount] || [];
 }

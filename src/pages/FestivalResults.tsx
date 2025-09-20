@@ -153,11 +153,10 @@ export default function FestivalResults() {
         </div>
 
         <Tabs defaultValue="checkliste" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="checkliste">Checkliste</TabsTrigger>
-            <TabsTrigger value="einteilung">Einteilung</TabsTrigger>
-            <TabsTrigger value="ressourcen">Ressourcen</TabsTrigger>
             <TabsTrigger value="schichtplan">Schichtplan</TabsTrigger>
+            <TabsTrigger value="ressourcen">Ressourcen</TabsTrigger>
           </TabsList>
 
           <TabsContent value="checkliste">
@@ -207,64 +206,6 @@ export default function FestivalResults() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="einteilung">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Personen-Einteilung
-                  <Button 
-                    onClick={() => navigate(`/scheduling?id=${festivalId}`)}
-                    className="flex items-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Neue Schichtplanung
-                  </Button>
-                </CardTitle>
-                <CardDescription>
-                  Schichtpläne und Personalzuteilung - Verwenden Sie die neue Schichtplanung für erweiterte Funktionen
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {stations.map((station) => (
-                    <Card key={station.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-medium">{station.bereich}</h4>
-                          <div className="flex items-center space-x-2">
-                            <Badge 
-                              variant={station.status === 'complete' ? 'secondary' : 'destructive'}
-                            >
-                              {station.personen.length}/{station.bedarf}
-                            </Badge>
-                            <Badge variant={getPriorityColor(station.priority)}>
-                              {station.priority === 'red' ? 'Wichtig' : 
-                               station.priority === 'yellow' ? 'Mittel' : 'Niedrig'}
-                            </Badge>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{station.zeit}</p>
-                        <div className="text-sm">
-                          <p className="font-medium mb-1">Zugeteilte Personen:</p>
-                          {station.personen.length > 0 ? (
-                            <ul className="list-disc list-inside text-muted-foreground">
-                              {station.personen.map((person, idx) => (
-                                <li key={idx}>{person}</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-muted-foreground italic">
-                              Noch keine Personen zugeteilt
-                            </p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
           
           <TabsContent value="schichtplan">
             <Card>
