@@ -52,22 +52,29 @@ export default function Navigation() {
       )}
       
       {user ? (
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleSignOut}
-          className="text-red-600 hover:text-red-700"
-          title={`Abmelden (${user.email})`}
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            {user.email}
+          </span>
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleSignOut}
+            className="bg-red-600 hover:bg-red-700 text-white"
+            title={`Abmelden (${user.email})`}
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Abmelden</span>
+          </Button>
+        </div>
       ) : (
         <Button 
           variant="default" 
           size="sm" 
           onClick={() => navigate("/auth")}
         >
-          <User className="h-4 w-4" />
+          <User className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">Anmelden</span>
         </Button>
       )}
     </div>

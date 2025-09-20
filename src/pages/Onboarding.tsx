@@ -31,8 +31,36 @@ const Onboarding = () => {
       return;
     }
     
-    fetchOrganizations();
+    // Check if user already has an organization
+    checkUserOrganization();
   }, [user, navigate]);
+
+  const checkUserOrganization = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      
+      // If user already has an organization, redirect to dashboard
+      if (profile?.organization_id) {
+        toast.success('Willkommen zurück!');
+        navigate('/dashboard');
+        return;
+      }
+      
+      // Otherwise, continue with organization selection
+      await fetchOrganizations();
+    } catch (error) {
+      console.error('Error checking user organization:', error);
+      await fetchOrganizations();
+    }
+  };
 
   const fetchOrganizations = async () => {
     try {
@@ -135,7 +163,10 @@ const Onboarding = () => {
   if (fetchingOrgs) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Lade Organisationen...</p>
+        </div>
       </div>
     );
   }
