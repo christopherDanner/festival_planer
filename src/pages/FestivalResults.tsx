@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
+import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Calendar, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Festival, 
@@ -123,6 +125,7 @@ export default function FestivalResults() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+      <Navigation />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -134,16 +137,27 @@ export default function FestivalResults() {
               Besucher: {getVisitorCountDisplay(festival.visitor_count)}
             </p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>
-            Zum Dashboard
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/scheduling?id=${festivalId}`)}
+              className="flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Schichtplanung
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/dashboard')}>
+              Zum Dashboard
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="checkliste" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="checkliste">Checkliste</TabsTrigger>
             <TabsTrigger value="einteilung">Einteilung</TabsTrigger>
             <TabsTrigger value="ressourcen">Ressourcen</TabsTrigger>
+            <TabsTrigger value="schichtplan">Schichtplan</TabsTrigger>
           </TabsList>
 
           <TabsContent value="checkliste">
@@ -196,9 +210,18 @@ export default function FestivalResults() {
           <TabsContent value="einteilung">
             <Card>
               <CardHeader>
-                <CardTitle>Personen-Einteilung</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  Personen-Einteilung
+                  <Button 
+                    onClick={() => navigate(`/scheduling?id=${festivalId}`)}
+                    className="flex items-center gap-2"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Neue Schichtplanung
+                  </Button>
+                </CardTitle>
                 <CardDescription>
-                  Schichtpläne und Personalzuteilung
+                  Schichtpläne und Personalzuteilung - Verwenden Sie die neue Schichtplanung für erweiterte Funktionen
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -238,6 +261,40 @@ export default function FestivalResults() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="schichtplan">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Erweiterte Schichtplanung
+                </CardTitle>
+                <CardDescription>
+                  Moderne Matrix-Ansicht für mehrtägige Schichtplanung mit Drag & Drop
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <div className="space-y-4">
+                  <Calendar className="h-16 w-16 mx-auto text-muted-foreground" />
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Neue Schichtplanung verfügbar</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Nutzen Sie unsere erweiterte Schichtplanung mit Matrix-Ansicht, 
+                      Drag & Drop und Farbkodierung für eine effiziente Personaleinteilung.
+                    </p>
+                    <Button 
+                      onClick={() => navigate(`/scheduling?id=${festivalId}`)}
+                      size="lg"
+                      className="flex items-center gap-2 mx-auto"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Zur Schichtplanung
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
