@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import Navigation from "@/components/Navigation";
+import ShiftMatrix from "@/components/ShiftMatrix";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,14 +139,6 @@ export default function FestivalResults() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(`/scheduling?id=${festivalId}`)}
-              className="flex items-center gap-2"
-            >
-              <Calendar className="h-4 w-4" />
-              Schichtplanung
-            </Button>
             <Button variant="outline" onClick={() => navigate('/dashboard')}>
               Zum Dashboard
             </Button>
@@ -208,37 +201,7 @@ export default function FestivalResults() {
 
           
           <TabsContent value="schichtplan">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Erweiterte Schichtplanung
-                </CardTitle>
-                <CardDescription>
-                  Moderne Matrix-Ansicht für mehrtägige Schichtplanung mit Drag & Drop
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center py-8">
-                <div className="space-y-4">
-                  <Calendar className="h-16 w-16 mx-auto text-muted-foreground" />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Neue Schichtplanung verfügbar</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Nutzen Sie unsere erweiterte Schichtplanung mit Matrix-Ansicht, 
-                      Drag & Drop und Farbkodierung für eine effiziente Personaleinteilung.
-                    </p>
-                    <Button 
-                      onClick={() => navigate(`/scheduling?id=${festivalId}`)}
-                      size="lg"
-                      className="flex items-center gap-2 mx-auto"
-                    >
-                      <Calendar className="h-4 w-4" />
-                      Zur Schichtplanung
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ShiftMatrix festivalId={festivalId} />
           </TabsContent>
 
           <TabsContent value="ressourcen">
