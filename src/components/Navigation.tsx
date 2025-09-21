@@ -34,13 +34,6 @@ export default function Navigation() {
         <Users className="h-4 w-4" />
       </Button>
       
-      <Button
-        variant={isActive("/scheduling") ? "festival" : "outline"}
-        size="sm"
-        onClick={() => navigate("/scheduling")}
-      >
-        <Calendar className="h-4 w-4" />
-      </Button>
       
       <Button
         variant={isActive("/mobile-waiter") ? "festival" : "outline"}

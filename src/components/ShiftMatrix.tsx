@@ -248,13 +248,26 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
     }
   };
 
-  const getAssignedMemberIds = (): Set<string> => {
-    return new Set(assignments.filter(a => a.member_id).map(a => a.member_id!));
+  const getMemberAssignments = (memberId: string) => {
+    return assignments.filter(a => a.member_id === memberId);
   };
 
-  const getFreMembers = (): Member[] => {
-    const assignedIds = getAssignedMemberIds();
-    return members.filter(member => !assignedIds.has(member.id));
+  const getMemberAssignmentInfo = (memberId: string) => {
+    const memberAssignments = getMemberAssignments(memberId);
+    if (memberAssignments.length === 0) return "Frei";
+    
+    return memberAssignments.map(assignment => {
+      const shift = shifts.find(s => s.id === assignment.shift_id);
+      const station = stations.find(s => s.id === assignment.station_id);
+      if (!shift || !station) return "";
+      
+      const date = new Date(shift.start_date).toLocaleDateString('de-AT', { 
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit'
+      });
+      return `${station.name} (${date} ${shift.start_time}-${shift.end_time})`;
+    }).join(", ");
   };
 
   const formatShiftTime = (shift: Shift): string => {
@@ -517,50 +530,83 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
         </Card>
       )}
 
-      {/* Free Members List */}
+      {/* All Members List with Assignment Info */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Freie Personen ({getFreMembers().length})
+            Alle Mitglieder ({members.length})
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Personen können mehreren Schichten zugewiesen werden. Ziehen Sie sie in die gewünschten Zellen.
+          </p>
         </CardHeader>
         <CardContent>
-          {getFreMembers().length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              Alle Mitglieder sind bereits eingeteilt.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {getFreMembers().map((member) => (
+          <div className="space-y-3">
+            {members.map((member) => {
+              const memberAssignments = getMemberAssignments(member.id);
+              const isFree = memberAssignments.length === 0;
+              return (
                 <div
                   key={member.id}
-                  className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 cursor-move hover:bg-secondary/80 transition-colors"
+                  className={cn(
+                    "flex items-start justify-between p-3 rounded-lg border cursor-move hover:bg-accent/50 transition-colors",
+                    isFree ? "bg-muted/20" : "bg-success/10"
+                  )}
                   draggable
                   onDragStart={() => handleDragStart(member)}
                   onDragEnd={handleDragEnd}
                 >
-                  <span className="font-medium">
-                    {member.first_name} {member.last_name}
-                  </span>
-                  {member.tags.length > 0 && (
-                    <div className="flex gap-1">
-                      {member.tags.slice(0, 2).map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {member.tags.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{member.tags.length - 2}
-                        </Badge>
-                      )}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {member.first_name} {member.last_name}
+                      </span>
+                      <Badge variant={isFree ? "destructive" : "default"} className="text-xs">
+                        {isFree ? "Frei" : `${memberAssignments.length} Schicht${memberAssignments.length !== 1 ? "en" : ""}`}
+                      </Badge>
                     </div>
-                  )}
+                    
+                    {member.tags.length > 0 && (
+                      <div className="flex gap-1 flex-wrap">
+                        {member.tags.map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {!isFree && (
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <div className="font-medium">Eingeteilt in:</div>
+                        {memberAssignments.map((assignment, index) => {
+                          const shift = shifts.find(s => s.id === assignment.shift_id);
+                          const station = stations.find(s => s.id === assignment.station_id);
+                          if (!shift || !station) return null;
+                          
+                          const date = new Date(shift.start_date).toLocaleDateString('de-AT', { 
+                            weekday: 'short',
+                            day: '2-digit',
+                            month: '2-digit'
+                          });
+                          
+                          return (
+                            <div key={assignment.id} className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {station.name}
+                              </Badge>
+                              <span>{date} {shift.start_time}-{shift.end_time}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>
