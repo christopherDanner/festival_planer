@@ -29,9 +29,11 @@ export interface Resource {
 }
 
 export interface FestivalData {
-  type: string;
+  name: string;
+  location: string;
   startDate: string;
   endDate?: string;
+  type?: string;
   visitorCount: string;
 }
 

@@ -59,11 +59,11 @@ export async function createFestival(festivalData: FestivalData, userId: string)
     .from('festivals')
     .insert({
       user_id: userId,
-      type: festivalData.type,
+      type: festivalData.type || 'general',
       start_date: festivalData.startDate,
       end_date: festivalData.endDate,
       visitor_count: festivalData.visitorCount,
-      name: `${getFestivalTypeName(festivalData.type)} ${new Date(festivalData.startDate).toLocaleDateString('de-AT')}`
+      name: festivalData.name
     })
     .select()
     .single();

@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { createFestival } from "@/lib/festivalService";
-import { Calendar, Users, Flame, Music, Grape, Church, Snowflake } from "lucide-react";
+import { Calendar, MapPin, Users, Flame, Music, Grape, Church, Snowflake, PartyPopper, Disc3, Building } from "lucide-react";
 
 interface FestivalWizardProps {
   onClose: () => void;
@@ -17,9 +18,12 @@ interface FestivalWizardProps {
 const festivalTypes = [
   { id: "feuerwehr", name: "Feuerwehrfest", icon: Flame, color: "bg-red-500" },
   { id: "musik", name: "Musikfest", icon: Music, color: "bg-blue-500" },
-  { id: "kirtag", name: "Dorf-/Kirtag", icon: Church, color: "bg-green-500" },
-  { id: "wein", name: "Weinfest", icon: Grape, color: "bg-purple-500" },
+  { id: "ball", name: "Ball", icon: PartyPopper, color: "bg-purple-500" },
+  { id: "disco", name: "Disco", icon: Disc3, color: "bg-pink-500" },
+  { id: "kirtag", name: "Dorffest/Kirtag", icon: Church, color: "bg-green-500" },
+  { id: "wein", name: "Weinfest", icon: Grape, color: "bg-purple-600" },
   { id: "weihnachten", name: "Weihnachtsmarkt", icon: Snowflake, color: "bg-blue-300" },
+  { id: "other", name: "Sonstiges", icon: Building, color: "bg-gray-500" },
 ];
 
 const visitorRanges = [
@@ -31,24 +35,26 @@ const visitorRanges = [
 
 export default function FestivalWizard({ onClose, onComplete }: FestivalWizardProps) {
   const [step, setStep] = useState(1);
-  const [festivalType, setFestivalType] = useState("");
+  const [festivalName, setFestivalName] = useState("");
+  const [location, setLocation] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [festivalType, setFestivalType] = useState("");
   const [visitorCount, setVisitorCount] = useState("");
+  const [loading, setLoading] = useState(false);
+  
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
 
-  const handleTypeSelect = (type: string) => {
-    setFestivalType(type);
-    setStep(2);
+  const handleBasicInfoSubmit = () => {
+    if (festivalName && location && startDate) {
+      setStep(2);
+    }
   };
 
-  const handleDateSubmit = () => {
-    if (startDate) {
-      setStep(3);
-    }
+  const handleTypeSubmit = () => {
+    setStep(3);
   };
 
   const handleComplete = async () => {
@@ -60,9 +66,11 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
     setLoading(true);
     try {
       const festivalData = {
-        type: festivalType,
+        name: festivalName,
+        location,
         startDate,
         endDate: endDate !== startDate ? endDate : undefined,
+        type: festivalType,
         visitorCount
       };
 
@@ -114,64 +122,101 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
           <Card className="shadow-lg">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">
-                {step === 1 && "Welche Art von Fest planst du?"}
-                {step === 2 && "Wann findet dein Fest statt?"}
-                {step === 3 && "Wie viele Besucher erwartest du?"}
+                {step === 1 && "Grundinformationen"}
+                {step === 2 && "Festtyp (optional)"}
+                {step === 3 && "Erwartete Besucherzahl"}
               </CardTitle>
               <CardDescription>
-                {step === 1 && "Wähle den Festtyp für optimale Vorschläge"}
-                {step === 2 && "Datum hilft bei der automatischen Planung"}
-                {step === 3 && "Die Besucherzahl bestimmt Ressourcen und Personal"}
+                {step === 1 && "Name, Datum und Ort Ihres Festes"}
+                {step === 2 && "Wählen Sie einen Festtyp für bessere Vorschläge"}
+                {step === 3 && "Die Besucherzahl hilft bei der Ressourcenplanung"}
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-6">
               {step === 1 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {festivalTypes.map((type) => (
-                    <Button
-                      key={type.id}
-                      variant="outline"
-                      className="h-24 flex flex-col gap-2 hover:border-primary"
-                      onClick={() => handleTypeSelect(type.id)}
-                    >
-                      <type.icon className="h-8 w-8" />
-                      <span className="font-medium">{type.name}</span>
-                    </Button>
-                  ))}
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="festivalName">Name des Festes</Label>
+                      <Input
+                        id="festivalName"
+                        type="text"
+                        placeholder="z.B. Sommerfest 2024"
+                        value={festivalName}
+                        onChange={(e) => setFestivalName(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="location">Ort</Label>
+                      <Input
+                        id="location"
+                        type="text"
+                        placeholder="z.B. Gemeindezentrum, Festplatz"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="startDate">Startdatum</Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="endDate">Enddatum (optional)</Label>
+                        <Input
+                          id="endDate"
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleBasicInfoSubmit} 
+                    className="w-full"
+                    disabled={!festivalName || !location || !startDate}
+                  >
+                    Weiter
+                  </Button>
                 </div>
               )}
 
               {step === 2 && (
                 <div className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="startDate">Startdatum</Label>
-                      <Input
-                        id="startDate"
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="endDate">Enddatum (optional)</Label>
-                      <Input
-                        id="endDate"
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {festivalTypes.map((type) => (
+                      <Button
+                        key={type.id}
+                        variant={festivalType === type.id ? "default" : "outline"}
+                        className="h-24 flex flex-col gap-2 hover:border-primary"
+                        onClick={() => setFestivalType(type.id)}
+                      >
+                        <type.icon className="h-8 w-8" />
+                        <span className="font-medium">{type.name}</span>
+                      </Button>
+                    ))}
                   </div>
+                  
                   <div className="flex gap-3">
                     <Button variant="outline" onClick={() => setStep(1)}>
                       Zurück
                     </Button>
-                    <Button onClick={handleDateSubmit} disabled={!startDate}>
-                      Weiter
+                    <Button onClick={handleTypeSubmit} className="flex-1">
+                      {festivalType ? "Weiter" : "Überspringen"}
                     </Button>
                   </div>
                 </div>
@@ -183,7 +228,7 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
                     {visitorRanges.map((range) => (
                       <Button
                         key={range.id}
-                        variant="outline"
+                        variant={visitorCount === range.id ? "default" : "outline"}
                         className="h-20 flex flex-col gap-2 hover:border-primary"
                         onClick={() => setVisitorCount(range.id)}
                       >
@@ -204,7 +249,7 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
                         size="lg"
                         disabled={loading}
                       >
-                        {loading ? 'Erstelle Plan...' : 'Plan erstellen'}
+                        {loading ? 'Erstelle Plan...' : 'Fest erstellen'}
                       </Button>
                     </div>
                   )}
