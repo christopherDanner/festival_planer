@@ -10,6 +10,7 @@ import Members from "./pages/Members";
 import Scheduling from "./pages/Scheduling";
 import MobileWaiter from "./pages/MobileWaiter";
 import FestivalResults from "./pages/FestivalResults";
+import FestivalPreviewPage from "./pages/FestivalPreviewPage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/members" element={<Members />} />
             <Route path="/scheduling" element={<Scheduling />} />
             <Route path="/festival-results" element={<FestivalResults />} />
+            <Route path="/festival-preview" element={<FestivalPreviewPage />} />
             <Route path="/mobile-waiter" element={<MobileWaiter />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

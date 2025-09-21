@@ -63,8 +63,8 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
       return;
     }
 
-    setLoading(true);
-    try {
+    if (festivalName && location && startDate && visitorCount) {
+      // Navigate to preview instead of creating festival directly
       const festivalData = {
         name: festivalName,
         location,
@@ -74,23 +74,10 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
         visitorCount
       };
 
-      const festivalId = await createFestival(festivalData, user.id);
-      
-      toast({
-        title: "Fest erfolgreich erstellt!",
-        description: "Ihr Festplan wurde generiert.",
+      // Pass data to preview component
+      navigate('/festival-preview', { 
+        state: { festivalData } 
       });
-
-      onComplete();
-      navigate(`/festival-results?id=${festivalId}`);
-    } catch (error: any) {
-      toast({
-        title: "Fehler beim Erstellen des Festes",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
