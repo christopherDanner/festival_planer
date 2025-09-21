@@ -7,21 +7,31 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Upload, FileSpreadsheet } from "lucide-react";
+import { Loader2, Brain, CheckCircle, AlertTriangle, FileSpreadsheet, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { importMembers, type MemberImportData } from "@/lib/memberService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ParsedRow {
   [key: string]: string;
 }
 
 interface ColumnMapping {
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  email?: string;
-  tags?: string;
-  notes?: string;
+  [columnName: string]: keyof MemberImportData | "";
+}
+
+interface AIAnalysis {
+  mappings: Record<string, {
+    field: string;
+    confidence: number;
+    reasoning: string;
+  }>;
+  suggestions: {
+    field: string;
+    column: string;
+    confidence: number;
+    reasoning: string;
+  }[];
 }
 
 interface MemberImportProps {
@@ -35,57 +45,126 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({});
   const [isLoading, setIsLoading] = useState(false);
   const [previewData, setPreviewData] = useState<MemberImportData[]>([]);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
     setFile(selectedFile);
+    setAnalysisError(null);
 
     Papa.parse(selectedFile, {
-      complete: (results) => {
+      complete: async (results) => {
         const data = results.data as ParsedRow[];
         const filteredData = data.filter(row => 
           Object.values(row).some(value => value && value.trim() !== '')
         );
-        setParsedData(filteredData);
         
-        // Auto-detect columns
-        if (filteredData.length > 0) {
-          const headers = Object.keys(filteredData[0]);
-          const autoMapping: ColumnMapping = {};
-          
-          headers.forEach(header => {
-            const lowerHeader = header.toLowerCase();
-            if (lowerHeader.includes('vorname') || lowerHeader.includes('first')) {
-              autoMapping.first_name = header;
-            } else if (lowerHeader.includes('nachname') || lowerHeader.includes('last') || lowerHeader.includes('name')) {
-              autoMapping.last_name = header;
-            } else if (lowerHeader.includes('telefon') || lowerHeader.includes('phone')) {
-              autoMapping.phone = header;
-            } else if (lowerHeader.includes('email') || lowerHeader.includes('mail')) {
-              autoMapping.email = header;
-            } else if (lowerHeader.includes('tag') || lowerHeader.includes('skill') || lowerHeader.includes('rolle')) {
-              autoMapping.tags = header;
-            } else if (lowerHeader.includes('notiz') || lowerHeader.includes('note')) {
-              autoMapping.notes = header;
-            }
+        if (filteredData.length === 0) {
+          toast({
+            title: "Fehler",
+            description: "Die Datei enthält keine gültigen Daten.",
+            variant: "destructive",
           });
-          
-          setColumnMapping(autoMapping);
+          return;
         }
+
+        setParsedData(filteredData);
+        const headers = Object.keys(filteredData[0]);
+        
+        // Start AI analysis
+        await analyzeWithAI(headers, filteredData.slice(0, 10));
       },
       header: true,
       skipEmptyLines: true,
     });
   };
 
+  const analyzeWithAI = async (headers: string[], sampleRows: ParsedRow[]) => {
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    
+    try {
+      console.log('Starting AI analysis...');
+      const { data, error } = await supabase.functions.invoke('analyze-member-import', {
+        body: {
+          headers,
+          sampleRows: sampleRows.map(row => Object.values(row))
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      console.log('AI analysis result:', data);
+      setAiAnalysis(data);
+      
+      // Apply AI suggestions to column mapping
+      const aiMapping: ColumnMapping = {};
+      Object.entries(data.mappings || {}).forEach(([column, mapping]: [string, any]) => {
+        if (mapping.confidence > 0.7) {
+          aiMapping[column] = mapping.field as keyof MemberImportData;
+        }
+      });
+      
+      setColumnMapping(aiMapping);
+      
+      toast({
+        title: "KI-Analyse abgeschlossen",
+        description: `${Object.keys(aiMapping).length} Spalten automatisch erkannt`,
+      });
+      
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      setAnalysisError(error instanceof Error ? error.message : 'Unbekannter Fehler');
+      
+      // Fallback to basic auto-detection
+      const basicMapping: ColumnMapping = {};
+      headers.forEach(header => {
+        const lowerHeader = header.toLowerCase().trim();
+        if (lowerHeader.includes('email') || lowerHeader.includes('mail')) {
+          basicMapping[header] = 'email';
+        } else if (lowerHeader.includes('phone') || lowerHeader.includes('telefon') || lowerHeader.includes('tel')) {
+          basicMapping[header] = 'phone';
+        } else if (lowerHeader.includes('vorname') || lowerHeader.includes('firstname')) {
+          basicMapping[header] = 'first_name';
+        } else if (lowerHeader.includes('nachname') || lowerHeader.includes('lastname')) {
+          basicMapping[header] = 'last_name';
+        } else if (lowerHeader.includes('tag') || lowerHeader.includes('skill')) {
+          basicMapping[header] = 'tags';
+        } else if (lowerHeader.includes('notiz') || lowerHeader.includes('note')) {
+          basicMapping[header] = 'notes';
+        }
+      });
+      setColumnMapping(basicMapping);
+      
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const generatePreview = () => {
-    if (!parsedData.length || !columnMapping.first_name || !columnMapping.last_name) {
+    if (!parsedData.length) {
       toast({
         title: "Fehler",
-        description: "Bitte wählen Sie mindestens Vorname und Nachname aus.",
+        description: "Keine Daten zum Anzeigen verfügbar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const firstNameCol = Object.keys(columnMapping).find(key => columnMapping[key] === 'first_name');
+    const lastNameCol = Object.keys(columnMapping).find(key => columnMapping[key] === 'last_name');
+
+    if (!firstNameCol && !lastNameCol) {
+      toast({
+        title: "Fehler",
+        description: "Bitte ordnen Sie mindestens Vor- oder Nachname zu.",
         variant: "destructive",
       });
       return;
@@ -93,15 +172,30 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 
     const preview = parsedData.slice(0, 10).map(row => {
       const member: MemberImportData = {
-        first_name: row[columnMapping.first_name!] || '',
-        last_name: row[columnMapping.last_name!] || '',
-        phone: columnMapping.phone ? row[columnMapping.phone] : undefined,
-        email: columnMapping.email ? row[columnMapping.email] : undefined,
-        tags: columnMapping.tags 
-          ? row[columnMapping.tags].split(',').map(tag => tag.trim()).filter(Boolean)
-          : [],
-        notes: columnMapping.notes ? row[columnMapping.notes] : undefined,
+        first_name: firstNameCol ? (row[firstNameCol] || '') : '',
+        last_name: lastNameCol ? (row[lastNameCol] || '') : '',
+        phone: undefined,
+        email: undefined,
+        tags: [],
+        notes: undefined,
       };
+
+      // Map other fields
+      Object.entries(columnMapping).forEach(([column, field]) => {
+        if (field === 'phone') {
+          member.phone = row[column] || undefined;
+        } else if (field === 'email') {
+          member.email = row[column] || undefined;
+        } else if (field === 'tags') {
+          const tagValue = row[column];
+          if (tagValue) {
+            member.tags = tagValue.split(',').map(tag => tag.trim()).filter(Boolean);
+          }
+        } else if (field === 'notes') {
+          member.notes = row[column] || undefined;
+        }
+      });
+
       return member;
     });
 
@@ -109,7 +203,19 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
   };
 
   const handleImport = async () => {
-    if (!parsedData.length || !columnMapping.first_name || !columnMapping.last_name) {
+    if (!parsedData.length) {
+      return;
+    }
+
+    const firstNameCol = Object.keys(columnMapping).find(key => columnMapping[key] === 'first_name');
+    const lastNameCol = Object.keys(columnMapping).find(key => columnMapping[key] === 'last_name');
+
+    if (!firstNameCol && !lastNameCol) {
+      toast({
+        title: "Fehler",
+        description: "Bitte ordnen Sie mindestens Vor- oder Nachname zu.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -117,15 +223,30 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
     try {
       const membersToImport = parsedData.map(row => {
         const member: MemberImportData = {
-          first_name: row[columnMapping.first_name!] || '',
-          last_name: row[columnMapping.last_name!] || '',
-          phone: columnMapping.phone ? row[columnMapping.phone] : undefined,
-          email: columnMapping.email ? row[columnMapping.email] : undefined,
-          tags: columnMapping.tags 
-            ? row[columnMapping.tags].split(',').map(tag => tag.trim()).filter(Boolean)
-            : [],
-          notes: columnMapping.notes ? row[columnMapping.notes] : undefined,
+          first_name: firstNameCol ? (row[firstNameCol] || '') : '',
+          last_name: lastNameCol ? (row[lastNameCol] || '') : '',
+          phone: undefined,
+          email: undefined,
+          tags: [],
+          notes: undefined,
         };
+
+        // Map other fields
+        Object.entries(columnMapping).forEach(([column, field]) => {
+          if (field === 'phone') {
+            member.phone = row[column] || undefined;
+          } else if (field === 'email') {
+            member.email = row[column] || undefined;
+          } else if (field === 'tags') {
+            const tagValue = row[column];
+            if (tagValue) {
+              member.tags = tagValue.split(',').map(tag => tag.trim()).filter(Boolean);
+            }
+          } else if (field === 'notes') {
+            member.notes = row[column] || undefined;
+          }
+        });
+
         return member;
       });
 
@@ -157,7 +278,7 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            CSV/Excel Import
+            KI-gestützter CSV/Excel Import
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -173,6 +294,29 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
               />
               <Upload className="h-4 w-4 text-muted-foreground" />
             </div>
+            
+            {isAnalyzing && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <Brain className="h-4 w-4" />
+                KI analysiert die Daten...
+              </div>
+            )}
+            
+            {analysisError && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                KI-Analyse fehlgeschlagen, verwende Basis-Erkennung
+              </div>
+            )}
+            
+            {aiAnalysis && !isAnalyzing && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                <CheckCircle className="h-4 w-4" />
+                <Brain className="h-4 w-4" />
+                KI-Analyse erfolgreich - {Object.keys(aiAnalysis.mappings).length} Spalten erkannt
+              </div>
+            )}
           </div>
 
           {file && (
@@ -186,115 +330,44 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
       {parsedData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Spalten zuordnen</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              Intelligente Spalten-Zuordnung
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Vorname *</Label>
-                <Select
-                  value={columnMapping.first_name || ''}
-                  onValueChange={(value) => setColumnMapping(prev => ({ ...prev, first_name: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Spalte auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableColumns.map(col => (
-                      <SelectItem key={col} value={col}>{col}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Nachname *</Label>
-                <Select
-                  value={columnMapping.last_name || ''}
-                  onValueChange={(value) => setColumnMapping(prev => ({ ...prev, last_name: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Spalte auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableColumns.map(col => (
-                      <SelectItem key={col} value={col}>{col}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Telefon</Label>
-                <Select
-                  value={columnMapping.phone || ''}
-                  onValueChange={(value) => setColumnMapping(prev => ({ ...prev, phone: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Spalte auswählen (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Keine Zuordnung</SelectItem>
-                    {availableColumns.map(col => (
-                      <SelectItem key={col} value={col}>{col}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>E-Mail</Label>
-                <Select
-                  value={columnMapping.email || ''}
-                  onValueChange={(value) => setColumnMapping(prev => ({ ...prev, email: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Spalte auswählen (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Keine Zuordnung</SelectItem>
-                    {availableColumns.map(col => (
-                      <SelectItem key={col} value={col}>{col}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Tags/Rollen (kommagetrennt)</Label>
-                <Select
-                  value={columnMapping.tags || ''}
-                  onValueChange={(value) => setColumnMapping(prev => ({ ...prev, tags: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Spalte auswählen (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Keine Zuordnung</SelectItem>
-                    {availableColumns.map(col => (
-                      <SelectItem key={col} value={col}>{col}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Notizen</Label>
-                <Select
-                  value={columnMapping.notes || ''}
-                  onValueChange={(value) => setColumnMapping(prev => ({ ...prev, notes: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Spalte auswählen (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Keine Zuordnung</SelectItem>
-                    {availableColumns.map(col => (
-                      <SelectItem key={col} value={col}>{col}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-4">
+              {availableColumns.map(column => (
+                <div key={column} className="space-y-2">
+                  <Label className="font-medium">{column}</Label>
+                  <Select
+                    value={columnMapping[column] || ''}
+                    onValueChange={(value) => setColumnMapping(prev => ({ ...prev, [column]: value as keyof MemberImportData | '' }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Feld auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nicht zuordnen</SelectItem>
+                      <SelectItem value="first_name">Vorname</SelectItem>
+                      <SelectItem value="last_name">Nachname</SelectItem>
+                      <SelectItem value="phone">Telefon</SelectItem>
+                      <SelectItem value="email">E-Mail</SelectItem>
+                      <SelectItem value="tags">Tags</SelectItem>
+                      <SelectItem value="notes">Notizen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {aiAnalysis?.mappings[column] && (
+                    <div className="mt-1 flex items-center gap-1 text-xs">
+                      <Brain className="h-3 w-3 text-blue-500" />
+                      <span className="text-muted-foreground">
+                        KI-Vorschlag: {aiAnalysis.mappings[column].field} 
+                        ({Math.round(aiAnalysis.mappings[column].confidence * 100)}% Sicherheit)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
             <div className="flex gap-2">
@@ -303,9 +376,16 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
               </Button>
               <Button 
                 onClick={handleImport} 
-                disabled={!columnMapping.first_name || !columnMapping.last_name || isLoading}
+                disabled={Object.keys(columnMapping).filter(k => columnMapping[k]).length === 0 || isLoading}
               >
-                {isLoading ? "Importiere..." : `${parsedData.length} Personen importieren`}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Importiere...
+                  </>
+                ) : (
+                  `${parsedData.length} Personen importieren`
+                )}
               </Button>
             </div>
           </CardContent>
