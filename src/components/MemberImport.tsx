@@ -17,7 +17,7 @@ interface ParsedRow {
 }
 
 interface ColumnMapping {
-  [columnName: string]: keyof MemberImportData | "";
+  [columnName: string]: keyof MemberImportData | "none";
 }
 
 interface AIAnalysis {
@@ -182,17 +182,19 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 
       // Map other fields
       Object.entries(columnMapping).forEach(([column, field]) => {
-        if (field === 'phone') {
-          member.phone = row[column] || undefined;
-        } else if (field === 'email') {
-          member.email = row[column] || undefined;
-        } else if (field === 'tags') {
-          const tagValue = row[column];
-          if (tagValue) {
-            member.tags = tagValue.split(',').map(tag => tag.trim()).filter(Boolean);
+        if (field && field !== 'none') {
+          if (field === 'phone') {
+            member.phone = row[column] || undefined;
+          } else if (field === 'email') {
+            member.email = row[column] || undefined;
+          } else if (field === 'tags') {
+            const tagValue = row[column];
+            if (tagValue) {
+              member.tags = tagValue.split(',').map(tag => tag.trim()).filter(Boolean);
+            }
+          } else if (field === 'notes') {
+            member.notes = row[column] || undefined;
           }
-        } else if (field === 'notes') {
-          member.notes = row[column] || undefined;
         }
       });
 
@@ -233,17 +235,19 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 
         // Map other fields
         Object.entries(columnMapping).forEach(([column, field]) => {
-          if (field === 'phone') {
-            member.phone = row[column] || undefined;
-          } else if (field === 'email') {
-            member.email = row[column] || undefined;
-          } else if (field === 'tags') {
-            const tagValue = row[column];
-            if (tagValue) {
-              member.tags = tagValue.split(',').map(tag => tag.trim()).filter(Boolean);
+          if (field && field !== 'none') {
+            if (field === 'phone') {
+              member.phone = row[column] || undefined;
+            } else if (field === 'email') {
+              member.email = row[column] || undefined;
+            } else if (field === 'tags') {
+              const tagValue = row[column];
+              if (tagValue) {
+                member.tags = tagValue.split(',').map(tag => tag.trim()).filter(Boolean);
+              }
+            } else if (field === 'notes') {
+              member.notes = row[column] || undefined;
             }
-          } else if (field === 'notes') {
-            member.notes = row[column] || undefined;
           }
         });
 
@@ -341,14 +345,14 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
                 <div key={column} className="space-y-2">
                   <Label className="font-medium">{column}</Label>
                   <Select
-                    value={columnMapping[column] || ''}
-                    onValueChange={(value) => setColumnMapping(prev => ({ ...prev, [column]: value as keyof MemberImportData | '' }))}
+                    value={columnMapping[column] || 'none'}
+                    onValueChange={(value) => setColumnMapping(prev => ({ ...prev, [column]: value as keyof MemberImportData | 'none' }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Feld auswählen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nicht zuordnen</SelectItem>
+                      <SelectItem value="none">Nicht zuordnen</SelectItem>
                       <SelectItem value="first_name">Vorname</SelectItem>
                       <SelectItem value="last_name">Nachname</SelectItem>
                       <SelectItem value="phone">Telefon</SelectItem>
@@ -376,7 +380,7 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
               </Button>
               <Button 
                 onClick={handleImport} 
-                disabled={Object.keys(columnMapping).filter(k => columnMapping[k]).length === 0 || isLoading}
+                disabled={Object.keys(columnMapping).filter(k => columnMapping[k] && columnMapping[k] !== 'none').length === 0 || isLoading}
               >
                 {isLoading ? (
                   <>
