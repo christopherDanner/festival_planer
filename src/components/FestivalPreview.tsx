@@ -4,7 +4,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateFestivalPlan, FestivalData } from "@/lib/festivalPlanGenerator";
 import { createFestival } from "@/lib/festivalService";
 import { getMembers } from "@/lib/memberService";
-import { Calendar, Users, Check, X, Edit, Lightbulb } from "lucide-react";
+import { Users, Check, X, Edit, Lightbulb, Plus, Trash2 } from "lucide-react";
 
 interface FestivalPreviewProps {
   festivalData: FestivalData;
@@ -22,6 +23,8 @@ interface FestivalPreviewProps {
 
 export default function FestivalPreview({ festivalData, onBack }: FestivalPreviewProps) {
   const [generatedPlan, setGeneratedPlan] = useState<any>(null);
+  const [editableStations, setEditableStations] = useState<any[]>([]);
+  const [editableShifts, setEditableShifts] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [useAISuggestions, setUseAISuggestions] = useState(true);
   const [generateShiftPlan, setGenerateShiftPlan] = useState(false);
@@ -50,6 +53,10 @@ export default function FestivalPreview({ festivalData, onBack }: FestivalPrevie
       const plan = generateFestivalPlan(festivalData, membersData);
       setGeneratedPlan(plan);
       
+      // Set editable copies of stations and shifts
+      setEditableStations(plan.shiftStations || []);
+      setEditableShifts(plan.shifts || []);
+      
       // Auto-enable shift plan generation if members exist
       if (membersData.length > 0) {
         setGenerateShiftPlan(true);
@@ -70,7 +77,14 @@ export default function FestivalPreview({ festivalData, onBack }: FestivalPrevie
     
     setCreating(true);
     try {
-      const festivalId = await createFestival(festivalData, user.id);
+      // Create festival with edited data
+      const updatedData = {
+        ...festivalData,
+        customStations: useAISuggestions ? editableStations : undefined,
+        customShifts: useAISuggestions ? editableShifts : undefined
+      };
+      
+      const festivalId = await createFestival(updatedData, user.id);
       
       toast({
         title: "Fest erfolgreich erstellt!",
@@ -87,6 +101,47 @@ export default function FestivalPreview({ festivalData, onBack }: FestivalPrevie
     } finally {
       setCreating(false);
     }
+  };
+
+  const addStation = () => {
+    const newStation = {
+      name: "Neue Station",
+      description: "",
+      required_people: 1
+    };
+    setEditableStations([...editableStations, newStation]);
+  };
+
+  const updateStation = (index: number, field: string, value: any) => {
+    const updated = [...editableStations];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditableStations(updated);
+  };
+
+  const removeStation = (index: number) => {
+    const updated = editableStations.filter((_, i) => i !== index);
+    setEditableStations(updated);
+  };
+
+  const addShift = () => {
+    const newShift = {
+      name: "Neue Schicht",
+      start_time: "09:00",
+      end_time: "12:00",
+      date: festivalData.startDate
+    };
+    setEditableShifts([...editableShifts, newShift]);
+  };
+
+  const updateShift = (index: number, field: string, value: any) => {
+    const updated = [...editableShifts];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditableShifts(updated);
+  };
+
+  const removeShift = (index: number) => {
+    const updated = editableShifts.filter((_, i) => i !== index);
+    setEditableShifts(updated);
   };
 
   const handleCreateEmpty = async () => {
@@ -221,110 +276,156 @@ export default function FestivalPreview({ festivalData, onBack }: FestivalPrevie
         </Card>
 
         {/* Preview Tabs */}
-        {useAISuggestions && generatedPlan && (
-          <Tabs defaultValue="checkliste" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="checkliste">Aufgaben ({generatedPlan.checklist?.length || 0})</TabsTrigger>
-              <TabsTrigger value="stationen">Stationen ({generatedPlan.shiftStations?.length || 0})</TabsTrigger>
-              <TabsTrigger value="ressourcen">Ressourcen ({generatedPlan.resources?.length || 0})</TabsTrigger>
+        {useAISuggestions && (
+          <Tabs defaultValue="stationen" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="stationen">Stationen ({editableStations.length})</TabsTrigger>
+              <TabsTrigger value="schichten">Schichten ({editableShifts.length})</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="checkliste">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Generierte Aufgaben-Checkliste</CardTitle>
-                  <CardDescription>
-                    Diese Aufgaben werden für Ihr Fest vorgeschlagen
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {generatedPlan.checklist?.map((item: any, index: number) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 border rounded-lg bg-card">
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{item.task}</span>
-                            <Badge variant={getPriorityColor(item.priority)}>
-                              {item.priority === 'red' ? 'Wichtig' : 
-                               item.priority === 'yellow' ? 'Mittel' : 'Niedrig'}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center text-xs text-muted-foreground space-x-4">
-                            <span>Fällig: {new Date(item.dueDate).toLocaleDateString('de-AT')}</span>
-                            <span>Kategorie: {item.category}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
             <TabsContent value="stationen">
               <Card>
                 <CardHeader>
-                  <CardTitle>Generierte Stationen</CardTitle>
-                  <CardDescription>
-                    Diese Stationen werden für Ihr Fest angelegt
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Stationen bearbeiten</CardTitle>
+                      <CardDescription>
+                        Bearbeiten Sie die vorgeschlagenen Stationen oder fügen Sie neue hinzu
+                      </CardDescription>
+                    </div>
+                    <Button onClick={addStation} size="sm" className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Neue Station
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {generatedPlan.shiftStations?.map((station: any, index: number) => (
-                      <Card key={index}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium">{station.name}</h4>
-                            <Badge variant="outline">
-                              <Users className="h-3 w-3 mr-1" />
-                              {station.required_people} Personen
-                            </Badge>
+                  <div className="space-y-4">
+                    {editableStations.map((station, index) => (
+                      <Card key={index} className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Input
+                              value={station.name}
+                              onChange={(e) => updateStation(index, 'name', e.target.value)}
+                              placeholder="Stationsname"
+                              className="font-medium"
+                            />
+                            <Button
+                              onClick={() => removeStation(index)}
+                              size="sm"
+                              variant="destructive"
+                              className="ml-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          {station.description && (
-                            <p className="text-sm text-muted-foreground">{station.description}</p>
-                          )}
-                        </CardContent>
+                          <Textarea
+                            value={station.description || ''}
+                            onChange={(e) => updateStation(index, 'description', e.target.value)}
+                            placeholder="Beschreibung (optional)"
+                            className="text-sm"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor={`people-${index}`} className="text-sm">
+                              Benötigte Personen:
+                            </Label>
+                            <Input
+                              id={`people-${index}`}
+                              type="number"
+                              min="1"
+                              value={station.required_people}
+                              onChange={(e) => updateStation(index, 'required_people', parseInt(e.target.value) || 1)}
+                              className="w-20"
+                            />
+                          </div>
+                        </div>
                       </Card>
                     ))}
+                    {editableStations.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8">
+                        Noch keine Stationen vorhanden. Fügen Sie eine neue Station hinzu.
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="ressourcen">
+            <TabsContent value="schichten">
               <Card>
                 <CardHeader>
-                  <CardTitle>Generierte Ressourcen</CardTitle>
-                  <CardDescription>
-                    Diese Materialien werden als Bedarf erfasst
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Schichten bearbeiten</CardTitle>
+                      <CardDescription>
+                        Bearbeiten Sie die vorgeschlagenen Schichten oder fügen Sie neue hinzu
+                      </CardDescription>
+                    </div>
+                    <Button onClick={addShift} size="sm" className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Neue Schicht
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {generatedPlan.resources?.map((resource: any, index: number) => (
-                      <Card key={index}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-medium">{resource.item}</h4>
-                            <Badge variant={getPriorityColor(resource.priority)}>
-                              {resource.priority === 'red' ? 'Wichtig' : 
-                               resource.priority === 'yellow' ? 'Mittel' : 'Niedrig'}
-                            </Badge>
+                  <div className="space-y-4">
+                    {editableShifts.map((shift, index) => (
+                      <Card key={index} className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Input
+                              value={shift.name}
+                              onChange={(e) => updateShift(index, 'name', e.target.value)}
+                              placeholder="Schichtname"
+                              className="font-medium"
+                            />
+                            <Button
+                              onClick={() => removeShift(index)}
+                              size="sm"
+                              variant="destructive"
+                              className="ml-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <p className="font-medium">Menge:</p>
-                              <p className="text-muted-foreground">{resource.menge} {resource.einheit}</p>
+                              <Label htmlFor={`date-${index}`} className="text-sm">Datum</Label>
+                              <Input
+                                id={`date-${index}`}
+                                type="date"
+                                value={shift.date || festivalData.startDate}
+                                onChange={(e) => updateShift(index, 'date', e.target.value)}
+                              />
                             </div>
                             <div>
-                              <p className="font-medium">Geschätzte Kosten:</p>
-                              <p className="text-muted-foreground">{resource.kosten}</p>
+                              <Label htmlFor={`start-${index}`} className="text-sm">Von</Label>
+                              <Input
+                                id={`start-${index}`}
+                                type="time"
+                                value={shift.start_time}
+                                onChange={(e) => updateShift(index, 'start_time', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`end-${index}`} className="text-sm">Bis</Label>
+                              <Input
+                                id={`end-${index}`}
+                                type="time"
+                                value={shift.end_time}
+                                onChange={(e) => updateShift(index, 'end_time', e.target.value)}
+                              />
                             </div>
                           </div>
-                        </CardContent>
+                        </div>
                       </Card>
                     ))}
+                    {editableShifts.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8">
+                        Noch keine Schichten vorhanden. Fügen Sie eine neue Schicht hinzu.
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

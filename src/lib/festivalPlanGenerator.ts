@@ -35,6 +35,8 @@ export interface FestivalData {
   endDate?: string;
   type?: string;
   visitorCount: string;
+  customStations?: any[];
+  customShifts?: any[];
 }
 
 export function generateFestivalPlan(festivalData: FestivalData, members: any[] = []) {
