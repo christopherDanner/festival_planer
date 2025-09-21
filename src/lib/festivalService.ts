@@ -278,6 +278,79 @@ export async function updateResource(resourceId: string, updates: Partial<Resour
   }
 }
 
+export async function deleteFestival(festivalId: string): Promise<void> {
+  // Delete all related data in correct order (children first, then parent)
+  // 1. Delete shift assignments
+  const { error: assignmentError } = await supabase
+    .from('shift_assignments')
+    .delete()
+    .eq('festival_id', festivalId);
+
+  if (assignmentError) {
+    throw new Error('Fehler beim Löschen der Schichtzuordnungen');
+  }
+
+  // 2. Delete shifts
+  const { error: shiftError } = await supabase
+    .from('shifts')
+    .delete()
+    .eq('festival_id', festivalId);
+
+  if (shiftError) {
+    throw new Error('Fehler beim Löschen der Schichten');
+  }
+
+  // 3. Delete stations
+  const { error: stationError } = await supabase
+    .from('stations')
+    .delete()
+    .eq('festival_id', festivalId);
+
+  if (stationError) {
+    throw new Error('Fehler beim Löschen der Stationen');
+  }
+
+  // 4. Delete checklist items
+  const { error: checklistError } = await supabase
+    .from('checklist_items')
+    .delete()
+    .eq('festival_id', festivalId);
+
+  if (checklistError) {
+    throw new Error('Fehler beim Löschen der Checkliste');
+  }
+
+  // 5. Delete resources
+  const { error: resourceError } = await supabase
+    .from('resources')
+    .delete()
+    .eq('festival_id', festivalId);
+
+  if (resourceError) {
+    throw new Error('Fehler beim Löschen der Ressourcen');
+  }
+
+  // 6. Delete station assignments (old system)
+  const { error: stationAssignmentError } = await supabase
+    .from('station_assignments')
+    .delete()
+    .eq('festival_id', festivalId);
+
+  if (stationAssignmentError) {
+    throw new Error('Fehler beim Löschen der Stationszuordnungen');
+  }
+
+  // 7. Finally delete the festival
+  const { error: festivalError } = await supabase
+    .from('festivals')
+    .delete()
+    .eq('id', festivalId);
+
+  if (festivalError) {
+    throw new Error('Fehler beim Löschen des Festes');
+  }
+}
+
 function getFestivalTypeName(type: string): string {
   const names: { [key: string]: string } = {
     feuerwehr: 'Feuerwehrfest',

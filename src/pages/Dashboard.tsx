@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import FestivalWizard from "@/components/FestivalWizard";
 import Navigation from "@/components/Navigation";
-import { Festival, getUserFestivals } from "@/lib/festivalService";
+import { Festival, getUserFestivals, deleteFestival } from "@/lib/festivalService";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 export default function Dashboard() {
   const [showWizard, setShowWizard] = useState(false);
@@ -48,6 +50,24 @@ export default function Dashboard() {
   const handleFestivalCreated = () => {
     setShowWizard(false);
     loadFestivals(); // Reload festivals
+  };
+
+  const handleDeleteFestival = async (festivalId: string, festivalName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    try {
+      await deleteFestival(festivalId);
+      toast({
+        title: "Fest gelöscht",
+        description: `${festivalName} wurde erfolgreich gelöscht.`,
+      });
+      loadFestivals(); // Reload festivals
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (showWizard) {
@@ -104,15 +124,48 @@ export default function Dashboard() {
             festivals.map((festival) => (
               <Card 
                 key={festival.id} 
-                className="hover:shadow-md transition-shadow cursor-pointer"
+                className="hover:shadow-md transition-shadow cursor-pointer relative group"
                 onClick={() => navigate(`/festival-results?id=${festival.id}`)}
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{festival.name}</CardTitle>
-                    <Badge variant="outline">
-                      {getFestivalTypeDisplay(festival.type)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {getFestivalTypeDisplay(festival.type)}
+                      </Badge>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Fest löschen</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Sind Sie sicher, dass Sie "{festival.name}" löschen möchten? 
+                              Diese Aktion kann nicht rückgängig gemacht werden und löscht alle zugehörigen Daten 
+                              (Checkliste, Schichtpläne, Ressourcen).
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={(e) => handleDeleteFestival(festival.id, festival.name || 'Fest', e)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Löschen
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                   <CardDescription>
                     {new Date(festival.start_date).toLocaleDateString('de-AT')}
