@@ -139,7 +139,7 @@ export default function Dashboard() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Trash2 className="h-4 w-4" />
