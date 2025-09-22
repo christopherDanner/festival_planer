@@ -52,7 +52,6 @@ Verfügbare Zielfelder:
 - phone (Telefon)
 - email (E-Mail)
 - tags (Tags/Stationspräferenzen/Kategorien)
-- notes (Notizen/Bemerkungen)
 
 Spaltenheader: ${JSON.stringify(headers)}
 

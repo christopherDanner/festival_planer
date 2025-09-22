@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+// PDF processing will be handled by Supabase Edge Function
+import { createWorker } from 'tesseract.js';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +20,6 @@ import {
 import { Loader2, Brain, CheckCircle, AlertTriangle, FileSpreadsheet, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { importMembers, type MemberImportData } from '@/lib/memberService';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ParsedRow {
 	[key: string]: string;
@@ -58,6 +60,7 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 	const [analysisError, setAnalysisError] = useState<string | null>(null);
 	const [autoMapping, setAutoMapping] = useState<ColumnMapping>({});
+	const [isProcessing, setIsProcessing] = useState(false);
 	const { toast } = useToast();
 
 	const generatePreviewFromMapping = (
@@ -131,6 +134,184 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 		}
 	}, [autoMapping, parsedData, isAnalyzing]);
 
+	const processPDF = async (file: File): Promise<string> => {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = async (e) => {
+				try {
+					// Convert file to base64 for Supabase Edge Function
+					const base64Data = e.target?.result as string;
+					const base64Content = base64Data.split(',')[1]; // Remove data:application/pdf;base64, prefix
+
+					// Call Supabase Edge Function for PDF processing
+					const { data, error } = await supabase.functions.invoke('process-pdf', {
+						body: {
+							fileData: base64Content,
+							fileName: file.name
+						}
+					});
+
+					if (error) {
+						throw new Error(`PDF-Verarbeitung fehlgeschlagen: ${error.message}`);
+					}
+
+					if (!data.success) {
+						throw new Error(data.error || 'Unbekannter Fehler bei der PDF-Verarbeitung');
+					}
+
+					resolve(data.text);
+				} catch (error) {
+					console.error('PDF processing error:', error);
+					reject(error);
+				}
+			};
+			reader.onerror = reject;
+			reader.readAsDataURL(file); // Use readAsDataURL to get base64
+		});
+	};
+
+	const processImage = async (file: File): Promise<string> => {
+		const worker = await createWorker('deu+eng');
+		try {
+			const {
+				data: { text }
+			} = await worker.recognize(file);
+			return text;
+		} finally {
+			await worker.terminate();
+		}
+	};
+
+	const parseTextToCSV = (text: string): ParsedRow[] => {
+		// Try to detect table structure in text
+		const lines = text.split('\n').filter((line) => line.trim());
+
+		// Look for CSV-like format (comma-separated)
+		const csvLines = lines.filter((line) => line.includes(','));
+		if (csvLines.length > 0) {
+			// Parse CSV format: "LastName FirstName,Telefon,Email"
+			const parsedRows: ParsedRow[] = csvLines
+				.map((line, index) => {
+					const parts = line.split(',').map((part) => part.trim());
+					if (parts.length < 1) return null;
+
+					// Skip header row (first line)
+					if (index === 0) {
+						// Check if this looks like a header row
+						const isHeader = parts.some(
+							(part) =>
+								part.toLowerCase().includes('nachname') ||
+								part.toLowerCase().includes('vorname') ||
+								part.toLowerCase().includes('telefon') ||
+								part.toLowerCase().includes('email')
+						);
+						if (isHeader) return null;
+					}
+
+					// Handle the specific CSV format: Nachname,,Vorname,Telefon
+					const lastName = parts[0] || '';
+					const firstName = parts[2] || ''; // Vorname ist in der 3. Spalte
+					const phonePart = parts[3] || ''; // Telefon ist in der 4. Spalte
+					const emailPart = parts[4] || ''; // Email wäre in der 5. Spalte (falls vorhanden)
+
+					return {
+						Nachname: lastName,
+						Vorname: firstName,
+						Telefon: phonePart,
+						Email: emailPart
+					};
+				})
+				.filter((row) => row !== null);
+
+			if (parsedRows.length > 0) {
+				return parsedRows;
+			}
+		}
+
+		// Look for patterns that might indicate a table
+		const tableLines = lines.filter((line) => {
+			// Check if line contains multiple words separated by spaces or tabs
+			const parts = line.split(/\s+/).filter((part) => part.trim());
+			return parts.length >= 2;
+		});
+
+		if (tableLines.length < 2) {
+			throw new Error('Keine Tabellenstruktur in der Datei erkannt');
+		}
+
+		// Try to detect headers (first line with multiple words)
+		const headers = tableLines[0].split(/\s+/).filter((part) => part.trim());
+		const dataRows = tableLines.slice(1);
+
+		// Convert to ParsedRow format
+		const parsedRows: ParsedRow[] = dataRows.map((line) => {
+			const values = line.split(/\s+/).filter((part) => part.trim());
+			const row: ParsedRow = {};
+
+			headers.forEach((header, index) => {
+				row[header] = values[index] || '';
+			});
+
+			return row;
+		});
+
+		return parsedRows.filter((row) =>
+			Object.values(row).some((value) => value && value.trim() !== '')
+		);
+	};
+
+	const parsePDFTextToMembers = (text: string): ParsedRow[] => {
+		// Direct PDF text parsing - no CSV conversion needed
+		const lines = text.split('\n').filter((line) => line.trim());
+
+		// Look for name patterns in the text
+		const members: ParsedRow[] = [];
+
+		for (const line of lines) {
+			// Skip empty lines and header-like content
+			if (
+				!line.trim() ||
+				line.toLowerCase().includes('geburtstagsliste') ||
+				line.toLowerCase().includes('mitgliederliste') ||
+				line.toLowerCase().includes('nachname') ||
+				line.toLowerCase().includes('vorname')
+			) {
+				continue;
+			}
+
+			// Try to extract names from the line
+			// Pattern: "LastName FirstName" or "FirstName LastName"
+			const words = line
+				.trim()
+				.split(/\s+/)
+				.filter((word) => word.length > 0);
+
+			if (words.length >= 2) {
+				// Assume first word is last name, rest is first name
+				const lastName = words[0];
+				const firstName = words.slice(1).join(' ');
+
+				// Skip if it looks like a date or number
+				if (lastName.match(/^\d+/) || firstName.match(/^\d+/)) {
+					continue;
+				}
+
+				members.push({
+					Nachname: lastName,
+					Vorname: firstName,
+					Telefon: '',
+					Email: ''
+				});
+			}
+		}
+
+		if (members.length === 0) {
+			throw new Error('Keine Mitgliederdaten in der PDF gefunden');
+		}
+
+		return members;
+	};
+
 	const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		const selectedFile = event.target.files?.[0];
 		if (!selectedFile) return;
@@ -140,7 +321,70 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 
 		const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
 
-		if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+		if (fileExtension === 'pdf') {
+			// Handle PDF files with dedicated PDF parsing
+			setIsProcessing(true);
+			try {
+				const text = await processPDF(selectedFile);
+				const parsedRows = parsePDFTextToMembers(text);
+
+				if (parsedRows.length === 0) {
+					toast({
+						title: 'Fehler',
+						description: 'Keine Mitgliederdaten in der PDF-Datei gefunden.',
+						variant: 'destructive'
+					});
+					return;
+				}
+
+				setParsedData(parsedRows);
+				const headers = Object.keys(parsedRows[0]);
+
+				// Start AI analysis
+				await analyzeWithAI(headers, parsedRows.slice(0, 10));
+			} catch (error) {
+				console.error('PDF processing error:', error);
+				toast({
+					title: 'Fehler',
+					description: `Fehler beim Verarbeiten der PDF-Datei: ${
+						error instanceof Error ? error.message : 'Unbekannter Fehler'
+					}`,
+					variant: 'destructive'
+				});
+			} finally {
+				setIsProcessing(false);
+			}
+		} else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension || '')) {
+			// Handle image files
+			setIsProcessing(true);
+			try {
+				const text = await processImage(selectedFile);
+				const parsedRows = parseTextToCSV(text);
+
+				if (parsedRows.length === 0) {
+					toast({
+						title: 'Fehler',
+						description: 'Keine Tabellendaten im Bild gefunden.',
+						variant: 'destructive'
+					});
+					return;
+				}
+
+				setParsedData(parsedRows);
+				const headers = Object.keys(parsedRows[0]);
+
+				// Start AI analysis
+				await analyzeWithAI(headers, parsedRows.slice(0, 10));
+			} catch (error) {
+				toast({
+					title: 'Fehler',
+					description: 'Fehler beim Verarbeiten des Bildes.',
+					variant: 'destructive'
+				});
+			} finally {
+				setIsProcessing(false);
+			}
+		} else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
 			// Handle Excel files
 			const reader = new FileReader();
 			reader.onload = async (e) => {
@@ -250,7 +494,12 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 			const aiMapping: ColumnMapping = {};
 			Object.entries(data.mappings || {}).forEach(([column, mapping]: [string, any]) => {
 				if (mapping.confidence > 0.7) {
-					aiMapping[column] = mapping.field as keyof MemberImportData;
+					// Normalize field names
+					let normalizedField = mapping.field;
+					if (mapping.field === 'firstName') normalizedField = 'first_name';
+					if (mapping.field === 'lastName') normalizedField = 'last_name';
+
+					aiMapping[column] = normalizedField as keyof MemberImportData;
 				}
 			});
 
@@ -377,22 +626,29 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<FileSpreadsheet className="h-5 w-5" />
-						KI-gestützter CSV/Excel Import
+						KI-gestützter Import (CSV, Excel, PDF, Bilder)
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<div>
-						<Label htmlFor="file-upload">Datei auswählen (CSV oder Excel)</Label>
+						<Label htmlFor="file-upload">Datei auswählen (CSV, Excel, PDF oder Bild)</Label>
 						<div className="flex items-center gap-2 mt-2">
 							<Input
 								id="file-upload"
 								type="file"
-								accept=".csv,.xlsx,.xls"
+								accept=".csv,.xlsx,.xls,.pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp"
 								onChange={handleFileUpload}
 								className="flex-1"
 							/>
 							<Upload className="h-4 w-4 text-muted-foreground" />
 						</div>
+
+						{isProcessing && (
+							<div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Verarbeite Datei...
+							</div>
+						)}
 
 						{isAnalyzing && (
 							<div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
