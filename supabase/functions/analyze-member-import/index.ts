@@ -51,7 +51,7 @@ Verfügbare Zielfelder:
 - lastName (Nachname) 
 - phone (Telefon)
 - email (E-Mail)
-- tags (Tags/Kategorien)
+- tags (Tags/Stationspräferenzen/Kategorien)
 - notes (Notizen/Bemerkungen)
 
 Spaltenheader: ${JSON.stringify(headers)}
@@ -87,7 +87,8 @@ Antworte im folgenden JSON-Format:
   ]
 }
 
-Berücksichtige verschiedene Sprachen (Deutsch, Englisch, Französisch) und gängige Variationen der Feldnamen.
+Berücksichtige verschiedene Sprachen (Deutsch, Englisch, Französisch) und gängige Variationen der Feldnamen. 
+Erkenne auch Stationspräferenzen wie "Küche", "Kassa", "Service", "Bar", "Grill", "Bier", "Wein", etc. als Tags.
 `;
 
 		const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
