@@ -47,8 +47,8 @@ serve(async (req) => {
 Du bist ein Experte für die Analyse von Mitgliederdaten. Analysiere die folgenden CSV-Spalten und Beispieldaten und erkenne automatisch, welche Spalten zu welchen Mitgliederfeldern gehören.
 
 Verfügbare Zielfelder:
-- firstName (Vorname)
-- lastName (Nachname) 
+- first_name (Vorname)
+- last_name (Nachname) 
 - phone (Telefon)
 - email (E-Mail)
 - tags (Tags/Stationspräferenzen/Kategorien)
@@ -79,7 +79,7 @@ Antworte im folgenden JSON-Format:
   },
   "suggestions": [
     {
-      "field": "firstName", 
+      "field": "first_name", 
       "column": "spaltenname",
       "confidence": 0.85,
       "reasoning": "Begründung"

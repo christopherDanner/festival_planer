@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,77 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 	const [analysisError, setAnalysisError] = useState<string | null>(null);
 	const [autoMapping, setAutoMapping] = useState<ColumnMapping>({});
 	const { toast } = useToast();
+
+	const generatePreviewFromMapping = (
+		mapping: ColumnMapping,
+		headers: string[],
+		sampleRows: ParsedRow[]
+	) => {
+		if (!sampleRows.length) {
+			toast({
+				title: 'Fehler',
+				description: 'Keine Daten zum Anzeigen verfügbar.',
+				variant: 'destructive'
+			});
+			return;
+		}
+
+		const firstNameCol = Object.keys(mapping).find((key) => mapping[key] === 'first_name');
+		const lastNameCol = Object.keys(mapping).find((key) => mapping[key] === 'last_name');
+
+		if (!firstNameCol && !lastNameCol) {
+			toast({
+				title: 'Fehler',
+				description: 'Mindestens Vor- oder Nachname muss erkannt werden.',
+				variant: 'destructive'
+			});
+			return;
+		}
+
+		const preview = sampleRows.map((row) => {
+			const member: MemberImportData = {
+				first_name: firstNameCol ? row[firstNameCol] || '' : '',
+				last_name: lastNameCol ? row[lastNameCol] || '' : '',
+				phone: undefined,
+				email: undefined,
+				tags: [],
+				notes: undefined
+			};
+
+			// Map other fields
+			Object.entries(mapping).forEach(([column, field]) => {
+				if (field && field !== 'none') {
+					if (field === 'phone') {
+						member.phone = row[column] || undefined;
+					} else if (field === 'email') {
+						member.email = row[column] || undefined;
+					} else if (field === 'tags') {
+						const tagValue = row[column];
+						if (tagValue) {
+							member.tags = tagValue
+								.split(',')
+								.map((tag) => tag.trim())
+								.filter(Boolean);
+						}
+					} else if (field === 'notes') {
+						member.notes = row[column] || undefined;
+					}
+				}
+			});
+
+			return member;
+		});
+
+		setPreviewData(preview);
+	};
+
+	// Auto-generate preview when autoMapping and parsedData are available
+	useEffect(() => {
+		if (Object.keys(autoMapping).length > 0 && parsedData.length > 0 && !isAnalyzing) {
+			const headers = Object.keys(parsedData[0]);
+			generatePreviewFromMapping(autoMapping, headers, parsedData.slice(0, 10));
+		}
+	}, [autoMapping, parsedData, isAnalyzing]);
 
 	const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		const selectedFile = event.target.files?.[0];
@@ -186,7 +257,7 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 			setAutoMapping(aiMapping);
 
 			// Automatically generate preview after AI analysis
-			generatePreviewFromMapping(aiMapping, headers, sampleRows);
+			// We'll generate preview after setting the state
 
 			toast({
 				title: 'KI-Analyse abgeschlossen',
@@ -221,73 +292,10 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 			setAutoMapping(basicMapping);
 
 			// Generate preview with fallback mapping
-			generatePreviewFromMapping(basicMapping, headers, sampleRows);
+			// We'll generate preview after setting the state
 		} finally {
 			setIsAnalyzing(false);
 		}
-	};
-
-	const generatePreviewFromMapping = (
-		mapping: ColumnMapping,
-		headers: string[],
-		sampleRows: ParsedRow[]
-	) => {
-		if (!sampleRows.length) {
-			toast({
-				title: 'Fehler',
-				description: 'Keine Daten zum Anzeigen verfügbar.',
-				variant: 'destructive'
-			});
-			return;
-		}
-
-		const firstNameCol = Object.keys(mapping).find((key) => mapping[key] === 'first_name');
-		const lastNameCol = Object.keys(mapping).find((key) => mapping[key] === 'last_name');
-
-		if (!firstNameCol && !lastNameCol) {
-			toast({
-				title: 'Fehler',
-				description: 'Mindestens Vor- oder Nachname muss erkannt werden.',
-				variant: 'destructive'
-			});
-			return;
-		}
-
-		const preview = sampleRows.map((row) => {
-			const member: MemberImportData = {
-				first_name: firstNameCol ? row[firstNameCol] || '' : '',
-				last_name: lastNameCol ? row[lastNameCol] || '' : '',
-				phone: undefined,
-				email: undefined,
-				tags: [],
-				notes: undefined
-			};
-
-			// Map other fields
-			Object.entries(mapping).forEach(([column, field]) => {
-				if (field && field !== 'none') {
-					if (field === 'phone') {
-						member.phone = row[column] || undefined;
-					} else if (field === 'email') {
-						member.email = row[column] || undefined;
-					} else if (field === 'tags') {
-						const tagValue = row[column];
-						if (tagValue) {
-							member.tags = tagValue
-								.split(',')
-								.map((tag) => tag.trim())
-								.filter(Boolean);
-						}
-					} else if (field === 'notes') {
-						member.notes = row[column] || undefined;
-					}
-				}
-			});
-
-			return member;
-		});
-
-		setPreviewData(preview);
 	};
 
 	const handleImport = async () => {
