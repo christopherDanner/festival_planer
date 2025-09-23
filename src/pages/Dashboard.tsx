@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Users, Calendar } from 'lucide-react';
 
 export default function Dashboard() {
 	const [showWizard, setShowWizard] = useState(false);
@@ -29,28 +29,29 @@ export default function Dashboard() {
 	const navigate = useNavigate();
 	const { toast } = useToast();
 
+	const loadFestivals = useCallback(async () => {
+		try {
+			const data = await getUserFestivals();
+			setFestivals(data);
+		} catch (error: unknown) {
+			toast({
+				title: 'Fehler',
+				description:
+					error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten',
+				variant: 'destructive'
+			});
+		} finally {
+			setLoading(false);
+		}
+	}, [toast]);
+
 	useEffect(() => {
 		if (!user) {
 			navigate('/auth');
 			return;
 		}
 		loadFestivals();
-	}, [user, navigate]);
-
-	const loadFestivals = async () => {
-		try {
-			const data = await getUserFestivals();
-			setFestivals(data);
-		} catch (error: any) {
-			toast({
-				title: 'Fehler',
-				description: error.message,
-				variant: 'destructive'
-			});
-		} finally {
-			setLoading(false);
-		}
-	};
+	}, [user, navigate, loadFestivals]);
 
 	const handleSignOut = async () => {
 		await signOut();
@@ -75,10 +76,11 @@ export default function Dashboard() {
 				description: `${festivalName} wurde erfolgreich gelöscht.`
 			});
 			loadFestivals(); // Reload festivals
-		} catch (error: any) {
+		} catch (error: unknown) {
 			toast({
 				title: 'Fehler',
-				description: error.message,
+				description:
+					error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten',
 				variant: 'destructive'
 			});
 		}
@@ -95,102 +97,156 @@ export default function Dashboard() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+		<div className="min-h-screen bg-background">
 			<Navigation />
-			<div className="container mx-auto px-4 py-8">
-				<div className="flex justify-between items-center mb-8">
-					<h1 className="text-3xl font-bold">Fest-Planer Dashboard Test</h1>
-					<Button variant="outline" onClick={handleSignOut}>
-						Abmelden
-					</Button>
+			<div className="pt-16">
+				{/* Header Section */}
+				<div className="bg-background border-b">
+					<div className="container mx-auto px-4 py-8">
+						<div className="max-w-4xl">
+							<h1 className="text-3xl font-bold mb-2">Willkommen zurück!</h1>
+							<p className="text-muted-foreground mb-6">
+								Planen und organisieren Sie Ihre Feste mit unserem intelligenten Fest-Planer
+							</p>
+							<div className="flex flex-col sm:flex-row gap-3">
+								<Button
+									onClick={() => setShowWizard(true)}
+									variant="festival"
+									size="lg"
+									className="px-6 py-3">
+									+ Neues Fest erstellen
+								</Button>
+								<Button
+									onClick={() => navigate('/members')}
+									variant="outline"
+									size="lg"
+									className="px-6 py-3">
+									Mitglieder verwalten
+								</Button>
+							</div>
+						</div>
+					</div>
 				</div>
 
-				<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{/* New Festival Card */}
-					<Card className="border-dashed border-2 border-primary/20 hover:border-primary/40 transition-colors">
-						<CardHeader className="text-center">
-							<CardTitle className="text-xl">Neues Fest planen</CardTitle>
-							<CardDescription>
-								Erstellen Sie in wenigen Schritten einen vollständigen Festplan
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Button onClick={() => setShowWizard(true)} className="w-full text-lg py-6" size="lg">
-								+ Neues Fest
-							</Button>
-						</CardContent>
-					</Card>
+				{/* Main Content */}
+				<div className="container mx-auto px-4 py-8">
+					{/* Festivals Section */}
+					<div className="mb-8">
+						<h2 className="text-2xl font-bold text-gray-900 mb-6">Ihre Feste</h2>
 
-					{/* Existing Festivals */}
-					{loading ? (
-						<div className="col-span-2 text-center py-8">
-							<p>Lade Ihre Feste...</p>
-						</div>
-					) : festivals.length === 0 ? (
-						<div className="col-span-2 text-center py-8">
-							<p className="text-muted-foreground">
-								Noch keine Feste erstellt. Klicken Sie auf "Neues Fest" um zu beginnen.
-							</p>
-						</div>
-					) : (
-						festivals.map((festival) => (
-							<Card
-								key={festival.id}
-								className="hover:shadow-md transition-shadow cursor-pointer relative group"
-								onClick={() => navigate(`/festival-results?id=${festival.id}`)}>
-								<CardHeader>
-									<div className="flex justify-between items-start">
-										<CardTitle className="text-lg">{festival.name}</CardTitle>
-										<div className="flex items-center gap-2">
-											<Badge variant="outline">{getFestivalTypeDisplay(festival.type)}</Badge>
-											<AlertDialog>
-												<AlertDialogTrigger asChild>
-													<Button
-														variant="ghost"
-														size="sm"
-														className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
-														onClick={(e) => e.stopPropagation()}>
-														<Trash2 className="h-4 w-4" />
-													</Button>
-												</AlertDialogTrigger>
-												<AlertDialogContent>
-													<AlertDialogHeader>
-														<AlertDialogTitle>Fest löschen</AlertDialogTitle>
-														<AlertDialogDescription>
-															Sind Sie sicher, dass Sie "{festival.name}" löschen möchten? Diese
-															Aktion kann nicht rückgängig gemacht werden und löscht alle
-															zugehörigen Daten (Checkliste, Schichtpläne, Ressourcen).
-														</AlertDialogDescription>
-													</AlertDialogHeader>
-													<AlertDialogFooter>
-														<AlertDialogCancel>Abbrechen</AlertDialogCancel>
-														<AlertDialogAction
-															onClick={(e) =>
-																handleDeleteFestival(festival.id, festival.name || 'Fest', e)
-															}
-															className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-															Löschen
-														</AlertDialogAction>
-													</AlertDialogFooter>
-												</AlertDialogContent>
-											</AlertDialog>
-										</div>
-									</div>
-									<CardDescription>
-										{new Date(festival.start_date).toLocaleDateString('de-AT')}
-										{festival.end_date &&
-											festival.end_date !== festival.start_date &&
-											` - ${new Date(festival.end_date).toLocaleDateString('de-AT')}`}
-									</CardDescription>
-								</CardHeader>
+						{loading ? (
+							<div className="text-center py-12">
+								<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+								<p className="mt-4 text-gray-600">Lade Ihre Feste...</p>
+							</div>
+						) : festivals.length === 0 ? (
+							<Card className="text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100 border-dashed border-2 border-gray-300">
 								<CardContent>
-									<p className="text-sm text-muted-foreground">
-										Besucherzahl: {getVisitorCountDisplay(festival.visitor_count)}
+									<div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+										<Calendar className="h-8 w-8 text-gray-400" />
+									</div>
+									<h3 className="text-xl font-semibold text-gray-700 mb-2">
+										Noch keine Feste erstellt
+									</h3>
+									<p className="text-gray-500 mb-6">
+										Beginnen Sie mit der Planung Ihres ersten Festes
 									</p>
+									<Button
+										onClick={() => setShowWizard(true)}
+										variant="festival"
+										size="lg"
+										className="px-8">
+										Erstes Fest erstellen
+									</Button>
 								</CardContent>
 							</Card>
-						))
-					)}
+						) : (
+							<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+								{festivals.map((festival) => (
+									<Card
+										key={festival.id}
+										className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white shadow-md hover:-translate-y-1"
+										onClick={() => navigate(`/festival-results?id=${festival.id}`)}>
+										<CardHeader className="pb-4">
+											<div className="flex justify-between items-start">
+												<div className="flex-1">
+													<CardTitle className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">
+														{festival.name}
+													</CardTitle>
+													<Badge
+														variant="outline"
+														className="mt-2 bg-primary/10 text-primary border-primary/20">
+														{getFestivalTypeDisplay(festival.type)}
+													</Badge>
+												</div>
+												<AlertDialog>
+													<AlertDialogTrigger asChild>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-8 w-8 p-0 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+															onClick={(e) => e.stopPropagation()}>
+															<Trash2 className="h-4 w-4" />
+														</Button>
+													</AlertDialogTrigger>
+													<AlertDialogContent>
+														<AlertDialogHeader>
+															<AlertDialogTitle>Fest löschen</AlertDialogTitle>
+															<AlertDialogDescription>
+																Sind Sie sicher, dass Sie "{festival.name}" löschen möchten? Diese
+																Aktion kann nicht rückgängig gemacht werden und löscht alle
+																zugehörigen Daten (Checkliste, Schichtpläne, Ressourcen).
+															</AlertDialogDescription>
+														</AlertDialogHeader>
+														<AlertDialogFooter>
+															<AlertDialogCancel>Abbrechen</AlertDialogCancel>
+															<AlertDialogAction
+																onClick={(e) =>
+																	handleDeleteFestival(festival.id, festival.name || 'Fest', e)
+																}
+																className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+																Löschen
+															</AlertDialogAction>
+														</AlertDialogFooter>
+													</AlertDialogContent>
+												</AlertDialog>
+											</div>
+										</CardHeader>
+										<CardContent className="pt-0">
+											<div className="space-y-3">
+												<div className="flex items-center text-sm text-gray-600">
+													<Calendar className="h-4 w-4 mr-2 text-primary" />
+													<span>
+														{new Date(festival.start_date).toLocaleDateString('de-AT')}
+														{festival.end_date &&
+															festival.end_date !== festival.start_date &&
+															` - ${new Date(festival.end_date).toLocaleDateString('de-AT')}`}
+													</span>
+												</div>
+												<div className="flex items-center text-sm text-gray-600">
+													<Users className="h-4 w-4 mr-2 text-primary" />
+													<span>
+														Besucherzahl: {getVisitorCountDisplay(festival.visitor_count)}
+													</span>
+												</div>
+											</div>
+											<div className="mt-4 pt-4 border-t border-gray-100">
+												<Button
+													variant="ghost"
+													className="w-full text-primary hover:bg-primary/10"
+													onClick={(e) => {
+														e.stopPropagation();
+														navigate(`/festival-results?id=${festival.id}`);
+													}}>
+													Fest anzeigen →
+												</Button>
+											</div>
+										</CardContent>
+									</Card>
+								))}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>
