@@ -7,7 +7,6 @@ export interface Member {
   last_name: string;
   phone?: string;
   email?: string;
-  tags: string[];
   station_preferences?: string[];
   is_active: boolean;
   notes?: string;
@@ -20,7 +19,6 @@ export interface MemberImportData {
   last_name: string;
   phone?: string;
   email?: string;
-  tags: string[];
   notes?: string;
 }
 
@@ -102,21 +100,6 @@ export const importMembers = async (members: MemberImportData[]): Promise<void> 
   }
 };
 
-// Get members by tags
-export const getMembersByTags = async (tags: string[]): Promise<Member[]> => {
-  const { data, error } = await supabase
-    .from('members')
-    .select('*')
-    .contains('tags', tags)
-    .eq('is_active', true)
-    .order('last_name', { ascending: true });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data || [];
-};
 
 // Get available members (not assigned to specific station)
 export const getAvailableMembers = async (stationId?: string): Promise<Member[]> => {

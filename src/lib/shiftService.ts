@@ -37,7 +37,6 @@ export interface ShiftAssignmentWithMember extends ShiftAssignment {
 		id: string;
 		first_name: string;
 		last_name: string;
-		tags: string[];
 	};
 }
 
@@ -129,7 +128,7 @@ export const getShiftAssignments = async (
 		.select(
 			`
       *,
-      member:members(id, first_name, last_name, tags)
+      member:members(id, first_name, last_name)
     `
 		)
 		.eq('festival_id', festivalId);

@@ -95,7 +95,6 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 				last_name: lastNameCol ? row[lastNameCol] || '' : '',
 				phone: undefined,
 				email: undefined,
-				tags: [],
 				notes: undefined
 			};
 
@@ -106,14 +105,6 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 						member.phone = row[column] || undefined;
 					} else if (field === 'email') {
 						member.email = row[column] || undefined;
-					} else if (field === 'tags') {
-						const tagValue = row[column];
-						if (tagValue) {
-							member.tags = tagValue
-								.split(',')
-								.map((tag) => tag.trim())
-								.filter(Boolean);
-						}
 					} else if (field === 'notes') {
 						member.notes = row[column] || undefined;
 					}
@@ -532,8 +523,6 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 					basicMapping[header] = 'first_name';
 				} else if (lowerHeader.includes('nachname') || lowerHeader.includes('lastname')) {
 					basicMapping[header] = 'last_name';
-				} else if (lowerHeader.includes('tag') || lowerHeader.includes('skill')) {
-					basicMapping[header] = 'tags';
 				} else if (lowerHeader.includes('notiz') || lowerHeader.includes('note')) {
 					basicMapping[header] = 'notes';
 				}
@@ -572,7 +561,6 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 					last_name: lastNameCol ? row[lastNameCol] || '' : '',
 					phone: undefined,
 					email: undefined,
-					tags: [],
 					notes: undefined
 				};
 
@@ -583,14 +571,6 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 							member.phone = row[column] || undefined;
 						} else if (field === 'email') {
 							member.email = row[column] || undefined;
-						} else if (field === 'tags') {
-							const tagValue = row[column];
-							if (tagValue) {
-								member.tags = tagValue
-									.split(',')
-									.map((tag) => tag.trim())
-									.filter(Boolean);
-							}
 						} else if (field === 'notes') {
 							member.notes = row[column] || undefined;
 						}
@@ -721,11 +701,11 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Vorname</TableHead>
-									<TableHead>Nachname</TableHead>
-									<TableHead>Telefon</TableHead>
-									<TableHead>E-Mail</TableHead>
-									<TableHead>Tags</TableHead>
+											<TableHead>Vorname</TableHead>
+											<TableHead>Nachname</TableHead>
+											<TableHead>Telefon</TableHead>
+											<TableHead>E-Mail</TableHead>
+											<TableHead>Notizen</TableHead>
 									<TableHead>Notizen</TableHead>
 								</TableRow>
 							</TableHeader>
@@ -736,15 +716,7 @@ const MemberImport: React.FC<MemberImportProps> = ({ onImportComplete, onClose }
 										<TableCell>{member.last_name}</TableCell>
 										<TableCell>{member.phone || '-'}</TableCell>
 										<TableCell>{member.email || '-'}</TableCell>
-										<TableCell>
-											<div className="flex gap-1 flex-wrap">
-												{member.tags.map((tag, tagIndex) => (
-													<Badge key={tagIndex} variant="secondary" className="text-xs">
-														{tag}
-													</Badge>
-												))}
-											</div>
-										</TableCell>
+										<TableCell>{member.notes || '-'}</TableCell>
 										<TableCell className="max-w-[200px] truncate">{member.notes || '-'}</TableCell>
 									</TableRow>
 								))}

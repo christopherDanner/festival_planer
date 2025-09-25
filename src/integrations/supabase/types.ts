@@ -105,7 +105,6 @@ export type Database = {
           notes: string | null
           phone: string | null
           station_preferences: string[] | null
-          tags: string[] | null
           updated_at: string
           user_id: string
         }
@@ -119,7 +118,6 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           station_preferences?: string[] | null
-          tags?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -133,7 +131,6 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           station_preferences?: string[] | null
-          tags?: string[] | null
           updated_at?: string
           user_id?: string
         }

@@ -38,9 +38,7 @@ import {
 	Edit,
 	Trash2,
 	Phone,
-	Mail,
-	Tags,
-	Plus
+	Mail
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
@@ -63,7 +61,6 @@ const Members = () => {
 	const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
-	const [tagFilter, setTagFilter] = useState('all-tags');
 	const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 	const [showImport, setShowImport] = useState(false);
 	const [showAddMember, setShowAddMember] = useState(false);
@@ -75,25 +72,9 @@ const Members = () => {
 		last_name: '',
 		phone: '',
 		email: '',
-		tags: [] as string[],
 		notes: '',
 		is_active: true
 	});
-	const [newTag, setNewTag] = useState('');
-
-	// Common tags
-	const commonTags = [
-		'Grill',
-		'Kassa',
-		'Sanitäter',
-		'Sicherheit',
-		'Technik',
-		'Aufbau',
-		'Abbau',
-		'Küche',
-		'Bar',
-		'Service'
-	];
 
 	useEffect(() => {
 		if (!user) {
@@ -105,7 +86,7 @@ const Members = () => {
 
 	useEffect(() => {
 		filterMembers();
-	}, [members, searchTerm, tagFilter, activeFilter]);
+	}, [members, searchTerm, activeFilter]);
 
 	const loadMembers = async () => {
 		try {
@@ -137,13 +118,6 @@ const Members = () => {
 			);
 		}
 
-		// Tag filter
-		if (tagFilter && tagFilter !== 'all-tags') {
-			filtered = filtered.filter((member) =>
-				member.tags.some((tag) => tag.toLowerCase().includes(tagFilter.toLowerCase()))
-			);
-		}
-
 		// Active filter
 		if (activeFilter !== 'all') {
 			filtered = filtered.filter((member) =>
@@ -160,11 +134,9 @@ const Members = () => {
 			last_name: '',
 			phone: '',
 			email: '',
-			tags: [],
 			notes: '',
 			is_active: true
 		});
-		setNewTag('');
 		setEditingMember(null);
 	};
 
@@ -232,7 +204,6 @@ const Members = () => {
 			last_name: member.last_name,
 			phone: member.phone || '',
 			email: member.email || '',
-			tags: [...member.tags],
 			notes: member.notes || '',
 			is_active: member.is_active
 		});
@@ -240,24 +211,6 @@ const Members = () => {
 		setShowAddMember(true);
 	};
 
-	const addTag = (tag: string) => {
-		if (tag && !formData.tags.includes(tag)) {
-			setFormData((prev) => ({
-				...prev,
-				tags: [...prev.tags, tag]
-			}));
-		}
-		setNewTag('');
-	};
-
-	const removeTag = (tagToRemove: string) => {
-		setFormData((prev) => ({
-			...prev,
-			tags: prev.tags.filter((tag) => tag !== tagToRemove)
-		}));
-	};
-
-	const allTags = Array.from(new Set(members.flatMap((member) => member.tags))).sort();
 
 	if (loading) {
 		return (
@@ -360,43 +313,6 @@ const Members = () => {
 										</div>
 
 										<div>
-											<Label>Tags/Rollen</Label>
-											<div className="flex gap-2 mb-2">
-												<Input
-													value={newTag}
-													onChange={(e) => setNewTag(e.target.value)}
-													placeholder="Neuen Tag eingeben"
-													onKeyPress={(e) => e.key === 'Enter' && addTag(newTag)}
-												/>
-												<Button onClick={() => addTag(newTag)} type="button" size="sm">
-													<Plus className="h-4 w-4" />
-												</Button>
-											</div>
-											<div className="flex gap-1 flex-wrap mb-2">
-												{commonTags.map((tag) => (
-													<Badge
-														key={tag}
-														variant={formData.tags.includes(tag) ? 'default' : 'outline'}
-														className="cursor-pointer"
-														onClick={() => addTag(tag)}>
-														{tag}
-													</Badge>
-												))}
-											</div>
-											<div className="flex gap-1 flex-wrap">
-												{formData.tags.map((tag) => (
-													<Badge
-														key={tag}
-														variant="secondary"
-														className="cursor-pointer"
-														onClick={() => removeTag(tag)}>
-														{tag} ×
-													</Badge>
-												))}
-											</div>
-										</div>
-
-										<div>
 											<Label htmlFor="notes">Notizen</Label>
 											<Textarea
 												id="notes"
@@ -437,7 +353,7 @@ const Members = () => {
 					{/* Filters */}
 					<Card className="mb-6">
 						<CardContent className="pt-6">
-							<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								<div>
 									<Label>Suche</Label>
 									<div className="relative">
@@ -449,23 +365,6 @@ const Members = () => {
 											className="pl-10"
 										/>
 									</div>
-								</div>
-
-								<div>
-									<Label>Tag Filter</Label>
-									<Select value={tagFilter} onValueChange={setTagFilter}>
-										<SelectTrigger>
-											<SelectValue placeholder="Alle Tags" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="all-tags">Alle Tags</SelectItem>
-											{allTags.map((tag) => (
-												<SelectItem key={tag} value={tag}>
-													{tag}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
 								</div>
 
 								<div>
@@ -491,7 +390,6 @@ const Members = () => {
 										variant="outline"
 										onClick={() => {
 											setSearchTerm('');
-											setTagFilter('all-tags');
 											setActiveFilter('all');
 										}}>
 										Filter zurücksetzen
@@ -514,7 +412,6 @@ const Members = () => {
 									<TableRow>
 										<TableHead>Name</TableHead>
 										<TableHead>Kontakt</TableHead>
-										<TableHead>Tags</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead>Aktionen</TableHead>
 									</TableRow>
@@ -522,7 +419,7 @@ const Members = () => {
 								<TableBody>
 									{filteredMembers.length === 0 ? (
 										<TableRow>
-											<TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+											<TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
 												Keine Mitglieder gefunden
 											</TableCell>
 										</TableRow>
@@ -554,20 +451,6 @@ const Members = () => {
 																<Mail className="h-3 w-3" />
 																{member.email}
 															</div>
-														)}
-													</div>
-												</TableCell>
-												<TableCell>
-													<div className="flex gap-1 flex-wrap">
-														{member.tags.slice(0, 3).map((tag, index) => (
-															<Badge key={index} variant="secondary" className="text-xs">
-																{tag}
-															</Badge>
-														))}
-														{member.tags.length > 3 && (
-															<Badge variant="outline" className="text-xs">
-																+{member.tags.length - 3}
-															</Badge>
 														)}
 													</div>
 												</TableCell>

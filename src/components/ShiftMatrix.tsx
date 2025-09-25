@@ -898,21 +898,6 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 											</div>
 										</div>
 
-										{member.tags.length > 0 && (
-											<div className="flex gap-1 flex-wrap">
-												{member.tags.slice(0, 2).map((tag, index) => (
-													<Badge key={index} variant="outline" className="text-xs">
-														{tag}
-													</Badge>
-												))}
-												{member.tags.length > 2 && (
-													<Badge variant="outline" className="text-xs">
-														+{member.tags.length - 2}
-													</Badge>
-												)}
-											</div>
-										)}
-
 										{memberAssignments.length > 0 && (
 											<div className="text-xs text-muted-foreground">
 												{memberAssignments.map((assignment, index) => {
