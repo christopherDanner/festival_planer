@@ -99,21 +99,36 @@ export default function FestivalPreview({ festivalData, onBack }: FestivalPrevie
 	const handleCreateFestival = async () => {
 		if (!user) return;
 
+		// Validate that all stations have names
+		const emptyStations = editableStations.filter(
+			(station) => !station.name || station.name.trim() === ''
+		);
+		if (emptyStations.length > 0) {
+			toast({
+				title: 'Fehler beim Speichern',
+				description: 'Alle Stationen müssen einen Namen haben. Bitte füllen Sie alle Felder aus.',
+				variant: 'destructive'
+			});
+			return;
+		}
+
 		setCreating(true);
 		try {
 			// Create festival with edited data
 			const updatedData: FestivalData = {
 				...festivalData,
 				customStations: useAISuggestions
-					? editableStations.map((station, index) => ({
-							id: index + 1,
-							bereich: station.name,
-							zeit: 'TBD',
-							personen: [],
-							bedarf: station.required_people,
-							status: 'incomplete' as const,
-							priority: 'green' as const
-					  }))
+					? editableStations
+							.filter((station) => station.name && station.name.trim() !== '') // Filter out empty stations
+							.map((station, index) => ({
+								id: index + 1,
+								bereich: station.name.trim(),
+								zeit: 'TBD',
+								personen: [],
+								bedarf: station.required_people || 1,
+								status: 'incomplete' as const,
+								priority: 'green' as const
+							}))
 					: undefined,
 				customShifts: useAISuggestions ? editableShifts : undefined
 			};
@@ -150,7 +165,12 @@ export default function FestivalPreview({ festivalData, onBack }: FestivalPrevie
 
 	const updateStation = (index: number, field: string, value: unknown) => {
 		const updated = [...editableStations];
-		updated[index] = { ...updated[index], [field]: value } as AIStation;
+		// Ensure name is never empty
+		if (field === 'name' && (!value || (value as string).trim() === '')) {
+			updated[index] = { ...updated[index], [field]: 'Neue Station' } as AIStation;
+		} else {
+			updated[index] = { ...updated[index], [field]: value } as AIStation;
+		}
 		setEditableStations(updated);
 	};
 
