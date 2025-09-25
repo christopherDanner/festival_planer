@@ -757,15 +757,17 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 						</div>
 					) : (
 						<div className="p-6">
-							<div className="overflow-x-auto">
-								<table className="w-full">
+							<div className="overflow-x-auto relative">
+								<table className="w-full min-w-max">
 									<thead>
 										<tr className="border-b bg-muted/50">
-											<th className="p-4 text-left font-medium min-w-[150px] sticky left-0 bg-muted/50">
+											<th className="p-4 text-left font-medium min-w-[150px] sticky left-0 top-0 bg-muted/50 z-20">
 												Station
 											</th>
 											{shifts.map((shift) => (
-												<th key={shift.id} className="p-4 text-center font-medium min-w-[200px]">
+												<th
+													key={shift.id}
+													className="p-4 text-center font-medium min-w-[200px] sticky top-0 bg-muted/50 z-10">
 													<div className="space-y-1">
 														<div className="font-semibold">{shift.name}</div>
 														<div className="text-xs text-muted-foreground">
@@ -779,7 +781,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 									<tbody>
 										{stations.map((station) => (
 											<tr key={station.id} className="border-b">
-												<td className="p-4 font-medium sticky left-0 bg-background">
+												<td className="p-4 font-medium sticky left-0 bg-background z-10 min-w-[150px]">
 													<div className="space-y-1">
 														<div>{station.name}</div>
 														<div className="text-xs text-muted-foreground flex items-center gap-1">
