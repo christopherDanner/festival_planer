@@ -19,7 +19,19 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@/components/ui/select';
-import { Plus, Calendar, Clock, MapPin, Users, Trash2, Edit, Filter, X, Zap, Settings } from 'lucide-react';
+import {
+	Plus,
+	Calendar,
+	Clock,
+	MapPin,
+	Users,
+	Trash2,
+	Edit,
+	Filter,
+	X,
+	Zap,
+	Settings
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
@@ -35,7 +47,12 @@ import {
 	type ShiftAssignmentWithMember
 } from '@/lib/shiftService';
 import { getMembers, type Member } from '@/lib/memberService';
-import { performAutomaticAssignment, clearAllAssignments, type AutoAssignmentConfig, type AssignmentResult } from '@/lib/automaticAssignmentService';
+import {
+	performAutomaticAssignment,
+	clearAllAssignments,
+	type AutoAssignmentConfig,
+	type AssignmentResult
+} from '@/lib/automaticAssignmentService';
 
 interface ShiftMatrixProps {
 	festivalId: string;
@@ -324,19 +341,19 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		}
 
 		setAutoAssignLoading(true);
-		
+
 		try {
 			const result: AssignmentResult = await performAutomaticAssignment(
 				festivalId,
 				shifts,
 				stations,
-				members.filter(m => m.is_active),
+				members.filter((m) => m.is_active),
 				autoAssignConfig
 			);
 
 			if (result.success) {
 				await loadData(); // Refresh data
-				
+
 				let message = `${result.assignmentsCreated} Zuweisungen erstellt.`;
 				if (result.unfilledPositions.length > 0) {
 					message += ` ${result.unfilledPositions.length} Positionen konnten nicht besetzt werden.`;
@@ -433,11 +450,14 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 					</p>
 				</div>
 
-				<div className="flex gap-2">
+				<div className="flex gap-2 items-center">
 					<Dialog open={showAutoAssignDialog} onOpenChange={setShowAutoAssignDialog}>
 						<DialogTrigger asChild>
-							<Button className="bg-gradient-to-r from-primary to-primary-foreground">
-								<Zap className="h-4 w-4 mr-2" />
+							<Button
+								variant="default"
+								size="lg"
+								className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 border-2 border-blue-500">
+								<Zap className="h-5 w-5 mr-2" />
 								Automatische Zuteilung
 							</Button>
 						</DialogTrigger>
@@ -454,10 +474,12 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 											type="number"
 											min="0"
 											value={autoAssignConfig.minShiftsPerMember}
-											onChange={(e) => setAutoAssignConfig(prev => ({
-												...prev,
-												minShiftsPerMember: parseInt(e.target.value) || 0
-											}))}
+											onChange={(e) =>
+												setAutoAssignConfig((prev) => ({
+													...prev,
+													minShiftsPerMember: parseInt(e.target.value) || 0
+												}))
+											}
 										/>
 									</div>
 									<div>
@@ -467,53 +489,47 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 											type="number"
 											min="1"
 											value={autoAssignConfig.maxShiftsPerMember}
-											onChange={(e) => setAutoAssignConfig(prev => ({
-												...prev,
-												maxShiftsPerMember: parseInt(e.target.value) || 1
-											}))}
+											onChange={(e) =>
+												setAutoAssignConfig((prev) => ({
+													...prev,
+													maxShiftsPerMember: parseInt(e.target.value) || 1
+												}))
+											}
 										/>
 									</div>
 								</div>
-								
+
 								<div className="flex items-center space-x-2">
 									<input
 										type="checkbox"
 										id="respect-preferences"
 										checked={autoAssignConfig.respectPreferences}
-										onChange={(e) => setAutoAssignConfig(prev => ({
-											...prev,
-											respectPreferences: e.target.checked
-										}))}
+										onChange={(e) =>
+											setAutoAssignConfig((prev) => ({
+												...prev,
+												respectPreferences: e.target.checked
+											}))
+										}
 									/>
-									<Label htmlFor="respect-preferences">
-										Stationspräferenzen berücksichtigen
-									</Label>
+									<Label htmlFor="respect-preferences">Stationspräferenzen berücksichtigen</Label>
 								</div>
 
 								<div className="bg-muted p-4 rounded-lg">
 									<p className="text-sm text-muted-foreground">
-										Die automatische Zuteilung versucht alle verfügbaren Positionen zu besetzen, 
-										berücksichtigt dabei Präferenzen der Mitglieder und verteilt die Schichten gleichmäßig.
+										Die automatische Zuteilung versucht alle verfügbaren Positionen zu besetzen,
+										berücksichtigt dabei Präferenzen der Mitglieder und verteilt die Schichten
+										gleichmäßig.
 									</p>
 								</div>
 
 								<div className="flex justify-end gap-2">
-									<Button 
-										variant="destructive" 
-										onClick={handleClearAllAssignments}
-									>
+									<Button variant="destructive" onClick={handleClearAllAssignments}>
 										Alle Zuweisungen löschen
 									</Button>
-									<Button 
-										variant="outline" 
-										onClick={() => setShowAutoAssignDialog(false)}
-									>
+									<Button variant="outline" onClick={() => setShowAutoAssignDialog(false)}>
 										Abbrechen
 									</Button>
-									<Button 
-										onClick={handleAutomaticAssignment}
-										disabled={autoAssignLoading}
-									>
+									<Button onClick={handleAutomaticAssignment} disabled={autoAssignLoading}>
 										{autoAssignLoading ? 'Zuteilen...' : 'Automatisch zuteilen'}
 									</Button>
 								</div>
@@ -521,9 +537,11 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 						</DialogContent>
 					</Dialog>
 
+					<div className="h-8 w-px bg-border mx-2"></div>
+
 					<Dialog open={showShiftDialog} onOpenChange={setShowShiftDialog}>
 						<DialogTrigger asChild>
-							<Button variant="outline">
+							<Button variant="outline" size="sm">
 								<Clock className="h-4 w-4 mr-2" />
 								Schicht hinzufügen
 							</Button>
@@ -589,7 +607,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 
 					<Dialog open={showStationDialog} onOpenChange={setShowStationDialog}>
 						<DialogTrigger asChild>
-							<Button>
+							<Button variant="outline" size="sm">
 								<MapPin className="h-4 w-4 mr-2" />
 								Station hinzufügen
 							</Button>
