@@ -80,74 +80,12 @@ export async function createFestival(festivalData: FestivalData, userId: string)
 
 	// Only insert data if AI suggestions are being used
 	if (stations.length > 0 && shifts.length > 0) {
-		// Insert shifts
-		const shiftInserts = shifts.map((shift) => ({
+		// Insert stations first
+		const stationInserts = stations.map((station) => ({
 			festival_id: festival.id,
-			name: shift.name,
-			start_date: shift.date || shift.start_date,
-			start_time: shift.start_time,
-			end_time: shift.end_time
-		}));
-
-	// Update festivalService.ts to work with station_shifts
-	const { data: insertedStationShifts, error: stationShiftError } = await supabase
-		.from('station_shifts')
-		.insert(
-			shifts.flatMap(shift => 
-				insertedStations.map(station => ({
-					station_id: station.id,
-					festival_id: festival.id,
-					name: shift.name,
-					start_date: shift.date || shift.start_date,
-					start_time: shift.start_time,
-					end_time: shift.end_time
-				}))
-			)
-		)
-		.select();
-
-	if (stationShiftError) {
-		throw new Error('Fehler beim Erstellen der Schichten');
-	}
-
-	// Insert stations
-	const stationInserts = stations.map((station) => ({
-		festival_id: festival.id,
-		name: station.bereich, // Use 'bereich' from StationAssignment interface
-		required_people: station.bedarf, // Use 'bedarf' from StationAssignment interface
-		description: ''
-	}));
-
-	const { data: insertedStations, error: stationError } = await supabase
-		.from('stations')
-		.insert(stationInserts)
-		.select();
-
-	if (stationError) {
-		throw new Error('Fehler beim Erstellen der Stationen');
-	}
-
-	// Create station shifts for each station-shift combination
-	const stationShiftInserts = shifts.flatMap(shift => 
-		insertedStations.map(station => ({
-			station_id: station.id,
-			festival_id: festival.id,
-			name: shift.name,
-			start_date: shift.date || shift.start_date,
-			start_time: shift.start_time,
-			end_time: shift.end_time
-		}))
-	);
-
-	const { data: insertedStationShifts, error: stationShiftError } = await supabase
-		.from('station_shifts')
-		.insert(stationShiftInserts)
-		.select();
-
-	if (stationShiftError) {
-		throw new Error('Fehler beim Erstellen der Schichten');
-	}
-			description: station.bereich // Use 'bereich' as description if no separate description field
+			name: station.bereich, // Use 'bereich' from StationAssignment interface
+			required_people: station.bedarf, // Use 'bedarf' from StationAssignment interface
+			description: ''
 		}));
 
 		const { data: insertedStations, error: stationError } = await supabase
@@ -159,17 +97,38 @@ export async function createFestival(festivalData: FestivalData, userId: string)
 			throw new Error('Fehler beim Erstellen der Stationen');
 		}
 
-		// Create shift assignments for each shift-station combination
+		// Create station shifts for each station-shift combination
+		const stationShiftInserts = shifts.flatMap(shift => 
+			insertedStations.map(station => ({
+				station_id: station.id,
+				festival_id: festival.id,
+				name: shift.name,
+				start_date: shift.date || shift.start_date,
+				start_time: shift.start_time,
+				end_time: shift.end_time
+			}))
+		);
+
+		const { data: insertedStationShifts, error: stationShiftError } = await supabase
+			.from('station_shifts')
+			.insert(stationShiftInserts)
+			.select();
+
+		if (stationShiftError) {
+			throw new Error('Fehler beim Erstellen der Schichten');
+		}
+
+		// Create shift assignments for each station shift
 		const assignmentInserts: any[] = [];
-		if (insertedShifts && insertedStations) {
-			for (const shift of insertedShifts) {
-				for (const station of insertedStations) {
+		if (insertedStationShifts) {
+			for (const stationShift of insertedStationShifts) {
+				const station = insertedStations?.find(s => s.id === stationShift.station_id);
+				if (station) {
 					// Create empty assignments for each required position
 					for (let position = 1; position <= station.required_people; position++) {
 						assignmentInserts.push({
 							festival_id: festival.id,
-							shift_id: shift.id,
-							station_id: station.id,
+							station_shift_id: stationShift.id,
 							position: position,
 							member_id: null // Initially no member assigned
 						});
