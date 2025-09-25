@@ -30,7 +30,9 @@ import {
 	Filter,
 	X,
 	Zap,
-	Settings
+	Settings,
+	Heart,
+	Star
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -46,7 +48,7 @@ import {
 	type Station,
 	type ShiftAssignmentWithMember
 } from '@/lib/shiftService';
-import { getMembers, type Member } from '@/lib/memberService';
+import { getMembers, updateMemberStationPreferences, type Member } from '@/lib/memberService';
 import {
 	performAutomaticAssignment,
 	clearAllAssignments,
@@ -77,6 +79,10 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const [showShiftDialog, setShowShiftDialog] = useState(false);
 	const [showStationDialog, setShowStationDialog] = useState(false);
 	const [showAutoAssignDialog, setShowAutoAssignDialog] = useState(false);
+	const [showStationPreferenceDialog, setShowStationPreferenceDialog] = useState(false);
+	const [selectedMemberForPreference, setSelectedMemberForPreference] = useState<Member | null>(
+		null
+	);
 	const [autoAssignLoading, setAutoAssignLoading] = useState(false);
 
 	// Form states
@@ -96,8 +102,11 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const [autoAssignConfig, setAutoAssignConfig] = useState<AutoAssignmentConfig>({
 		minShiftsPerMember: 1,
 		maxShiftsPerMember: 3,
-		respectPreferences: true
+		respectPreferences: true // Always true, checkbox removed
 	});
+
+	// Station preferences state
+	const [stationPreferences, setStationPreferences] = useState<Record<string, string[]>>({});
 
 	// Drag and drop state
 	const [draggedMember, setDraggedMember] = useState<Member | null>(null);
@@ -124,6 +133,15 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			setStations(stationsData);
 			setAssignments(assignmentsData);
 			setMembers(membersData.filter((m) => m.is_active));
+
+			// Load station preferences from member data
+			const preferences: Record<string, string[]> = {};
+			membersData.forEach((member) => {
+				if (member.station_preferences && member.station_preferences.length > 0) {
+					preferences[member.id] = member.station_preferences;
+				}
+			});
+			setStationPreferences(preferences);
 		} catch (error) {
 			toast({
 				title: 'Fehler',
@@ -330,6 +348,74 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		return { free, partial, full, total: members.length };
 	};
 
+	// Station preference functions
+
+	const handleSaveStationPreference = async (memberId: string, preferredStations: string[]) => {
+		try {
+			// Save to database
+			await updateMemberStationPreferences(memberId, preferredStations);
+
+			// Update local state
+			setStationPreferences((prev) => ({
+				...prev,
+				[memberId]: preferredStations
+			}));
+
+			toast({
+				title: 'Stationswünsche gespeichert',
+				description: 'Die Stationswünsche wurden erfolgreich gespeichert.'
+			});
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Stationswünsche konnten nicht gespeichert werden.',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	const getMemberStationPreferences = (memberId: string): string[] => {
+		return stationPreferences[memberId] || [];
+	};
+
+	// Temporary preferences for dialog editing
+	const [tempStationPreferences, setTempStationPreferences] = useState<Record<string, string[]>>(
+		{}
+	);
+
+	const handleToggleStationPreference = (memberId: string, stationId: string) => {
+		const currentPreferences =
+			tempStationPreferences[memberId] || getMemberStationPreferences(memberId);
+		const isSelected = currentPreferences.includes(stationId);
+		const newPreferences = isSelected
+			? currentPreferences.filter((id) => id !== stationId)
+			: [...currentPreferences, stationId];
+
+		setTempStationPreferences((prev) => ({
+			...prev,
+			[memberId]: newPreferences
+		}));
+	};
+
+	const handleOpenStationPreferenceDialog = (member: Member) => {
+		setSelectedMemberForPreference(member);
+		// Initialize temp preferences with current preferences
+		setTempStationPreferences((prev) => ({
+			...prev,
+			[member.id]: getMemberStationPreferences(member.id)
+		}));
+		setShowStationPreferenceDialog(true);
+	};
+
+	const handleSaveStationPreferencesFromDialog = async () => {
+		if (!selectedMemberForPreference) return;
+
+		const preferences = tempStationPreferences[selectedMemberForPreference.id] || [];
+		await handleSaveStationPreference(selectedMemberForPreference.id, preferences);
+		setShowStationPreferenceDialog(false);
+		setSelectedMemberForPreference(null);
+	};
+
 	const handleAutomaticAssignment = async () => {
 		if (shifts.length === 0 || stations.length === 0 || members.length === 0) {
 			toast({
@@ -348,7 +434,8 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				shifts,
 				stations,
 				members.filter((m) => m.is_active),
-				autoAssignConfig
+				autoAssignConfig,
+				stationPreferences
 			);
 
 			if (result.success) {
@@ -499,26 +586,11 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 									</div>
 								</div>
 
-								<div className="flex items-center space-x-2">
-									<input
-										type="checkbox"
-										id="respect-preferences"
-										checked={autoAssignConfig.respectPreferences}
-										onChange={(e) =>
-											setAutoAssignConfig((prev) => ({
-												...prev,
-												respectPreferences: e.target.checked
-											}))
-										}
-									/>
-									<Label htmlFor="respect-preferences">Stationspräferenzen berücksichtigen</Label>
-								</div>
-
 								<div className="bg-muted p-4 rounded-lg">
 									<p className="text-sm text-muted-foreground">
-										Die automatische Zuteilung versucht alle verfügbaren Positionen zu besetzen,
-										berücksichtigt dabei Präferenzen der Mitglieder und verteilt die Schichten
-										gleichmäßig.
+										Die automatische Zuteilung versucht alle verfügbaren Positionen zu besetzen.
+										Mitglieder mit Stationswünschen werden bevorzugt zugewiesen, solange Schichten
+										in ihren Wunschstationen frei sind. Die Schichten werden gleichmäßig verteilt.
 									</p>
 								</div>
 
@@ -877,6 +949,24 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 												{member.first_name} {member.last_name}
 											</span>
 											<div className="flex items-center gap-1">
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleOpenStationPreferenceDialog(member);
+													}}
+													className="h-6 w-6 p-0 hover:bg-blue-100"
+													title="Stationswünsche bearbeiten">
+													<Heart
+														className={cn(
+															'h-3 w-3',
+															getMemberStationPreferences(member.id).length > 0
+																? 'text-red-500 fill-red-500'
+																: 'text-gray-400'
+														)}
+													/>
+												</Button>
 												<Badge
 													variant={
 														availability === 'free'
@@ -897,6 +987,25 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 													)}></div>
 											</div>
 										</div>
+
+										{/* Station Preferences */}
+										{getMemberStationPreferences(member.id).length > 0 && (
+											<div className="flex flex-wrap gap-1">
+												{getMemberStationPreferences(member.id).map((stationId) => {
+													const station = stations.find((s) => s.id === stationId);
+													if (!station) return null;
+													return (
+														<Badge
+															key={stationId}
+															variant="outline"
+															className="text-xs bg-pink-50 border-pink-200 text-pink-700">
+															<Heart className="h-2 w-2 mr-1 fill-current" />
+															{station.name}
+														</Badge>
+													);
+												})}
+											</div>
+										)}
 
 										{memberAssignments.length > 0 && (
 											<div className="text-xs text-muted-foreground">
@@ -945,6 +1054,73 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 					</div>
 				</div>
 			</div>
+
+			{/* Station Preference Dialog */}
+			<Dialog open={showStationPreferenceDialog} onOpenChange={setShowStationPreferenceDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<Heart className="h-5 w-5 text-red-500" />
+							Stationswünsche für {selectedMemberForPreference?.first_name}{' '}
+							{selectedMemberForPreference?.last_name}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4">
+						<p className="text-sm text-muted-foreground">
+							Wählen Sie die Stationen aus, bei denen {selectedMemberForPreference?.first_name}{' '}
+							bevorzugt eingesetzt werden soll.
+						</p>
+
+						<div className="space-y-2">
+							{stations.map((station) => {
+								const isSelected =
+									selectedMemberForPreference &&
+									(
+										tempStationPreferences[selectedMemberForPreference.id] ||
+										getMemberStationPreferences(selectedMemberForPreference.id)
+									).includes(station.id);
+
+								return (
+									<div
+										key={station.id}
+										className={cn(
+											'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+											isSelected ? 'bg-pink-50 border-pink-200' : 'hover:bg-gray-50 border-gray-200'
+										)}
+										onClick={() => {
+											if (!selectedMemberForPreference) return;
+											handleToggleStationPreference(selectedMemberForPreference.id, station.id);
+										}}>
+										<div
+											className={cn(
+												'w-4 h-4 rounded border-2 flex items-center justify-center',
+												isSelected ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+											)}>
+											{isSelected && <Heart className="h-2 w-2 text-white fill-current" />}
+										</div>
+										<div className="flex-1">
+											<div className="font-medium text-sm">{station.name}</div>
+											{station.description && (
+												<div className="text-xs text-muted-foreground">{station.description}</div>
+											)}
+										</div>
+										<div className="text-xs text-muted-foreground">
+											{station.required_people} Person{station.required_people !== 1 ? 'en' : ''}
+										</div>
+									</div>
+								);
+							})}
+						</div>
+
+						<div className="flex justify-end gap-2 pt-4">
+							<Button variant="outline" onClick={() => setShowStationPreferenceDialog(false)}>
+								Abbrechen
+							</Button>
+							<Button onClick={handleSaveStationPreferencesFromDialog}>Speichern</Button>
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 };
