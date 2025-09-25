@@ -1,8 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export interface StationShift {
+export interface Shift {
 	id: string;
-	station_id: string;
 	festival_id: string;
 	name: string;
 	start_date: string;
@@ -22,14 +21,11 @@ export interface Station {
 	updated_at: string;
 }
 
-export interface StationShiftWithStation extends StationShift {
-	station?: Station;
-}
-
 export interface ShiftAssignment {
 	id: string;
 	festival_id: string;
-	station_shift_id: string;
+	shift_id: string;
+	station_id: string;
 	member_id?: string;
 	position: number;
 	created_at: string;
@@ -42,17 +38,13 @@ export interface ShiftAssignmentWithMember extends ShiftAssignment {
 		first_name: string;
 		last_name: string;
 	};
-	station_shift?: StationShift;
 }
 
-// Station Shift functions
-export const getStationShifts = async (festivalId: string): Promise<StationShiftWithStation[]> => {
+// Shift functions
+export const getShifts = async (festivalId: string): Promise<Shift[]> => {
 	const { data, error } = await supabase
-		.from('station_shifts')
-		.select(`
-			*,
-			station:stations(*)
-		`)
+		.from('shifts')
+		.select('*')
 		.eq('festival_id', festivalId)
 		.order('start_date', { ascending: true })
 		.order('start_time', { ascending: true });
@@ -61,30 +53,18 @@ export const getStationShifts = async (festivalId: string): Promise<StationShift
 	return data || [];
 };
 
-export const getStationShiftsByStation = async (stationId: string): Promise<StationShift[]> => {
-	const { data, error } = await supabase
-		.from('station_shifts')
-		.select('*')
-		.eq('station_id', stationId)
-		.order('start_date', { ascending: true })
-		.order('start_time', { ascending: true });
-
-	if (error) throw error;
-	return data || [];
-};
-
-export const createStationShift = async (
-	shiftData: Omit<StationShift, 'id' | 'created_at' | 'updated_at'>
-): Promise<StationShift> => {
-	const { data, error } = await supabase.from('station_shifts').insert(shiftData).select().single();
+export const createShift = async (
+	shiftData: Omit<Shift, 'id' | 'created_at' | 'updated_at'>
+): Promise<Shift> => {
+	const { data, error } = await supabase.from('shifts').insert(shiftData).select().single();
 
 	if (error) throw error;
 	return data;
 };
 
-export const updateStationShift = async (id: string, updates: Partial<StationShift>): Promise<StationShift> => {
+export const updateShift = async (id: string, updates: Partial<Shift>): Promise<Shift> => {
 	const { data, error } = await supabase
-		.from('station_shifts')
+		.from('shifts')
 		.update(updates)
 		.eq('id', id)
 		.select()
@@ -94,8 +74,8 @@ export const updateStationShift = async (id: string, updates: Partial<StationShi
 	return data;
 };
 
-export const deleteStationShift = async (id: string): Promise<void> => {
-	const { error } = await supabase.from('station_shifts').delete().eq('id', id);
+export const deleteShift = async (id: string): Promise<void> => {
+	const { error } = await supabase.from('shifts').delete().eq('id', id);
 
 	if (error) throw error;
 };
@@ -148,8 +128,7 @@ export const getShiftAssignments = async (
 		.select(
 			`
       *,
-      member:members(id, first_name, last_name),
-      station_shift:station_shifts(*)
+      member:members(id, first_name, last_name)
     `
 		)
 		.eq('festival_id', festivalId);
@@ -192,9 +171,10 @@ export const deleteAssignment = async (id: string): Promise<void> => {
 	if (error) throw error;
 };
 
-export const assignMemberToStationShift = async (
+export const assignMemberToShift = async (
 	festivalId: string,
-	stationShiftId: string,
+	shiftId: string,
+	stationId: string,
 	memberId: string,
 	position: number = 1
 ): Promise<ShiftAssignment> => {
@@ -203,7 +183,8 @@ export const assignMemberToStationShift = async (
 		.from('shift_assignments')
 		.select('*')
 		.eq('festival_id', festivalId)
-		.eq('station_shift_id', stationShiftId)
+		.eq('shift_id', shiftId)
+		.eq('station_id', stationId)
 		.eq('position', position)
 		.maybeSingle();
 
@@ -214,23 +195,26 @@ export const assignMemberToStationShift = async (
 		// Create new assignment
 		return createAssignment({
 			festival_id: festivalId,
-			station_shift_id: stationShiftId,
+			shift_id: shiftId,
+			station_id: stationId,
 			member_id: memberId,
 			position
 		});
 	}
 };
 
-export const removeMemberFromStationShift = async (
+export const removeMemberFromShift = async (
 	festivalId: string,
-	stationShiftId: string,
+	shiftId: string,
+	stationId: string,
 	memberId: string
 ): Promise<void> => {
 	const { error } = await supabase
 		.from('shift_assignments')
 		.delete()
 		.eq('festival_id', festivalId)
-		.eq('station_shift_id', stationShiftId)
+		.eq('shift_id', shiftId)
+		.eq('station_id', stationId)
 		.eq('member_id', memberId);
 
 	if (error) throw error;

@@ -190,7 +190,8 @@ export type Database = {
           id: string
           member_id: string | null
           position: number | null
-          station_shift_id: string
+          shift_id: string
+          station_id: string
           updated_at: string
         }
         Insert: {
@@ -199,7 +200,8 @@ export type Database = {
           id?: string
           member_id?: string | null
           position?: number | null
-          station_shift_id: string
+          shift_id: string
+          station_id: string
           updated_at?: string
         }
         Update: {
@@ -208,7 +210,8 @@ export type Database = {
           id?: string
           member_id?: string | null
           position?: number | null
-          station_shift_id?: string
+          shift_id?: string
+          station_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -227,10 +230,58 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "shift_assignments_station_shift_id_fkey"
-            columns: ["station_shift_id"]
+            foreignKeyName: "fk_shift_assignments_shift"
+            columns: ["shift_id"]
             isOneToOne: false
-            referencedRelation: "station_shifts"
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_shift_assignments_station"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          created_at: string
+          end_time: string
+          festival_id: string
+          id: string
+          name: string
+          start_date: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          festival_id: string
+          id?: string
+          name: string
+          start_date: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          festival_id?: string
+          id?: string
+          name?: string
+          start_date?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_shifts_festival"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
         ]
@@ -299,50 +350,6 @@ export type Database = {
           station_id?: string
         }
         Relationships: []
-      }
-      station_shifts: {
-        Row: {
-          created_at: string
-          end_time: string
-          festival_id: string
-          id: string
-          name: string
-          start_date: string
-          start_time: string
-          station_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          end_time: string
-          festival_id: string
-          id?: string
-          name: string
-          start_date: string
-          start_time: string
-          station_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          end_time?: string
-          festival_id?: string
-          id?: string
-          name?: string
-          start_date?: string
-          start_time?: string
-          station_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "station_shifts_station_id_fkey"
-            columns: ["station_id"]
-            isOneToOne: false
-            referencedRelation: "stations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       stations: {
         Row: {

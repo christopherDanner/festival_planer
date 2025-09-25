@@ -37,14 +37,14 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
-	getStationShifts,
+	getShifts,
 	getStations,
 	getShiftAssignments,
-	createStationShift,
+	createShift,
 	createStation,
-	assignMemberToStationShift,
-	removeMemberFromStationShift,
-	type StationShift,
+	assignMemberToShift,
+	removeMemberFromShift,
+	type Shift,
 	type Station,
 	type ShiftAssignmentWithMember
 } from '@/lib/shiftService';
@@ -60,9 +60,16 @@ interface ShiftMatrixProps {
 	festivalId: string;
 }
 
+interface MatrixCell {
+	shiftId: string;
+	stationId: string;
+	assignments: ShiftAssignmentWithMember[];
+	requiredPeople: number;
+}
+
 const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const { toast } = useToast();
-	const [stationShifts, setStationShifts] = useState<StationShift[]>([]);
+	const [shifts, setShifts] = useState<Shift[]>([]);
 	const [stations, setStations] = useState<Station[]>([]);
 	const [assignments, setAssignments] = useState<ShiftAssignmentWithMember[]>([]);
 	const [members, setMembers] = useState<Member[]>([]);
@@ -76,7 +83,6 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const [selectedMemberForPreference, setSelectedMemberForPreference] = useState<Member | null>(
 		null
 	);
-	const [selectedStationForShift, setSelectedStationForShift] = useState<Station | null>(null);
 	const [autoAssignLoading, setAutoAssignLoading] = useState(false);
 
 	// Form states
@@ -96,7 +102,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const [autoAssignConfig, setAutoAssignConfig] = useState<AutoAssignmentConfig>({
 		minShiftsPerMember: 1,
 		maxShiftsPerMember: 3,
-		respectPreferences: true
+		respectPreferences: true // Always true, checkbox removed
 	});
 
 	// Station preferences state
@@ -116,24 +122,14 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 
 	const loadData = async () => {
 		try {
-			const [stationShiftsData, stationsData, assignmentsData, membersData] = await Promise.all([
-				getStationShifts(festivalId),
+			const [shiftsData, stationsData, assignmentsData, membersData] = await Promise.all([
+				getShifts(festivalId),
 				getStations(festivalId),
 				getShiftAssignments(festivalId),
 				getMembers()
 			]);
 
-			setStationShifts(stationShiftsData.map(s => ({
-				id: s.id,
-				station_id: s.station_id,
-				festival_id: s.festival_id,
-				name: s.name,
-				start_date: s.start_date,
-				start_time: s.start_time,
-				end_time: s.end_time,
-				created_at: s.created_at,
-				updated_at: s.updated_at
-			})));
+			setShifts(shiftsData);
 			setStations(stationsData);
 			setAssignments(assignmentsData);
 			setMembers(membersData.filter((m) => m.is_active));
@@ -158,24 +154,22 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	};
 
 	const handleCreateShift = async () => {
-		if (!shiftForm.name || !shiftForm.start_date || !shiftForm.start_time || !shiftForm.end_time || !selectedStationForShift) {
+		if (!shiftForm.name || !shiftForm.start_date || !shiftForm.start_time || !shiftForm.end_time) {
 			toast({
 				title: 'Fehler',
-				description: 'Bitte füllen Sie alle Felder aus und wählen Sie eine Station.',
+				description: 'Bitte füllen Sie alle Felder aus.',
 				variant: 'destructive'
 			});
 			return;
 		}
 
 		try {
-			await createStationShift({
-				station_id: selectedStationForShift.id,
+			await createShift({
 				festival_id: festivalId,
 				...shiftForm
 			});
 
 			setShiftForm({ name: '', start_date: '', start_time: '', end_time: '' });
-			setSelectedStationForShift(null);
 			setShowShiftDialog(false);
 			loadData();
 
@@ -225,14 +219,69 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		}
 	};
 
-	const handleDrop = async (stationShiftId: string, memberId: string) => {
+	const getMatrixCell = (shiftId: string, stationId: string): MatrixCell => {
+		const station = stations.find((s) => s.id === stationId);
+		const cellAssignments = assignments.filter(
+			(a) => a.shift_id === shiftId && a.station_id === stationId && a.member_id
+		);
+
+		return {
+			shiftId,
+			stationId,
+			assignments: cellAssignments,
+			requiredPeople: station?.required_people || 1
+		};
+	};
+
+	const getCellColor = (cell: MatrixCell): string => {
+		const assigned = cell.assignments.length;
+		const required = cell.requiredPeople;
+
+		if (assigned >= required) return 'bg-success/20 border-success';
+		if (assigned > 0) return 'bg-warning/20 border-warning';
+		return 'bg-destructive/20 border-destructive';
+	};
+
+	const getRemainingBadgeVariant = (
+		cell: MatrixCell
+	): 'default' | 'secondary' | 'destructive' | 'outline' => {
+		const remaining = cell.requiredPeople - cell.assignments.length;
+		if (remaining === 0) return 'default';
+		if (remaining < cell.requiredPeople / 2) return 'secondary';
+		return 'destructive';
+	};
+
+	const handleDragStart = (member: Member) => {
+		setDraggedMember(member);
+	};
+
+	const handleDragEnd = () => {
+		setDraggedMember(null);
+	};
+
+	const handleDrop = async (shiftId: string, stationId: string, e: React.DragEvent) => {
+		e.preventDefault();
+
 		if (!draggedMember) return;
 
 		try {
-			const position = 
-				assignments.filter((a) => a.station_shift_id === stationShiftId && a.member_id).length + 1;
+			const cell = getMatrixCell(shiftId, stationId);
+			if (cell.assignments.length >= cell.requiredPeople) {
+				toast({
+					title: 'Hinweis',
+					description: 'Diese Station ist bereits vollständig besetzt.',
+					variant: 'destructive'
+				});
+				return;
+			}
 
-			await assignMemberToStationShift(festivalId, stationShiftId, memberId, position);
+			await assignMemberToShift(
+				festivalId,
+				shiftId,
+				stationId,
+				draggedMember.id,
+				cell.assignments.length + 1
+			);
 			loadData();
 
 			toast({
@@ -242,140 +291,397 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		} catch (error) {
 			toast({
 				title: 'Fehler',
-				description: 'Zuweisung fehlgeschlagen.',
+				description: 'Zuweisung konnte nicht erstellt werden.',
 				variant: 'destructive'
 			});
-		} finally {
-			setDraggedMember(null);
 		}
+
+		setDraggedMember(null);
 	};
 
-	const handleRemoveMember = async (stationShiftId: string, memberId: string) => {
+	const handleRemoveMember = async (shiftId: string, stationId: string, memberId: string) => {
 		try {
-			await removeMemberFromStationShift(festivalId, stationShiftId, memberId);
+			await removeMemberFromShift(festivalId, shiftId, stationId, memberId);
 			loadData();
 
 			toast({
 				title: 'Erfolg',
-				description: 'Mitglied wurde entfernt.'
+				description: 'Zuweisung wurde entfernt.'
 			});
 		} catch (error) {
 			toast({
 				title: 'Fehler',
-				description: 'Entfernung fehlgeschlagen.',
+				description: 'Zuweisung konnte nicht entfernt werden.',
 				variant: 'destructive'
 			});
 		}
 	};
 
-	const handleAutoAssign = async () => {
+	const getMemberAssignments = (memberId: string) => {
+		return assignments.filter((a) => a.member_id === memberId);
+	};
+
+	const getMemberAvailability = (memberId: string): 'free' | 'partial' | 'full' => {
+		const memberAssignments = getMemberAssignments(memberId);
+		const totalShifts = shifts.length;
+		const assignedShifts = memberAssignments.length;
+
+		if (assignedShifts === 0) return 'free';
+		if (assignedShifts < totalShifts) return 'partial';
+		return 'full';
+	};
+
+	const getFilteredMembers = () => {
+		if (availabilityFilter === 'all') return members;
+
+		return members.filter((member) => {
+			const availability = getMemberAvailability(member.id);
+			return availability === availabilityFilter;
+		});
+	};
+
+	const getAvailabilityStats = () => {
+		const free = members.filter((m) => getMemberAvailability(m.id) === 'free').length;
+		const partial = members.filter((m) => getMemberAvailability(m.id) === 'partial').length;
+		const full = members.filter((m) => getMemberAvailability(m.id) === 'full').length;
+
+		return { free, partial, full, total: members.length };
+	};
+
+	// Station preference functions
+
+	const handleSaveStationPreference = async (memberId: string, preferredStations: string[]) => {
 		try {
-			setAutoAssignLoading(true);
-			const result = await performAutomaticAssignment(
+			// Save to database
+			await updateMemberStationPreferences(memberId, preferredStations);
+
+			// Update local state
+			setStationPreferences((prev) => ({
+				...prev,
+				[memberId]: preferredStations
+			}));
+
+			toast({
+				title: 'Stationswünsche gespeichert',
+				description: 'Die Stationswünsche wurden erfolgreich gespeichert.'
+			});
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Stationswünsche konnten nicht gespeichert werden.',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	const getMemberStationPreferences = (memberId: string): string[] => {
+		return stationPreferences[memberId] || [];
+	};
+
+	// Temporary preferences for dialog editing
+	const [tempStationPreferences, setTempStationPreferences] = useState<Record<string, string[]>>(
+		{}
+	);
+
+	const handleToggleStationPreference = (memberId: string, stationId: string) => {
+		const currentPreferences =
+			tempStationPreferences[memberId] || getMemberStationPreferences(memberId);
+		const isSelected = currentPreferences.includes(stationId);
+		const newPreferences = isSelected
+			? currentPreferences.filter((id) => id !== stationId)
+			: [...currentPreferences, stationId];
+
+		setTempStationPreferences((prev) => ({
+			...prev,
+			[memberId]: newPreferences
+		}));
+	};
+
+	const handleOpenStationPreferenceDialog = (member: Member) => {
+		setSelectedMemberForPreference(member);
+		// Initialize temp preferences with current preferences
+		setTempStationPreferences((prev) => ({
+			...prev,
+			[member.id]: getMemberStationPreferences(member.id)
+		}));
+		setShowStationPreferenceDialog(true);
+	};
+
+	const handleSaveStationPreferencesFromDialog = async () => {
+		if (!selectedMemberForPreference) return;
+
+		const preferences = tempStationPreferences[selectedMemberForPreference.id] || [];
+		await handleSaveStationPreference(selectedMemberForPreference.id, preferences);
+		setShowStationPreferenceDialog(false);
+		setSelectedMemberForPreference(null);
+	};
+
+	const handleAutomaticAssignment = async () => {
+		if (shifts.length === 0 || stations.length === 0 || members.length === 0) {
+			toast({
+				title: 'Fehler',
+				description: 'Es müssen Schichten, Stationen und Mitglieder vorhanden sein.',
+				variant: 'destructive'
+			});
+			return;
+		}
+
+		setAutoAssignLoading(true);
+
+		try {
+			const result: AssignmentResult = await performAutomaticAssignment(
 				festivalId,
-				stationShifts,
+				shifts,
 				stations,
-				members,
+				members.filter((m) => m.is_active),
 				autoAssignConfig,
 				stationPreferences
 			);
 
 			if (result.success) {
-				loadData();
-				setShowAutoAssignDialog(false);
+				await loadData(); // Refresh data
+
+				let message = `${result.assignmentsCreated} Zuweisungen erstellt.`;
+				if (result.unfilledPositions.length > 0) {
+					message += ` ${result.unfilledPositions.length} Positionen konnten nicht besetzt werden.`;
+				}
 
 				toast({
-					title: 'Automatische Zuweisung abgeschlossen',
-					description: `${result.assignmentsCreated} Zuweisungen erstellt.`
+					title: 'Automatische Zuteilung abgeschlossen',
+					description: message
 				});
+			} else {
+				throw new Error('Assignment failed');
 			}
 		} catch (error) {
 			toast({
 				title: 'Fehler',
-				description: 'Automatische Zuweisung fehlgeschlagen.',
+				description: 'Die automatische Zuteilung ist fehlgeschlagen.',
 				variant: 'destructive'
 			});
 		} finally {
 			setAutoAssignLoading(false);
+			setShowAutoAssignDialog(false);
 		}
 	};
 
-	const handleClearAssignments = async () => {
+	const handleClearAllAssignments = async () => {
 		try {
 			const success = await clearAllAssignments(festivalId);
 			if (success) {
-				loadData();
+				await loadData();
 				toast({
 					title: 'Erfolg',
-					description: 'Alle Zuweisungen wurden entfernt.'
+					description: 'Alle Zuweisungen wurden gelöscht.'
 				});
+			} else {
+				throw new Error('Clear failed');
 			}
 		} catch (error) {
 			toast({
 				title: 'Fehler',
-				description: 'Zuweisungen konnten nicht entfernt werden.',
+				description: 'Zuweisungen konnten nicht gelöscht werden.',
 				variant: 'destructive'
 			});
 		}
 	};
 
-	const handleUpdateMemberPreferences = async (memberId: string, preferences: string[]) => {
-		try {
-			await updateMemberStationPreferences(memberId, preferences);
-			
-			// Update local state
-			setStationPreferences(prev => ({
-				...prev,
-				[memberId]: preferences
-			}));
+	const getMemberAssignmentInfo = (memberId: string) => {
+		const memberAssignments = getMemberAssignments(memberId);
+		if (memberAssignments.length === 0) return 'Frei';
 
-			toast({
-				title: 'Erfolg',
-				description: 'Präferenzen wurden aktualisiert.'
-			});
-		} catch (error) {
-			toast({
-				title: 'Fehler',
-				description: 'Präferenzen konnten nicht aktualisiert werden.',
-				variant: 'destructive'
-			});
-		}
+		return memberAssignments
+			.map((assignment) => {
+				const shift = shifts.find((s) => s.id === assignment.shift_id);
+				const station = stations.find((s) => s.id === assignment.station_id);
+				if (!shift || !station) return '';
+
+				const date = new Date(shift.start_date).toLocaleDateString('de-AT', {
+					weekday: 'short',
+					day: '2-digit',
+					month: '2-digit'
+				});
+				return `${station.name} (${date} ${shift.start_time}-${shift.end_time})`;
+			})
+			.join(', ');
 	};
 
-	const getStationShiftsForStation = (stationId: string) => {
-		return stationShifts.filter(shift => shift.station_id === stationId);
-	};
-
-	const getAssignmentsForStationShift = (stationShiftId: string) => {
-		return assignments.filter(a => a.station_shift_id === stationShiftId);
+	const formatShiftTime = (shift: Shift): string => {
+		const date = new Date(shift.start_date).toLocaleDateString('de-AT', {
+			weekday: 'short',
+			day: '2-digit',
+			month: '2-digit'
+		});
+		return `${date} ${shift.start_time}-${shift.end_time}`;
 	};
 
 	if (loading) {
 		return (
-			<Card>
-				<CardContent className="p-6">
-					<div className="text-center py-8">Lade Schichtplan...</div>
-				</CardContent>
-			</Card>
+			<div className="flex items-center justify-center py-8">
+				<div className="text-lg">Lade Schichtplan...</div>
+			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="h-screen flex flex-col">
 			{/* Header with controls */}
-			<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+			<div className="flex items-center justify-between p-6 border-b bg-background">
 				<div>
-					<h2 className="text-2xl font-bold">Schichtplan</h2>
+					<h2 className="text-2xl font-bold flex items-center gap-2">
+						<Calendar className="h-6 w-6" />
+						Schichtplan Matrix
+					</h2>
 					<p className="text-muted-foreground">
-						Verwalten Sie Schichten und weisen Sie Mitglieder zu Stationen zu.
+						Ziehen Sie Mitglieder aus der rechten Liste in die gewünschten Schichten
 					</p>
 				</div>
-				<div className="flex gap-2">
+
+				<div className="flex gap-2 items-center">
+					<Dialog open={showAutoAssignDialog} onOpenChange={setShowAutoAssignDialog}>
+						<DialogTrigger asChild>
+							<Button
+								variant="default"
+								size="lg"
+								className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 border-2 border-blue-500">
+								<Zap className="h-5 w-5 mr-2" />
+								Automatische Zuteilung
+							</Button>
+						</DialogTrigger>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Automatische Schichtzuteilung</DialogTitle>
+							</DialogHeader>
+							<div className="space-y-4">
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<Label htmlFor="min-shifts">Min. Schichten pro Person</Label>
+										<Input
+											id="min-shifts"
+											type="number"
+											min="0"
+											value={autoAssignConfig.minShiftsPerMember}
+											onChange={(e) =>
+												setAutoAssignConfig((prev) => ({
+													...prev,
+													minShiftsPerMember: parseInt(e.target.value) || 0
+												}))
+											}
+										/>
+									</div>
+									<div>
+										<Label htmlFor="max-shifts">Max. Schichten pro Person</Label>
+										<Input
+											id="max-shifts"
+											type="number"
+											min="1"
+											value={autoAssignConfig.maxShiftsPerMember}
+											onChange={(e) =>
+												setAutoAssignConfig((prev) => ({
+													...prev,
+													maxShiftsPerMember: parseInt(e.target.value) || 1
+												}))
+											}
+										/>
+									</div>
+								</div>
+
+								<div className="bg-muted p-4 rounded-lg">
+									<p className="text-sm text-muted-foreground">
+										Die automatische Zuteilung versucht alle verfügbaren Positionen zu besetzen.
+										Mitglieder mit Stationswünschen werden bevorzugt zugewiesen, solange Schichten
+										in ihren Wunschstationen frei sind. Die Schichten werden gleichmäßig verteilt.
+									</p>
+								</div>
+
+								<div className="flex justify-end gap-2">
+									<Button variant="destructive" onClick={handleClearAllAssignments}>
+										Alle Zuweisungen löschen
+									</Button>
+									<Button variant="outline" onClick={() => setShowAutoAssignDialog(false)}>
+										Abbrechen
+									</Button>
+									<Button onClick={handleAutomaticAssignment} disabled={autoAssignLoading}>
+										{autoAssignLoading ? 'Zuteilen...' : 'Automatisch zuteilen'}
+									</Button>
+								</div>
+							</div>
+						</DialogContent>
+					</Dialog>
+
+					<div className="h-8 w-px bg-border mx-2"></div>
+
+					<Dialog open={showShiftDialog} onOpenChange={setShowShiftDialog}>
+						<DialogTrigger asChild>
+							<Button variant="outline" size="sm">
+								<Clock className="h-4 w-4 mr-2" />
+								Schicht hinzufügen
+							</Button>
+						</DialogTrigger>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Neue Schicht erstellen</DialogTitle>
+							</DialogHeader>
+							<div className="space-y-4">
+								<div>
+									<Label htmlFor="shift-name">Name</Label>
+									<Input
+										id="shift-name"
+										value={shiftForm.name}
+										onChange={(e) => setShiftForm((prev) => ({ ...prev, name: e.target.value }))}
+										placeholder="z.B. Freitag Abend"
+									/>
+								</div>
+								<div>
+									<Label htmlFor="shift-date">Datum</Label>
+									<Input
+										id="shift-date"
+										type="date"
+										value={shiftForm.start_date}
+										onChange={(e) =>
+											setShiftForm((prev) => ({ ...prev, start_date: e.target.value }))
+										}
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<Label htmlFor="start-time">Von</Label>
+										<Input
+											id="start-time"
+											type="time"
+											value={shiftForm.start_time}
+											onChange={(e) =>
+												setShiftForm((prev) => ({ ...prev, start_time: e.target.value }))
+											}
+										/>
+									</div>
+									<div>
+										<Label htmlFor="end-time">Bis</Label>
+										<Input
+											id="end-time"
+											type="time"
+											value={shiftForm.end_time}
+											onChange={(e) =>
+												setShiftForm((prev) => ({ ...prev, end_time: e.target.value }))
+											}
+										/>
+									</div>
+								</div>
+								<div className="flex justify-end gap-2">
+									<Button variant="outline" onClick={() => setShowShiftDialog(false)}>
+										Abbrechen
+									</Button>
+									<Button onClick={handleCreateShift}>Erstellen</Button>
+								</div>
+							</div>
+						</DialogContent>
+					</Dialog>
+
 					<Dialog open={showStationDialog} onOpenChange={setShowStationDialog}>
 						<DialogTrigger asChild>
 							<Button variant="outline" size="sm">
-								<Plus className="h-4 w-4 mr-2" />
-								Station
+								<MapPin className="h-4 w-4 mr-2" />
+								Station hinzufügen
 							</Button>
 						</DialogTrigger>
 						<DialogContent>
@@ -388,10 +694,8 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 									<Input
 										id="station-name"
 										value={stationForm.name}
-										onChange={(e) =>
-											setStationForm({ ...stationForm, name: e.target.value })
-										}
-										placeholder="z.B. Eingang, Bar, Küche"
+										onChange={(e) => setStationForm((prev) => ({ ...prev, name: e.target.value }))}
+										placeholder="z.B. Grill, Kassa, Bar"
 									/>
 								</div>
 								<div>
@@ -402,10 +706,10 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 										min="1"
 										value={stationForm.required_people}
 										onChange={(e) =>
-											setStationForm({
-												...stationForm,
+											setStationForm((prev) => ({
+												...prev,
 												required_people: parseInt(e.target.value) || 1
-											})
+											}))
 										}
 									/>
 								</div>
@@ -415,16 +719,14 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 										id="station-description"
 										value={stationForm.description}
 										onChange={(e) =>
-											setStationForm({ ...stationForm, description: e.target.value })
+											setStationForm((prev) => ({ ...prev, description: e.target.value }))
 										}
 										placeholder="Zusätzliche Informationen..."
+										rows={3}
 									/>
 								</div>
-								<div className="flex gap-2 justify-end">
-									<Button
-										variant="outline"
-										onClick={() => setShowStationDialog(false)}
-									>
+								<div className="flex justify-end gap-2">
+									<Button variant="outline" onClick={() => setShowStationDialog(false)}>
 										Abbrechen
 									</Button>
 									<Button onClick={handleCreateStation}>Erstellen</Button>
@@ -432,333 +734,395 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 							</div>
 						</DialogContent>
 					</Dialog>
-
-					<Dialog open={showShiftDialog} onOpenChange={setShowShiftDialog}>
-						<DialogTrigger asChild>
-							<Button variant="default" size="sm">
-								<Plus className="h-4 w-4 mr-2" />
-								Schicht
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="max-w-md">
-							<DialogHeader>
-								<DialogTitle>Neue Schicht erstellen</DialogTitle>
-							</DialogHeader>
-							<div className="space-y-4">
-								<div>
-									<Label htmlFor="shift-station">Station</Label>
-									<Select 
-										value={selectedStationForShift?.id || ''} 
-										onValueChange={(stationId) => {
-											const station = stations.find(s => s.id === stationId);
-											setSelectedStationForShift(station || null);
-										}}
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="Station auswählen" />
-										</SelectTrigger>
-										<SelectContent>
-											{stations.map((station) => (
-												<SelectItem key={station.id} value={station.id}>
-													{station.name}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-								<div>
-									<Label htmlFor="shift-name">Name</Label>
-									<Input
-										id="shift-name"
-										value={shiftForm.name}
-										onChange={(e) =>
-											setShiftForm({ ...shiftForm, name: e.target.value })
-										}
-										placeholder="z.B. Frühschicht, Spätschicht"
-									/>
-								</div>
-								<div>
-									<Label htmlFor="shift-date">Datum</Label>
-									<Input
-										id="shift-date"
-										type="date"
-										value={shiftForm.start_date}
-										onChange={(e) =>
-											setShiftForm({ ...shiftForm, start_date: e.target.value })
-										}
-									/>
-								</div>
-								<div className="grid grid-cols-2 gap-2">
-									<div>
-										<Label htmlFor="start-time">Startzeit</Label>
-										<Input
-											id="start-time"
-											type="time"
-											value={shiftForm.start_time}
-											onChange={(e) =>
-												setShiftForm({ ...shiftForm, start_time: e.target.value })
-											}
-										/>
-									</div>
-									<div>
-										<Label htmlFor="end-time">Endzeit</Label>
-										<Input
-											id="end-time"
-											type="time"
-											value={shiftForm.end_time}
-											onChange={(e) =>
-												setShiftForm({ ...shiftForm, end_time: e.target.value })
-											}
-										/>
-									</div>
-								</div>
-								<div className="flex gap-2 justify-end">
-									<Button
-										variant="outline"
-										onClick={() => setShowShiftDialog(false)}
-									>
-										Abbrechen
-									</Button>
-									<Button onClick={handleCreateShift}>Erstellen</Button>
-								</div>
-							</div>
-						</DialogContent>
-					</Dialog>
-
-					<Dialog open={showAutoAssignDialog} onOpenChange={setShowAutoAssignDialog}>
-						<DialogTrigger asChild>
-							<Button variant="secondary" size="sm">
-								<Zap className="h-4 w-4 mr-2" />
-								Auto-Zuweisung
-							</Button>
-						</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>Automatische Zuweisung</DialogTitle>
-							</DialogHeader>
-							<div className="space-y-4">
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<Label>Min. Schichten pro Person</Label>
-										<Input
-											type="number"
-											min="0"
-											value={autoAssignConfig.minShiftsPerMember}
-											onChange={(e) =>
-												setAutoAssignConfig({
-													...autoAssignConfig,
-													minShiftsPerMember: parseInt(e.target.value) || 0
-												})
-											}
-										/>
-									</div>
-									<div>
-										<Label>Max. Schichten pro Person</Label>
-										<Input
-											type="number"
-											min="1"
-											value={autoAssignConfig.maxShiftsPerMember}
-											onChange={(e) =>
-												setAutoAssignConfig({
-													...autoAssignConfig,
-													maxShiftsPerMember: parseInt(e.target.value) || 1
-												})
-											}
-										/>
-									</div>
-								</div>
-								<div className="flex gap-2 justify-end">
-									<Button
-										variant="outline"
-										onClick={() => setShowAutoAssignDialog(false)}
-									>
-										Abbrechen
-									</Button>
-									<Button 
-										variant="outline" 
-										onClick={handleClearAssignments}
-									>
-										Alle löschen
-									</Button>
-									<Button 
-										onClick={handleAutoAssign} 
-										disabled={autoAssignLoading}
-									>
-										{autoAssignLoading ? 'Zuweisen...' : 'Zuweisen'}
-									</Button>
-								</div>
-							</div>
-						</DialogContent>
-					</Dialog>
 				</div>
 			</div>
 
-			{/* Members sidebar */}
-			<div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-				<div className="lg:col-span-1 space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-lg flex items-center gap-2">
-								<Users className="h-5 w-5" />
-								Mitglieder ({members.length})
-							</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-2 max-h-96 overflow-y-auto">
-							{members.map((member) => (
+			{/* Main Content - Split Layout */}
+			<div className="flex-1 flex overflow-hidden">
+				{/* Left Side - Matrix */}
+				<div className="flex-1 overflow-auto">
+					{shifts.length === 0 || stations.length === 0 ? (
+						<div className="flex items-center justify-center h-full">
+							<div className="text-center text-muted-foreground">
+								{shifts.length === 0 && stations.length === 0 && (
+									<p>Erstellen Sie zuerst Schichten und Stationen, um die Matrix zu sehen.</p>
+								)}
+								{shifts.length === 0 && stations.length > 0 && (
+									<p>Erstellen Sie Schichten, um die Matrix zu sehen.</p>
+								)}
+								{shifts.length > 0 && stations.length === 0 && (
+									<p>Erstellen Sie Stationen, um die Matrix zu sehen.</p>
+								)}
+							</div>
+						</div>
+					) : (
+						<div className="p-6">
+							<div className="overflow-x-auto relative">
+								<table className="w-full min-w-max">
+									<thead>
+										<tr className="border-b bg-muted/50">
+											<th className="p-4 text-left font-medium min-w-[150px] sticky left-0 top-0 bg-muted/50 z-20">
+												Station
+											</th>
+											{shifts.map((shift) => (
+												<th
+													key={shift.id}
+													className="p-4 text-center font-medium min-w-[200px] sticky top-0 bg-muted/50 z-10">
+													<div className="space-y-1">
+														<div className="font-semibold">{shift.name}</div>
+														<div className="text-xs text-muted-foreground">
+															{formatShiftTime(shift)}
+														</div>
+													</div>
+												</th>
+											))}
+										</tr>
+									</thead>
+									<tbody>
+										{stations.map((station) => (
+											<tr key={station.id} className="border-b">
+												<td className="p-4 font-medium sticky left-0 bg-background z-10 min-w-[150px]">
+													<div className="space-y-1">
+														<div>{station.name}</div>
+														<div className="text-xs text-muted-foreground flex items-center gap-1">
+															<Users className="h-3 w-3" />
+															{station.required_people} Personen
+														</div>
+													</div>
+												</td>
+												{shifts.map((shift) => {
+													const cell = getMatrixCell(shift.id, station.id);
+													const remaining = cell.requiredPeople - cell.assignments.length;
+
+													return (
+														<td key={`${shift.id}-${station.id}`} className="p-2">
+															<div
+																className={cn(
+																	'min-h-[120px] border-2 rounded-lg p-2 space-y-2 transition-colors',
+																	getCellColor(cell),
+																	'relative'
+																)}
+																onDragOver={(e) => e.preventDefault()}
+																onDrop={(e) => handleDrop(shift.id, station.id, e)}>
+																<div className="flex justify-between items-start">
+																	<Badge
+																		variant={getRemainingBadgeVariant(cell)}
+																		className="text-xs">
+																		{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
+																	</Badge>
+																</div>
+
+																<div className="space-y-1">
+																	{cell.assignments.map((assignment) => (
+																		<div
+																			key={assignment.id}
+																			className="flex items-center justify-between bg-background/80 rounded px-2 py-1 text-sm group">
+																			<span className="font-medium">
+																				{assignment.member?.first_name}{' '}
+																				{assignment.member?.last_name}
+																			</span>
+																			<Button
+																				size="sm"
+																				variant="ghost"
+																				className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+																				onClick={() =>
+																					handleRemoveMember(
+																						shift.id,
+																						station.id,
+																						assignment.member_id!
+																					)
+																				}>
+																				<Trash2 className="h-3 w-3" />
+																			</Button>
+																		</div>
+																	))}
+																</div>
+
+																{remaining > 0 && (
+																	<div className="text-xs text-muted-foreground text-center border-dashed border rounded p-2">
+																		Person hier ablegen
+																	</div>
+																)}
+															</div>
+														</td>
+													);
+												})}
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					)}
+				</div>
+
+				{/* Right Side - Members List */}
+				<div className="w-80 border-l bg-muted/20 flex flex-col">
+					<div className="p-4 border-b bg-background">
+						<div className="flex items-center justify-between mb-3">
+							<h3 className="font-semibold flex items-center gap-2">
+								<Users className="h-4 w-4" />
+								Mitglieder ({getFilteredMembers().length})
+							</h3>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setAvailabilityFilter('all')}
+								className="h-6 w-6 p-0">
+								<X className="h-3 w-3" />
+							</Button>
+						</div>
+
+						{/* Filter Buttons */}
+						<div className="flex gap-1 mb-3">
+							<Button
+								variant={availabilityFilter === 'all' ? 'default' : 'outline'}
+								size="sm"
+								onClick={() => setAvailabilityFilter('all')}
+								className="text-xs h-6 px-2">
+								Alle
+							</Button>
+							<Button
+								variant={availabilityFilter === 'free' ? 'default' : 'outline'}
+								size="sm"
+								onClick={() => setAvailabilityFilter('free')}
+								className="text-xs h-6 px-2">
+								Frei
+							</Button>
+							<Button
+								variant={availabilityFilter === 'partial' ? 'default' : 'outline'}
+								size="sm"
+								onClick={() => setAvailabilityFilter('partial')}
+								className="text-xs h-6 px-2">
+								Teilweise
+							</Button>
+							<Button
+								variant={availabilityFilter === 'full' ? 'default' : 'outline'}
+								size="sm"
+								onClick={() => setAvailabilityFilter('full')}
+								className="text-xs h-6 px-2">
+								Voll
+							</Button>
+						</div>
+
+						{/* Stats */}
+						{(() => {
+							const stats = getAvailabilityStats();
+							return (
+								<div className="flex gap-2 text-xs">
+									<div className="flex items-center gap-1">
+										<div className="w-2 h-2 rounded-full bg-red-500"></div>
+										<span>{stats.free} frei</span>
+									</div>
+									<div className="flex items-center gap-1">
+										<div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+										<span>{stats.partial} teilweise</span>
+									</div>
+									<div className="flex items-center gap-1">
+										<div className="w-2 h-2 rounded-full bg-green-500"></div>
+										<span>{stats.full} voll</span>
+									</div>
+								</div>
+							);
+						})()}
+					</div>
+
+					<div className="flex-1 overflow-y-auto p-4 space-y-2">
+						{getFilteredMembers().map((member) => {
+							const memberAssignments = getMemberAssignments(member.id);
+							const availability = getMemberAvailability(member.id);
+							const totalShifts = shifts.length;
+
+							return (
 								<div
 									key={member.id}
-									draggable
-									onDragStart={() => setDraggedMember(member)}
-									onDragEnd={() => setDraggedMember(null)}
 									className={cn(
-										'p-2 rounded border cursor-move hover:bg-muted/50 transition-colors',
-										stationPreferences[member.id]?.length > 0 && 'border-primary/50'
+										'p-3 rounded-lg border cursor-move hover:bg-accent/50 transition-colors',
+										availability === 'free' && 'bg-red-50 border-red-200',
+										availability === 'partial' && 'bg-yellow-50 border-yellow-200',
+										availability === 'full' && 'bg-green-50 border-green-200'
 									)}
-								>
-									<div className="font-medium text-sm">
-										{member.first_name} {member.last_name}
-									</div>
-									{stationPreferences[member.id]?.length > 0 && (
-										<div className="flex items-center gap-1 mt-1">
-											<Heart className="h-3 w-3 text-primary" />
-											<div className="text-xs text-muted-foreground">
-												{stationPreferences[member.id].length} Präferenzen
+									draggable
+									onDragStart={() => handleDragStart(member)}
+									onDragEnd={handleDragEnd}>
+									<div className="space-y-2">
+										<div className="flex items-center justify-between">
+											<span className="font-medium text-sm">
+												{member.first_name} {member.last_name}
+											</span>
+											<div className="flex items-center gap-1">
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleOpenStationPreferenceDialog(member);
+													}}
+													className="h-6 w-6 p-0 hover:bg-blue-100"
+													title="Stationswünsche bearbeiten">
+													<Heart
+														className={cn(
+															'h-3 w-3',
+															getMemberStationPreferences(member.id).length > 0
+																? 'text-red-500 fill-red-500'
+																: 'text-gray-400'
+														)}
+													/>
+												</Button>
+												<Badge
+													variant={
+														availability === 'free'
+															? 'destructive'
+															: availability === 'partial'
+															? 'secondary'
+															: 'default'
+													}
+													className="text-xs">
+													{memberAssignments.length}/{totalShifts}
+												</Badge>
+												<div
+													className={cn(
+														'w-2 h-2 rounded-full',
+														availability === 'free' && 'bg-red-500',
+														availability === 'partial' && 'bg-yellow-500',
+														availability === 'full' && 'bg-green-500'
+													)}></div>
 											</div>
 										</div>
-									)}
-								</div>
-							))}
-						</CardContent>
-					</Card>
-				</div>
 
-				{/* Station shifts matrix */}
-				<div className="lg:col-span-3">
-					<Card>
-						<CardHeader>
-							<CardTitle>Schichtplan nach Stationen</CardTitle>
-						</CardHeader>
-						{stations.length === 0 ? (
-							<CardContent>
-								<div className="text-center py-8 text-muted-foreground">
-									Keine Stationen vorhanden. Erstellen Sie zunächst eine Station.
-								</div>
-							</CardContent>
-						) : (
-							<CardContent className="p-0">
-								<div className="space-y-6 p-6">
-									{stations.map((station) => {
-										const stationShiftsForStation = getStationShiftsForStation(station.id);
-										
-										return (
-											<div key={station.id} className="border rounded-lg p-4">
-												<div className="flex items-center justify-between mb-4">
-													<div>
-														<h3 className="font-semibold text-lg">{station.name}</h3>
-														<p className="text-sm text-muted-foreground">
-															{station.required_people} Personen benötigt
-														</p>
-													</div>
-													<Badge variant="outline">
-														{stationShiftsForStation.length} Schichten
-													</Badge>
-												</div>
-												
-												{stationShiftsForStation.length === 0 ? (
-													<div className="text-center py-8 text-muted-foreground">
-														Keine Schichten für diese Station vorhanden.
-													</div>
-												) : (
-													<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-														{stationShiftsForStation.map((stationShift) => {
-															const shiftAssignments = getAssignmentsForStationShift(stationShift.id);
-															const filledSlots = shiftAssignments.filter(a => a.member_id).length;
-															
-															return (
-																<div
-																	key={stationShift.id}
-																	className="border rounded p-3 bg-card"
-																	onDrop={(e) => {
-																		e.preventDefault();
-																		if (draggedMember) {
-																			handleDrop(stationShift.id, draggedMember.id);
-																		}
-																	}}
-																	onDragOver={(e) => e.preventDefault()}
-																>
-																	<div className="mb-2">
-																		<div className="font-medium">{stationShift.name}</div>
-																		<div className="text-xs text-muted-foreground flex items-center gap-2">
-																			<Calendar className="h-3 w-3" />
-																			{stationShift.start_date}
-																		</div>
-																		<div className="text-xs text-muted-foreground flex items-center gap-2">
-																			<Clock className="h-3 w-3" />
-																			{stationShift.start_time} - {stationShift.end_time}
-																		</div>
-																	</div>
-																	
-																	<div className="space-y-1">
-																		{Array.from({ length: station.required_people }).map((_, index) => {
-																			const assignment = shiftAssignments.find(a => a.position === index + 1);
-																			const member = assignment?.member;
-																			
-																			return (
-																				<div
-																					key={index}
-																					className={cn(
-																						'p-2 rounded text-xs border-2 border-dashed min-h-[2rem] flex items-center',
-																						member 
-																							? 'border-primary bg-primary/5 text-foreground' 
-																							: 'border-muted-foreground/20 bg-muted/20'
-																					)}
-																				>
-																					{member ? (
-																						<div className="flex items-center justify-between w-full">
-																							<span>
-																								{member.first_name} {member.last_name}
-																							</span>
-																							<Button
-																								size="sm"
-																								variant="ghost"
-																								className="h-4 w-4 p-0"
-																								onClick={() => handleRemoveMember(stationShift.id, member.id)}
-																							>
-																								<X className="h-3 w-3" />
-																							</Button>
-																						</div>
-																					) : (
-																						<span className="text-muted-foreground">
-																							Position {index + 1}
-																						</span>
-																					)}
-																				</div>
-																			);
-																		})}
-																	</div>
-																	
-																	<div className="mt-2 flex items-center gap-2">
-																		<Badge
-																			variant={filledSlots === station.required_people ? 'default' : 'secondary'}
-																			className="text-xs"
-																		>
-																			{filledSlots}/{station.required_people}
-																		</Badge>
-																	</div>
-																</div>
-															);
-														})}
-													</div>
-												)}
+										{/* Station Preferences */}
+										{getMemberStationPreferences(member.id).length > 0 && (
+											<div className="flex flex-wrap gap-1">
+												{getMemberStationPreferences(member.id).map((stationId) => {
+													const station = stations.find((s) => s.id === stationId);
+													if (!station) return null;
+													return (
+														<Badge
+															key={stationId}
+															variant="outline"
+															className="text-xs bg-pink-50 border-pink-200 text-pink-700">
+															<Heart className="h-2 w-2 mr-1 fill-current" />
+															{station.name}
+														</Badge>
+													);
+												})}
 											</div>
-										);
-									})}
+										)}
+
+										{memberAssignments.length > 0 && (
+											<div className="text-xs text-muted-foreground">
+												{memberAssignments.map((assignment, index) => {
+													const shift = shifts.find((s) => s.id === assignment.shift_id);
+													const station = stations.find((s) => s.id === assignment.station_id);
+													if (!shift || !station) return null;
+
+													const date = new Date(shift.start_date).toLocaleDateString('de-AT', {
+														weekday: 'short',
+														day: '2-digit',
+														month: '2-digit'
+													});
+
+													return (
+														<div key={assignment.id} className="flex items-center gap-1">
+															<Badge variant="secondary" className="text-xs">
+																{station.name}
+															</Badge>
+															<span>{date}</span>
+														</div>
+													);
+												})}
+											</div>
+										)}
+
+										{/* Availability Progress Bar */}
+										{totalShifts > 0 && (
+											<div className="w-full bg-gray-200 rounded-full h-1.5">
+												<div
+													className={cn(
+														'h-1.5 rounded-full transition-all',
+														availability === 'free' && 'bg-red-500',
+														availability === 'partial' && 'bg-yellow-500',
+														availability === 'full' && 'bg-green-500'
+													)}
+													style={{
+														width: `${(memberAssignments.length / totalShifts) * 100}%`
+													}}></div>
+											</div>
+										)}
+									</div>
 								</div>
-							</CardContent>
-						)}
-					</Card>
+							);
+						})}
+					</div>
 				</div>
 			</div>
+
+			{/* Station Preference Dialog */}
+			<Dialog open={showStationPreferenceDialog} onOpenChange={setShowStationPreferenceDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<Heart className="h-5 w-5 text-red-500" />
+							Stationswünsche für {selectedMemberForPreference?.first_name}{' '}
+							{selectedMemberForPreference?.last_name}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4">
+						<p className="text-sm text-muted-foreground">
+							Wählen Sie die Stationen aus, bei denen {selectedMemberForPreference?.first_name}{' '}
+							bevorzugt eingesetzt werden soll.
+						</p>
+
+						<div className="space-y-2">
+							{stations.map((station) => {
+								const isSelected =
+									selectedMemberForPreference &&
+									(
+										tempStationPreferences[selectedMemberForPreference.id] ||
+										getMemberStationPreferences(selectedMemberForPreference.id)
+									).includes(station.id);
+
+								return (
+									<div
+										key={station.id}
+										className={cn(
+											'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+											isSelected ? 'bg-pink-50 border-pink-200' : 'hover:bg-gray-50 border-gray-200'
+										)}
+										onClick={() => {
+											if (!selectedMemberForPreference) return;
+											handleToggleStationPreference(selectedMemberForPreference.id, station.id);
+										}}>
+										<div
+											className={cn(
+												'w-4 h-4 rounded border-2 flex items-center justify-center',
+												isSelected ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+											)}>
+											{isSelected && <Heart className="h-2 w-2 text-white fill-current" />}
+										</div>
+										<div className="flex-1">
+											<div className="font-medium text-sm">{station.name}</div>
+											{station.description && (
+												<div className="text-xs text-muted-foreground">{station.description}</div>
+											)}
+										</div>
+										<div className="text-xs text-muted-foreground">
+											{station.required_people} Person{station.required_people !== 1 ? 'en' : ''}
+										</div>
+									</div>
+								);
+							})}
+						</div>
+
+						<div className="flex justify-end gap-2 pt-4">
+							<Button variant="outline" onClick={() => setShowStationPreferenceDialog(false)}>
+								Abbrechen
+							</Button>
+							<Button onClick={handleSaveStationPreferencesFromDialog}>Speichern</Button>
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 };
