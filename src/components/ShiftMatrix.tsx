@@ -19,7 +19,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@/components/ui/select';
-import { Plus, Calendar, Clock, MapPin, Users, Trash2, Edit, Filter, X } from 'lucide-react';
+import { Plus, Calendar, Clock, MapPin, Users, Trash2, Edit, Filter, X, Zap, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
@@ -35,6 +35,7 @@ import {
 	type ShiftAssignmentWithMember
 } from '@/lib/shiftService';
 import { getMembers, type Member } from '@/lib/memberService';
+import { performAutomaticAssignment, clearAllAssignments, type AutoAssignmentConfig, type AssignmentResult } from '@/lib/automaticAssignmentService';
 
 interface ShiftMatrixProps {
 	festivalId: string;
@@ -58,6 +59,8 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	// Dialog states
 	const [showShiftDialog, setShowShiftDialog] = useState(false);
 	const [showStationDialog, setShowStationDialog] = useState(false);
+	const [showAutoAssignDialog, setShowAutoAssignDialog] = useState(false);
+	const [autoAssignLoading, setAutoAssignLoading] = useState(false);
 
 	// Form states
 	const [shiftForm, setShiftForm] = useState({
@@ -71,6 +74,12 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		name: '',
 		required_people: 1,
 		description: ''
+	});
+
+	const [autoAssignConfig, setAutoAssignConfig] = useState<AutoAssignmentConfig>({
+		minShiftsPerMember: 1,
+		maxShiftsPerMember: 3,
+		respectPreferences: true
 	});
 
 	// Drag and drop state
@@ -304,6 +313,75 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		return { free, partial, full, total: members.length };
 	};
 
+	const handleAutomaticAssignment = async () => {
+		if (shifts.length === 0 || stations.length === 0 || members.length === 0) {
+			toast({
+				title: 'Fehler',
+				description: 'Es müssen Schichten, Stationen und Mitglieder vorhanden sein.',
+				variant: 'destructive'
+			});
+			return;
+		}
+
+		setAutoAssignLoading(true);
+		
+		try {
+			const result: AssignmentResult = await performAutomaticAssignment(
+				festivalId,
+				shifts,
+				stations,
+				members.filter(m => m.is_active),
+				autoAssignConfig
+			);
+
+			if (result.success) {
+				await loadData(); // Refresh data
+				
+				let message = `${result.assignmentsCreated} Zuweisungen erstellt.`;
+				if (result.unfilledPositions.length > 0) {
+					message += ` ${result.unfilledPositions.length} Positionen konnten nicht besetzt werden.`;
+				}
+
+				toast({
+					title: 'Automatische Zuteilung abgeschlossen',
+					description: message
+				});
+			} else {
+				throw new Error('Assignment failed');
+			}
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Die automatische Zuteilung ist fehlgeschlagen.',
+				variant: 'destructive'
+			});
+		} finally {
+			setAutoAssignLoading(false);
+			setShowAutoAssignDialog(false);
+		}
+	};
+
+	const handleClearAllAssignments = async () => {
+		try {
+			const success = await clearAllAssignments(festivalId);
+			if (success) {
+				await loadData();
+				toast({
+					title: 'Erfolg',
+					description: 'Alle Zuweisungen wurden gelöscht.'
+				});
+			} else {
+				throw new Error('Clear failed');
+			}
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Zuweisungen konnten nicht gelöscht werden.',
+				variant: 'destructive'
+			});
+		}
+	};
+
 	const getMemberAssignmentInfo = (memberId: string) => {
 		const memberAssignments = getMemberAssignments(memberId);
 		if (memberAssignments.length === 0) return 'Frei';
@@ -356,6 +434,93 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				</div>
 
 				<div className="flex gap-2">
+					<Dialog open={showAutoAssignDialog} onOpenChange={setShowAutoAssignDialog}>
+						<DialogTrigger asChild>
+							<Button className="bg-gradient-to-r from-primary to-primary-foreground">
+								<Zap className="h-4 w-4 mr-2" />
+								Automatische Zuteilung
+							</Button>
+						</DialogTrigger>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Automatische Schichtzuteilung</DialogTitle>
+							</DialogHeader>
+							<div className="space-y-4">
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<Label htmlFor="min-shifts">Min. Schichten pro Person</Label>
+										<Input
+											id="min-shifts"
+											type="number"
+											min="0"
+											value={autoAssignConfig.minShiftsPerMember}
+											onChange={(e) => setAutoAssignConfig(prev => ({
+												...prev,
+												minShiftsPerMember: parseInt(e.target.value) || 0
+											}))}
+										/>
+									</div>
+									<div>
+										<Label htmlFor="max-shifts">Max. Schichten pro Person</Label>
+										<Input
+											id="max-shifts"
+											type="number"
+											min="1"
+											value={autoAssignConfig.maxShiftsPerMember}
+											onChange={(e) => setAutoAssignConfig(prev => ({
+												...prev,
+												maxShiftsPerMember: parseInt(e.target.value) || 1
+											}))}
+										/>
+									</div>
+								</div>
+								
+								<div className="flex items-center space-x-2">
+									<input
+										type="checkbox"
+										id="respect-preferences"
+										checked={autoAssignConfig.respectPreferences}
+										onChange={(e) => setAutoAssignConfig(prev => ({
+											...prev,
+											respectPreferences: e.target.checked
+										}))}
+									/>
+									<Label htmlFor="respect-preferences">
+										Stationspräferenzen berücksichtigen
+									</Label>
+								</div>
+
+								<div className="bg-muted p-4 rounded-lg">
+									<p className="text-sm text-muted-foreground">
+										Die automatische Zuteilung versucht alle verfügbaren Positionen zu besetzen, 
+										berücksichtigt dabei Präferenzen der Mitglieder und verteilt die Schichten gleichmäßig.
+									</p>
+								</div>
+
+								<div className="flex justify-end gap-2">
+									<Button 
+										variant="destructive" 
+										onClick={handleClearAllAssignments}
+									>
+										Alle Zuweisungen löschen
+									</Button>
+									<Button 
+										variant="outline" 
+										onClick={() => setShowAutoAssignDialog(false)}
+									>
+										Abbrechen
+									</Button>
+									<Button 
+										onClick={handleAutomaticAssignment}
+										disabled={autoAssignLoading}
+									>
+										{autoAssignLoading ? 'Zuteilen...' : 'Automatisch zuteilen'}
+									</Button>
+								</div>
+							</div>
+						</DialogContent>
+					</Dialog>
+
 					<Dialog open={showShiftDialog} onOpenChange={setShowShiftDialog}>
 						<DialogTrigger asChild>
 							<Button variant="outline">

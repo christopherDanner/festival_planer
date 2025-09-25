@@ -74,10 +74,9 @@ export async function createFestival(festivalData: FestivalData, userId: string)
 	}
 
 	// Use custom data if provided, otherwise generate plan
-	const stations =
-		festivalData.customStations || generateFestivalPlan(festivalData, members || []).shiftStations;
-	const shifts =
-		festivalData.customShifts || generateFestivalPlan(festivalData, members || []).shifts;
+	const planResult = await generateFestivalPlan(festivalData, members || []);
+	const stations = festivalData.customStations || planResult.shiftStations;
+	const shifts = festivalData.customShifts || planResult.shifts;
 
 	// Only insert data if AI suggestions are being used
 	if (stations.length > 0 && shifts.length > 0) {

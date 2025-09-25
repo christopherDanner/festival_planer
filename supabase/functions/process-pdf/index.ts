@@ -107,10 +107,13 @@ Extrahiere alle Namen aus diesem PDF-Text:`
 				mistralResponse.choices[0]?.message?.content || 'Keine Daten extrahiert';
 
 			// Check if we got actual name data
-			const nameLines = structuredData
-				.split('\n')
-				.filter((line) => line.trim() && !line.toLowerCase().includes('keine'))
-				.map((line) => line.trim());
+			let nameLines: string[] = [];
+			if (typeof structuredData === 'string') {
+				nameLines = structuredData
+					.split('\n')
+					.filter((line: string) => line.trim() && !line.toLowerCase().includes('keine'))
+					.map((line: string) => line.trim());
+			}
 
 			if (nameLines.length > 0) {
 				// Return the structured name list
@@ -133,7 +136,8 @@ Bitte überprüfe den extrahierten Text und versuche es erneut.`;
 			console.log('PDF analysis completed with Mistral AI');
 		} catch (pdfError) {
 			console.error('PDF processing error:', pdfError);
-			extractedText = `Fehler beim Verarbeiten der PDF-Datei: ${pdfError.message}
+			const errorMessage = pdfError instanceof Error ? pdfError.message : 'Unknown error';
+			extractedText = `Fehler beim Verarbeiten der PDF-Datei: ${errorMessage}
 
 Bitte versuche es mit einer anderen Datei oder konvertiere das PDF zu CSV/Excel.`;
 		}
@@ -151,10 +155,11 @@ Bitte versuche es mit einer anderen Datei oder konvertiere das PDF zu CSV/Excel.
 		);
 	} catch (error) {
 		console.error('PDF processing error:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return new Response(
 			JSON.stringify({
 				error: 'Fehler beim Verarbeiten der PDF-Datei',
-				details: error.message
+				details: errorMessage
 			}),
 			{
 				status: 500,

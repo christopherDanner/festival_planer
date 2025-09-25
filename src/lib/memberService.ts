@@ -8,6 +8,7 @@ export interface Member {
   phone?: string;
   email?: string;
   tags: string[];
+  station_preferences?: string[];
   is_active: boolean;
   notes?: string;
   created_at: string;
