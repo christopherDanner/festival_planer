@@ -89,20 +89,64 @@ export async function createFestival(festivalData: FestivalData, userId: string)
 			end_time: shift.end_time
 		}));
 
-		const { data: insertedShifts, error: shiftError } = await supabase
-			.from('shifts')
-			.insert(shiftInserts)
-			.select();
+	// Update festivalService.ts to work with station_shifts
+	const { data: insertedStationShifts, error: stationShiftError } = await supabase
+		.from('station_shifts')
+		.insert(
+			shifts.flatMap(shift => 
+				insertedStations.map(station => ({
+					station_id: station.id,
+					festival_id: festival.id,
+					name: shift.name,
+					start_date: shift.date || shift.start_date,
+					start_time: shift.start_time,
+					end_time: shift.end_time
+				}))
+			)
+		)
+		.select();
 
-		if (shiftError) {
-			throw new Error('Fehler beim Erstellen der Schichten');
-		}
+	if (stationShiftError) {
+		throw new Error('Fehler beim Erstellen der Schichten');
+	}
 
-		// Insert stations
-		const stationInserts = stations.map((station) => ({
+	// Insert stations
+	const stationInserts = stations.map((station) => ({
+		festival_id: festival.id,
+		name: station.bereich, // Use 'bereich' from StationAssignment interface
+		required_people: station.bedarf, // Use 'bedarf' from StationAssignment interface
+		description: ''
+	}));
+
+	const { data: insertedStations, error: stationError } = await supabase
+		.from('stations')
+		.insert(stationInserts)
+		.select();
+
+	if (stationError) {
+		throw new Error('Fehler beim Erstellen der Stationen');
+	}
+
+	// Create station shifts for each station-shift combination
+	const stationShiftInserts = shifts.flatMap(shift => 
+		insertedStations.map(station => ({
+			station_id: station.id,
 			festival_id: festival.id,
-			name: station.bereich, // Use 'bereich' from StationAssignment interface
-			required_people: station.bedarf, // Use 'bedarf' from StationAssignment interface
+			name: shift.name,
+			start_date: shift.date || shift.start_date,
+			start_time: shift.start_time,
+			end_time: shift.end_time
+		}))
+	);
+
+	const { data: insertedStationShifts, error: stationShiftError } = await supabase
+		.from('station_shifts')
+		.insert(stationShiftInserts)
+		.select();
+
+	if (stationShiftError) {
+		throw new Error('Fehler beim Erstellen der Schichten');
+	}
 			description: station.bereich // Use 'bereich' as description if no separate description field
 		}));
 
@@ -255,13 +299,13 @@ export async function deleteFestival(festivalId: string): Promise<void> {
 		throw new Error('Fehler beim Löschen der Schichtzuordnungen');
 	}
 
-	// 2. Delete shifts
-	const { error: shiftError } = await supabase
-		.from('shifts')
+	// 2. Delete station shifts
+	const { error: stationShiftError } = await supabase
+		.from('station_shifts')
 		.delete()
 		.eq('festival_id', festivalId);
 
-	if (shiftError) {
+	if (stationShiftError) {
 		throw new Error('Fehler beim Löschen der Schichten');
 	}
 

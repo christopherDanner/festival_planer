@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Shift, Station, ShiftAssignment } from './shiftService';
-import { assignMemberToShift, getShiftAssignments } from './shiftService';
+import type { StationShift, Station, ShiftAssignment } from './shiftService';
+import { assignMemberToStationShift, getShiftAssignments } from './shiftService';
 import type { Member } from './memberService';
 
 export interface AutoAssignmentConfig {
@@ -32,7 +32,7 @@ interface AssignmentScore {
 
 export const performAutomaticAssignment = async (
 	festivalId: string,
-	shifts: Shift[],
+	stationShifts: StationShift[],
 	stations: Station[],
 	members: Member[],
 	config: AutoAssignmentConfig,
@@ -56,33 +56,34 @@ export const performAutomaticAssignment = async (
 			memberShiftCounts.set(member.id, currentAssignments.length);
 		});
 
-		// Create assignment matrix for all shift-station combinations
+		// Create assignment matrix for all station shifts
 		const assignmentMatrix: Array<{
-			shiftId: string;
+			stationShiftId: string;
 			stationId: string;
 			requiredPeople: number;
 			currentAssignments: number;
 			remainingSlots: number;
 		}> = [];
 
-		shifts.forEach((shift) => {
-			stations.forEach((station) => {
-				const currentAssignments = existingAssignments.filter(
-					(a) => a.shift_id === shift.id && a.station_id === station.id && a.member_id
-				).length;
+		stationShifts.forEach((stationShift) => {
+			const station = stations.find(s => s.id === stationShift.station_id);
+			if (!station) return;
 
-				const remainingSlots = station.required_people - currentAssignments;
+			const currentAssignments = existingAssignments.filter(
+				(a) => a.station_shift_id === stationShift.id && a.member_id
+			).length;
 
-				if (remainingSlots > 0) {
-					assignmentMatrix.push({
-						shiftId: shift.id,
-						stationId: station.id,
-						requiredPeople: station.required_people,
-						currentAssignments,
-						remainingSlots
-					});
-				}
-			});
+			const remainingSlots = station.required_people - currentAssignments;
+
+			if (remainingSlots > 0) {
+				assignmentMatrix.push({
+					stationShiftId: stationShift.id,
+					stationId: station.id,
+					requiredPeople: station.required_people,
+					currentAssignments,
+					remainingSlots
+				});
+			}
 		});
 
 		// Sort positions by priority (least filled stations first)
@@ -99,9 +100,9 @@ export const performAutomaticAssignment = async (
 			const availableMembers = members.filter((member) => {
 				const currentShifts = memberShiftCounts.get(member.id) || 0;
 
-				// Check if member is already assigned to this shift
+				// Check if member is already assigned to this station shift
 				const alreadyAssignedToShift = existingAssignments.some(
-					(a) => a.shift_id === position.shiftId && a.member_id === member.id
+					(a) => a.station_shift_id === position.stationShiftId && a.member_id === member.id
 				);
 
 				return (
@@ -151,10 +152,9 @@ export const performAutomaticAssignment = async (
 				const selectedMember = memberScores[slot];
 
 				try {
-					await assignMemberToShift(
+					await assignMemberToStationShift(
 						festivalId,
-						position.shiftId,
-						position.stationId,
+						position.stationShiftId,
 						selectedMember.memberId,
 						position.currentAssignments + slot + 1
 					);
@@ -184,7 +184,7 @@ export const performAutomaticAssignment = async (
 		result.unfilledPositions = assignmentMatrix
 			.filter((pos) => pos.remainingSlots > 0)
 			.map((pos) => ({
-				shiftId: pos.shiftId,
+				shiftId: pos.stationShiftId,
 				stationId: pos.stationId,
 				remainingSlots: pos.remainingSlots
 			}));
