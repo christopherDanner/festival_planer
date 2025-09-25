@@ -190,8 +190,8 @@ export type Database = {
           id: string
           member_id: string | null
           position: number | null
-          shift_id: string
-          station_id: string
+          shift_id: string | null
+          station_id: string | null
           updated_at: string
         }
         Insert: {
@@ -200,8 +200,8 @@ export type Database = {
           id?: string
           member_id?: string | null
           position?: number | null
-          shift_id: string
-          station_id: string
+          shift_id?: string | null
+          station_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -210,8 +210,8 @@ export type Database = {
           id?: string
           member_id?: string | null
           position?: number | null
-          shift_id?: string
-          station_id?: string
+          shift_id?: string | null
+          station_id?: string | null
           updated_at?: string
         }
         Relationships: [
