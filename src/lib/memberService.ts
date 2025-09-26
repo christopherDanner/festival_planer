@@ -106,10 +106,10 @@ export const getAvailableMembers = async (stationId?: string): Promise<Member[]>
 		// Get members not assigned to this specific station
 		const { data: assignedMembers } = await supabase
 			.from('station_member_assignments')
-			.select('member_id')
+			.select('festival_member_id')
 			.eq('station_id', stationId);
 
-		const assignedIds = assignedMembers?.map((a) => a.member_id) || [];
+		const assignedIds = assignedMembers?.map((a) => a.festival_member_id) || [];
 
 		if (assignedIds.length > 0) {
 			query = query.not('id', 'in', `(${assignedIds.join(',')})`);

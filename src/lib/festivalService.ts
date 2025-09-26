@@ -1,5 +1,7 @@
-import { supabase } from '@/integrations/supabase/client';
 import { generateFestivalPlan, FestivalData } from './festivalPlanGenerator';
+import { supabase } from '@/integrations/supabase/client';
+import { getMembers } from './memberService';
+import { copyGlobalMembersToFestival } from './festivalMemberService';
 
 export interface Festival {
 	id: string;
@@ -73,6 +75,17 @@ export async function createFestival(festivalData: FestivalData, userId: string)
 		throw new Error('Fehler beim Erstellen des Festes');
 	}
 
+	// Copy global members to festival
+	try {
+		const globalMembers = await getMembers();
+		if (globalMembers.length > 0) {
+			await copyGlobalMembersToFestival(festival.id, globalMembers);
+		}
+	} catch (error) {
+		console.warn('Could not copy global members to festival:', error);
+		// Continue even if member copying fails
+	}
+
 	// Use custom data if provided, otherwise generate plan
 	const planResult = await generateFestivalPlan(festivalData, members || []);
 	const stations = festivalData.customStations || planResult.shiftStations;
@@ -127,7 +140,7 @@ export async function createFestival(festivalData: FestivalData, userId: string)
 							shift_id: shift.id,
 							station_id: station.id,
 							position: position,
-							member_id: null // Initially no member assigned
+							festival_member_id: null // Initially no festival member assigned
 						});
 					}
 				}

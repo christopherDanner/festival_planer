@@ -55,6 +55,56 @@ export type Database = {
           },
         ]
       }
+      festival_members: {
+        Row: {
+          created_at: string
+          email: string | null
+          festival_id: string
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
+          notes: string | null
+          phone: string | null
+          station_preferences: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          festival_id: string
+          first_name: string
+          id?: string
+          is_active?: boolean
+          last_name: string
+          notes?: string | null
+          phone?: string | null
+          station_preferences?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          festival_id?: string
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          notes?: string | null
+          phone?: string | null
+          station_preferences?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_festival_members_festival_id"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festivals: {
         Row: {
           created_at: string
@@ -187,6 +237,7 @@ export type Database = {
         Row: {
           created_at: string
           festival_id: string
+          festival_member_id: string | null
           id: string
           member_id: string | null
           position: number | null
@@ -197,6 +248,7 @@ export type Database = {
         Insert: {
           created_at?: string
           festival_id: string
+          festival_member_id?: string | null
           id?: string
           member_id?: string | null
           position?: number | null
@@ -207,6 +259,7 @@ export type Database = {
         Update: {
           created_at?: string
           festival_id?: string
+          festival_member_id?: string | null
           id?: string
           member_id?: string | null
           position?: number | null
@@ -333,23 +386,38 @@ export type Database = {
       station_member_assignments: {
         Row: {
           created_at: string
+          festival_member_id: string
           id: string
-          member_id: string
           station_id: string
         }
         Insert: {
           created_at?: string
+          festival_member_id: string
           id?: string
-          member_id: string
           station_id: string
         }
         Update: {
           created_at?: string
+          festival_member_id?: string
           id?: string
-          member_id?: string
           station_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_station_member_assignments_festival_member_id"
+            columns: ["festival_member_id"]
+            isOneToOne: false
+            referencedRelation: "festival_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_station_member_assignments_station_id"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "station_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stations: {
         Row: {

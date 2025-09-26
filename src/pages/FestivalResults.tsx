@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
 import ShiftMatrix from '@/components/ShiftMatrix';
+import { FestivalMemberManagement } from '@/components/FestivalMemberManagement';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -151,9 +152,10 @@ export default function FestivalResults() {
 						</div>
 					</div>
 
-					<Tabs defaultValue="schichtplan" className="space-y-6">
-						<TabsList className="grid w-full grid-cols-1">
+					<Tabs defaultValue="mitglieder" className="space-y-6">
+						<TabsList className="grid w-full grid-cols-2">
 							{/* Temporarily hidden: Checkliste and Ressourcen features */}
+							<TabsTrigger value="mitglieder">Mitglieder</TabsTrigger>
 							<TabsTrigger value="schichtplan">Schichtplan</TabsTrigger>
 						</TabsList>
 
@@ -209,6 +211,10 @@ export default function FestivalResults() {
 							</Card>
 						</TabsContent>
 						*/}
+
+						<TabsContent value="mitglieder">
+							<FestivalMemberManagement festivalId={festivalId} />
+						</TabsContent>
 
 						<TabsContent value="schichtplan">
 							<ShiftMatrix festivalId={festivalId} />
