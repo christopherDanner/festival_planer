@@ -91,7 +91,7 @@ export default function Index() {
 								</div>
 								<CardTitle>Smart Planning</CardTitle>
 								<CardDescription>
-									Automatische Checklisten und Ressourcen-Vorschläge basierend auf deinem Festtyp
+									Automatische Checklisten und Ressourcen-Vorschläge für dein Fest
 								</CardDescription>
 							</CardHeader>
 							<CardContent>

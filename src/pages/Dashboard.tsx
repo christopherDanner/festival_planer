@@ -19,7 +19,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Trash2, Users, Calendar } from 'lucide-react';
+import { Trash2, Calendar } from 'lucide-react';
 
 export default function Dashboard() {
 	const [showWizard, setShowWizard] = useState(false);
@@ -173,11 +173,6 @@ export default function Dashboard() {
 													<CardTitle className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">
 														{festival.name}
 													</CardTitle>
-													<Badge
-														variant="outline"
-														className="mt-2 bg-primary/10 text-primary border-primary/20">
-														{getFestivalTypeDisplay(festival.type)}
-													</Badge>
 												</div>
 												<AlertDialog>
 													<AlertDialogTrigger asChild>
@@ -223,12 +218,6 @@ export default function Dashboard() {
 															` - ${new Date(festival.end_date).toLocaleDateString('de-AT')}`}
 													</span>
 												</div>
-												<div className="flex items-center text-sm text-gray-600">
-													<Users className="h-4 w-4 mr-2 text-primary" />
-													<span>
-														Besucherzahl: {getVisitorCountDisplay(festival.visitor_count)}
-													</span>
-												</div>
 											</div>
 											<div className="mt-4 pt-4 border-t border-gray-100">
 												<Button
@@ -251,25 +240,4 @@ export default function Dashboard() {
 			</div>
 		</div>
 	);
-}
-
-function getFestivalTypeDisplay(type: string): string {
-	const types: { [key: string]: string } = {
-		feuerwehr: 'Feuerwehrfest',
-		musik: 'Musikfest',
-		kirtag: 'Kirtag/Dorffest',
-		wein: 'Weinfest',
-		weihnachten: 'Weihnachtsmarkt'
-	};
-	return types[type] || type;
-}
-
-function getVisitorCountDisplay(count: string): string {
-	const counts: { [key: string]: string } = {
-		small: 'unter 100',
-		medium: '100-300',
-		large: '300-800',
-		xlarge: 'über 800'
-	};
-	return counts[count] || count;
 }

@@ -145,8 +145,7 @@ export default function FestivalResults() {
 								{new Date(festival.start_date).toLocaleDateString('de-AT')}
 								{festival.end_date &&
 									festival.end_date !== festival.start_date &&
-									` bis ${new Date(festival.end_date).toLocaleDateString('de-AT')}`}{' '}
-								| Besucher: {getVisitorCountDisplay(festival.visitor_count)}
+									` bis ${new Date(festival.end_date).toLocaleDateString('de-AT')}`}
 							</p>
 						</div>
 						<div className="flex gap-2">
@@ -285,14 +284,4 @@ export default function FestivalResults() {
 			</div>
 		</div>
 	);
-}
-
-function getVisitorCountDisplay(count: string): string {
-	const counts: { [key: string]: string } = {
-		small: 'unter 100',
-		medium: '100-300',
-		large: '300-800',
-		xlarge: 'über 800'
-	};
-	return counts[count] || count;
 }
