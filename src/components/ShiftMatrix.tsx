@@ -28,6 +28,9 @@ import {
 	Trash2,
 	Edit,
 	Filter,
+	UserPlus,
+	UserMinus,
+	Save,
 	X,
 	Zap,
 	Settings,
@@ -48,7 +51,15 @@ import {
 	type Station,
 	type ShiftAssignmentWithMember
 } from '@/lib/shiftService';
-import { getMembers, updateMemberStationPreferences, type Member } from '@/lib/memberService';
+import {
+	getMembers,
+	updateMemberStationPreferences,
+	getAllFestivalMemberPreferences,
+	createMember,
+	updateMember,
+	deleteMember,
+	type Member
+} from '@/lib/memberService';
 import {
 	performAutomaticAssignment,
 	clearAllAssignments,
@@ -108,6 +119,18 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	// Station preferences state
 	const [stationPreferences, setStationPreferences] = useState<Record<string, string[]>>({});
 
+	// Member management state
+	const [showMemberDialog, setShowMemberDialog] = useState(false);
+	const [editingMember, setEditingMember] = useState<Member | null>(null);
+	const [memberForm, setMemberForm] = useState({
+		first_name: '',
+		last_name: '',
+		phone: '',
+		email: '',
+		notes: '',
+		is_active: true
+	});
+
 	// Drag and drop state
 	const [draggedMember, setDraggedMember] = useState<Member | null>(null);
 
@@ -134,13 +157,8 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			setAssignments(assignmentsData);
 			setMembers(membersData.filter((m) => m.is_active));
 
-			// Load station preferences from member data
-			const preferences: Record<string, string[]> = {};
-			membersData.forEach((member) => {
-				if (member.station_preferences && member.station_preferences.length > 0) {
-					preferences[member.id] = member.station_preferences;
-				}
-			});
+			// Load festival-specific station preferences
+			const preferences = await getAllFestivalMemberPreferences(festivalId);
 			setStationPreferences(preferences);
 		} catch (error) {
 			toast({
@@ -353,7 +371,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const handleSaveStationPreference = async (memberId: string, preferredStations: string[]) => {
 		try {
 			// Save to database
-			await updateMemberStationPreferences(memberId, preferredStations);
+			await updateMemberStationPreferences(festivalId, memberId, preferredStations);
 
 			// Update local state
 			setStationPreferences((prev) => ({
@@ -414,6 +432,84 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		await handleSaveStationPreference(selectedMemberForPreference.id, preferences);
 		setShowStationPreferenceDialog(false);
 		setSelectedMemberForPreference(null);
+	};
+
+	// Member management functions
+	const handleAddMember = () => {
+		setEditingMember(null);
+		setMemberForm({
+			first_name: '',
+			last_name: '',
+			phone: '',
+			email: '',
+			notes: '',
+			is_active: true
+		});
+		setShowMemberDialog(true);
+	};
+
+	const handleEditMember = (member: Member) => {
+		setEditingMember(member);
+		setMemberForm({
+			first_name: member.first_name,
+			last_name: member.last_name,
+			phone: member.phone || '',
+			email: member.email || '',
+			notes: member.notes || '',
+			is_active: member.is_active
+		});
+		setShowMemberDialog(true);
+	};
+
+	const handleSaveMember = async () => {
+		try {
+			if (editingMember) {
+				// Update existing member
+				await updateMember(editingMember.id, memberForm);
+				toast({
+					title: 'Mitglied aktualisiert',
+					description: `${memberForm.first_name} ${memberForm.last_name} wurde erfolgreich aktualisiert.`
+				});
+			} else {
+				// Create new member
+				await createMember(memberForm);
+				toast({
+					title: 'Mitglied hinzugefügt',
+					description: `${memberForm.first_name} ${memberForm.last_name} wurde erfolgreich hinzugefügt.`
+				});
+			}
+
+			await loadData(); // Refresh data
+			setShowMemberDialog(false);
+			setEditingMember(null);
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Mitglied konnte nicht gespeichert werden.',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	const handleDeleteMember = async (member: Member) => {
+		if (!confirm(`Möchten Sie ${member.first_name} ${member.last_name} wirklich löschen?`)) {
+			return;
+		}
+
+		try {
+			await deleteMember(member.id);
+			toast({
+				title: 'Mitglied gelöscht',
+				description: `${member.first_name} ${member.last_name} wurde erfolgreich gelöscht.`
+			});
+			await loadData(); // Refresh data
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Mitglied konnte nicht gelöscht werden.',
+				variant: 'destructive'
+			});
+		}
 	};
 
 	const handleAutomaticAssignment = async () => {
@@ -538,6 +634,18 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				</div>
 
 				<div className="flex gap-2 items-center">
+					{/* Member management buttons */}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={handleAddMember}
+						className="flex items-center gap-2">
+						<UserPlus className="h-4 w-4" />
+						Mitglied hinzufügen
+					</Button>
+
+					<div className="h-8 w-px bg-border mx-2"></div>
+
 					<Dialog open={showAutoAssignDialog} onOpenChange={setShowAutoAssignDialog}>
 						<DialogTrigger asChild>
 							<Button
@@ -969,6 +1077,28 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 														)}
 													/>
 												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleEditMember(member);
+													}}
+													className="h-6 w-6 p-0 hover:bg-green-100"
+													title="Mitglied bearbeiten">
+													<Edit className="h-3 w-3 text-green-600" />
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleDeleteMember(member);
+													}}
+													className="h-6 w-6 p-0 hover:bg-red-100"
+													title="Mitglied löschen">
+													<UserMinus className="h-3 w-3 text-red-600" />
+												</Button>
 												<Badge
 													variant={
 														availability === 'free'
@@ -1119,6 +1249,101 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 								Abbrechen
 							</Button>
 							<Button onClick={handleSaveStationPreferencesFromDialog}>Speichern</Button>
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* Member Management Dialog */}
+			<Dialog open={showMemberDialog} onOpenChange={setShowMemberDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<UserPlus className="h-5 w-5" />
+							{editingMember ? 'Mitglied bearbeiten' : 'Neues Mitglied hinzufügen'}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4">
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<Label htmlFor="first_name">Vorname *</Label>
+								<Input
+									id="first_name"
+									value={memberForm.first_name}
+									onChange={(e) =>
+										setMemberForm((prev) => ({ ...prev, first_name: e.target.value }))
+									}
+									placeholder="Vorname eingeben"
+								/>
+							</div>
+							<div>
+								<Label htmlFor="last_name">Nachname *</Label>
+								<Input
+									id="last_name"
+									value={memberForm.last_name}
+									onChange={(e) =>
+										setMemberForm((prev) => ({ ...prev, last_name: e.target.value }))
+									}
+									placeholder="Nachname eingeben"
+								/>
+							</div>
+						</div>
+
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<Label htmlFor="phone">Telefon</Label>
+								<Input
+									id="phone"
+									value={memberForm.phone}
+									onChange={(e) => setMemberForm((prev) => ({ ...prev, phone: e.target.value }))}
+									placeholder="Telefonnummer eingeben"
+								/>
+							</div>
+							<div>
+								<Label htmlFor="email">E-Mail</Label>
+								<Input
+									id="email"
+									type="email"
+									value={memberForm.email}
+									onChange={(e) => setMemberForm((prev) => ({ ...prev, email: e.target.value }))}
+									placeholder="E-Mail eingeben"
+								/>
+							</div>
+						</div>
+
+						<div>
+							<Label htmlFor="notes">Notizen</Label>
+							<Textarea
+								id="notes"
+								value={memberForm.notes}
+								onChange={(e) => setMemberForm((prev) => ({ ...prev, notes: e.target.value }))}
+								placeholder="Notizen eingeben"
+								rows={3}
+							/>
+						</div>
+
+						<div className="flex items-center space-x-2">
+							<input
+								type="checkbox"
+								id="is_active"
+								checked={memberForm.is_active}
+								onChange={(e) =>
+									setMemberForm((prev) => ({ ...prev, is_active: e.target.checked }))
+								}
+							/>
+							<Label htmlFor="is_active">Aktiv</Label>
+						</div>
+
+						<div className="flex justify-end gap-2 pt-4">
+							<Button variant="outline" onClick={() => setShowMemberDialog(false)}>
+								Abbrechen
+							</Button>
+							<Button
+								onClick={handleSaveMember}
+								disabled={!memberForm.first_name || !memberForm.last_name}>
+								<Save className="h-4 w-4 mr-2" />
+								{editingMember ? 'Aktualisieren' : 'Hinzufügen'}
+							</Button>
 						</div>
 					</div>
 				</DialogContent>

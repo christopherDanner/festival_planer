@@ -125,17 +125,61 @@ export const getAvailableMembers = async (stationId?: string): Promise<Member[]>
 	return data || [];
 };
 
-// Update member station preferences
+// Update member station preferences for a specific festival
 export const updateMemberStationPreferences = async (
+	festivalId: string,
 	memberId: string,
 	stationPreferences: string[]
 ): Promise<void> => {
-	const { error } = await supabase
-		.from('members')
-		.update({ station_preferences: stationPreferences })
-		.eq('id', memberId);
+	// Use upsert to create or update preferences
+	const { error } = await supabase.from('festival_member_preferences').upsert({
+		festival_id: festivalId,
+		member_id: memberId,
+		station_preferences: stationPreferences
+	});
 
 	if (error) {
 		throw new Error(error.message);
 	}
+};
+
+// Get member station preferences for a specific festival
+export const getMemberStationPreferences = async (
+	festivalId: string,
+	memberId: string
+): Promise<string[]> => {
+	const { data, error } = await supabase
+		.from('festival_member_preferences')
+		.select('station_preferences')
+		.eq('festival_id', festivalId)
+		.eq('member_id', memberId)
+		.single();
+
+	if (error && error.code !== 'PGRST116') {
+		// PGRST116 = no rows found
+		throw new Error(error.message);
+	}
+
+	return data?.station_preferences || [];
+};
+
+// Get all member station preferences for a festival
+export const getAllFestivalMemberPreferences = async (
+	festivalId: string
+): Promise<Record<string, string[]>> => {
+	const { data, error } = await supabase
+		.from('festival_member_preferences')
+		.select('member_id, station_preferences')
+		.eq('festival_id', festivalId);
+
+	if (error) {
+		throw new Error(error.message);
+	}
+
+	const preferences: Record<string, string[]> = {};
+	data?.forEach((item) => {
+		preferences[item.member_id] = item.station_preferences || [];
+	});
+
+	return preferences;
 };
