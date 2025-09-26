@@ -48,19 +48,30 @@ export interface Resource {
 	priority: 'green' | 'yellow' | 'red';
 }
 
-export async function createFestival(festivalData: FestivalData, userId: string): Promise<string> {
+export async function createFestival(festivalData: FestivalData, userId?: string): Promise<string> {
+	// Get user ID from auth if not provided
+	let actualUserId = userId;
+	if (!actualUserId) {
+		const {
+			data: { user }
+		} = await supabase.auth.getUser();
+		if (!user) {
+			throw new Error('User not authenticated');
+		}
+		actualUserId = user.id;
+	}
 	// Get user's members for shift generation
 	const { data: members } = await supabase
 		.from('members')
 		.select('*')
-		.eq('user_id', userId)
+		.eq('user_id', actualUserId)
 		.eq('is_active', true);
 
 	// Create festival record
 	const { data: festival, error: festivalError } = await supabase
 		.from('festivals')
 		.insert({
-			user_id: userId,
+			user_id: actualUserId,
 			type: festivalData.type || 'general',
 			start_date: festivalData.startDate,
 			end_date: festivalData.endDate,
@@ -86,76 +97,8 @@ export async function createFestival(festivalData: FestivalData, userId: string)
 		// Continue even if member copying fails
 	}
 
-	// Use custom data if provided, otherwise generate plan
-	const planResult = await generateFestivalPlan(festivalData, members || []);
-	const stations = festivalData.customStations || planResult.shiftStations;
-	const shifts = festivalData.customShifts || planResult.shifts;
-
-	// Only insert data if AI suggestions are being used
-	if (stations.length > 0 && shifts.length > 0) {
-		// Insert shifts
-		const shiftInserts = shifts.map((shift) => ({
-			festival_id: festival.id,
-			name: shift.name,
-			start_date: shift.date || shift.start_date,
-			start_time: shift.start_time,
-			end_time: shift.end_time
-		}));
-
-		const { data: insertedShifts, error: shiftError } = await supabase
-			.from('shifts')
-			.insert(shiftInserts)
-			.select();
-
-		if (shiftError) {
-			throw new Error('Fehler beim Erstellen der Schichten');
-		}
-
-		// Insert stations
-		const stationInserts = stations.map((station) => ({
-			festival_id: festival.id,
-			name: station.bereich, // Use 'bereich' from StationAssignment interface
-			required_people: station.bedarf, // Use 'bedarf' from StationAssignment interface
-			description: station.bereich // Use 'bereich' as description if no separate description field
-		}));
-
-		const { data: insertedStations, error: stationError } = await supabase
-			.from('stations')
-			.insert(stationInserts)
-			.select();
-
-		if (stationError) {
-			throw new Error('Fehler beim Erstellen der Stationen');
-		}
-
-		// Create shift assignments for each shift-station combination
-		const assignmentInserts: any[] = [];
-		if (insertedShifts && insertedStations) {
-			for (const shift of insertedShifts) {
-				for (const station of insertedStations) {
-					// Create empty assignments for each required position
-					for (let position = 1; position <= station.required_people; position++) {
-						assignmentInserts.push({
-							festival_id: festival.id,
-							shift_id: shift.id,
-							station_id: station.id,
-							position: position,
-							festival_member_id: null // Initially no festival member assigned
-						});
-					}
-				}
-			}
-
-			const { error: assignmentError } = await supabase
-				.from('shift_assignments')
-				.insert(assignmentInserts);
-
-			if (assignmentError) {
-				throw new Error('Fehler beim Erstellen der Schichtzuordnungen');
-			}
-		}
-	}
-
+	// For simplified wizard, don't create stations and shifts automatically
+	// Let users add them manually in the shift plan
 	return festival.id;
 }
 
