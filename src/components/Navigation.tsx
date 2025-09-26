@@ -58,6 +58,7 @@ export default function Navigation() {
 									<span className="hidden sm:inline">Mitglieder</span>
 								</Button>
 
+{/* Mobile Waiter feature temporarily hidden
 								<Button
 									variant={isActive('/mobile-waiter') ? 'festival' : 'ghost'}
 									size="sm"
@@ -66,6 +67,7 @@ export default function Navigation() {
 									<Smartphone className="h-4 w-4" />
 									<span className="hidden sm:inline">Mobile</span>
 								</Button>
+								*/}
 							</>
 						)}
 					</div>

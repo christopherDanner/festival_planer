@@ -151,13 +151,13 @@ export default function FestivalResults() {
 						</div>
 					</div>
 
-					<Tabs defaultValue="checkliste" className="space-y-6">
-						<TabsList className="grid w-full grid-cols-3">
-							<TabsTrigger value="checkliste">Checkliste</TabsTrigger>
+					<Tabs defaultValue="schichtplan" className="space-y-6">
+						<TabsList className="grid w-full grid-cols-1">
+							{/* Temporarily hidden: Checkliste and Ressourcen features */}
 							<TabsTrigger value="schichtplan">Schichtplan</TabsTrigger>
-							<TabsTrigger value="ressourcen">Ressourcen</TabsTrigger>
 						</TabsList>
 
+{/* Checkliste feature temporarily hidden
 						<TabsContent value="checkliste">
 							<Card>
 								<CardHeader>
@@ -208,11 +208,13 @@ export default function FestivalResults() {
 								</CardContent>
 							</Card>
 						</TabsContent>
+						*/}
 
 						<TabsContent value="schichtplan">
 							<ShiftMatrix festivalId={festivalId} />
 						</TabsContent>
 
+{/* Ressourcen feature temporarily hidden
 						<TabsContent value="ressourcen">
 							<Card>
 								<CardHeader>
@@ -267,6 +269,7 @@ export default function FestivalResults() {
 								</CardContent>
 							</Card>
 						</TabsContent>
+						*/}
 					</Tabs>
 				</div>
 			</div>
