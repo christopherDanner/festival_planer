@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
 import ShiftMatrix from '@/components/ShiftMatrix';
@@ -28,6 +28,7 @@ import {
 export default function FestivalResults() {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { user } = useAuth();
 	const { toast } = useToast();
 
@@ -37,7 +38,8 @@ export default function FestivalResults() {
 	const [resources, setResources] = useState<Resource[]>([]);
 	const [loading, setLoading] = useState(true);
 
-	const festivalId = searchParams.get('id');
+	// Get festivalId from URL params or location state
+	const festivalId = searchParams.get('id') || location.state?.festivalId;
 
 	useEffect(() => {
 		if (!user) {
@@ -73,10 +75,11 @@ export default function FestivalResults() {
 			setChecklist(checklistData);
 			setStations(stationsData);
 			setResources(resourcesData);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			toast({
 				title: 'Fehler beim Laden der Daten',
-				description: error.message,
+				description:
+					error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten',
 				variant: 'destructive'
 			});
 			navigate('/dashboard');
@@ -91,10 +94,11 @@ export default function FestivalResults() {
 			setChecklist((prev) =>
 				prev.map((item) => (item.id === itemId ? { ...item, completed } : item))
 			);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			toast({
 				title: 'Fehler beim Aktualisieren',
-				description: error.message,
+				description:
+					error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten',
 				variant: 'destructive'
 			});
 		}

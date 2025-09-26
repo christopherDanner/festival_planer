@@ -57,8 +57,8 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
 						'Ihr Fest wurde erfolgreich erstellt. Sie können jetzt Schichten und Stationen hinzufügen.'
 				});
 
-				// Navigate directly to the shift plan with festival ID
-				navigate('/scheduling', { state: { festivalId } });
+				// Navigate directly to the festival results page
+				navigate('/festival-results', { state: { festivalId } });
 			} catch (error) {
 				toast({
 					title: 'Fehler',
