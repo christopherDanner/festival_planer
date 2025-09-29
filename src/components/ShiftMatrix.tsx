@@ -43,13 +43,16 @@ import {
 	getShifts,
 	getStations,
 	getShiftAssignments,
+	getStationShiftAssignments,
+	toggleStationShiftAssignment,
 	createShift,
 	createStation,
 	assignMemberToShift,
 	removeMemberFromShift,
 	type Shift,
 	type Station,
-	type ShiftAssignmentWithMember
+	type ShiftAssignmentWithMember,
+	type StationShiftAssignment
 } from '@/lib/shiftService';
 import {
 	getMembers,
@@ -83,6 +86,9 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const [shifts, setShifts] = useState<Shift[]>([]);
 	const [stations, setStations] = useState<Station[]>([]);
 	const [assignments, setAssignments] = useState<ShiftAssignmentWithMember[]>([]);
+	const [stationShiftAssignments, setStationShiftAssignments] = useState<StationShiftAssignment[]>(
+		[]
+	);
 	const [members, setMembers] = useState<Member[]>([]);
 	const [loading, setLoading] = useState(true);
 
@@ -145,16 +151,19 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 
 	const loadData = async () => {
 		try {
-			const [shiftsData, stationsData, assignmentsData, membersData] = await Promise.all([
-				getShifts(festivalId),
-				getStations(festivalId),
-				getShiftAssignments(festivalId),
-				getMembers()
-			]);
+			const [shiftsData, stationsData, assignmentsData, stationShiftAssignmentsData, membersData] =
+				await Promise.all([
+					getShifts(festivalId),
+					getStations(festivalId),
+					getShiftAssignments(festivalId),
+					getStationShiftAssignments(festivalId),
+					getMembers()
+				]);
 
 			setShifts(shiftsData);
 			setStations(stationsData);
 			setAssignments(assignmentsData);
+			setStationShiftAssignments(stationShiftAssignmentsData);
 			setMembers(membersData.filter((m) => m.is_active));
 
 			// Load festival-specific station preferences
@@ -237,6 +246,32 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		}
 	};
 
+	const isStationAssignedToShift = (stationId: string, shiftId: string): boolean => {
+		return stationShiftAssignments.some(
+			(assignment) => assignment.station_id === stationId && assignment.shift_id === shiftId
+		);
+	};
+
+	const handleToggleStationShiftAssignment = async (stationId: string, shiftId: string) => {
+		const isAssigned = isStationAssignedToShift(stationId, shiftId);
+
+		try {
+			await toggleStationShiftAssignment(festivalId, stationId, shiftId, !isAssigned);
+			await loadData(); // Reload data to update the UI
+
+			toast({
+				title: 'Erfolg',
+				description: `Station wurde ${!isAssigned ? 'zugewiesen' : 'entfernt'}.`
+			});
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Zuweisung konnte nicht geändert werden.',
+				variant: 'destructive'
+			});
+		}
+	};
+
 	const getMatrixCell = (shiftId: string, stationId: string): MatrixCell => {
 		const station = stations.find((s) => s.id === stationId);
 		const cellAssignments = assignments.filter(
@@ -251,7 +286,9 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		};
 	};
 
-	const getCellColor = (cell: MatrixCell): string => {
+	const getCellColor = (cell: MatrixCell, isAssigned: boolean): string => {
+		if (!isAssigned) return 'bg-muted/20 border-muted opacity-50';
+
 		const assigned = cell.assignments.length;
 		const required = cell.requiredPeople;
 
@@ -531,7 +568,8 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				stations,
 				members.filter((m) => m.is_active),
 				autoAssignConfig,
-				stationPreferences
+				stationPreferences,
+				stationShiftAssignments
 			);
 
 			if (result.success) {
@@ -634,6 +672,14 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				</div>
 
 				<div className="flex gap-2 items-center">
+					{/* Station-Shift Assignment Overview */}
+					<div className="flex items-center gap-2 text-sm text-muted-foreground">
+						<MapPin className="h-4 w-4" />
+						<span>{stationShiftAssignments.length} Station-Schicht-Zuweisungen</span>
+					</div>
+
+					<div className="h-8 w-px bg-border mx-2"></div>
+
 					{/* Member management buttons */}
 					<Button
 						variant="outline"
@@ -696,9 +742,10 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 
 								<div className="bg-muted p-4 rounded-lg">
 									<p className="text-sm text-muted-foreground">
-										Die automatische Zuteilung versucht alle verfügbaren Positionen zu besetzen.
-										Mitglieder mit Stationswünschen werden bevorzugt zugewiesen, solange Schichten
-										in ihren Wunschstationen frei sind. Die Schichten werden gleichmäßig verteilt.
+										Die automatische Zuteilung berücksichtigt nur Stationen, die den jeweiligen
+										Schichten zugewiesen wurden. Mitglieder mit Stationswünschen werden bevorzugt
+										zugewiesen, solange Schichten in ihren Wunschstationen frei sind. Die Schichten
+										werden gleichmäßig verteilt.
 									</p>
 								</div>
 
@@ -899,56 +946,80 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 													</div>
 												</td>
 												{shifts.map((shift) => {
+													const isAssigned = isStationAssignedToShift(station.id, shift.id);
 													const cell = getMatrixCell(shift.id, station.id);
 													const remaining = cell.requiredPeople - cell.assignments.length;
 
 													return (
 														<td key={`${shift.id}-${station.id}`} className="p-2">
-															<div
-																className={cn(
-																	'min-h-[120px] border-2 rounded-lg p-2 space-y-2 transition-colors',
-																	getCellColor(cell),
-																	'relative'
-																)}
-																onDragOver={(e) => e.preventDefault()}
-																onDrop={(e) => handleDrop(shift.id, station.id, e)}>
-																<div className="flex justify-between items-start">
-																	<Badge
-																		variant={getRemainingBadgeVariant(cell)}
-																		className="text-xs">
-																		{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
-																	</Badge>
+															<div className="space-y-2">
+																{/* Toggle Button for Station-Shift Assignment */}
+																<div className="flex justify-center">
+																	<Button
+																		variant={isAssigned ? 'default' : 'outline'}
+																		size="sm"
+																		onClick={() =>
+																			handleToggleStationShiftAssignment(station.id, shift.id)
+																		}
+																		className={cn(
+																			'text-xs h-6 px-2',
+																			isAssigned
+																				? 'bg-green-600 hover:bg-green-700 text-white'
+																				: 'border-dashed border-gray-300 hover:border-gray-400'
+																		)}>
+																		{isAssigned ? '✓ Zugewiesen' : 'Zuweisen'}
+																	</Button>
 																</div>
 
-																<div className="space-y-1">
-																	{cell.assignments.map((assignment) => (
-																		<div
-																			key={assignment.id}
-																			className="flex items-center justify-between bg-background/80 rounded px-2 py-1 text-sm group">
-																			<span className="font-medium">
-																				{assignment.member?.first_name}{' '}
-																				{assignment.member?.last_name}
-																			</span>
-																			<Button
-																				size="sm"
-																				variant="ghost"
-																				className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
-																				onClick={() =>
-																					handleRemoveMember(
-																						shift.id,
-																						station.id,
-																						assignment.member_id!
-																					)
-																				}>
-																				<Trash2 className="h-3 w-3" />
-																			</Button>
+																{/* Assignment Cell - only show if assigned */}
+																{isAssigned && (
+																	<div
+																		className={cn(
+																			'min-h-[120px] border-2 rounded-lg p-2 space-y-2 transition-colors',
+																			getCellColor(cell, isAssigned),
+																			'relative'
+																		)}
+																		onDragOver={(e) => e.preventDefault()}
+																		onDrop={(e) => handleDrop(shift.id, station.id, e)}>
+																		<div className="flex justify-between items-start">
+																			<Badge
+																				variant={getRemainingBadgeVariant(cell)}
+																				className="text-xs">
+																				{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
+																			</Badge>
 																		</div>
-																	))}
-																</div>
 
-																{remaining > 0 && (
-																	<div className="text-xs text-muted-foreground text-center border-dashed border rounded p-2">
-																		Person hier ablegen
+																		<div className="space-y-1">
+																			{cell.assignments.map((assignment) => (
+																				<div
+																					key={assignment.id}
+																					className="flex items-center justify-between bg-background/80 rounded px-2 py-1 text-sm group">
+																					<span className="font-medium">
+																						{assignment.member?.first_name}{' '}
+																						{assignment.member?.last_name}
+																					</span>
+																					<Button
+																						size="sm"
+																						variant="ghost"
+																						className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+																						onClick={() =>
+																							handleRemoveMember(
+																								shift.id,
+																								station.id,
+																								assignment.member_id!
+																							)
+																						}>
+																						<Trash2 className="h-3 w-3" />
+																					</Button>
+																				</div>
+																			))}
+																		</div>
+
+																		{remaining > 0 && (
+																			<div className="text-xs text-muted-foreground text-center border-dashed border rounded p-2">
+																				Person hier ablegen
+																			</div>
+																		)}
 																	</div>
 																)}
 															</div>

@@ -36,7 +36,8 @@ export const performAutomaticAssignment = async (
 	stations: Station[],
 	members: Member[],
 	config: AutoAssignmentConfig,
-	stationPreferences?: Record<string, string[]>
+	stationPreferences?: Record<string, string[]>,
+	stationShiftAssignments?: Array<{ station_id: string; shift_id: string }>
 ): Promise<AssignmentResult> => {
 	const result: AssignmentResult = {
 		success: false,
@@ -67,6 +68,15 @@ export const performAutomaticAssignment = async (
 
 		shifts.forEach((shift) => {
 			stations.forEach((station) => {
+				// Only process if this station is assigned to this shift
+				const isAssigned =
+					!stationShiftAssignments ||
+					stationShiftAssignments.some(
+						(assignment) => assignment.station_id === station.id && assignment.shift_id === shift.id
+					);
+
+				if (!isAssigned) return;
+
 				const currentAssignments = existingAssignments.filter(
 					(a) => a.shift_id === shift.id && a.station_id === station.id && a.member_id
 				).length;

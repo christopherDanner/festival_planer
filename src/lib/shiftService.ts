@@ -40,6 +40,15 @@ export interface ShiftAssignmentWithMember extends ShiftAssignment {
 	};
 }
 
+export interface StationShiftAssignment {
+	id: string;
+	festival_id: string;
+	station_id: string;
+	shift_id: string;
+	created_at: string;
+	updated_at: string;
+}
+
 // Shift functions
 export const getShifts = async (festivalId: string): Promise<Shift[]> => {
 	const { data, error } = await supabase
@@ -218,4 +227,62 @@ export const removeMemberFromShift = async (
 		.eq('member_id', memberId);
 
 	if (error) throw error;
+};
+
+// Station-Shift Assignment functions
+export const getStationShiftAssignments = async (
+	festivalId: string
+): Promise<StationShiftAssignment[]> => {
+	const { data, error } = await supabase
+		.from('station_shift_assignments')
+		.select('*')
+		.eq('festival_id', festivalId);
+
+	if (error) throw error;
+	return data || [];
+};
+
+export const createStationShiftAssignment = async (
+	assignmentData: Omit<StationShiftAssignment, 'id' | 'created_at' | 'updated_at'>
+): Promise<StationShiftAssignment> => {
+	const { data, error } = await supabase
+		.from('station_shift_assignments')
+		.insert(assignmentData)
+		.select()
+		.single();
+
+	if (error) throw error;
+	return data;
+};
+
+export const deleteStationShiftAssignment = async (
+	festivalId: string,
+	stationId: string,
+	shiftId: string
+): Promise<void> => {
+	const { error } = await supabase
+		.from('station_shift_assignments')
+		.delete()
+		.eq('festival_id', festivalId)
+		.eq('station_id', stationId)
+		.eq('shift_id', shiftId);
+
+	if (error) throw error;
+};
+
+export const toggleStationShiftAssignment = async (
+	festivalId: string,
+	stationId: string,
+	shiftId: string,
+	assigned: boolean
+): Promise<void> => {
+	if (assigned) {
+		await createStationShiftAssignment({
+			festival_id: festivalId,
+			station_id: stationId,
+			shift_id: shiftId
+		});
+	} else {
+		await deleteStationShiftAssignment(festivalId, stationId, shiftId);
+	}
 };
