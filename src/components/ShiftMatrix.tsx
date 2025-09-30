@@ -48,8 +48,10 @@ import {
 	toggleStationShiftAssignment,
 	createShift,
 	updateShift,
+	deleteShift,
 	createStation,
 	updateStation,
+	deleteStation,
 	assignMemberToShift,
 	removeMemberFromShift,
 	type Shift,
@@ -60,6 +62,9 @@ import {
 import {
 	getMembers,
 	updateMemberStationPreferences,
+	updateMemberShiftPreferences,
+	updateMemberPreferences,
+	getMemberShiftPreferences,
 	getAllFestivalMemberPreferences,
 	createMember,
 	updateMember,
@@ -127,8 +132,9 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		respectPreferences: true // Always true, checkbox removed
 	});
 
-	// Station preferences state
+	// Station and shift preferences state
 	const [stationPreferences, setStationPreferences] = useState<Record<string, string[]>>({});
+	const [shiftPreferences, setShiftPreferences] = useState<Record<string, string[]>>({});
 
 	// Member management state
 	const [showMemberDialog, setShowMemberDialog] = useState(false);
@@ -190,6 +196,19 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			// Load festival-specific station preferences
 			const preferences = await getAllFestivalMemberPreferences(festivalId);
 			setStationPreferences(preferences);
+
+			// Load shift preferences for each member
+			const shiftPrefs: Record<string, string[]> = {};
+			for (const member of membersData.filter((m) => m.is_active)) {
+				try {
+					const memberShiftPrefs = await getMemberShiftPreferences(festivalId, member.id);
+					shiftPrefs[member.id] = memberShiftPrefs;
+				} catch (error) {
+					// If no preferences found, use empty array
+					shiftPrefs[member.id] = [];
+				}
+			}
+			setShiftPreferences(shiftPrefs);
 		} catch (error) {
 			toast({
 				title: 'Fehler',
@@ -454,10 +473,15 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		return stationPreferences[memberId] || [];
 	};
 
+	const getMemberShiftPreferences = (memberId: string): string[] => {
+		return shiftPreferences[memberId] || [];
+	};
+
 	// Temporary preferences for dialog editing
 	const [tempStationPreferences, setTempStationPreferences] = useState<Record<string, string[]>>(
 		{}
 	);
+	const [tempShiftPreferences, setTempShiftPreferences] = useState<Record<string, string[]>>({});
 
 	const handleToggleStationPreference = (memberId: string, stationId: string) => {
 		const currentPreferences =
@@ -473,6 +497,21 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		}));
 	};
 
+	const handleToggleShiftPreference = (memberId: string, shiftId: string) => {
+		const currentPreferences =
+			tempShiftPreferences[memberId] || getMemberShiftPreferences(memberId);
+		const isSelected = currentPreferences.includes(shiftId);
+
+		const newPreferences = isSelected
+			? currentPreferences.filter((id) => id !== shiftId)
+			: [...currentPreferences, shiftId];
+
+		setTempShiftPreferences((prev) => ({
+			...prev,
+			[memberId]: newPreferences
+		}));
+	};
+
 	const handleOpenStationPreferenceDialog = (member: Member) => {
 		setSelectedMemberForPreference(member);
 		// Initialize temp preferences with current preferences
@@ -480,14 +519,49 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			...prev,
 			[member.id]: getMemberStationPreferences(member.id)
 		}));
+		setTempShiftPreferences((prev) => ({
+			...prev,
+			[member.id]: getMemberShiftPreferences(member.id)
+		}));
 		setShowStationPreferenceDialog(true);
 	};
 
 	const handleSaveStationPreferencesFromDialog = async () => {
 		if (!selectedMemberForPreference) return;
 
-		const preferences = tempStationPreferences[selectedMemberForPreference.id] || [];
-		await handleSaveStationPreference(selectedMemberForPreference.id, preferences);
+		const stationPrefs = tempStationPreferences[selectedMemberForPreference.id] || [];
+		const shiftPrefs = tempShiftPreferences[selectedMemberForPreference.id] || [];
+
+		try {
+			await updateMemberPreferences(
+				festivalId,
+				selectedMemberForPreference.id,
+				stationPrefs,
+				shiftPrefs
+			);
+
+			// Update local state
+			setStationPreferences((prev) => ({
+				...prev,
+				[selectedMemberForPreference.id]: stationPrefs
+			}));
+			setShiftPreferences((prev) => ({
+				...prev,
+				[selectedMemberForPreference.id]: shiftPrefs
+			}));
+
+			toast({
+				title: 'Präferenzen gespeichert',
+				description: 'Stations- und Schichtwünsche wurden erfolgreich gespeichert.'
+			});
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Präferenzen konnten nicht gespeichert werden.',
+				variant: 'destructive'
+			});
+		}
+
 		setShowStationPreferenceDialog(false);
 		setSelectedMemberForPreference(null);
 	};
@@ -567,6 +641,58 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				description: 'Mitglied konnte nicht gelöscht werden.',
 				variant: 'destructive'
 			});
+		}
+	};
+
+	const handleDeleteShift = async (shiftId: string) => {
+		const shift = shifts.find((s) => s.id === shiftId);
+		if (!shift) return;
+
+		if (
+			confirm(
+				`Schicht "${shift.name}" wirklich löschen? Alle Zuweisungen werden ebenfalls gelöscht.`
+			)
+		) {
+			try {
+				await deleteShift(shiftId);
+				await loadData();
+				toast({
+					title: 'Schicht gelöscht',
+					description: `Schicht "${shift.name}" wurde gelöscht.`
+				});
+			} catch (error) {
+				toast({
+					title: 'Fehler',
+					description: 'Schicht konnte nicht gelöscht werden.',
+					variant: 'destructive'
+				});
+			}
+		}
+	};
+
+	const handleDeleteStation = async (stationId: string) => {
+		const station = stations.find((s) => s.id === stationId);
+		if (!station) return;
+
+		if (
+			confirm(
+				`Station "${station.name}" wirklich löschen? Alle Zuweisungen werden ebenfalls gelöscht.`
+			)
+		) {
+			try {
+				await deleteStation(stationId);
+				await loadData();
+				toast({
+					title: 'Station gelöscht',
+					description: `Station "${station.name}" wurde gelöscht.`
+				});
+			} catch (error) {
+				toast({
+					title: 'Fehler',
+					description: 'Station konnte nicht gelöscht werden.',
+					variant: 'destructive'
+				});
+			}
 		}
 	};
 
@@ -1147,14 +1273,24 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 														<div className="space-y-1 group">
 															<div className="font-semibold flex items-center justify-center gap-2">
 																{shift.name}
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
-																	onClick={() => handleStartEditShift(shift)}
-																	title="Schicht bearbeiten">
-																	<Edit className="h-3 w-3" />
-																</Button>
+																<div className="flex gap-1">
+																	<Button
+																		size="sm"
+																		variant="ghost"
+																		className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+																		onClick={() => handleStartEditShift(shift)}
+																		title="Schicht bearbeiten">
+																		<Edit className="h-3 w-3" />
+																	</Button>
+																	<Button
+																		size="sm"
+																		variant="ghost"
+																		className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-100"
+																		onClick={() => handleDeleteShift(shift.id)}
+																		title="Schicht löschen">
+																		<Trash2 className="h-3 w-3 text-red-600" />
+																	</Button>
+																</div>
 															</div>
 															<div className="text-xs text-muted-foreground">
 																{formatShiftTime(shift)}
@@ -1227,14 +1363,24 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 														<div className="space-y-1 group">
 															<div className="flex items-center gap-2">
 																<span>{station.name}</span>
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
-																	onClick={() => handleStartEditStation(station)}
-																	title="Station bearbeiten">
-																	<Edit className="h-3 w-3" />
-																</Button>
+																<div className="flex gap-1">
+																	<Button
+																		size="sm"
+																		variant="ghost"
+																		className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+																		onClick={() => handleStartEditStation(station)}
+																		title="Station bearbeiten">
+																		<Edit className="h-3 w-3" />
+																	</Button>
+																	<Button
+																		size="sm"
+																		variant="ghost"
+																		className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-100"
+																		onClick={() => handleDeleteStation(station.id)}
+																		title="Station löschen">
+																		<Trash2 className="h-3 w-3 text-red-600" />
+																	</Button>
+																</div>
 															</div>
 															<div className="text-xs text-muted-foreground flex items-center gap-1">
 																<Users className="h-3 w-3" />
@@ -1523,6 +1669,25 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 											</div>
 										)}
 
+										{/* Shift Preferences */}
+										{getMemberShiftPreferences(member.id).length > 0 && (
+											<div className="flex flex-wrap gap-1">
+												{getMemberShiftPreferences(member.id).map((shiftId) => {
+													const shift = shifts.find((s) => s.id === shiftId);
+													if (!shift) return null;
+													return (
+														<Badge
+															key={shiftId}
+															variant="outline"
+															className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+															<Calendar className="h-2 w-2 mr-1 fill-current" />
+															{shift.name}
+														</Badge>
+													);
+												})}
+											</div>
+										)}
+
 										{memberAssignments.length > 0 && (
 											<div className="text-xs text-muted-foreground">
 												{memberAssignments.map((assignment, index) => {
@@ -1577,55 +1742,116 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2">
 							<Heart className="h-5 w-5 text-red-500" />
-							Stationswünsche für {selectedMemberForPreference?.first_name}{' '}
+							Präferenzen für {selectedMemberForPreference?.first_name}{' '}
 							{selectedMemberForPreference?.last_name}
 						</DialogTitle>
 					</DialogHeader>
-					<div className="space-y-4">
-						<p className="text-sm text-muted-foreground">
-							Wählen Sie die Stationen aus, bei denen {selectedMemberForPreference?.first_name}{' '}
-							bevorzugt eingesetzt werden soll.
-						</p>
+					<div className="space-y-6">
+						{/* Station Preferences */}
+						<div>
+							<h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+								<Heart className="h-4 w-4 text-red-500" />
+								Stationswünsche
+							</h3>
+							<p className="text-sm text-muted-foreground mb-4">
+								Wählen Sie die Stationen aus, bei denen {selectedMemberForPreference?.first_name}{' '}
+								bevorzugt eingesetzt werden soll.
+							</p>
 
-						<div className="space-y-2">
-							{stations.map((station) => {
-								const isSelected =
-									selectedMemberForPreference &&
-									(
-										tempStationPreferences[selectedMemberForPreference.id] ||
-										getMemberStationPreferences(selectedMemberForPreference.id)
-									).includes(station.id);
+							<div className="space-y-2">
+								{stations.map((station) => {
+									const isSelected =
+										selectedMemberForPreference &&
+										(
+											tempStationPreferences[selectedMemberForPreference.id] ||
+											getMemberStationPreferences(selectedMemberForPreference.id)
+										).includes(station.id);
 
-								return (
-									<div
-										key={station.id}
-										className={cn(
-											'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
-											isSelected ? 'bg-pink-50 border-pink-200' : 'hover:bg-gray-50 border-gray-200'
-										)}
-										onClick={() => {
-											if (!selectedMemberForPreference) return;
-											handleToggleStationPreference(selectedMemberForPreference.id, station.id);
-										}}>
+									return (
 										<div
+											key={station.id}
 											className={cn(
-												'w-4 h-4 rounded border-2 flex items-center justify-center',
-												isSelected ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
-											)}>
-											{isSelected && <Heart className="h-2 w-2 text-white fill-current" />}
-										</div>
-										<div className="flex-1">
-											<div className="font-medium text-sm">{station.name}</div>
-											{station.description && (
-												<div className="text-xs text-muted-foreground">{station.description}</div>
+												'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+												isSelected
+													? 'bg-pink-50 border-pink-200'
+													: 'hover:bg-gray-50 border-gray-200'
 											)}
+											onClick={() => {
+												if (!selectedMemberForPreference) return;
+												handleToggleStationPreference(selectedMemberForPreference.id, station.id);
+											}}>
+											<div
+												className={cn(
+													'w-4 h-4 rounded border-2 flex items-center justify-center',
+													isSelected ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+												)}>
+												{isSelected && <Heart className="h-2 w-2 text-white fill-current" />}
+											</div>
+											<div className="flex-1">
+												<div className="font-medium text-sm">{station.name}</div>
+												{station.description && (
+													<div className="text-xs text-muted-foreground">{station.description}</div>
+												)}
+											</div>
+											<div className="text-xs text-muted-foreground">
+												{station.required_people} Person{station.required_people !== 1 ? 'en' : ''}
+											</div>
 										</div>
-										<div className="text-xs text-muted-foreground">
-											{station.required_people} Person{station.required_people !== 1 ? 'en' : ''}
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Shift Preferences */}
+						<div>
+							<h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+								<Calendar className="h-4 w-4 text-blue-500" />
+								Schichtwünsche
+							</h3>
+							<p className="text-sm text-muted-foreground mb-4">
+								Wählen Sie die Schichten aus, in denen {selectedMemberForPreference?.first_name}{' '}
+								bevorzugt eingesetzt werden soll.
+							</p>
+
+							<div className="space-y-2">
+								{shifts.map((shift) => {
+									const isSelected =
+										selectedMemberForPreference &&
+										(
+											tempShiftPreferences[selectedMemberForPreference.id] ||
+											getMemberShiftPreferences(selectedMemberForPreference.id)
+										).includes(shift.id);
+
+									return (
+										<div
+											key={shift.id}
+											className={cn(
+												'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+												isSelected
+													? 'bg-blue-50 border-blue-200'
+													: 'hover:bg-gray-50 border-gray-200'
+											)}
+											onClick={() => {
+												if (!selectedMemberForPreference) return;
+												handleToggleShiftPreference(selectedMemberForPreference.id, shift.id);
+											}}>
+											<div
+												className={cn(
+													'w-4 h-4 rounded border-2 flex items-center justify-center',
+													isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+												)}>
+												{isSelected && <Calendar className="h-2 w-2 text-white fill-current" />}
+											</div>
+											<div className="flex-1">
+												<div className="font-medium text-sm">{shift.name}</div>
+												<div className="text-xs text-muted-foreground">
+													{formatShiftTime(shift)}
+												</div>
+											</div>
 										</div>
-									</div>
-								);
-							})}
+									);
+								})}
+							</div>
 						</div>
 
 						<div className="flex justify-end gap-2 pt-4">

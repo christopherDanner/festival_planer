@@ -143,6 +143,44 @@ export const updateMemberStationPreferences = async (
 	}
 };
 
+// Update member shift preferences for a specific festival
+export const updateMemberShiftPreferences = async (
+	festivalId: string,
+	memberId: string,
+	shiftPreferences: string[]
+): Promise<void> => {
+	// Use upsert to create or update preferences
+	const { error } = await supabase.from('festival_member_preferences').upsert({
+		festival_id: festivalId,
+		member_id: memberId,
+		shift_preferences: shiftPreferences
+	});
+
+	if (error) {
+		throw new Error(error.message);
+	}
+};
+
+// Update both station and shift preferences
+export const updateMemberPreferences = async (
+	festivalId: string,
+	memberId: string,
+	stationPreferences: string[],
+	shiftPreferences: string[]
+): Promise<void> => {
+	// Use upsert to create or update preferences
+	const { error } = await supabase.from('festival_member_preferences').upsert({
+		festival_id: festivalId,
+		member_id: memberId,
+		station_preferences: stationPreferences,
+		shift_preferences: shiftPreferences
+	});
+
+	if (error) {
+		throw new Error(error.message);
+	}
+};
+
 // Get member station preferences for a specific festival
 export const getMemberStationPreferences = async (
 	festivalId: string,
@@ -161,6 +199,26 @@ export const getMemberStationPreferences = async (
 	}
 
 	return data?.station_preferences || [];
+};
+
+// Get member shift preferences for a specific festival
+export const getMemberShiftPreferences = async (
+	festivalId: string,
+	memberId: string
+): Promise<string[]> => {
+	const { data, error } = await supabase
+		.from('festival_member_preferences')
+		.select('shift_preferences')
+		.eq('festival_id', festivalId)
+		.eq('member_id', memberId)
+		.single();
+
+	if (error && error.code !== 'PGRST116') {
+		// PGRST116 = no rows found
+		throw new Error(error.message);
+	}
+
+	return data?.shift_preferences || [];
 };
 
 // Get all member station preferences for a festival
