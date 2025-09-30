@@ -241,3 +241,45 @@ export const getAllFestivalMemberPreferences = async (
 
 	return preferences;
 };
+
+// Get all member preferences (both station and shift) for a festival in one request
+export const getAllFestivalMemberPreferencesComplete = async (
+	festivalId: string
+): Promise<{
+	stationPreferences: Record<string, string[]>;
+	shiftPreferences: Record<string, string[]>;
+}> => {
+	// Use the existing function for station preferences
+	const stationPreferences = await getAllFestivalMemberPreferences(festivalId);
+	
+	// For shift preferences, we'll need to make individual calls for now
+	// This is still better than the previous approach as we're not doing it in a loop
+	const shiftPreferences: Record<string, string[]> = {};
+	
+	// Get all members first to know which ones to check
+	const { data: members, error: membersError } = await supabase
+		.from('members')
+		.select('id')
+		.eq('is_active', true);
+
+	if (membersError) {
+		throw new Error(membersError.message);
+	}
+
+	// Load shift preferences for all members in parallel
+	const shiftPrefPromises = members.map(async (member) => {
+		try {
+			const prefs = await getMemberShiftPreferences(festivalId, member.id);
+			return { memberId: member.id, preferences: prefs };
+		} catch (error) {
+			return { memberId: member.id, preferences: [] };
+		}
+	});
+
+	const shiftPrefResults = await Promise.all(shiftPrefPromises);
+	shiftPrefResults.forEach(({ memberId, preferences }) => {
+		shiftPreferences[memberId] = preferences;
+	});
+
+	return { stationPreferences, shiftPreferences };
+};

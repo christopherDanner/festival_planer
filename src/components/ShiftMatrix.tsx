@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,8 +64,8 @@ import {
 	updateMemberStationPreferences,
 	updateMemberShiftPreferences,
 	updateMemberPreferences,
-	getMemberShiftPreferences,
 	getAllFestivalMemberPreferences,
+	getMemberShiftPreferences as getMemberShiftPreferencesFromService,
 	createMember,
 	updateMember,
 	deleteMember,
@@ -155,6 +155,9 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'free' | 'partial' | 'full'>(
 		'all'
 	);
+	const [nameFilter, setNameFilter] = useState('');
+	const [stationFilter, setStationFilter] = useState<string>('all');
+	const [shiftFilter, setShiftFilter] = useState<string>('all');
 
 	// Inline editing state
 	const [editingShift, setEditingShift] = useState<string | null>(null);
@@ -172,11 +175,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		description: ''
 	});
 
-	useEffect(() => {
-		loadData();
-	}, [festivalId]);
-
-	const loadData = async () => {
+	const loadData = useCallback(async () => {
 		try {
 			const [shiftsData, stationsData, assignmentsData, stationShiftAssignmentsData, membersData] =
 				await Promise.all([
@@ -193,20 +192,31 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			setStationShiftAssignments(stationShiftAssignmentsData);
 			setMembers(membersData.filter((m) => m.is_active));
 
-			// Load festival-specific station preferences
-			const preferences = await getAllFestivalMemberPreferences(festivalId);
-			setStationPreferences(preferences);
+			// Load station preferences
+			const stationPrefs = await getAllFestivalMemberPreferences(festivalId);
+			setStationPreferences(stationPrefs);
 
-			// Load shift preferences for each member
+			// Load shift preferences - use existing service but with error handling
 			const shiftPrefs: Record<string, string[]> = {};
-			for (const member of membersData.filter((m) => m.is_active)) {
-				try {
-					const memberShiftPrefs = await getMemberShiftPreferences(festivalId, member.id);
-					shiftPrefs[member.id] = memberShiftPrefs;
-				} catch (error) {
-					// If no preferences found, use empty array
-					shiftPrefs[member.id] = [];
-				}
+			try {
+				// Try to load shift preferences for all members in parallel
+				const memberIds = membersData.filter((m) => m.is_active).map((m) => m.id);
+				const shiftPrefPromises = memberIds.map(async (memberId) => {
+					try {
+						const prefs = await getMemberShiftPreferencesFromService(festivalId, memberId);
+						return { memberId, preferences: prefs };
+					} catch (error) {
+						return { memberId, preferences: [] };
+					}
+				});
+
+				const shiftPrefResults = await Promise.all(shiftPrefPromises);
+				shiftPrefResults.forEach(({ memberId, preferences }) => {
+					shiftPrefs[memberId] = preferences;
+				});
+			} catch (error) {
+				// If loading fails, use empty preferences
+				console.warn('Failed to load shift preferences:', error);
 			}
 			setShiftPreferences(shiftPrefs);
 		} catch (error) {
@@ -218,7 +228,11 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [festivalId]);
+
+	useEffect(() => {
+		loadData();
+	}, [loadData]);
 
 	const handleCreateShift = async () => {
 		if (!shiftForm.name || !shiftForm.start_date || !shiftForm.start_time || !shiftForm.end_time) {
@@ -427,11 +441,38 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	};
 
 	const getFilteredMembers = () => {
-		if (availabilityFilter === 'all') return members;
-
 		return members.filter((member) => {
-			const availability = getMemberAvailability(member.id);
-			return availability === availabilityFilter;
+			// Name filter
+			if (
+				nameFilter &&
+				!`${member.first_name} ${member.last_name}`.toLowerCase().includes(nameFilter.toLowerCase())
+			) {
+				return false;
+			}
+
+			// Station filter
+			if (stationFilter !== 'all') {
+				const memberStationPrefs = getMemberStationPreferences(member.id);
+				if (!memberStationPrefs.includes(stationFilter)) {
+					return false;
+				}
+			}
+
+			// Shift filter
+			if (shiftFilter !== 'all') {
+				const memberShiftPrefs = getMemberShiftPreferences(member.id);
+				if (!memberShiftPrefs.includes(shiftFilter)) {
+					return false;
+				}
+			}
+
+			// Availability filter
+			if (availabilityFilter !== 'all') {
+				const availability = getMemberAvailability(member.id);
+				return availability === availabilityFilter;
+			}
+
+			return true;
 		});
 	};
 
@@ -703,7 +744,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			name: shift.name,
 			start_date: shift.start_date,
 			start_time: shift.start_time,
-			end_date: (shift as any).end_date || '',
+			end_date: (shift as Shift & { end_date?: string }).end_date || '',
 			end_time: shift.end_time
 		});
 	};
@@ -887,7 +928,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			month: '2-digit'
 		});
 
-		const endDate = (shift as any).end_date;
+		const endDate = (shift as Shift & { end_date?: string }).end_date;
 		if (endDate && endDate !== shift.start_date) {
 			const endDateFormatted = new Date(endDate).toLocaleDateString('de-AT', {
 				weekday: 'short',
@@ -1511,6 +1552,50 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 							</Button>
 						</div>
 
+						{/* Name Filter */}
+						<div className="mb-3">
+							<Input
+								placeholder="Nach Namen suchen..."
+								value={nameFilter}
+								onChange={(e) => setNameFilter(e.target.value)}
+								className="text-xs h-8"
+							/>
+						</div>
+
+						{/* Station Filter */}
+						<div className="mb-3">
+							<Select value={stationFilter} onValueChange={setStationFilter}>
+								<SelectTrigger className="text-xs h-8">
+									<SelectValue placeholder="Station filtern..." />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Alle Stationen</SelectItem>
+									{stations.map((station) => (
+										<SelectItem key={station.id} value={station.id}>
+											{station.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						{/* Shift Filter */}
+						<div className="mb-3">
+							<Select value={shiftFilter} onValueChange={setShiftFilter}>
+								<SelectTrigger className="text-xs h-8">
+									<SelectValue placeholder="Schicht filtern..." />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Alle Schichten</SelectItem>
+									{shifts.map((shift) => (
+										<SelectItem key={shift.id} value={shift.id}>
+											{shift.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
 						{/* Filter Buttons */}
 						<div className="flex gap-1 mb-3">
 							<Button
@@ -1542,6 +1627,27 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 								Voll
 							</Button>
 						</div>
+
+						{/* Clear All Filters Button */}
+						{(nameFilter ||
+							stationFilter !== 'all' ||
+							shiftFilter !== 'all' ||
+							availabilityFilter !== 'all') && (
+							<div className="mb-3">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => {
+										setNameFilter('');
+										setStationFilter('all');
+										setShiftFilter('all');
+										setAvailabilityFilter('all');
+									}}
+									className="text-xs h-6 w-full">
+									Alle Filter zurücksetzen
+								</Button>
+							</div>
+						)}
 
 						{/* Stats */}
 						{(() => {
