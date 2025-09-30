@@ -46,7 +46,9 @@ import {
 	getStationShiftAssignments,
 	toggleStationShiftAssignment,
 	createShift,
+	updateShift,
 	createStation,
+	updateStation,
 	assignMemberToShift,
 	removeMemberFromShift,
 	type Shift,
@@ -107,6 +109,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		name: '',
 		start_date: '',
 		start_time: '',
+		end_date: '',
 		end_time: ''
 	});
 
@@ -144,6 +147,22 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'free' | 'partial' | 'full'>(
 		'all'
 	);
+
+	// Inline editing state
+	const [editingShift, setEditingShift] = useState<string | null>(null);
+	const [editingStation, setEditingStation] = useState<string | null>(null);
+	const [editingShiftForm, setEditingShiftForm] = useState({
+		name: '',
+		start_date: '',
+		start_time: '',
+		end_date: '',
+		end_time: ''
+	});
+	const [editingStationForm, setEditingStationForm] = useState({
+		name: '',
+		required_people: 1,
+		description: ''
+	});
 
 	useEffect(() => {
 		loadData();
@@ -184,7 +203,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		if (!shiftForm.name || !shiftForm.start_date || !shiftForm.start_time || !shiftForm.end_time) {
 			toast({
 				title: 'Fehler',
-				description: 'Bitte füllen Sie alle Felder aus.',
+				description: 'Bitte füllen Sie alle Pflichtfelder aus.',
 				variant: 'destructive'
 			});
 			return;
@@ -196,7 +215,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				...shiftForm
 			});
 
-			setShiftForm({ name: '', start_date: '', start_time: '', end_time: '' });
+			setShiftForm({ name: '', start_date: '', start_time: '', end_date: '', end_time: '' });
 			setShowShiftDialog(false);
 			loadData();
 
@@ -549,6 +568,72 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		}
 	};
 
+	// Inline editing functions
+	const handleStartEditShift = (shift: Shift) => {
+		setEditingShift(shift.id);
+		setEditingShiftForm({
+			name: shift.name,
+			start_date: shift.start_date,
+			start_time: shift.start_time,
+			end_date: (shift as any).end_date || '',
+			end_time: shift.end_time
+		});
+	};
+
+	const handleStartEditStation = (station: Station) => {
+		setEditingStation(station.id);
+		setEditingStationForm({
+			name: station.name,
+			required_people: station.required_people,
+			description: station.description || ''
+		});
+	};
+
+	const handleSaveEditShift = async () => {
+		if (!editingShift) return;
+
+		try {
+			await updateShift(editingShift, editingShiftForm);
+			toast({
+				title: 'Schicht aktualisiert',
+				description: 'Die Schicht wurde erfolgreich aktualisiert.'
+			});
+			setEditingShift(null);
+			await loadData();
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Schicht konnte nicht aktualisiert werden.',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	const handleSaveEditStation = async () => {
+		if (!editingStation) return;
+
+		try {
+			await updateStation(editingStation, editingStationForm);
+			toast({
+				title: 'Station aktualisiert',
+				description: 'Die Station wurde erfolgreich aktualisiert.'
+			});
+			setEditingStation(null);
+			await loadData();
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Station konnte nicht aktualisiert werden.',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	const handleCancelEdit = () => {
+		setEditingShift(null);
+		setEditingStation(null);
+	};
+
 	const handleAutomaticAssignment = async () => {
 		if (shifts.length === 0 || stations.length === 0 || members.length === 0) {
 			toast({
@@ -641,12 +726,23 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	};
 
 	const formatShiftTime = (shift: Shift): string => {
-		const date = new Date(shift.start_date).toLocaleDateString('de-AT', {
+		const startDate = new Date(shift.start_date).toLocaleDateString('de-AT', {
 			weekday: 'short',
 			day: '2-digit',
 			month: '2-digit'
 		});
-		return `${date} ${shift.start_time}-${shift.end_time}`;
+
+		const endDate = (shift as any).end_date;
+		if (endDate && endDate !== shift.start_date) {
+			const endDateFormatted = new Date(endDate).toLocaleDateString('de-AT', {
+				weekday: 'short',
+				day: '2-digit',
+				month: '2-digit'
+			});
+			return `${startDate} ${shift.start_time} - ${endDateFormatted} ${shift.end_time}`;
+		}
+
+		return `${startDate} ${shift.start_time}-${shift.end_time}`;
 	};
 
 	if (loading) {
@@ -672,12 +768,6 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				</div>
 
 				<div className="flex gap-2 items-center">
-					{/* Station-Shift Assignment Overview */}
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<MapPin className="h-4 w-4" />
-						<span>{stationShiftAssignments.length} Station-Schicht-Zuweisungen</span>
-					</div>
-
 					<div className="h-8 w-px bg-border mx-2"></div>
 
 					{/* Member management buttons */}
@@ -822,6 +912,20 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 										/>
 									</div>
 								</div>
+
+								<div>
+									<Label htmlFor="end-date">
+										Enddatum (optional - für tagesübergreifende Schichten)
+									</Label>
+									<Input
+										id="end-date"
+										type="date"
+										value={shiftForm.end_date}
+										onChange={(e) =>
+											setShiftForm((prev) => ({ ...prev, end_date: e.target.value }))
+										}
+									/>
+								</div>
 								<div className="flex justify-end gap-2">
 									<Button variant="outline" onClick={() => setShowShiftDialog(false)}>
 										Abbrechen
@@ -923,12 +1027,99 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 												<th
 													key={shift.id}
 													className="p-4 text-center font-medium min-w-[200px] sticky top-0 bg-muted/50 z-10">
-													<div className="space-y-1">
-														<div className="font-semibold">{shift.name}</div>
-														<div className="text-xs text-muted-foreground">
-															{formatShiftTime(shift)}
+													{editingShift === shift.id ? (
+														<div className="space-y-2">
+															<Input
+																value={editingShiftForm.name}
+																onChange={(e) =>
+																	setEditingShiftForm((prev) => ({ ...prev, name: e.target.value }))
+																}
+																placeholder="Schichtname"
+																className="text-sm"
+															/>
+															<div className="grid grid-cols-2 gap-1">
+																<Input
+																	type="date"
+																	value={editingShiftForm.start_date}
+																	onChange={(e) =>
+																		setEditingShiftForm((prev) => ({
+																			...prev,
+																			start_date: e.target.value
+																		}))
+																	}
+																	className="text-xs"
+																/>
+																<Input
+																	type="time"
+																	value={editingShiftForm.start_time}
+																	onChange={(e) =>
+																		setEditingShiftForm((prev) => ({
+																			...prev,
+																			start_time: e.target.value
+																		}))
+																	}
+																	className="text-xs"
+																/>
+															</div>
+															<div className="grid grid-cols-2 gap-1">
+																<Input
+																	type="date"
+																	value={editingShiftForm.end_date}
+																	onChange={(e) =>
+																		setEditingShiftForm((prev) => ({
+																			...prev,
+																			end_date: e.target.value
+																		}))
+																	}
+																	placeholder="Enddatum (optional)"
+																	className="text-xs"
+																/>
+																<Input
+																	type="time"
+																	value={editingShiftForm.end_time}
+																	onChange={(e) =>
+																		setEditingShiftForm((prev) => ({
+																			...prev,
+																			end_time: e.target.value
+																		}))
+																	}
+																	className="text-xs"
+																/>
+															</div>
+															<div className="flex gap-1">
+																<Button
+																	size="sm"
+																	onClick={handleSaveEditShift}
+																	className="text-xs h-6">
+																	<Save className="h-3 w-3" />
+																</Button>
+																<Button
+																	size="sm"
+																	variant="outline"
+																	onClick={handleCancelEdit}
+																	className="text-xs h-6">
+																	<X className="h-3 w-3" />
+																</Button>
+															</div>
 														</div>
-													</div>
+													) : (
+														<div className="space-y-1 group">
+															<div className="font-semibold flex items-center justify-center gap-2">
+																{shift.name}
+																<Button
+																	size="sm"
+																	variant="ghost"
+																	className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+																	onClick={() => handleStartEditShift(shift)}
+																	title="Schicht bearbeiten">
+																	<Edit className="h-3 w-3" />
+																</Button>
+															</div>
+															<div className="text-xs text-muted-foreground">
+																{formatShiftTime(shift)}
+															</div>
+														</div>
+													)}
 												</th>
 											))}
 										</tr>
@@ -937,13 +1128,79 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 										{stations.map((station) => (
 											<tr key={station.id} className="border-b">
 												<td className="p-4 font-medium sticky left-0 bg-background z-10 min-w-[150px]">
-													<div className="space-y-1">
-														<div>{station.name}</div>
-														<div className="text-xs text-muted-foreground flex items-center gap-1">
-															<Users className="h-3 w-3" />
-															{station.required_people} Personen
+													{editingStation === station.id ? (
+														<div className="space-y-2">
+															<Input
+																value={editingStationForm.name}
+																onChange={(e) =>
+																	setEditingStationForm((prev) => ({
+																		...prev,
+																		name: e.target.value
+																	}))
+																}
+																placeholder="Stationname"
+																className="text-sm"
+															/>
+															<Input
+																type="number"
+																min="1"
+																value={editingStationForm.required_people}
+																onChange={(e) =>
+																	setEditingStationForm((prev) => ({
+																		...prev,
+																		required_people: parseInt(e.target.value) || 1
+																	}))
+																}
+																placeholder="Personen"
+																className="text-xs"
+															/>
+															<Textarea
+																value={editingStationForm.description}
+																onChange={(e) =>
+																	setEditingStationForm((prev) => ({
+																		...prev,
+																		description: e.target.value
+																	}))
+																}
+																placeholder="Beschreibung (optional)"
+																rows={2}
+																className="text-xs"
+															/>
+															<div className="flex gap-1">
+																<Button
+																	size="sm"
+																	onClick={handleSaveEditStation}
+																	className="text-xs h-6">
+																	<Save className="h-3 w-3" />
+																</Button>
+																<Button
+																	size="sm"
+																	variant="outline"
+																	onClick={handleCancelEdit}
+																	className="text-xs h-6">
+																	<X className="h-3 w-3" />
+																</Button>
+															</div>
 														</div>
-													</div>
+													) : (
+														<div className="space-y-1 group">
+															<div className="flex items-center gap-2">
+																<span>{station.name}</span>
+																<Button
+																	size="sm"
+																	variant="ghost"
+																	className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+																	onClick={() => handleStartEditStation(station)}
+																	title="Station bearbeiten">
+																	<Edit className="h-3 w-3" />
+																</Button>
+															</div>
+															<div className="text-xs text-muted-foreground flex items-center gap-1">
+																<Users className="h-3 w-3" />
+																{station.required_people} Personen
+															</div>
+														</div>
+													)}
 												</td>
 												{shifts.map((shift) => {
 													const isAssigned = isStationAssignedToShift(station.id, shift.id);
@@ -952,48 +1209,55 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 
 													return (
 														<td key={`${shift.id}-${station.id}`} className="p-2">
-															<div className="space-y-2">
-																{/* Toggle Button for Station-Shift Assignment */}
-																<div className="flex justify-center">
-																	<Button
-																		variant={isAssigned ? 'default' : 'outline'}
-																		size="sm"
-																		onClick={() =>
-																			handleToggleStationShiftAssignment(station.id, shift.id)
-																		}
-																		className={cn(
-																			'text-xs h-6 px-2',
-																			isAssigned
-																				? 'bg-green-600 hover:bg-green-700 text-white'
-																				: 'border-dashed border-gray-300 hover:border-gray-400'
-																		)}>
-																		{isAssigned ? '✓ Zugewiesen' : 'Zuweisen'}
-																	</Button>
+															<div
+																className={cn(
+																	'min-h-[120px] border-2 rounded-lg p-2 space-y-2 transition-colors relative group',
+																	isAssigned
+																		? getCellColor(cell, isAssigned)
+																		: 'bg-muted/10 border-muted/30 hover:border-muted/50 cursor-pointer',
+																	!isAssigned && 'hover:bg-muted/20'
+																)}
+																onClick={() => {
+																	if (!isAssigned) {
+																		handleToggleStationShiftAssignment(station.id, shift.id);
+																	}
+																}}
+																onDragOver={(e) => e.preventDefault()}
+																onDrop={(e) => handleDrop(shift.id, station.id, e)}>
+																{/* Assignment Status Indicator */}
+																<div className="flex justify-between items-start">
+																	{isAssigned && (
+																		<Badge
+																			variant={getRemainingBadgeVariant(cell)}
+																			className="text-xs">
+																			{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
+																		</Badge>
+																	)}
+
+																	{/* Remove Assignment Button - only visible on hover */}
+																	{isAssigned && (
+																		<Button
+																			size="sm"
+																			variant="ghost"
+																			className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				handleToggleStationShiftAssignment(station.id, shift.id);
+																			}}
+																			title="Zuweisung entfernen">
+																			<X className="h-3 w-3" />
+																		</Button>
+																	)}
 																</div>
 
-																{/* Assignment Cell - only show if assigned */}
+																{/* Assignment Content - only show if assigned */}
 																{isAssigned && (
-																	<div
-																		className={cn(
-																			'min-h-[120px] border-2 rounded-lg p-2 space-y-2 transition-colors',
-																			getCellColor(cell, isAssigned),
-																			'relative'
-																		)}
-																		onDragOver={(e) => e.preventDefault()}
-																		onDrop={(e) => handleDrop(shift.id, station.id, e)}>
-																		<div className="flex justify-between items-start">
-																			<Badge
-																				variant={getRemainingBadgeVariant(cell)}
-																				className="text-xs">
-																				{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
-																			</Badge>
-																		</div>
-
+																	<>
 																		<div className="space-y-1">
 																			{cell.assignments.map((assignment) => (
 																				<div
 																					key={assignment.id}
-																					className="flex items-center justify-between bg-background/80 rounded px-2 py-1 text-sm group">
+																					className="flex items-center justify-between bg-background/80 rounded px-2 py-1 text-sm group/member">
 																					<span className="font-medium">
 																						{assignment.member?.first_name}{' '}
 																						{assignment.member?.last_name}
@@ -1001,14 +1265,15 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 																					<Button
 																						size="sm"
 																						variant="ghost"
-																						className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
-																						onClick={() =>
+																						className="h-4 w-4 p-0 opacity-0 group-hover/member:opacity-100 hover:bg-destructive/20 hover:text-destructive"
+																						onClick={(e) => {
+																							e.stopPropagation();
 																							handleRemoveMember(
 																								shift.id,
 																								station.id,
 																								assignment.member_id!
-																							)
-																						}>
+																							);
+																						}}>
 																						<Trash2 className="h-3 w-3" />
 																					</Button>
 																				</div>
@@ -1020,6 +1285,13 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 																				Person hier ablegen
 																			</div>
 																		)}
+																	</>
+																)}
+
+																{/* Click hint for unassigned cells */}
+																{!isAssigned && (
+																	<div className="text-xs text-muted-foreground text-center border-dashed border rounded p-2">
+																		Klicken zum Zuweisen
 																	</div>
 																)}
 															</div>

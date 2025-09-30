@@ -65,16 +65,28 @@ export const getShifts = async (festivalId: string): Promise<Shift[]> => {
 export const createShift = async (
 	shiftData: Omit<Shift, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Shift> => {
-	const { data, error } = await supabase.from('shifts').insert(shiftData).select().single();
+	// Only include end_date if it has a value
+	const insertData: any = { ...shiftData };
+	if (!insertData.end_date || insertData.end_date === '') {
+		delete insertData.end_date;
+	}
+
+	const { data, error } = await supabase.from('shifts').insert(insertData).select().single();
 
 	if (error) throw error;
 	return data;
 };
 
 export const updateShift = async (id: string, updates: Partial<Shift>): Promise<Shift> => {
+	// Only include end_date if it has a value
+	const updateData: any = { ...updates };
+	if (updateData.end_date === '') {
+		updateData.end_date = null;
+	}
+
 	const { data, error } = await supabase
 		.from('shifts')
-		.update(updates)
+		.update(updateData)
 		.eq('id', id)
 		.select()
 		.single();
