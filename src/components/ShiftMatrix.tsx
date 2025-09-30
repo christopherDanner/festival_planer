@@ -35,7 +35,8 @@ import {
 	Zap,
 	Settings,
 	Heart,
-	Star
+	Star,
+	FileSpreadsheet
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,7 @@ import {
 	type AutoAssignmentConfig,
 	type AssignmentResult
 } from '@/lib/automaticAssignmentService';
+import { exportToExcel, type ExportData } from '@/lib/exportService';
 
 interface ShiftMatrixProps {
 	festivalId: string;
@@ -705,6 +707,33 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		}
 	};
 
+	// Export functions
+	const handleExportToExcel = () => {
+		try {
+			const exportData: ExportData = {
+				shifts,
+				stations,
+				assignments,
+				stationShiftAssignments,
+				members,
+				festivalName: 'Festival', // You might want to get this from props or context
+				festivalDates: 'Datum' // You might want to get this from props or context
+			};
+
+			exportToExcel(exportData);
+			toast({
+				title: 'Excel Export',
+				description: 'Schichtplan wurde als Excel-Datei exportiert.'
+			});
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Excel Export fehlgeschlagen.',
+				variant: 'destructive'
+			});
+		}
+	};
+
 	const getMemberAssignmentInfo = (memberId: string) => {
 		const memberAssignments = getMemberAssignments(memberId);
 		if (memberAssignments.length === 0) return 'Frei';
@@ -768,6 +797,18 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				</div>
 
 				<div className="flex gap-2 items-center">
+					<div className="h-8 w-px bg-border mx-2"></div>
+
+					{/* Export buttons */}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={handleExportToExcel}
+						className="flex items-center gap-2">
+						<FileSpreadsheet className="h-4 w-4" />
+						Excel Export
+					</Button>
+
 					<div className="h-8 w-px bg-border mx-2"></div>
 
 					{/* Member management buttons */}
@@ -999,7 +1040,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			{/* Main Content - Split Layout */}
 			<div className="flex-1 flex overflow-hidden">
 				{/* Left Side - Matrix */}
-				<div className="flex-1 overflow-auto">
+				<div id="shift-matrix-container" className="flex-1 overflow-auto">
 					{shifts.length === 0 || stations.length === 0 ? (
 						<div className="flex items-center justify-center h-full">
 							<div className="text-center text-muted-foreground">
