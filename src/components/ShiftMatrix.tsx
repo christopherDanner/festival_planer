@@ -36,7 +36,11 @@ import {
 	Settings,
 	Heart,
 	Star,
-	FileSpreadsheet
+	FileSpreadsheet,
+	ChevronLeft,
+	ChevronRight,
+	Maximize,
+	Minimize
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -175,6 +179,10 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		description: ''
 	});
 
+	// UI state for collapsible member list and fullscreen
+	const [isMemberListCollapsed, setIsMemberListCollapsed] = useState(false);
+	const [isFullscreen, setIsFullscreen] = useState(false);
+
 	const loadData = useCallback(async () => {
 		try {
 			const [shiftsData, stationsData, assignmentsData, stationShiftAssignmentsData, membersData] =
@@ -228,7 +236,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 		} finally {
 			setLoading(false);
 		}
-	}, [festivalId]);
+	}, [festivalId, toast]);
 
 	useEffect(() => {
 		loadData();
@@ -950,7 +958,11 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 	}
 
 	return (
-		<div className="h-screen flex flex-col">
+		<div
+			className={cn(
+				'flex flex-col',
+				isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'h-screen'
+			)}>
 			{/* Header with controls */}
 			<div className="flex items-center justify-between p-6 border-b bg-background">
 				<div>
@@ -964,6 +976,18 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				</div>
 
 				<div className="flex gap-2 items-center">
+					<div className="h-8 w-px bg-border mx-2"></div>
+
+					{/* Fullscreen toggle */}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setIsFullscreen(!isFullscreen)}
+						className="flex items-center gap-2">
+						{isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+						{isFullscreen ? 'Vollbild beenden' : 'Vollbild'}
+					</Button>
+
 					<div className="h-8 w-px bg-border mx-2"></div>
 
 					{/* Export buttons */}
@@ -1207,7 +1231,9 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 			{/* Main Content - Split Layout */}
 			<div className="flex-1 flex overflow-hidden">
 				{/* Left Side - Matrix */}
-				<div id="shift-matrix-container" className="flex-1 overflow-auto">
+				<div
+					id="shift-matrix-container"
+					className={cn('overflow-auto', isMemberListCollapsed ? 'flex-1' : 'flex-1')}>
 					{shifts.length === 0 || stations.length === 0 ? (
 						<div className="flex items-center justify-center h-full">
 							<div className="text-center text-muted-foreground">
@@ -1536,308 +1562,330 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				</div>
 
 				{/* Right Side - Members List */}
-				<div className="w-80 border-l bg-muted/20 flex flex-col">
+				<div
+					className={cn(
+						'border-l bg-muted/20 flex flex-col transition-all duration-300',
+						isMemberListCollapsed ? 'w-12' : 'w-80'
+					)}>
 					<div className="p-4 border-b bg-background">
 						<div className="flex items-center justify-between mb-3">
-							<h3 className="font-semibold flex items-center gap-2">
-								<Users className="h-4 w-4" />
-								Mitglieder ({getFilteredMembers().length})
-							</h3>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => setAvailabilityFilter('all')}
-								className="h-6 w-6 p-0">
-								<X className="h-3 w-3" />
-							</Button>
-						</div>
-
-						{/* Name Filter */}
-						<div className="mb-3">
-							<Input
-								placeholder="Nach Namen suchen..."
-								value={nameFilter}
-								onChange={(e) => setNameFilter(e.target.value)}
-								className="text-xs h-8"
-							/>
-						</div>
-
-						{/* Station Filter */}
-						<div className="mb-3">
-							<Select value={stationFilter} onValueChange={setStationFilter}>
-								<SelectTrigger className="text-xs h-8">
-									<SelectValue placeholder="Station filtern..." />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">Alle Stationen</SelectItem>
-									{stations.map((station) => (
-										<SelectItem key={station.id} value={station.id}>
-											{station.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-
-						{/* Shift Filter */}
-						<div className="mb-3">
-							<Select value={shiftFilter} onValueChange={setShiftFilter}>
-								<SelectTrigger className="text-xs h-8">
-									<SelectValue placeholder="Schicht filtern..." />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">Alle Schichten</SelectItem>
-									{shifts.map((shift) => (
-										<SelectItem key={shift.id} value={shift.id}>
-											{shift.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-
-						{/* Filter Buttons */}
-						<div className="flex gap-1 mb-3">
-							<Button
-								variant={availabilityFilter === 'all' ? 'default' : 'outline'}
-								size="sm"
-								onClick={() => setAvailabilityFilter('all')}
-								className="text-xs h-6 px-2">
-								Alle
-							</Button>
-							<Button
-								variant={availabilityFilter === 'free' ? 'default' : 'outline'}
-								size="sm"
-								onClick={() => setAvailabilityFilter('free')}
-								className="text-xs h-6 px-2">
-								Frei
-							</Button>
-							<Button
-								variant={availabilityFilter === 'partial' ? 'default' : 'outline'}
-								size="sm"
-								onClick={() => setAvailabilityFilter('partial')}
-								className="text-xs h-6 px-2">
-								Teilweise
-							</Button>
-							<Button
-								variant={availabilityFilter === 'full' ? 'default' : 'outline'}
-								size="sm"
-								onClick={() => setAvailabilityFilter('full')}
-								className="text-xs h-6 px-2">
-								Voll
-							</Button>
-						</div>
-
-						{/* Clear All Filters Button */}
-						{(nameFilter ||
-							stationFilter !== 'all' ||
-							shiftFilter !== 'all' ||
-							availabilityFilter !== 'all') && (
-							<div className="mb-3">
+							{!isMemberListCollapsed && (
+								<h3 className="font-semibold flex items-center gap-2">
+									<Users className="h-4 w-4" />
+									Mitglieder ({getFilteredMembers().length})
+								</h3>
+							)}
+							<div className="flex items-center gap-2">
 								<Button
-									variant="outline"
+									variant="ghost"
 									size="sm"
-									onClick={() => {
-										setNameFilter('');
-										setStationFilter('all');
-										setShiftFilter('all');
-										setAvailabilityFilter('all');
-									}}
-									className="text-xs h-6 w-full">
-									Alle Filter zurücksetzen
+									onClick={() => setIsMemberListCollapsed(!isMemberListCollapsed)}
+									className="h-6 w-6 p-0"
+									title={
+										isMemberListCollapsed
+											? 'Mitgliederliste einblenden'
+											: 'Mitgliederliste ausblenden'
+									}>
+									{isMemberListCollapsed ? (
+										<ChevronLeft className="h-4 w-4" />
+									) : (
+										<ChevronRight className="h-4 w-4" />
+									)}
 								</Button>
 							</div>
-						)}
+						</div>
 
-						{/* Stats */}
-						{(() => {
-							const stats = getAvailabilityStats();
-							return (
-								<div className="flex gap-2 text-xs">
-									<div className="flex items-center gap-1">
-										<div className="w-2 h-2 rounded-full bg-red-500"></div>
-										<span>{stats.free} frei</span>
-									</div>
-									<div className="flex items-center gap-1">
-										<div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-										<span>{stats.partial} teilweise</span>
-									</div>
-									<div className="flex items-center gap-1">
-										<div className="w-2 h-2 rounded-full bg-green-500"></div>
-										<span>{stats.full} voll</span>
-									</div>
+						{!isMemberListCollapsed && (
+							<>
+								{/* Name Filter */}
+								<div className="mb-3">
+									<Input
+										placeholder="Nach Namen suchen..."
+										value={nameFilter}
+										onChange={(e) => setNameFilter(e.target.value)}
+										className="text-xs h-8"
+									/>
 								</div>
-							);
-						})()}
+
+								{/* Station Filter */}
+								<div className="mb-3">
+									<Select value={stationFilter} onValueChange={setStationFilter}>
+										<SelectTrigger className="text-xs h-8">
+											<SelectValue placeholder="Station filtern..." />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">Alle Stationen</SelectItem>
+											{stations.map((station) => (
+												<SelectItem key={station.id} value={station.id}>
+													{station.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+
+								{/* Shift Filter */}
+								<div className="mb-3">
+									<Select value={shiftFilter} onValueChange={setShiftFilter}>
+										<SelectTrigger className="text-xs h-8">
+											<SelectValue placeholder="Schicht filtern..." />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">Alle Schichten</SelectItem>
+											{shifts.map((shift) => (
+												<SelectItem key={shift.id} value={shift.id}>
+													{shift.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+
+								{/* Filter Buttons */}
+								<div className="flex gap-1 mb-3">
+									<Button
+										variant={availabilityFilter === 'all' ? 'default' : 'outline'}
+										size="sm"
+										onClick={() => setAvailabilityFilter('all')}
+										className="text-xs h-6 px-2">
+										Alle
+									</Button>
+									<Button
+										variant={availabilityFilter === 'free' ? 'default' : 'outline'}
+										size="sm"
+										onClick={() => setAvailabilityFilter('free')}
+										className="text-xs h-6 px-2">
+										Frei
+									</Button>
+									<Button
+										variant={availabilityFilter === 'partial' ? 'default' : 'outline'}
+										size="sm"
+										onClick={() => setAvailabilityFilter('partial')}
+										className="text-xs h-6 px-2">
+										Teilweise
+									</Button>
+									<Button
+										variant={availabilityFilter === 'full' ? 'default' : 'outline'}
+										size="sm"
+										onClick={() => setAvailabilityFilter('full')}
+										className="text-xs h-6 px-2">
+										Voll
+									</Button>
+								</div>
+
+								{/* Clear All Filters Button */}
+								{(nameFilter ||
+									stationFilter !== 'all' ||
+									shiftFilter !== 'all' ||
+									availabilityFilter !== 'all') && (
+									<div className="mb-3">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => {
+												setNameFilter('');
+												setStationFilter('all');
+												setShiftFilter('all');
+												setAvailabilityFilter('all');
+											}}
+											className="text-xs h-6 w-full">
+											Alle Filter zurücksetzen
+										</Button>
+									</div>
+								)}
+
+								{/* Stats */}
+								{(() => {
+									const stats = getAvailabilityStats();
+									return (
+										<div className="flex gap-2 text-xs">
+											<div className="flex items-center gap-1">
+												<div className="w-2 h-2 rounded-full bg-red-500"></div>
+												<span>{stats.free} frei</span>
+											</div>
+											<div className="flex items-center gap-1">
+												<div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+												<span>{stats.partial} teilweise</span>
+											</div>
+											<div className="flex items-center gap-1">
+												<div className="w-2 h-2 rounded-full bg-green-500"></div>
+												<span>{stats.full} voll</span>
+											</div>
+										</div>
+									);
+								})()}
+							</>
+						)}
 					</div>
 
 					<div className="flex-1 overflow-y-auto p-4 space-y-2">
-						{getFilteredMembers().map((member) => {
-							const memberAssignments = getMemberAssignments(member.id);
-							const availability = getMemberAvailability(member.id);
-							const totalShifts = shifts.length;
+						{!isMemberListCollapsed &&
+							getFilteredMembers().map((member) => {
+								const memberAssignments = getMemberAssignments(member.id);
+								const availability = getMemberAvailability(member.id);
+								const totalShifts = shifts.length;
 
-							return (
-								<div
-									key={member.id}
-									className={cn(
-										'p-3 rounded-lg border cursor-move hover:bg-accent/50 transition-colors',
-										availability === 'free' && 'bg-red-50 border-red-200',
-										availability === 'partial' && 'bg-yellow-50 border-yellow-200',
-										availability === 'full' && 'bg-green-50 border-green-200'
-									)}
-									draggable
-									onDragStart={() => handleDragStart(member)}
-									onDragEnd={handleDragEnd}>
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<span className="font-medium text-sm">
-												{member.first_name} {member.last_name}
-											</span>
-											<div className="flex items-center gap-1">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleOpenStationPreferenceDialog(member);
-													}}
-													className="h-6 w-6 p-0 hover:bg-blue-100"
-													title="Stationswünsche bearbeiten">
-													<Heart
+								return (
+									<div
+										key={member.id}
+										className={cn(
+											'p-3 rounded-lg border cursor-move hover:bg-accent/50 transition-colors',
+											availability === 'free' && 'bg-red-50 border-red-200',
+											availability === 'partial' && 'bg-yellow-50 border-yellow-200',
+											availability === 'full' && 'bg-green-50 border-green-200'
+										)}
+										draggable
+										onDragStart={() => handleDragStart(member)}
+										onDragEnd={handleDragEnd}>
+										<div className="space-y-2">
+											<div className="flex items-center justify-between">
+												<span className="font-medium text-sm">
+													{member.first_name} {member.last_name}
+												</span>
+												<div className="flex items-center gap-1">
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleOpenStationPreferenceDialog(member);
+														}}
+														className="h-6 w-6 p-0 hover:bg-blue-100"
+														title="Stationswünsche bearbeiten">
+														<Heart
+															className={cn(
+																'h-3 w-3',
+																getMemberStationPreferences(member.id).length > 0
+																	? 'text-red-500 fill-red-500'
+																	: 'text-gray-400'
+															)}
+														/>
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleEditMember(member);
+														}}
+														className="h-6 w-6 p-0 hover:bg-green-100"
+														title="Mitglied bearbeiten">
+														<Edit className="h-3 w-3 text-green-600" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleDeleteMember(member);
+														}}
+														className="h-6 w-6 p-0 hover:bg-red-100"
+														title="Mitglied löschen">
+														<UserMinus className="h-3 w-3 text-red-600" />
+													</Button>
+													<Badge
+														variant={
+															availability === 'free'
+																? 'destructive'
+																: availability === 'partial'
+																? 'secondary'
+																: 'default'
+														}
+														className="text-xs">
+														{memberAssignments.length}/{totalShifts}
+													</Badge>
+													<div
 														className={cn(
-															'h-3 w-3',
-															getMemberStationPreferences(member.id).length > 0
-																? 'text-red-500 fill-red-500'
-																: 'text-gray-400'
-														)}
-													/>
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleEditMember(member);
-													}}
-													className="h-6 w-6 p-0 hover:bg-green-100"
-													title="Mitglied bearbeiten">
-													<Edit className="h-3 w-3 text-green-600" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleDeleteMember(member);
-													}}
-													className="h-6 w-6 p-0 hover:bg-red-100"
-													title="Mitglied löschen">
-													<UserMinus className="h-3 w-3 text-red-600" />
-												</Button>
-												<Badge
-													variant={
-														availability === 'free'
-															? 'destructive'
-															: availability === 'partial'
-															? 'secondary'
-															: 'default'
-													}
-													className="text-xs">
-													{memberAssignments.length}/{totalShifts}
-												</Badge>
-												<div
-													className={cn(
-														'w-2 h-2 rounded-full',
-														availability === 'free' && 'bg-red-500',
-														availability === 'partial' && 'bg-yellow-500',
-														availability === 'full' && 'bg-green-500'
-													)}></div>
+															'w-2 h-2 rounded-full',
+															availability === 'free' && 'bg-red-500',
+															availability === 'partial' && 'bg-yellow-500',
+															availability === 'full' && 'bg-green-500'
+														)}></div>
+												</div>
 											</div>
-										</div>
 
-										{/* Station Preferences */}
-										{getMemberStationPreferences(member.id).length > 0 && (
-											<div className="flex flex-wrap gap-1">
-												{getMemberStationPreferences(member.id).map((stationId) => {
-													const station = stations.find((s) => s.id === stationId);
-													if (!station) return null;
-													return (
-														<Badge
-															key={stationId}
-															variant="outline"
-															className="text-xs bg-pink-50 border-pink-200 text-pink-700">
-															<Heart className="h-2 w-2 mr-1 fill-current" />
-															{station.name}
-														</Badge>
-													);
-												})}
-											</div>
-										)}
-
-										{/* Shift Preferences */}
-										{getMemberShiftPreferences(member.id).length > 0 && (
-											<div className="flex flex-wrap gap-1">
-												{getMemberShiftPreferences(member.id).map((shiftId) => {
-													const shift = shifts.find((s) => s.id === shiftId);
-													if (!shift) return null;
-													return (
-														<Badge
-															key={shiftId}
-															variant="outline"
-															className="text-xs bg-blue-50 border-blue-200 text-blue-700">
-															<Calendar className="h-2 w-2 mr-1 fill-current" />
-															{shift.name}
-														</Badge>
-													);
-												})}
-											</div>
-										)}
-
-										{memberAssignments.length > 0 && (
-											<div className="text-xs text-muted-foreground">
-												{memberAssignments.map((assignment, index) => {
-													const shift = shifts.find((s) => s.id === assignment.shift_id);
-													const station = stations.find((s) => s.id === assignment.station_id);
-													if (!shift || !station) return null;
-
-													const date = new Date(shift.start_date).toLocaleDateString('de-AT', {
-														weekday: 'short',
-														day: '2-digit',
-														month: '2-digit'
-													});
-
-													return (
-														<div key={assignment.id} className="flex items-center gap-1">
-															<Badge variant="secondary" className="text-xs">
+											{/* Station Preferences */}
+											{getMemberStationPreferences(member.id).length > 0 && (
+												<div className="flex flex-wrap gap-1">
+													{getMemberStationPreferences(member.id).map((stationId) => {
+														const station = stations.find((s) => s.id === stationId);
+														if (!station) return null;
+														return (
+															<Badge
+																key={stationId}
+																variant="outline"
+																className="text-xs bg-pink-50 border-pink-200 text-pink-700">
+																<Heart className="h-2 w-2 mr-1 fill-current" />
 																{station.name}
 															</Badge>
-															<span>{date}</span>
-														</div>
-													);
-												})}
-											</div>
-										)}
+														);
+													})}
+												</div>
+											)}
 
-										{/* Availability Progress Bar */}
-										{totalShifts > 0 && (
-											<div className="w-full bg-gray-200 rounded-full h-1.5">
-												<div
-													className={cn(
-														'h-1.5 rounded-full transition-all',
-														availability === 'free' && 'bg-red-500',
-														availability === 'partial' && 'bg-yellow-500',
-														availability === 'full' && 'bg-green-500'
-													)}
-													style={{
-														width: `${(memberAssignments.length / totalShifts) * 100}%`
-													}}></div>
-											</div>
-										)}
+											{/* Shift Preferences */}
+											{getMemberShiftPreferences(member.id).length > 0 && (
+												<div className="flex flex-wrap gap-1">
+													{getMemberShiftPreferences(member.id).map((shiftId) => {
+														const shift = shifts.find((s) => s.id === shiftId);
+														if (!shift) return null;
+														return (
+															<Badge
+																key={shiftId}
+																variant="outline"
+																className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+																<Calendar className="h-2 w-2 mr-1 fill-current" />
+																{shift.name}
+															</Badge>
+														);
+													})}
+												</div>
+											)}
+
+											{memberAssignments.length > 0 && (
+												<div className="text-xs text-muted-foreground">
+													{memberAssignments.map((assignment, index) => {
+														const shift = shifts.find((s) => s.id === assignment.shift_id);
+														const station = stations.find((s) => s.id === assignment.station_id);
+														if (!shift || !station) return null;
+
+														const date = new Date(shift.start_date).toLocaleDateString('de-AT', {
+															weekday: 'short',
+															day: '2-digit',
+															month: '2-digit'
+														});
+
+														return (
+															<div key={assignment.id} className="flex items-center gap-1">
+																<Badge variant="secondary" className="text-xs">
+																	{station.name}
+																</Badge>
+																<span>{date}</span>
+															</div>
+														);
+													})}
+												</div>
+											)}
+
+											{/* Availability Progress Bar */}
+											{totalShifts > 0 && (
+												<div className="w-full bg-gray-200 rounded-full h-1.5">
+													<div
+														className={cn(
+															'h-1.5 rounded-full transition-all',
+															availability === 'free' && 'bg-red-500',
+															availability === 'partial' && 'bg-yellow-500',
+															availability === 'full' && 'bg-green-500'
+														)}
+														style={{
+															width: `${(memberAssignments.length / totalShifts) * 100}%`
+														}}></div>
+												</div>
+											)}
+										</div>
 									</div>
-								</div>
-							);
-						})}
+								);
+							})}
 					</div>
 				</div>
 			</div>
