@@ -131,12 +131,17 @@ export const updateMemberStationPreferences = async (
 	memberId: string,
 	stationPreferences: string[]
 ): Promise<void> => {
-	// Use upsert to create or update preferences
-	const { error } = await supabase.from('festival_member_preferences').upsert({
-		festival_id: festivalId,
-		member_id: memberId,
-		station_preferences: stationPreferences
-	});
+	// Use upsert with proper conflict resolution
+	const { error } = await (supabase as any).from('festival_member_preferences').upsert(
+		{
+			festival_id: festivalId,
+			member_id: memberId,
+			station_preferences: stationPreferences
+		},
+		{
+			onConflict: 'festival_id,member_id'
+		}
+	);
 
 	if (error) {
 		throw new Error(error.message);
@@ -149,12 +154,17 @@ export const updateMemberShiftPreferences = async (
 	memberId: string,
 	shiftPreferences: string[]
 ): Promise<void> => {
-	// Use upsert to create or update preferences
-	const { error } = await supabase.from('festival_member_preferences').upsert({
-		festival_id: festivalId,
-		member_id: memberId,
-		shift_preferences: shiftPreferences
-	});
+	// Use upsert with proper conflict resolution
+	const { error } = await (supabase as any).from('festival_member_preferences').upsert(
+		{
+			festival_id: festivalId,
+			member_id: memberId,
+			shift_preferences: shiftPreferences
+		},
+		{
+			onConflict: 'festival_id,member_id'
+		}
+	);
 
 	if (error) {
 		throw new Error(error.message);
@@ -168,13 +178,18 @@ export const updateMemberPreferences = async (
 	stationPreferences: string[],
 	shiftPreferences: string[]
 ): Promise<void> => {
-	// Use upsert to create or update preferences
-	const { error } = await supabase.from('festival_member_preferences').upsert({
-		festival_id: festivalId,
-		member_id: memberId,
-		station_preferences: stationPreferences,
-		shift_preferences: shiftPreferences
-	});
+	// Use upsert with proper conflict resolution
+	const { error } = await (supabase as any).from('festival_member_preferences').upsert(
+		{
+			festival_id: festivalId,
+			member_id: memberId,
+			station_preferences: stationPreferences,
+			shift_preferences: shiftPreferences
+		},
+		{
+			onConflict: 'festival_id,member_id'
+		}
+	);
 
 	if (error) {
 		throw new Error(error.message);
@@ -186,7 +201,7 @@ export const getMemberStationPreferences = async (
 	festivalId: string,
 	memberId: string
 ): Promise<string[]> => {
-	const { data, error } = await supabase
+	const { data, error } = await (supabase as any)
 		.from('festival_member_preferences')
 		.select('station_preferences')
 		.eq('festival_id', festivalId)
@@ -206,7 +221,7 @@ export const getMemberShiftPreferences = async (
 	festivalId: string,
 	memberId: string
 ): Promise<string[]> => {
-	const { data, error } = await supabase
+	const { data, error } = await (supabase as any)
 		.from('festival_member_preferences')
 		.select('shift_preferences')
 		.eq('festival_id', festivalId)
@@ -225,7 +240,7 @@ export const getMemberShiftPreferences = async (
 export const getAllFestivalMemberPreferences = async (
 	festivalId: string
 ): Promise<Record<string, string[]>> => {
-	const { data, error } = await supabase
+	const { data, error } = await (supabase as any)
 		.from('festival_member_preferences')
 		.select('member_id, station_preferences')
 		.eq('festival_id', festivalId);
@@ -235,7 +250,7 @@ export const getAllFestivalMemberPreferences = async (
 	}
 
 	const preferences: Record<string, string[]> = {};
-	data?.forEach((item) => {
+	data?.forEach((item: any) => {
 		preferences[item.member_id] = item.station_preferences || [];
 	});
 
@@ -251,13 +266,13 @@ export const getAllFestivalMemberPreferencesComplete = async (
 }> => {
 	// Use the existing function for station preferences
 	const stationPreferences = await getAllFestivalMemberPreferences(festivalId);
-	
+
 	// For shift preferences, we'll need to make individual calls for now
 	// This is still better than the previous approach as we're not doing it in a loop
 	const shiftPreferences: Record<string, string[]> = {};
-	
+
 	// Get all members first to know which ones to check
-	const { data: members, error: membersError } = await supabase
+	const { data: members, error: membersError } = await (supabase as any)
 		.from('members')
 		.select('id')
 		.eq('is_active', true);

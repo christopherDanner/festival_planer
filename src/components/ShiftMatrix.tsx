@@ -1892,15 +1892,15 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 
 			{/* Station Preference Dialog */}
 			<Dialog open={showStationPreferenceDialog} onOpenChange={setShowStationPreferenceDialog}>
-				<DialogContent>
-					<DialogHeader>
+				<DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+					<DialogHeader className="flex-shrink-0">
 						<DialogTitle className="flex items-center gap-2">
 							<Heart className="h-5 w-5 text-red-500" />
 							Präferenzen für {selectedMemberForPreference?.first_name}{' '}
 							{selectedMemberForPreference?.last_name}
 						</DialogTitle>
 					</DialogHeader>
-					<div className="space-y-6">
+					<div className="flex-1 overflow-y-auto space-y-6 pr-2">
 						{/* Station Preferences */}
 						<div>
 							<h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -2007,13 +2007,12 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 								})}
 							</div>
 						</div>
-
-						<div className="flex justify-end gap-2 pt-4">
-							<Button variant="outline" onClick={() => setShowStationPreferenceDialog(false)}>
-								Abbrechen
-							</Button>
-							<Button onClick={handleSaveStationPreferencesFromDialog}>Speichern</Button>
-						</div>
+					</div>
+					<div className="flex-shrink-0 flex justify-end gap-2 pt-4 border-t mt-4">
+						<Button variant="outline" onClick={() => setShowStationPreferenceDialog(false)}>
+							Abbrechen
+						</Button>
+						<Button onClick={handleSaveStationPreferencesFromDialog}>Speichern</Button>
 					</div>
 				</DialogContent>
 			</Dialog>
