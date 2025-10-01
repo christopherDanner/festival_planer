@@ -392,13 +392,31 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 				return;
 			}
 
-			await assignMemberToShift(
-				festivalId,
-				shiftId,
-				stationId,
-				draggedMember.id,
-				cell.assignments.length + 1
+			// Check if member is already assigned to this shift/station
+			const isAlreadyAssigned = cell.assignments.some(
+				(assignment) => assignment.member_id === draggedMember.id
 			);
+			if (isAlreadyAssigned) {
+				toast({
+					title: 'Hinweis',
+					description: `${draggedMember.first_name} ${draggedMember.last_name} ist bereits dieser Schicht zugewiesen.`,
+					variant: 'destructive'
+				});
+				return;
+			}
+
+			// Find the next available position
+			const usedPositions = cell.assignments.map((a) => a.position).sort((a, b) => a - b);
+			let nextPosition = 1;
+			for (const pos of usedPositions) {
+				if (nextPosition === pos) {
+					nextPosition++;
+				} else {
+					break;
+				}
+			}
+
+			await assignMemberToShift(festivalId, shiftId, stationId, draggedMember.id, nextPosition);
 			loadData();
 
 			toast({
@@ -1266,7 +1284,10 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 															<Input
 																value={editingShiftForm.name}
 																onChange={(e) =>
-																	setEditingShiftForm((prev) => ({ ...prev, name: e.target.value }))
+																	setEditingShiftForm((prev) => ({
+																		...prev,
+																		name: e.target.value
+																	}))
 																}
 																placeholder="Schichtname"
 																className="text-sm"

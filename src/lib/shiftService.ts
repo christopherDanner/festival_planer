@@ -199,8 +199,27 @@ export const assignMemberToShift = async (
 	memberId: string,
 	position: number = 1
 ): Promise<ShiftAssignment> => {
-	// Check if assignment already exists for this position
-	const { data: existing, error } = await supabase
+	// Check if member is already assigned to this shift/station combination
+	const { data: existingMemberAssignment, error: memberCheckError } = await supabase
+		.from('shift_assignments')
+		.select('*')
+		.eq('festival_id', festivalId)
+		.eq('shift_id', shiftId)
+		.eq('station_id', stationId)
+		.eq('member_id', memberId)
+		.maybeSingle();
+
+	if (memberCheckError) {
+		throw memberCheckError;
+	}
+
+	if (existingMemberAssignment) {
+		// Member is already assigned, update the position
+		return updateAssignment(existingMemberAssignment.id, { position });
+	}
+
+	// Check if position is already taken by another member
+	const { data: existingPositionAssignment, error: positionCheckError } = await supabase
 		.from('shift_assignments')
 		.select('*')
 		.eq('festival_id', festivalId)
@@ -209,11 +228,44 @@ export const assignMemberToShift = async (
 		.eq('position', position)
 		.maybeSingle();
 
-	if (existing) {
-		// Update existing assignment
-		return updateAssignment(existing.id, { member_id: memberId });
+	if (positionCheckError) {
+		throw positionCheckError;
+	}
+
+	if (existingPositionAssignment) {
+		// Position is taken, create new assignment with next available position
+		// Find next available position
+		const { data: allAssignments, error: allAssignmentsError } = await supabase
+			.from('shift_assignments')
+			.select('position')
+			.eq('festival_id', festivalId)
+			.eq('shift_id', shiftId)
+			.eq('station_id', stationId)
+			.order('position');
+
+		if (allAssignmentsError) {
+			throw allAssignmentsError;
+		}
+
+		const usedPositions = allAssignments?.map((a) => a.position) || [];
+		let nextPosition = 1;
+		for (const pos of usedPositions) {
+			if (nextPosition === pos) {
+				nextPosition++;
+			} else {
+				break;
+			}
+		}
+
+		return createAssignment({
+			festival_id: festivalId,
+			shift_id: shiftId,
+			station_id: stationId,
+			member_id: memberId,
+			position: nextPosition
+		});
 	} else {
-		// Create new assignment
+		// Position is free, create new assignment
 		return createAssignment({
 			festival_id: festivalId,
 			shift_id: shiftId,
