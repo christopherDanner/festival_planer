@@ -989,11 +989,31 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 						Schichtplan Matrix
 					</h2>
 					<p className="text-muted-foreground">
-						Ziehen Sie Mitglieder aus der rechten Liste in die gewünschten Schichten
+						Ziehen Sie Mitglieder aus der rechten Liste in die gewünschten Schichten. Klicken Sie
+						auf leere Zellen, um Stationen bestimmten Schichten zuzuweisen.
 					</p>
 				</div>
 
 				<div className="flex gap-2 items-center">
+					<div className="h-8 w-px bg-border mx-2"></div>
+
+					{/* Station-Shift Assignment Helper */}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => {
+							toast({
+								title: 'Station-Schicht Zuweisungen',
+								description:
+									'Klicken Sie auf leere Zellen, um Stationen bestimmten Schichten zuzuweisen. Nur zugewiesene Stationen können mit Mitgliedern besetzt werden.',
+								duration: 5000
+							});
+						}}
+						className="flex items-center gap-2">
+						<Settings className="h-4 w-4" />
+						Hilfe
+					</Button>
+
 					<div className="h-8 w-px bg-border mx-2"></div>
 
 					{/* Fullscreen toggle */}
@@ -1383,6 +1403,15 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 															<div className="text-xs text-muted-foreground">
 																{formatShiftTime(shift)}
 															</div>
+															{/* Show assigned stations count */}
+															<div className="text-xs text-blue-600 font-medium">
+																{
+																	stations.filter((station) =>
+																		isStationAssignedToShift(station.id, shift.id)
+																	).length
+																}{' '}
+																Stationen zugewiesen
+															</div>
 														</div>
 													)}
 												</th>
@@ -1474,6 +1503,15 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 																<Users className="h-3 w-3" />
 																{station.required_people} Personen
 															</div>
+															{/* Show assigned shifts count */}
+															<div className="text-xs text-green-600 font-medium">
+																{
+																	shifts.filter((shift) =>
+																		isStationAssignedToShift(station.id, shift.id)
+																	).length
+																}{' '}
+																Schichten zugewiesen
+															</div>
 														</div>
 													)}
 												</td>
@@ -1489,7 +1527,7 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 																	'min-h-[120px] border-2 rounded-lg p-2 space-y-2 transition-colors relative group',
 																	isAssigned
 																		? getCellColor(cell, isAssigned)
-																		: 'bg-muted/10 border-muted/30 hover:border-muted/50 cursor-pointer',
+																		: 'bg-muted/10 border-muted/30 hover:border-muted/50 cursor-pointer hover:bg-muted/20',
 																	!isAssigned && 'hover:bg-muted/20'
 																)}
 																onClick={() => {
@@ -1565,8 +1603,11 @@ const ShiftMatrix: React.FC<ShiftMatrixProps> = ({ festivalId }) => {
 
 																{/* Click hint for unassigned cells */}
 																{!isAssigned && (
-																	<div className="text-xs text-muted-foreground text-center border-dashed border rounded p-2">
-																		Klicken zum Zuweisen
+																	<div className="text-xs text-muted-foreground text-center border-dashed border rounded p-2 bg-muted/20">
+																		<div className="flex flex-col items-center gap-1">
+																			<MapPin className="h-4 w-4 opacity-50" />
+																			<span>Station dieser Schicht zuweisen</span>
+																		</div>
 																	</div>
 																)}
 															</div>

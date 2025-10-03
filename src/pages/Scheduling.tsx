@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { useEffect } from 'react';
 import Navigation from '@/components/Navigation';
-import ShiftMatrix from '@/components/ShiftMatrix';
+import StationShiftMatrix from '@/components/StationShiftMatrix';
 
 const Scheduling = () => {
 	const { user } = useAuth();
@@ -34,7 +34,7 @@ const Scheduling = () => {
 			<Navigation />
 			<div className="pt-16">
 				<div className="container mx-auto px-4 py-8">
-					<ShiftMatrix festivalId={festivalId} />
+					<StationShiftMatrix festivalId={festivalId} />
 				</div>
 			</div>
 		</div>

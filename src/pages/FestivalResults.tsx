@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
-import ShiftMatrix from '@/components/ShiftMatrix';
+import StationShiftMatrix from '@/components/StationShiftMatrix';
 import { FestivalMemberManagement } from '@/components/FestivalMemberManagement';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -220,7 +220,7 @@ export default function FestivalResults() {
 						</TabsContent> */}
 
 						<TabsContent value="schichtplan">
-							<ShiftMatrix festivalId={festivalId} />
+							<StationShiftMatrix festivalId={festivalId} />
 						</TabsContent>
 
 						{/* Ressourcen feature temporarily hidden

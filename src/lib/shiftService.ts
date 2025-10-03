@@ -49,6 +49,20 @@ export interface StationShiftAssignment {
 	updated_at: string;
 }
 
+export interface StationShift {
+	id: string;
+	festival_id: string;
+	station_id: string;
+	name: string;
+	start_date: string;
+	start_time: string;
+	end_date?: string;
+	end_time: string;
+	required_people: number;
+	created_at: string;
+	updated_at: string;
+}
+
 // Shift functions
 export const getShifts = async (festivalId: string): Promise<Shift[]> => {
 	const { data, error } = await supabase
@@ -349,4 +363,79 @@ export const toggleStationShiftAssignment = async (
 	} else {
 		await deleteStationShiftAssignment(festivalId, stationId, shiftId);
 	}
+};
+
+// Station Shift functions
+export const getStationShifts = async (festivalId: string): Promise<StationShift[]> => {
+	const { data, error } = await supabase
+		.from('station_shifts')
+		.select('*')
+		.eq('festival_id', festivalId)
+		.order('start_date', { ascending: true })
+		.order('start_time', { ascending: true });
+
+	if (error) throw error;
+	return data || [];
+};
+
+export const getStationShiftsByStation = async (
+	festivalId: string,
+	stationId: string
+): Promise<StationShift[]> => {
+	const { data, error } = await supabase
+		.from('station_shifts')
+		.select('*')
+		.eq('festival_id', festivalId)
+		.eq('station_id', stationId)
+		.order('start_date', { ascending: true })
+		.order('start_time', { ascending: true });
+
+	if (error) throw error;
+	return data || [];
+};
+
+export const createStationShift = async (
+	stationShiftData: Omit<StationShift, 'id' | 'created_at' | 'updated_at'>
+): Promise<StationShift> => {
+	// Only include end_date if it has a value
+	const insertData: any = { ...stationShiftData };
+	if (!insertData.end_date || insertData.end_date === '') {
+		delete insertData.end_date;
+	}
+
+	const { data, error } = await supabase
+		.from('station_shifts')
+		.insert(insertData)
+		.select()
+		.single();
+
+	if (error) throw error;
+	return data;
+};
+
+export const updateStationShift = async (
+	id: string,
+	updates: Partial<StationShift>
+): Promise<StationShift> => {
+	// Only include end_date if it has a value
+	const updateData: any = { ...updates };
+	if (updateData.end_date === '') {
+		updateData.end_date = null;
+	}
+
+	const { data, error } = await supabase
+		.from('station_shifts')
+		.update(updateData)
+		.eq('id', id)
+		.select()
+		.single();
+
+	if (error) throw error;
+	return data;
+};
+
+export const deleteStationShift = async (id: string): Promise<void> => {
+	const { error } = await supabase.from('station_shifts').delete().eq('id', id);
+
+	if (error) throw error;
 };
