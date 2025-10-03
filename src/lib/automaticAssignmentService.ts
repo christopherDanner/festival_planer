@@ -83,17 +83,20 @@ export const performAutomaticAssignment = async (
 
 				const remainingSlots = station.required_people - currentAssignments;
 
-				if (remainingSlots > 0) {
-					assignmentMatrix.push({
-						shiftId: shift.id,
-						stationId: station.id,
-						requiredPeople: station.required_people,
-						currentAssignments,
-						remainingSlots
-					});
-				}
+				// Always add to matrix, even if fully assigned (for tracking)
+				assignmentMatrix.push({
+					shiftId: shift.id,
+					stationId: station.id,
+					requiredPeople: station.required_people,
+					currentAssignments,
+					remainingSlots: Math.max(0, remainingSlots)
+				});
 			});
 		});
+
+		// Debug logging
+		console.log('Assignment Matrix:', assignmentMatrix);
+		console.log('Station-Shift Assignments:', stationShiftAssignments);
 
 		// Sort positions by priority (least filled stations first)
 		assignmentMatrix.sort((a, b) => {
@@ -106,6 +109,9 @@ export const performAutomaticAssignment = async (
 
 		// Process each position that needs filling
 		for (const position of assignmentMatrix) {
+			// Skip if no slots need filling
+			if (position.remainingSlots <= 0) continue;
+
 			const availableMembers = members.filter((member) => {
 				const currentShifts = memberShiftCounts.get(member.id) || 0;
 
@@ -119,7 +125,16 @@ export const performAutomaticAssignment = async (
 				);
 			});
 
-			if (availableMembers.length === 0) continue;
+			console.log(
+				`Processing position: Shift ${position.shiftId}, Station ${position.stationId}, Remaining: ${position.remainingSlots}, Available members: ${availableMembers.length}`
+			);
+
+			if (availableMembers.length === 0) {
+				console.log(
+					`No available members for position: Shift ${position.shiftId}, Station ${position.stationId}`
+				);
+				continue;
+			}
 
 			// Score members for this position
 			const memberScores: AssignmentScore[] = availableMembers.map((member) => {
@@ -157,10 +172,42 @@ export const performAutomaticAssignment = async (
 			memberScores.sort((a, b) => b.score - a.score);
 
 			// Assign slots for this position
-			for (let slot = 0; slot < position.remainingSlots && slot < memberScores.length; slot++) {
+			const slotsToFill = Math.min(position.remainingSlots, memberScores.length);
+			console.log(
+				`Filling ${slotsToFill} slots for position: Shift ${position.shiftId}, Station ${position.stationId}`
+			);
+
+			for (let slot = 0; slot < slotsToFill; slot++) {
 				const selectedMember = memberScores[slot];
 
 				try {
+					console.log(
+						`Assigning member ${selectedMember.memberId} to shift ${position.shiftId}, station ${position.stationId}`
+					);
+
+					// Check if shift exists, if not create it
+					const { data: existingShift } = await supabase
+						.from('shifts')
+						.select('id')
+						.eq('id', position.shiftId)
+						.single();
+
+					if (!existingShift) {
+						// Find the shift data from the shifts array
+						const shiftData = shifts.find((s) => s.id === position.shiftId);
+						if (shiftData) {
+							console.log(`Creating temporary shift for ${position.shiftId}`);
+							await supabase.from('shifts').insert({
+								id: position.shiftId,
+								festival_id: festivalId,
+								name: shiftData.name,
+								start_date: shiftData.start_date,
+								start_time: shiftData.start_time,
+								end_time: shiftData.end_time
+							});
+						}
+					}
+
 					await assignMemberToShift(
 						festivalId,
 						position.shiftId,
@@ -176,13 +223,14 @@ export const performAutomaticAssignment = async (
 					);
 
 					assignmentsCreated++;
+					console.log(`Successfully assigned member ${selectedMember.memberId}`);
 				} catch (error) {
 					console.error('Failed to assign member:', error);
 				}
 			}
 
 			// Update remaining slots
-			position.remainingSlots -= Math.min(position.remainingSlots, memberScores.length);
+			position.remainingSlots -= slotsToFill;
 		}
 
 		// Calculate final stats

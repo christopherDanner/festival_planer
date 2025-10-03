@@ -606,10 +606,20 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 			}));
 
 			// Create station-shift assignments for the automatic assignment
+			// Each station shift is automatically assigned to its station
 			const stationShiftAssignments = stationShifts.map((shift) => ({
 				station_id: shift.station_id,
 				shift_id: shift.id
 			}));
+
+			// Debug: Log the data being passed to the assignment
+			console.log('Automatic Assignment Debug:', {
+				shifts: regularShifts.length,
+				stations: stations.length,
+				members: members.filter((m) => m.is_active).length,
+				stationShiftAssignments: stationShiftAssignments.length,
+				config: autoAssignConfig
+			});
 
 			const result: AssignmentResult = await performAutomaticAssignment(
 				festivalId,
