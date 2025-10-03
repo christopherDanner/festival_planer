@@ -439,3 +439,125 @@ export const deleteStationShift = async (id: string): Promise<void> => {
 
 	if (error) throw error;
 };
+
+// Station Shift Assignment functions
+export const assignMemberToStationShift = async (
+	festivalId: string,
+	stationShiftId: string,
+	memberId: string,
+	position: number = 1
+): Promise<ShiftAssignment> => {
+	// Get the station shift to get the station_id
+	const { data: stationShift, error: shiftError } = await supabase
+		.from('station_shifts')
+		.select('station_id')
+		.eq('id', stationShiftId)
+		.single();
+
+	if (shiftError || !stationShift) {
+		throw new Error('Station shift not found');
+	}
+
+	// Check if member is already assigned to this station shift
+	const { data: existingMemberAssignment, error: memberCheckError } = await supabase
+		.from('shift_assignments')
+		.select('*')
+		.eq('festival_id', festivalId)
+		.eq('shift_id', stationShiftId)
+		.eq('station_id', stationShift.station_id)
+		.eq('member_id', memberId)
+		.maybeSingle();
+
+	if (memberCheckError) {
+		throw memberCheckError;
+	}
+
+	if (existingMemberAssignment) {
+		// Member is already assigned, update the position
+		return updateAssignment(existingMemberAssignment.id, { position });
+	}
+
+	// Check if position is already taken by another member
+	const { data: existingPositionAssignment, error: positionCheckError } = await supabase
+		.from('shift_assignments')
+		.select('*')
+		.eq('festival_id', festivalId)
+		.eq('shift_id', stationShiftId)
+		.eq('station_id', stationShift.station_id)
+		.eq('position', position)
+		.maybeSingle();
+
+	if (positionCheckError) {
+		throw positionCheckError;
+	}
+
+	if (existingPositionAssignment) {
+		// Position is taken, create new assignment with next available position
+		// Find next available position
+		const { data: allAssignments, error: allAssignmentsError } = await supabase
+			.from('shift_assignments')
+			.select('position')
+			.eq('festival_id', festivalId)
+			.eq('shift_id', stationShiftId)
+			.eq('station_id', stationShift.station_id)
+			.order('position');
+
+		if (allAssignmentsError) {
+			throw allAssignmentsError;
+		}
+
+		const usedPositions = allAssignments?.map((a) => a.position) || [];
+		let nextPosition = 1;
+		for (const pos of usedPositions) {
+			if (nextPosition === pos) {
+				nextPosition++;
+			} else {
+				break;
+			}
+		}
+
+		return createAssignment({
+			festival_id: festivalId,
+			shift_id: stationShiftId,
+			station_id: stationShift.station_id,
+			member_id: memberId,
+			position: nextPosition
+		});
+	} else {
+		// Position is free, create new assignment
+		return createAssignment({
+			festival_id: festivalId,
+			shift_id: stationShiftId,
+			station_id: stationShift.station_id,
+			member_id: memberId,
+			position
+		});
+	}
+};
+
+export const removeMemberFromStationShift = async (
+	festivalId: string,
+	stationShiftId: string,
+	memberId: string
+): Promise<void> => {
+	// Get the station shift to get the station_id
+	const { data: stationShift, error: shiftError } = await supabase
+		.from('station_shifts')
+		.select('station_id')
+		.eq('id', stationShiftId)
+		.single();
+
+	if (shiftError || !stationShift) {
+		throw new Error('Station shift not found');
+	}
+
+	const { error } = await supabase
+		.from('shift_assignments')
+		.delete()
+		.eq('festival_id', festivalId)
+		.eq('shift_id', stationShiftId)
+		.eq('station_id', stationShift.station_id)
+		.eq('member_id', memberId);
+
+	if (error) throw error;
+};
