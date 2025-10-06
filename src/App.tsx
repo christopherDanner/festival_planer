@@ -1,44 +1,46 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/components/AuthProvider";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Members from "./pages/Members";
-import Scheduling from "./pages/Scheduling";
-import MobileWaiter from "./pages/MobileWaiter";
-import FestivalResults from "./pages/FestivalResults";
-import FestivalPreviewPage from "./pages/FestivalPreviewPage";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from '@/components/AuthProvider';
+import Index from './pages/Index';
+import Dashboard from './pages/Dashboard';
+import Members from './pages/Members';
+import Scheduling from './pages/Scheduling';
+import MobileWaiter from './pages/MobileWaiter';
+import FestivalResults from './pages/FestivalResults';
+import FestivalPreviewPage from './pages/FestivalPreviewPage';
+import MemberPreferences from './pages/MemberPreferences';
+import Auth from './pages/Auth';
+import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/scheduling" element={<Scheduling />} />
-            <Route path="/festival-results" element={<FestivalResults />} />
-            <Route path="/festival-preview" element={<FestivalPreviewPage />} />
-            <Route path="/mobile-waiter" element={<MobileWaiter />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+	<QueryClientProvider client={queryClient}>
+		<BrowserRouter>
+			<AuthProvider>
+				<TooltipProvider>
+					<Toaster />
+					<Sonner />
+					<Routes>
+						<Route path="/" element={<Index />} />
+						<Route path="/auth" element={<Auth />} />
+						<Route path="/dashboard" element={<Dashboard />} />
+						<Route path="/members" element={<Members />} />
+						<Route path="/scheduling" element={<Scheduling />} />
+						<Route path="/festival-results" element={<FestivalResults />} />
+						<Route path="/festival-preview" element={<FestivalPreviewPage />} />
+						<Route path="/mobile-waiter" element={<MobileWaiter />} />
+						<Route path="/preferences/:token" element={<MemberPreferences />} />
+						{/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+						<Route path="*" element={<NotFound />} />
+					</Routes>
+				</TooltipProvider>
+			</AuthProvider>
+		</BrowserRouter>
+	</QueryClientProvider>
 );
 
 export default App;

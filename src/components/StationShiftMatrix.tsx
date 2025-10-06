@@ -81,9 +81,16 @@ import {
 	type AutoAssignmentConfig,
 	type AssignmentResult
 } from '@/lib/automaticAssignmentService';
+import MagicLinkManager from './MagicLinkManager';
 
 interface StationShiftMatrixProps {
 	festivalId: string;
+}
+
+interface MemberPreferenceData {
+	member_id: string;
+	shift_preferences: string[];
+	station_preferences: string[];
 }
 
 // We'll use the existing ShiftAssignmentWithMember type
@@ -101,6 +108,7 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 	const [showStationShiftDialog, setShowStationShiftDialog] = useState(false);
 	const [showMemberDialog, setShowMemberDialog] = useState(false);
 	const [showStationPreferenceDialog, setShowStationPreferenceDialog] = useState(false);
+	const [showMemberPreferenceDialog, setShowMemberPreferenceDialog] = useState(false);
 	const [showAutoAssignDialog, setShowAutoAssignDialog] = useState(false);
 	const [selectedMemberForPreference, setSelectedMemberForPreference] = useState<Member | null>(
 		null
@@ -108,6 +116,7 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 	const [selectedStation, setSelectedStation] = useState<Station | null>(null);
 	const [selectedStationShift, setSelectedStationShift] = useState<StationShift | null>(null);
 	const [autoAssignLoading, setAutoAssignLoading] = useState(false);
+	const [activeTab, setActiveTab] = useState<'matrix' | 'magic-links'>('matrix');
 
 	// Form states
 	const [stationForm, setStationForm] = useState({
@@ -142,6 +151,7 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 
 	// Station and shift preferences state
 	const [stationPreferences, setStationPreferences] = useState<Record<string, string[]>>({});
+	const [shiftPreferences, setShiftPreferences] = useState<Record<string, string[]>>({});
 
 	// Member management state
 	const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -175,6 +185,33 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 			// Load station preferences
 			const stationPrefs = await getAllFestivalMemberPreferences(festivalId);
 			setStationPreferences(stationPrefs);
+
+			// Load shift and station preferences from member_preferences table
+			try {
+				const { data: memberPrefs, error: memberPrefsError } = await supabase
+					.from('member_preferences' as never)
+					.select('member_id, shift_preferences, station_preferences')
+					.eq('festival_id', festivalId);
+
+				if (!memberPrefsError && memberPrefs) {
+					const shiftPrefs: Record<string, string[]> = {};
+					const stationPrefsFromDB: Record<string, string[]> = {};
+
+					(memberPrefs as unknown as MemberPreferenceData[]).forEach(
+						(pref: MemberPreferenceData) => {
+							shiftPrefs[pref.member_id] = pref.shift_preferences || [];
+							stationPrefsFromDB[pref.member_id] = pref.station_preferences || [];
+						}
+					);
+
+					setShiftPreferences(shiftPrefs);
+					// Merge with existing station preferences
+					setStationPreferences((prev) => ({ ...prev, ...stationPrefsFromDB }));
+				}
+			} catch (error) {
+				// Ignore error for now - table might not exist yet
+				console.log('Could not load preferences:', error);
+			}
 		} catch (error) {
 			toast({
 				title: 'Fehler',
@@ -414,6 +451,10 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 		return stationPreferences[memberId] || [];
 	};
 
+	const getMemberShiftPreferences = (memberId: string): string[] => {
+		return shiftPreferences[memberId] || [];
+	};
+
 	// Station preference functions
 	const handleSaveStationPreference = async (memberId: string, preferredStations: string[]) => {
 		try {
@@ -443,19 +484,74 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 	const [tempStationPreferences, setTempStationPreferences] = useState<Record<string, string[]>>(
 		{}
 	);
+	const [tempShiftPreferences, setTempShiftPreferences] = useState<Record<string, string[]>>({});
 
 	const handleToggleStationPreference = (memberId: string, stationId: string) => {
 		const currentPreferences =
 			tempStationPreferences[memberId] || getMemberStationPreferences(memberId);
 		const isSelected = currentPreferences.includes(stationId);
-		const newPreferences = isSelected
-			? currentPreferences.filter((id) => id !== stationId)
-			: [...currentPreferences, stationId];
 
-		setTempStationPreferences((prev) => ({
-			...prev,
-			[memberId]: newPreferences
-		}));
+		if (isSelected) {
+			// Remove station and all its shifts
+			const stationShiftsForStation = stationShifts.filter(
+				(shift) => shift.station_id === stationId
+			);
+			const shiftIds = stationShiftsForStation.map((shift) => shift.id);
+
+			setTempStationPreferences((prev) => ({
+				...prev,
+				[memberId]: currentPreferences.filter((id) => id !== stationId)
+			}));
+
+			// Remove all shifts from this station
+			const currentShiftPreferences =
+				tempShiftPreferences[memberId] || getMemberShiftPreferences(memberId);
+			setTempShiftPreferences((prev) => ({
+				...prev,
+				[memberId]: currentShiftPreferences.filter((id) => !shiftIds.includes(id))
+			}));
+		} else {
+			setTempStationPreferences((prev) => ({
+				...prev,
+				[memberId]: [...currentPreferences, stationId]
+			}));
+		}
+	};
+
+	const handleToggleShiftPreference = (memberId: string, shiftId: string) => {
+		const currentPreferences =
+			tempShiftPreferences[memberId] || getMemberShiftPreferences(memberId);
+		const isSelected = currentPreferences.includes(shiftId);
+		const shift = stationShifts.find((s) => s.id === shiftId);
+		const stationId = shift?.station_id;
+
+		if (isSelected) {
+			setTempShiftPreferences((prev) => ({
+				...prev,
+				[memberId]: currentPreferences.filter((id) => id !== shiftId)
+			}));
+		} else {
+			// Add shift and automatically add station preference
+			const newStationPreferences =
+				stationId && !tempStationPreferences[memberId]?.includes(stationId)
+					? [
+							...(tempStationPreferences[memberId] || getMemberStationPreferences(memberId)),
+							stationId
+					  ]
+					: tempStationPreferences[memberId] || getMemberStationPreferences(memberId);
+
+			setTempShiftPreferences((prev) => ({
+				...prev,
+				[memberId]: [...currentPreferences, shiftId]
+			}));
+
+			if (stationId && !tempStationPreferences[memberId]?.includes(stationId)) {
+				setTempStationPreferences((prev) => ({
+					...prev,
+					[memberId]: newStationPreferences
+				}));
+			}
+		}
 	};
 
 	const handleOpenStationPreferenceDialog = (member: Member) => {
@@ -499,6 +595,69 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 		}
 
 		setShowStationPreferenceDialog(false);
+		setSelectedMemberForPreference(null);
+	};
+
+	const handleOpenMemberPreferenceDialog = (member: Member) => {
+		setSelectedMemberForPreference(member);
+		// Initialize temp preferences with current preferences
+		setTempStationPreferences((prev) => ({
+			...prev,
+			[member.id]: getMemberStationPreferences(member.id)
+		}));
+		setTempShiftPreferences((prev) => ({
+			...prev,
+			[member.id]: getMemberShiftPreferences(member.id)
+		}));
+		setShowMemberPreferenceDialog(true);
+	};
+
+	const handleSaveMemberPreferencesFromDialog = async () => {
+		if (!selectedMemberForPreference) return;
+
+		const stationPrefs = tempStationPreferences[selectedMemberForPreference.id] || [];
+		const shiftPrefs = tempShiftPreferences[selectedMemberForPreference.id] || [];
+
+		try {
+			// Save station preferences
+			await updateMemberStationPreferences(
+				festivalId,
+				selectedMemberForPreference.id,
+				stationPrefs
+			);
+
+			// Save shift preferences to member_preferences table
+			await supabase.from('member_preferences' as never).upsert({
+				festival_id: festivalId,
+				member_id: selectedMemberForPreference.id,
+				station_preferences: stationPrefs,
+				shift_preferences: shiftPrefs,
+				updated_at: new Date().toISOString()
+			} as never);
+
+			// Update local state
+			setStationPreferences((prev) => ({
+				...prev,
+				[selectedMemberForPreference.id]: stationPrefs
+			}));
+			setShiftPreferences((prev) => ({
+				...prev,
+				[selectedMemberForPreference.id]: shiftPrefs
+			}));
+
+			toast({
+				title: 'Präferenzen gespeichert',
+				description: 'Station- und Schichtwünsche wurden erfolgreich gespeichert.'
+			});
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: 'Präferenzen konnten nicht gespeichert werden.',
+				variant: 'destructive'
+			});
+		}
+
+		setShowMemberPreferenceDialog(false);
 		setSelectedMemberForPreference(null);
 	};
 
@@ -1008,500 +1167,558 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 				</div>
 			</div>
 
+			{/* Tab Navigation */}
+			<div className="border-b bg-background">
+				<div className="flex">
+					<button
+						className={cn(
+							'px-6 py-3 text-sm font-medium border-b-2 transition-colors',
+							activeTab === 'matrix'
+								? 'border-blue-600 text-blue-600'
+								: 'border-transparent text-gray-600 hover:text-gray-900'
+						)}
+						onClick={() => setActiveTab('matrix')}>
+						Schichtplan Matrix
+					</button>
+					<button
+						className={cn(
+							'px-6 py-3 text-sm font-medium border-b-2 transition-colors',
+							activeTab === 'magic-links'
+								? 'border-blue-600 text-blue-600'
+								: 'border-transparent text-gray-600 hover:text-gray-900'
+						)}
+						onClick={() => setActiveTab('magic-links')}>
+						Magic Links & Präferenzen
+					</button>
+				</div>
+			</div>
+
 			{/* Main Content */}
 			<div className="flex-1 flex overflow-hidden">
-				{/* Left Side - Stations and their shifts */}
-				<div className="flex-1 overflow-auto p-6">
-					{stations.length === 0 ? (
-						<div className="flex items-center justify-center h-full">
-							<div className="text-center text-muted-foreground">
-								<p>Erstellen Sie zuerst Stationen, um die Matrix zu sehen.</p>
-							</div>
-						</div>
-					) : (
-						<div className="space-y-6">
-							{stations.map((station) => {
-								const stationShiftsForStation = getStationShiftsForStation(station.id);
+				{activeTab === 'matrix' ? (
+					<>
+						{/* Left Side - Stations and their shifts */}
+						<div className="flex-1 overflow-auto p-6">
+							{stations.length === 0 ? (
+								<div className="flex items-center justify-center h-full">
+									<div className="text-center text-muted-foreground">
+										<p>Erstellen Sie zuerst Stationen, um die Matrix zu sehen.</p>
+									</div>
+								</div>
+							) : (
+								<div className="space-y-6">
+									{stations.map((station) => {
+										const stationShiftsForStation = getStationShiftsForStation(station.id);
 
-								return (
-									<Card key={station.id} className="w-full">
-										<CardHeader>
-											<CardTitle className="flex items-center justify-between">
-												<div className="flex items-center gap-2">
-													<MapPin className="h-5 w-5" />
-													<div className="flex items-center gap-2">
-														<span>{station.name}</span>
-														<Button
-															size="sm"
-															variant="ghost"
-															className="h-4 w-4 p-0 hover:bg-blue-100 hover:text-blue-600"
-															onClick={() => {
-																setSelectedStation(station);
-																setStationForm({
-																	name: station.name,
-																	required_people: station.required_people,
-																	description: station.description || ''
-																});
-																setShowStationDialog(true);
-															}}>
-															<Edit className="h-3 w-3" />
-														</Button>
-													</div>
-													<Badge variant="outline">{station.required_people} Personen</Badge>
-												</div>
-												<div className="flex gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															setSelectedStation(station);
-															setStationShiftForm({
-																name: '',
-																start_date: '',
-																start_time: '',
-																end_date: '',
-																end_time: '',
-																required_people: station.required_people
-															});
-															setShowStationShiftDialog(true);
-														}}>
-														<Plus className="h-4 w-4 mr-2" />
-														Schicht hinzufügen
-													</Button>
-													<Button
-														variant="outline"
-														size="sm"
-														className="hover:bg-red-100 hover:text-red-600"
-														onClick={async () => {
-															if (
-																confirm(
-																	'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
-																)
-															) {
-																try {
-																	await deleteStation(station.id);
-																	await loadData();
-																	toast({
-																		title: 'Erfolg',
-																		description: 'Station wurde gelöscht.'
+										return (
+											<Card key={station.id} className="w-full">
+												<CardHeader>
+													<CardTitle className="flex items-center justify-between">
+														<div className="flex items-center gap-2">
+															<MapPin className="h-5 w-5" />
+															<div className="flex items-center gap-2">
+																<span>{station.name}</span>
+																<Button
+																	size="sm"
+																	variant="ghost"
+																	className="h-4 w-4 p-0 hover:bg-blue-100 hover:text-blue-600"
+																	onClick={() => {
+																		setSelectedStation(station);
+																		setStationForm({
+																			name: station.name,
+																			required_people: station.required_people,
+																			description: station.description || ''
+																		});
+																		setShowStationDialog(true);
+																	}}>
+																	<Edit className="h-3 w-3" />
+																</Button>
+															</div>
+															<Badge variant="outline">{station.required_people} Personen</Badge>
+														</div>
+														<div className="flex gap-2">
+															<Button
+																variant="outline"
+																size="sm"
+																onClick={() => {
+																	setSelectedStation(station);
+																	setStationShiftForm({
+																		name: '',
+																		start_date: '',
+																		start_time: '',
+																		end_date: '',
+																		end_time: '',
+																		required_people: station.required_people
 																	});
-																} catch (error) {
-																	toast({
-																		title: 'Fehler',
-																		description: 'Station konnte nicht gelöscht werden.',
-																		variant: 'destructive'
-																	});
-																}
-															}
-														}}>
-														<Trash2 className="h-4 w-4 mr-2" />
-														Löschen
-													</Button>
-												</div>
-											</CardTitle>
-											{station.description && (
-												<p className="text-sm text-muted-foreground">{station.description}</p>
-											)}
-										</CardHeader>
-										<CardContent>
-											{stationShiftsForStation.length === 0 ? (
-												<div className="text-center text-muted-foreground py-8">
-													<p>Keine Schichten für diese Station.</p>
-													<p className="text-sm">
-														Klicken Sie auf "Schicht hinzufügen" um eine Schicht zu erstellen.
-													</p>
-												</div>
-											) : (
-												<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-													{stationShiftsForStation.map((stationShift) => {
-														const shiftAssignments = getAssignmentsForStationShift(stationShift.id);
-														const remaining =
-															stationShift.required_people - shiftAssignments.length;
+																	setShowStationShiftDialog(true);
+																}}>
+																<Plus className="h-4 w-4 mr-2" />
+																Schicht hinzufügen
+															</Button>
+															<Button
+																variant="outline"
+																size="sm"
+																className="hover:bg-red-100 hover:text-red-600"
+																onClick={async () => {
+																	if (
+																		confirm(
+																			'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
+																		)
+																	) {
+																		try {
+																			await deleteStation(station.id);
+																			await loadData();
+																			toast({
+																				title: 'Erfolg',
+																				description: 'Station wurde gelöscht.'
+																			});
+																		} catch (error) {
+																			toast({
+																				title: 'Fehler',
+																				description: 'Station konnte nicht gelöscht werden.',
+																				variant: 'destructive'
+																			});
+																		}
+																	}
+																}}>
+																<Trash2 className="h-4 w-4 mr-2" />
+																Löschen
+															</Button>
+														</div>
+													</CardTitle>
+													{station.description && (
+														<p className="text-sm text-muted-foreground">{station.description}</p>
+													)}
+												</CardHeader>
+												<CardContent>
+													{stationShiftsForStation.length === 0 ? (
+														<div className="text-center text-muted-foreground py-8">
+															<p>Keine Schichten für diese Station.</p>
+															<p className="text-sm">
+																Klicken Sie auf "Schicht hinzufügen" um eine Schicht zu erstellen.
+															</p>
+														</div>
+													) : (
+														<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+															{stationShiftsForStation.map((stationShift) => {
+																const shiftAssignments = getAssignmentsForStationShift(
+																	stationShift.id
+																);
+																const remaining =
+																	stationShift.required_people - shiftAssignments.length;
 
-														return (
-															<Card key={stationShift.id} className="border-2">
-																<CardHeader className="pb-2">
-																	<CardTitle className="text-lg flex items-center justify-between">
-																		<div className="flex items-center gap-2">
-																			<span>{stationShift.name}</span>
-																			<Button
-																				size="sm"
-																				variant="ghost"
-																				className="h-4 w-4 p-0 hover:bg-blue-100 hover:text-blue-600"
-																				onClick={() => {
-																					setSelectedStationShift(stationShift);
-																					setStationShiftForm({
-																						name: stationShift.name,
-																						start_date: stationShift.start_date,
-																						start_time: stationShift.start_time,
-																						end_date: stationShift.end_date || '',
-																						end_time: stationShift.end_time,
-																						required_people: stationShift.required_people
-																					});
-																					setShowStationShiftDialog(true);
-																				}}>
-																				<Edit className="h-3 w-3" />
-																			</Button>
-																		</div>
-																		<div className="flex items-center gap-1">
-																			<Badge
-																				variant={
-																					remaining === 0
-																						? 'default'
-																						: remaining < stationShift.required_people / 2
-																						? 'secondary'
-																						: 'destructive'
-																				}>
-																				{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
-																			</Badge>
-																			<Button
-																				size="sm"
-																				variant="ghost"
-																				className="h-4 w-4 p-0 hover:bg-red-100 hover:text-red-600"
-																				onClick={async () => {
-																					if (
-																						confirm(
-																							'Sind Sie sicher, dass Sie diese Schicht löschen möchten?'
-																						)
-																					) {
-																						try {
-																							await deleteStationShift(stationShift.id);
-																							await loadData();
-																							toast({
-																								title: 'Erfolg',
-																								description: 'Schicht wurde gelöscht.'
+																return (
+																	<Card key={stationShift.id} className="border-2">
+																		<CardHeader className="pb-2">
+																			<CardTitle className="text-lg flex items-center justify-between">
+																				<div className="flex items-center gap-2">
+																					<span>{stationShift.name}</span>
+																					<Button
+																						size="sm"
+																						variant="ghost"
+																						className="h-4 w-4 p-0 hover:bg-blue-100 hover:text-blue-600"
+																						onClick={() => {
+																							setSelectedStationShift(stationShift);
+																							setStationShiftForm({
+																								name: stationShift.name,
+																								start_date: stationShift.start_date,
+																								start_time: stationShift.start_time,
+																								end_date: stationShift.end_date || '',
+																								end_time: stationShift.end_time,
+																								required_people: stationShift.required_people
 																							});
-																						} catch (error) {
-																							toast({
-																								title: 'Fehler',
-																								description:
-																									'Schicht konnte nicht gelöscht werden.',
-																								variant: 'destructive'
-																							});
-																						}
-																					}
-																				}}>
-																				<Trash2 className="h-3 w-3" />
-																			</Button>
-																		</div>
-																	</CardTitle>
-																	<div className="flex items-center justify-between">
-																		<p className="text-sm text-muted-foreground">
-																			{formatStationShiftTime(stationShift)}
-																		</p>
-																		{/* Fill level indicator */}
-																		<div className="flex items-center gap-2">
-																			<div className="flex items-center gap-1 text-xs">
-																				<span className="text-muted-foreground">
-																					{getAssignmentsForStationShift(stationShift.id).length}/
-																					{stationShift.required_people}
-																				</span>
-																				<div
-																					className={cn(
-																						'w-2 h-2 rounded-full',
-																						(() => {
-																							const currentAssignments =
-																								getAssignmentsForStationShift(stationShift.id);
-																							const fillPercentage =
-																								(currentAssignments.length /
-																									stationShift.required_people) *
-																								100;
-
-																							if (fillPercentage === 0) {
-																								return 'bg-gray-400'; // Empty
-																							} else if (fillPercentage < 50) {
-																								return 'bg-red-500'; // Partially filled (red)
-																							} else if (fillPercentage < 100) {
-																								return 'bg-yellow-500'; // Mostly filled (yellow)
-																							} else {
-																								return 'bg-green-500'; // Fully filled (green)
-																							}
-																						})()
-																					)}
-																				/>
-																			</div>
-																			{/* Progress bar */}
-																			<div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
-																				<div
-																					className={cn(
-																						'h-full transition-all duration-300',
-																						(() => {
-																							const currentAssignments =
-																								getAssignmentsForStationShift(stationShift.id);
-																							const fillPercentage =
-																								(currentAssignments.length /
-																									stationShift.required_people) *
-																								100;
-
-																							if (fillPercentage === 0) {
-																								return 'bg-gray-400 w-0'; // Empty
-																							} else if (fillPercentage < 50) {
-																								return 'bg-red-500'; // Partially filled (red)
-																							} else if (fillPercentage < 100) {
-																								return 'bg-yellow-500'; // Mostly filled (yellow)
-																							} else {
-																								return 'bg-green-500'; // Fully filled (green)
-																							}
-																						})()
-																					)}
-																					style={{
-																						width: `${Math.min(
-																							(getAssignmentsForStationShift(stationShift.id)
-																								.length /
-																								stationShift.required_people) *
-																								100,
-																							100
-																						)}%`
-																					}}
-																				/>
-																			</div>
-																		</div>
-																	</div>
-																</CardHeader>
-																<CardContent>
-																	<div
-																		className={cn(
-																			'min-h-[100px] border-2 border-dashed rounded-lg p-3 space-y-2 transition-all duration-200',
-																			// Color coding based on fill level
-																			(() => {
-																				const currentAssignments = getAssignmentsForStationShift(
-																					stationShift.id
-																				);
-																				const fillPercentage =
-																					(currentAssignments.length /
-																						stationShift.required_people) *
-																					100;
-
-																				if (fillPercentage === 0) {
-																					return 'border-gray-300 bg-gray-50'; // Empty
-																				} else if (fillPercentage < 50) {
-																					return 'border-red-300 bg-red-50'; // Partially filled (red)
-																				} else if (fillPercentage < 100) {
-																					return 'border-yellow-300 bg-yellow-50'; // Mostly filled (yellow)
-																				} else {
-																					return 'border-green-300 bg-green-50'; // Fully filled (green)
-																				}
-																			})()
-																		)}
-																		onDragOver={(e) => e.preventDefault()}
-																		onDrop={(e) => handleDrop(stationShift.id, e)}>
-																		{shiftAssignments.length > 0 ? (
-																			<div className="space-y-1">
-																				{shiftAssignments.map((assignment) => (
-																					<div
-																						key={assignment.id}
-																						className="flex items-center justify-between bg-background rounded px-2 py-1 text-sm">
-																						<span className="font-medium">
-																							{assignment.member?.first_name}{' '}
-																							{assignment.member?.last_name}
-																						</span>
-																						<Button
-																							size="sm"
-																							variant="ghost"
-																							className="h-4 w-4 p-0 hover:bg-destructive/20 hover:text-destructive"
-																							onClick={async () => {
+																							setShowStationShiftDialog(true);
+																						}}>
+																						<Edit className="h-3 w-3" />
+																					</Button>
+																				</div>
+																				<div className="flex items-center gap-1">
+																					<Badge
+																						variant={
+																							remaining === 0
+																								? 'default'
+																								: remaining < stationShift.required_people / 2
+																								? 'secondary'
+																								: 'destructive'
+																						}>
+																						{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
+																					</Badge>
+																					<Button
+																						size="sm"
+																						variant="ghost"
+																						className="h-4 w-4 p-0 hover:bg-red-100 hover:text-red-600"
+																						onClick={async () => {
+																							if (
+																								confirm(
+																									'Sind Sie sicher, dass Sie diese Schicht löschen möchten?'
+																								)
+																							) {
 																								try {
-																									await removeMemberFromShift(
-																										festivalId,
-																										stationShift.id,
-																										stationShift.station_id,
-																										assignment.member_id!
-																									);
+																									await deleteStationShift(stationShift.id);
 																									await loadData();
 																									toast({
 																										title: 'Erfolg',
-																										description: 'Zuweisung wurde entfernt.'
+																										description: 'Schicht wurde gelöscht.'
 																									});
 																								} catch (error) {
 																									toast({
 																										title: 'Fehler',
 																										description:
-																											'Zuweisung konnte nicht entfernt werden.',
+																											'Schicht konnte nicht gelöscht werden.',
 																										variant: 'destructive'
 																									});
 																								}
-																							}}>
-																							<Trash2 className="h-3 w-3" />
-																						</Button>
+																							}
+																						}}>
+																						<Trash2 className="h-3 w-3" />
+																					</Button>
+																				</div>
+																			</CardTitle>
+																			<div className="flex items-center justify-between">
+																				<p className="text-sm text-muted-foreground">
+																					{formatStationShiftTime(stationShift)}
+																				</p>
+																				{/* Fill level indicator */}
+																				<div className="flex items-center gap-2">
+																					<div className="flex items-center gap-1 text-xs">
+																						<span className="text-muted-foreground">
+																							{
+																								getAssignmentsForStationShift(stationShift.id)
+																									.length
+																							}
+																							/{stationShift.required_people}
+																						</span>
+																						<div
+																							className={cn(
+																								'w-2 h-2 rounded-full',
+																								(() => {
+																									const currentAssignments =
+																										getAssignmentsForStationShift(stationShift.id);
+																									const fillPercentage =
+																										(currentAssignments.length /
+																											stationShift.required_people) *
+																										100;
+
+																									if (fillPercentage === 0) {
+																										return 'bg-gray-400'; // Empty
+																									} else if (fillPercentage < 50) {
+																										return 'bg-red-500'; // Partially filled (red)
+																									} else if (fillPercentage < 100) {
+																										return 'bg-yellow-500'; // Mostly filled (yellow)
+																									} else {
+																										return 'bg-green-500'; // Fully filled (green)
+																									}
+																								})()
+																							)}
+																						/>
 																					</div>
-																				))}
+																					{/* Progress bar */}
+																					<div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+																						<div
+																							className={cn(
+																								'h-full transition-all duration-300',
+																								(() => {
+																									const currentAssignments =
+																										getAssignmentsForStationShift(stationShift.id);
+																									const fillPercentage =
+																										(currentAssignments.length /
+																											stationShift.required_people) *
+																										100;
+
+																									if (fillPercentage === 0) {
+																										return 'bg-gray-400 w-0'; // Empty
+																									} else if (fillPercentage < 50) {
+																										return 'bg-red-500'; // Partially filled (red)
+																									} else if (fillPercentage < 100) {
+																										return 'bg-yellow-500'; // Mostly filled (yellow)
+																									} else {
+																										return 'bg-green-500'; // Fully filled (green)
+																									}
+																								})()
+																							)}
+																							style={{
+																								width: `${Math.min(
+																									(getAssignmentsForStationShift(stationShift.id)
+																										.length /
+																										stationShift.required_people) *
+																										100,
+																									100
+																								)}%`
+																							}}
+																						/>
+																					</div>
+																				</div>
 																			</div>
-																		) : (
-																			<div className="text-xs text-muted-foreground text-center">
-																				Person hier ablegen
+																		</CardHeader>
+																		<CardContent>
+																			<div
+																				className={cn(
+																					'min-h-[100px] border-2 border-dashed rounded-lg p-3 space-y-2 transition-all duration-200',
+																					// Color coding based on fill level
+																					(() => {
+																						const currentAssignments =
+																							getAssignmentsForStationShift(stationShift.id);
+																						const fillPercentage =
+																							(currentAssignments.length /
+																								stationShift.required_people) *
+																							100;
+
+																						if (fillPercentage === 0) {
+																							return 'border-gray-300 bg-gray-50'; // Empty
+																						} else if (fillPercentage < 50) {
+																							return 'border-red-300 bg-red-50'; // Partially filled (red)
+																						} else if (fillPercentage < 100) {
+																							return 'border-yellow-300 bg-yellow-50'; // Mostly filled (yellow)
+																						} else {
+																							return 'border-green-300 bg-green-50'; // Fully filled (green)
+																						}
+																					})()
+																				)}
+																				onDragOver={(e) => e.preventDefault()}
+																				onDrop={(e) => handleDrop(stationShift.id, e)}>
+																				{shiftAssignments.length > 0 ? (
+																					<div className="space-y-1">
+																						{shiftAssignments.map((assignment) => (
+																							<div
+																								key={assignment.id}
+																								className="flex items-center justify-between bg-background rounded px-2 py-1 text-sm">
+																								<span className="font-medium">
+																									{assignment.member?.first_name}{' '}
+																									{assignment.member?.last_name}
+																								</span>
+																								<Button
+																									size="sm"
+																									variant="ghost"
+																									className="h-4 w-4 p-0 hover:bg-destructive/20 hover:text-destructive"
+																									onClick={async () => {
+																										try {
+																											await removeMemberFromShift(
+																												festivalId,
+																												stationShift.id,
+																												stationShift.station_id,
+																												assignment.member_id!
+																											);
+																											await loadData();
+																											toast({
+																												title: 'Erfolg',
+																												description: 'Zuweisung wurde entfernt.'
+																											});
+																										} catch (error) {
+																											toast({
+																												title: 'Fehler',
+																												description:
+																													'Zuweisung konnte nicht entfernt werden.',
+																												variant: 'destructive'
+																											});
+																										}
+																									}}>
+																									<Trash2 className="h-3 w-3" />
+																								</Button>
+																							</div>
+																						))}
+																					</div>
+																				) : (
+																					<div className="text-xs text-muted-foreground text-center">
+																						Person hier ablegen
+																					</div>
+																				)}
 																			</div>
-																		)}
-																	</div>
-																</CardContent>
-															</Card>
-														);
-													})}
-												</div>
+																		</CardContent>
+																	</Card>
+																);
+															})}
+														</div>
+													)}
+												</CardContent>
+											</Card>
+										);
+									})}
+								</div>
+							)}
+						</div>
+
+						{/* Right Side - Members List */}
+						<div className="w-80 border-l bg-muted/20 flex flex-col">
+							<div className="p-4 border-b bg-background">
+								<h3 className="font-semibold flex items-center gap-2">
+									<Users className="h-4 w-4" />
+									Mitglieder ({getFilteredMembers().length})
+								</h3>
+
+								{/* Name Filter */}
+								<div className="mt-3">
+									<Input
+										placeholder="Nach Namen suchen..."
+										value={nameFilter}
+										onChange={(e) => setNameFilter(e.target.value)}
+										className="text-xs h-8"
+									/>
+								</div>
+
+								{/* Station Filter */}
+								<div className="mt-3">
+									<Select value={stationFilter} onValueChange={setStationFilter}>
+										<SelectTrigger className="text-xs h-8">
+											<SelectValue placeholder="Station filtern..." />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">Alle Stationen</SelectItem>
+											{stations.map((station) => (
+												<SelectItem key={station.id} value={station.id}>
+													{station.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+
+							<div className="flex-1 overflow-y-auto p-4 space-y-2">
+								{getFilteredMembers().map((member) => {
+									const memberAssignments = getMemberAssignments(member.id);
+									const availability = getMemberAvailability(member.id);
+
+									return (
+										<div
+											key={member.id}
+											className={cn(
+												'p-3 rounded-lg border cursor-move hover:bg-accent/50 transition-colors',
+												availability === 'free' && 'bg-red-50 border-red-200',
+												availability === 'partial' && 'bg-yellow-50 border-yellow-200',
+												availability === 'full' && 'bg-green-50 border-green-200'
 											)}
-										</CardContent>
-									</Card>
-								);
-							})}
-						</div>
-					)}
-				</div>
+											draggable
+											onDragStart={() => handleDragStart(member)}
+											onDragEnd={handleDragEnd}>
+											<div className="space-y-2">
+												<div className="flex items-center justify-between">
+													<span className="font-medium text-sm">
+														{member.first_name} {member.last_name}
+													</span>
+													<div className="flex items-center gap-1">
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={(e) => {
+																e.stopPropagation();
+																handleOpenMemberPreferenceDialog(member);
+															}}
+															className="h-6 w-6 p-0 hover:bg-purple-100"
+															title="Alle Präferenzen bearbeiten">
+															<Settings
+																className={cn(
+																	'h-3 w-3',
+																	getMemberStationPreferences(member.id).length > 0 ||
+																		getMemberShiftPreferences(member.id).length > 0
+																		? 'text-purple-500'
+																		: 'text-gray-400'
+																)}
+															/>
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={(e) => {
+																e.stopPropagation();
+																handleEditMember(member);
+															}}
+															className="h-6 w-6 p-0 hover:bg-green-100"
+															title="Mitglied bearbeiten">
+															<Edit className="h-3 w-3 text-green-600" />
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={(e) => {
+																e.stopPropagation();
+																handleDeleteMember(member);
+															}}
+															className="h-6 w-6 p-0 hover:bg-red-100"
+															title="Mitglied löschen">
+															<UserMinus className="h-3 w-3 text-red-600" />
+														</Button>
+														<Badge
+															variant={
+																availability === 'free'
+																	? 'destructive'
+																	: availability === 'partial'
+																	? 'secondary'
+																	: 'default'
+															}
+															className="text-xs">
+															{memberAssignments.length}/{stationShifts.length}
+														</Badge>
+													</div>
+												</div>
 
-				{/* Right Side - Members List */}
-				<div className="w-80 border-l bg-muted/20 flex flex-col">
-					<div className="p-4 border-b bg-background">
-						<h3 className="font-semibold flex items-center gap-2">
-							<Users className="h-4 w-4" />
-							Mitglieder ({getFilteredMembers().length})
-						</h3>
+												{/* Station Preferences */}
+												{getMemberStationPreferences(member.id).length > 0 && (
+													<div className="flex flex-wrap gap-1">
+														{getMemberStationPreferences(member.id).map((stationId) => {
+															const station = stations.find((s) => s.id === stationId);
+															if (!station) return null;
+															return (
+																<Badge
+																	key={stationId}
+																	variant="outline"
+																	className="text-xs bg-pink-50 border-pink-200 text-pink-700">
+																	<Heart className="h-2 w-2 mr-1 fill-current" />
+																	{station.name}
+																</Badge>
+															);
+														})}
+													</div>
+												)}
 
-						{/* Name Filter */}
-						<div className="mt-3">
-							<Input
-								placeholder="Nach Namen suchen..."
-								value={nameFilter}
-								onChange={(e) => setNameFilter(e.target.value)}
-								className="text-xs h-8"
-							/>
-						</div>
+												{/* Shift Preferences */}
+												{getMemberShiftPreferences(member.id).length > 0 && (
+													<div className="flex flex-wrap gap-1">
+														{getMemberShiftPreferences(member.id).map((shiftId) => {
+															const stationShift = stationShifts.find((s) => s.id === shiftId);
+															if (!stationShift) return null;
+															return (
+																<Badge
+																	key={shiftId}
+																	variant="outline"
+																	className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+																	<Clock className="h-2 w-2 mr-1" />
+																	{stationShift.name}
+																</Badge>
+															);
+														})}
+													</div>
+												)}
 
-						{/* Station Filter */}
-						<div className="mt-3">
-							<Select value={stationFilter} onValueChange={setStationFilter}>
-								<SelectTrigger className="text-xs h-8">
-									<SelectValue placeholder="Station filtern..." />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">Alle Stationen</SelectItem>
-									{stations.map((station) => (
-										<SelectItem key={station.id} value={station.id}>
-											{station.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
+												{memberAssignments.length > 0 && (
+													<div className="text-xs text-muted-foreground">
+														{memberAssignments.map((assignment, index) => {
+															const stationShift = stationShifts.find(
+																(shift) => shift.id === assignment.shift_id
+															);
+															if (!stationShift) return null;
 
-					<div className="flex-1 overflow-y-auto p-4 space-y-2">
-						{getFilteredMembers().map((member) => {
-							const memberAssignments = getMemberAssignments(member.id);
-							const availability = getMemberAvailability(member.id);
-
-							return (
-								<div
-									key={member.id}
-									className={cn(
-										'p-3 rounded-lg border cursor-move hover:bg-accent/50 transition-colors',
-										availability === 'free' && 'bg-red-50 border-red-200',
-										availability === 'partial' && 'bg-yellow-50 border-yellow-200',
-										availability === 'full' && 'bg-green-50 border-green-200'
-									)}
-									draggable
-									onDragStart={() => handleDragStart(member)}
-									onDragEnd={handleDragEnd}>
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<span className="font-medium text-sm">
-												{member.first_name} {member.last_name}
-											</span>
-											<div className="flex items-center gap-1">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleOpenStationPreferenceDialog(member);
-													}}
-													className="h-6 w-6 p-0 hover:bg-blue-100"
-													title="Stationswünsche bearbeiten">
-													<Heart
-														className={cn(
-															'h-3 w-3',
-															getMemberStationPreferences(member.id).length > 0
-																? 'text-red-500 fill-red-500'
-																: 'text-gray-400'
-														)}
-													/>
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleEditMember(member);
-													}}
-													className="h-6 w-6 p-0 hover:bg-green-100"
-													title="Mitglied bearbeiten">
-													<Edit className="h-3 w-3 text-green-600" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleDeleteMember(member);
-													}}
-													className="h-6 w-6 p-0 hover:bg-red-100"
-													title="Mitglied löschen">
-													<UserMinus className="h-3 w-3 text-red-600" />
-												</Button>
-												<Badge
-													variant={
-														availability === 'free'
-															? 'destructive'
-															: availability === 'partial'
-															? 'secondary'
-															: 'default'
-													}
-													className="text-xs">
-													{memberAssignments.length}/{stationShifts.length}
-												</Badge>
+															return (
+																<div key={assignment.id} className="flex items-center gap-1">
+																	<Badge variant="secondary" className="text-xs">
+																		{stationShift.name}
+																	</Badge>
+																</div>
+															);
+														})}
+													</div>
+												)}
 											</div>
 										</div>
-
-										{/* Station Preferences */}
-										{getMemberStationPreferences(member.id).length > 0 && (
-											<div className="flex flex-wrap gap-1">
-												{getMemberStationPreferences(member.id).map((stationId) => {
-													const station = stations.find((s) => s.id === stationId);
-													if (!station) return null;
-													return (
-														<Badge
-															key={stationId}
-															variant="outline"
-															className="text-xs bg-pink-50 border-pink-200 text-pink-700">
-															<Heart className="h-2 w-2 mr-1 fill-current" />
-															{station.name}
-														</Badge>
-													);
-												})}
-											</div>
-										)}
-
-										{memberAssignments.length > 0 && (
-											<div className="text-xs text-muted-foreground">
-												{memberAssignments.map((assignment, index) => {
-													const stationShift = stationShifts.find(
-														(shift) => shift.id === assignment.shift_id
-													);
-													if (!stationShift) return null;
-
-													return (
-														<div key={assignment.id} className="flex items-center gap-1">
-															<Badge variant="secondary" className="text-xs">
-																{stationShift.name}
-															</Badge>
-														</div>
-													);
-												})}
-											</div>
-										)}
-									</div>
-								</div>
-							);
-						})}
+									);
+								})}
+							</div>
+						</div>
+					</>
+				) : (
+					<div className="flex-1 overflow-auto p-6">
+						<MagicLinkManager festivalId={festivalId} />
 					</div>
-				</div>
+				)}
 			</div>
 
 			{/* Station Shift Dialog */}
@@ -1666,12 +1883,15 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 								})}
 							</div>
 						</div>
-					</div>
-					<div className="flex-shrink-0 flex justify-end gap-2 pt-4 border-t mt-4">
-						<Button variant="outline" onClick={() => setShowStationPreferenceDialog(false)}>
-							Abbrechen
-						</Button>
-						<Button onClick={handleSaveStationPreferencesFromDialog}>Speichern</Button>
+						<div className="flex-shrink-0 flex justify-end gap-2 pt-4 border-t mt-4">
+							<Button variant="outline" onClick={() => setShowStationPreferenceDialog(false)}>
+								Abbrechen
+							</Button>
+							<Button onClick={handleSaveStationPreferencesFromDialog}>
+								<Save className="h-4 w-4 mr-2" />
+								Speichern
+							</Button>
+						</div>
 					</div>
 				</DialogContent>
 			</Dialog>
@@ -1765,6 +1985,180 @@ const StationShiftMatrix: React.FC<StationShiftMatrixProps> = ({ festivalId }) =
 								disabled={!memberForm.first_name || !memberForm.last_name}>
 								<Save className="h-4 w-4 mr-2" />
 								{editingMember ? 'Aktualisieren' : 'Hinzufügen'}
+							</Button>
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* Member Preference Dialog */}
+			<Dialog open={showMemberPreferenceDialog} onOpenChange={setShowMemberPreferenceDialog}>
+				<DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+					<DialogHeader className="flex-shrink-0">
+						<DialogTitle className="flex items-center gap-2">
+							<Heart className="h-5 w-5 text-red-500" />
+							Präferenzen für {selectedMemberForPreference?.first_name}{' '}
+							{selectedMemberForPreference?.last_name}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="flex-1 overflow-y-auto space-y-6 pr-2">
+						{/* Station Preferences */}
+						<div>
+							<h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+								<MapPin className="h-4 w-4 text-green-600" />
+								Stationswünsche
+							</h3>
+							<p className="text-sm text-muted-foreground mb-4">
+								Wählen Sie die Stationen aus, bei denen {selectedMemberForPreference?.first_name}{' '}
+								gerne arbeiten möchte.
+							</p>
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+								{stations.map((station) => {
+									const currentPreferences =
+										tempStationPreferences[selectedMemberForPreference?.id || ''] ||
+										getMemberStationPreferences(selectedMemberForPreference?.id || '');
+									const isSelected = currentPreferences.includes(station.id);
+
+									return (
+										<div
+											key={station.id}
+											className={cn(
+												'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+												isSelected
+													? 'bg-green-50 border-green-200'
+													: 'hover:bg-gray-50 border-gray-200'
+											)}
+											onClick={() =>
+												handleToggleStationPreference(
+													selectedMemberForPreference?.id || '',
+													station.id
+												)
+											}>
+											<input
+												type="checkbox"
+												checked={isSelected}
+												onChange={() =>
+													handleToggleStationPreference(
+														selectedMemberForPreference?.id || '',
+														station.id
+													)
+												}
+												className="rounded"
+											/>
+											<div className="flex-1">
+												<div className="font-medium">{station.name}</div>
+												{station.description && (
+													<div className="text-sm text-gray-600">{station.description}</div>
+												)}
+											</div>
+											<Badge variant="outline">
+												<Users className="h-3 w-3 mr-1" />
+												{station.required_people}
+											</Badge>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Shift Preferences */}
+						<div>
+							<h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+								<Clock className="h-4 w-4 text-blue-600" />
+								Schichtwünsche (optional)
+							</h3>
+							<p className="text-sm text-muted-foreground mb-4">
+								Wählen Sie spezifische Schichten aus, in denen{' '}
+								{selectedMemberForPreference?.first_name} arbeiten möchte. Die Schichten sind nach
+								Stationen gruppiert.
+							</p>
+
+							<div className="space-y-6">
+								{stations.map((station) => {
+									const stationShiftsForStation = stationShifts.filter(
+										(shift) => shift.station_id === station.id
+									);
+									if (stationShiftsForStation.length === 0) return null;
+
+									return (
+										<div key={station.id} className="border rounded-lg p-4">
+											<div className="flex items-center gap-2 mb-4">
+												<MapPin className="h-5 w-5 text-green-600" />
+												<h4 className="text-lg font-semibold">{station.name}</h4>
+												<Badge variant="outline">
+													<Users className="h-3 w-3 mr-1" />
+													{station.required_people} Personen
+												</Badge>
+												{tempStationPreferences[selectedMemberForPreference?.id || '']?.includes(
+													station.id
+												) && (
+													<Badge variant="default" className="bg-green-100 text-green-800">
+														<Heart className="h-3 w-3 mr-1 fill-current" />
+														Station gewünscht
+													</Badge>
+												)}
+											</div>
+											{station.description && (
+												<p className="text-sm text-gray-600 mb-4">{station.description}</p>
+											)}
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+												{stationShiftsForStation.map((shift) => {
+													const currentShiftPreferences =
+														tempShiftPreferences[selectedMemberForPreference?.id || ''] ||
+														getMemberShiftPreferences(selectedMemberForPreference?.id || '');
+													const isSelected = currentShiftPreferences.includes(shift.id);
+
+													return (
+														<div
+															key={shift.id}
+															className={cn(
+																'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+																isSelected
+																	? 'bg-blue-50 border-blue-200'
+																	: 'hover:bg-gray-50 border-gray-200'
+															)}
+															onClick={() =>
+																handleToggleShiftPreference(
+																	selectedMemberForPreference?.id || '',
+																	shift.id
+																)
+															}>
+															<input
+																type="checkbox"
+																checked={isSelected}
+																onChange={() =>
+																	handleToggleShiftPreference(
+																		selectedMemberForPreference?.id || '',
+																		shift.id
+																	)
+																}
+																className="rounded"
+															/>
+															<div className="flex-1">
+																<div className="font-medium">{shift.name}</div>
+																<div className="text-sm text-gray-600">
+																	{new Date(shift.start_date).toLocaleDateString('de-DE')}{' '}
+																	{shift.start_time} - {shift.end_time}
+																</div>
+															</div>
+														</div>
+													);
+												})}
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+
+						<div className="flex justify-end gap-2 pt-4">
+							<Button variant="outline" onClick={() => setShowMemberPreferenceDialog(false)}>
+								Abbrechen
+							</Button>
+							<Button onClick={handleSaveMemberPreferencesFromDialog}>
+								<Save className="h-4 w-4 mr-2" />
+								Speichern
 							</Button>
 						</div>
 					</div>
