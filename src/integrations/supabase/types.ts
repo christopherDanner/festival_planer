@@ -8,97 +8,6 @@ export type Database = {
 	};
 	public: {
 		Tables: {
-			checklist_items: {
-				Row: {
-					category: string;
-					completed: boolean;
-					created_at: string;
-					due_date: string;
-					festival_id: string;
-					id: string;
-					priority: string;
-					task: string;
-				};
-				Insert: {
-					category: string;
-					completed?: boolean;
-					created_at?: string;
-					due_date: string;
-					festival_id: string;
-					id?: string;
-					priority: string;
-					task: string;
-				};
-				Update: {
-					category?: string;
-					completed?: boolean;
-					created_at?: string;
-					due_date?: string;
-					festival_id?: string;
-					id?: string;
-					priority?: string;
-					task?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'checklist_items_festival_id_fkey';
-						columns: ['festival_id'];
-						isOneToOne: false;
-						referencedRelation: 'festivals';
-						referencedColumns: ['id'];
-					}
-				];
-			};
-			festival_members: {
-				Row: {
-					created_at: string;
-					email: string | null;
-					festival_id: string;
-					first_name: string;
-					id: string;
-					is_active: boolean;
-					last_name: string;
-					notes: string | null;
-					phone: string | null;
-					station_preferences: string[] | null;
-					updated_at: string;
-				};
-				Insert: {
-					created_at?: string;
-					email?: string | null;
-					festival_id: string;
-					first_name: string;
-					id?: string;
-					is_active?: boolean;
-					last_name: string;
-					notes?: string | null;
-					phone?: string | null;
-					station_preferences?: string[] | null;
-					updated_at?: string;
-				};
-				Update: {
-					created_at?: string;
-					email?: string | null;
-					festival_id?: string;
-					first_name?: string;
-					id?: string;
-					is_active?: boolean;
-					last_name?: string;
-					notes?: string | null;
-					phone?: string | null;
-					station_preferences?: string[] | null;
-					updated_at?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'fk_festival_members_festival_id';
-						columns: ['festival_id'];
-						isOneToOne: false;
-						referencedRelation: 'festivals';
-						referencedColumns: ['id'];
-					}
-				];
-			};
 			festivals: {
 				Row: {
 					created_at: string;
@@ -137,6 +46,51 @@ export type Database = {
 					visitor_count?: string;
 				};
 				Relationships: [];
+			};
+			festival_member_preferences: {
+				Row: {
+					id: string;
+					festival_id: string;
+					member_id: string;
+					station_preferences: string[] | null;
+					shift_preferences: string[] | null;
+					created_at: string;
+					updated_at: string;
+				};
+				Insert: {
+					id?: string;
+					festival_id: string;
+					member_id: string;
+					station_preferences?: string[] | null;
+					shift_preferences?: string[] | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Update: {
+					id?: string;
+					festival_id?: string;
+					member_id?: string;
+					station_preferences?: string[] | null;
+					shift_preferences?: string[] | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'festival_member_preferences_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'festival_member_preferences_member_id_fkey';
+						columns: ['member_id'];
+						isOneToOne: false;
+						referencedRelation: 'members';
+						referencedColumns: ['id'];
+					}
+				];
 			};
 			members: {
 				Row: {
@@ -180,53 +134,6 @@ export type Database = {
 				};
 				Relationships: [];
 			};
-			resources: {
-				Row: {
-					created_at: string;
-					einheit: string;
-					festival_id: string;
-					id: string;
-					item: string;
-					kosten: string;
-					lieferant: string;
-					menge: string;
-					priority: string;
-					status: string;
-				};
-				Insert: {
-					created_at?: string;
-					einheit: string;
-					festival_id: string;
-					id?: string;
-					item: string;
-					kosten: string;
-					lieferant: string;
-					menge: string;
-					priority: string;
-					status?: string;
-				};
-				Update: {
-					created_at?: string;
-					einheit?: string;
-					festival_id?: string;
-					id?: string;
-					item?: string;
-					kosten?: string;
-					lieferant?: string;
-					menge?: string;
-					priority?: string;
-					status?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'resources_festival_id_fkey';
-						columns: ['festival_id'];
-						isOneToOne: false;
-						referencedRelation: 'festivals';
-						referencedColumns: ['id'];
-					}
-				];
-			};
 			shift_assignments: {
 				Row: {
 					created_at: string;
@@ -235,7 +142,7 @@ export type Database = {
 					id: string;
 					member_id: string | null;
 					position: number | null;
-					shift_id: string | null;
+					station_shift_id: string;
 					station_id: string | null;
 					updated_at: string;
 				};
@@ -246,7 +153,7 @@ export type Database = {
 					id?: string;
 					member_id?: string | null;
 					position?: number | null;
-					shift_id?: string | null;
+					station_shift_id: string;
 					station_id?: string | null;
 					updated_at?: string;
 				};
@@ -257,7 +164,7 @@ export type Database = {
 					id?: string;
 					member_id?: string | null;
 					position?: number | null;
-					shift_id?: string | null;
+					station_shift_id?: string;
 					station_id?: string | null;
 					updated_at?: string;
 				};
@@ -277,10 +184,10 @@ export type Database = {
 						referencedColumns: ['id'];
 					},
 					{
-						foreignKeyName: 'fk_shift_assignments_shift';
-						columns: ['shift_id'];
+						foreignKeyName: 'shift_assignments_station_shift_id_fkey';
+						columns: ['station_shift_id'];
 						isOneToOne: false;
-						referencedRelation: 'shifts';
+						referencedRelation: 'station_shifts';
 						referencedColumns: ['id'];
 					},
 					{
@@ -292,7 +199,7 @@ export type Database = {
 					}
 				];
 			};
-			shifts: {
+			station_shifts: {
 				Row: {
 					created_at: string;
 					end_date: string | null;
@@ -300,8 +207,10 @@ export type Database = {
 					festival_id: string;
 					id: string;
 					name: string;
+					required_people: number;
 					start_date: string;
 					start_time: string;
+					station_id: string;
 					updated_at: string;
 				};
 				Insert: {
@@ -311,8 +220,10 @@ export type Database = {
 					festival_id: string;
 					id?: string;
 					name: string;
+					required_people?: number;
 					start_date: string;
 					start_time: string;
+					station_id: string;
 					updated_at?: string;
 				};
 				Update: {
@@ -322,145 +233,71 @@ export type Database = {
 					festival_id?: string;
 					id?: string;
 					name?: string;
+					required_people?: number;
 					start_date?: string;
 					start_time?: string;
-					updated_at?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'fk_shifts_festival';
-						columns: ['festival_id'];
-						isOneToOne: false;
-						referencedRelation: 'festivals';
-						referencedColumns: ['id'];
-					}
-				];
-			};
-			station_assignments: {
-				Row: {
-					bedarf: number;
-					bereich: string;
-					created_at: string;
-					festival_id: string;
-					id: string;
-					personen: string[];
-					priority: string;
-					status: string;
-					zeit: string;
-				};
-				Insert: {
-					bedarf: number;
-					bereich: string;
-					created_at?: string;
-					festival_id: string;
-					id?: string;
-					personen?: string[];
-					priority: string;
-					status?: string;
-					zeit: string;
-				};
-				Update: {
-					bedarf?: number;
-					bereich?: string;
-					created_at?: string;
-					festival_id?: string;
-					id?: string;
-					personen?: string[];
-					priority?: string;
-					status?: string;
-					zeit?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'station_assignments_festival_id_fkey';
-						columns: ['festival_id'];
-						isOneToOne: false;
-						referencedRelation: 'festivals';
-						referencedColumns: ['id'];
-					}
-				];
-			};
-			station_member_assignments: {
-				Row: {
-					created_at: string;
-					festival_member_id: string;
-					id: string;
-					station_id: string;
-				};
-				Insert: {
-					created_at?: string;
-					festival_member_id: string;
-					id?: string;
-					station_id: string;
-				};
-				Update: {
-					created_at?: string;
-					festival_member_id?: string;
-					id?: string;
-					station_id?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'fk_station_member_assignments_festival_member_id';
-						columns: ['festival_member_id'];
-						isOneToOne: false;
-						referencedRelation: 'festival_members';
-						referencedColumns: ['id'];
-					},
-					{
-						foreignKeyName: 'fk_station_member_assignments_station_id';
-						columns: ['station_id'];
-						isOneToOne: false;
-						referencedRelation: 'station_assignments';
-						referencedColumns: ['id'];
-					}
-				];
-			};
-			station_shift_assignments: {
-				Row: {
-					created_at: string;
-					festival_id: string;
-					id: string;
-					shift_id: string;
-					station_id: string;
-					updated_at: string;
-				};
-				Insert: {
-					created_at?: string;
-					festival_id: string;
-					id?: string;
-					shift_id: string;
-					station_id: string;
-					updated_at?: string;
-				};
-				Update: {
-					created_at?: string;
-					festival_id?: string;
-					id?: string;
-					shift_id?: string;
 					station_id?: string;
 					updated_at?: string;
 				};
 				Relationships: [
 					{
-						foreignKeyName: 'station_shift_assignments_festival_id_fkey';
+						foreignKeyName: 'station_shifts_festival_id_fkey';
 						columns: ['festival_id'];
 						isOneToOne: false;
 						referencedRelation: 'festivals';
 						referencedColumns: ['id'];
 					},
 					{
-						foreignKeyName: 'station_shift_assignments_shift_id_fkey';
-						columns: ['shift_id'];
-						isOneToOne: false;
-						referencedRelation: 'shifts';
-						referencedColumns: ['id'];
-					},
-					{
-						foreignKeyName: 'station_shift_assignments_station_id_fkey';
+						foreignKeyName: 'station_shifts_station_id_fkey';
 						columns: ['station_id'];
 						isOneToOne: false;
 						referencedRelation: 'stations';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			station_members: {
+				Row: {
+					id: string;
+					festival_id: string;
+					station_id: string;
+					member_id: string;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					festival_id: string;
+					station_id: string;
+					member_id: string;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					festival_id?: string;
+					station_id?: string;
+					member_id?: string;
+					created_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'station_members_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'station_members_station_id_fkey';
+						columns: ['station_id'];
+						isOneToOne: false;
+						referencedRelation: 'stations';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'station_members_member_id_fkey';
+						columns: ['member_id'];
+						isOneToOne: false;
+						referencedRelation: 'members';
 						referencedColumns: ['id'];
 					}
 				];
@@ -473,6 +310,7 @@ export type Database = {
 					id: string;
 					name: string;
 					required_people: number;
+					responsible_member_id: string | null;
 					updated_at: string;
 				};
 				Insert: {
@@ -482,6 +320,7 @@ export type Database = {
 					id?: string;
 					name: string;
 					required_people?: number;
+					responsible_member_id?: string | null;
 					updated_at?: string;
 				};
 				Update: {
@@ -491,6 +330,7 @@ export type Database = {
 					id?: string;
 					name?: string;
 					required_people?: number;
+					responsible_member_id?: string | null;
 					updated_at?: string;
 				};
 				Relationships: [
@@ -499,6 +339,13 @@ export type Database = {
 						columns: ['festival_id'];
 						isOneToOne: false;
 						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'stations_responsible_member_id_fkey';
+						columns: ['responsible_member_id'];
+						isOneToOne: false;
+						referencedRelation: 'members';
 						referencedColumns: ['id'];
 					}
 				];

@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import {
 	Calendar,
 	Users,
-	ClipboardList,
-	Smartphone,
 	CheckCircle,
 	ArrowRight,
 	Tent,
@@ -45,7 +43,7 @@ export default function Index() {
 						<p className="text-xl lg:text-2xl mb-8 text-white/90 max-w-2xl mx-auto">
 							<strong>3 Schritte. 5 Minuten. Fertig.</strong>
 							<br />
-							Erstelle automatisch Checklisten, Schichtpläne und Bestelllisten für dein Vereinsfest.
+							Erstelle automatisch Schichtpläne und Personaleinteilungen für dein Vereinsfest.
 						</p>
 
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -83,30 +81,30 @@ export default function Index() {
 						</p>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
 						<Card className="shadow-card hover:shadow-lg transition-shadow">
 							<CardHeader>
 								<div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-									<ClipboardList className="h-6 w-6 text-primary" />
+									<Calendar className="h-6 w-6 text-primary" />
 								</div>
-								<CardTitle>Smart Planning</CardTitle>
+								<CardTitle>Fest-Verwaltung</CardTitle>
 								<CardDescription>
-									Automatische Checklisten und Ressourcen-Vorschläge für dein Fest
+									Erstelle und verwalte deine Vereinsfeste mit wenigen Klicks
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<ul className="space-y-2 text-sm">
 									<li className="flex items-center gap-2">
 										<CheckCircle className="h-4 w-4 text-green-500" />
-										Feuerwehr-, Musik- & Dorffest Templates
+										Feuerwehr-, Musik- & Dorffest Vorlagen
 									</li>
 									<li className="flex items-center gap-2">
 										<CheckCircle className="h-4 w-4 text-green-500" />
-										Zeitgesteuerte Erinnerungen
+										Stationen & Schichten flexibel anlegen
 									</li>
 									<li className="flex items-center gap-2">
 										<CheckCircle className="h-4 w-4 text-green-500" />
-										KI-basierte Mengenplanung
+										Dashboard mit Festübersicht
 									</li>
 								</ul>
 							</CardContent>
@@ -126,7 +124,7 @@ export default function Index() {
 								<ul className="space-y-2 text-sm">
 									<li className="flex items-center gap-2">
 										<CheckCircle className="h-4 w-4 text-green-500" />
-										Excel/CSV Import
+										Drag & Drop Schichtplanung
 									</li>
 									<li className="flex items-center gap-2">
 										<CheckCircle className="h-4 w-4 text-green-500" />
@@ -134,35 +132,7 @@ export default function Index() {
 									</li>
 									<li className="flex items-center gap-2">
 										<CheckCircle className="h-4 w-4 text-green-500" />
-										PDF-Export für Aushang
-									</li>
-								</ul>
-							</CardContent>
-						</Card>
-
-						<Card className="shadow-card hover:shadow-lg transition-shadow">
-							<CardHeader>
-								<div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-									<Smartphone className="h-6 w-6 text-primary" />
-								</div>
-								<CardTitle>Mobile Kassa</CardTitle>
-								<CardDescription>
-									Kellner-App und Stationen-Übersicht für reibungslosen Ablauf während dem Fest
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<ul className="space-y-2 text-sm">
-									<li className="flex items-center gap-2">
-										<CheckCircle className="h-4 w-4 text-green-500" />
-										Touch-optimierte Bedienung
-									</li>
-									<li className="flex items-center gap-2">
-										<CheckCircle className="h-4 w-4 text-green-500" />
-										Echtzeit Bestellweiterleitung
-									</li>
-									<li className="flex items-center gap-2">
-										<CheckCircle className="h-4 w-4 text-green-500" />
-										Automatische Bon-Erstellung
+										Stationswünsche & Präferenzen
 									</li>
 								</ul>
 							</CardContent>
@@ -209,7 +179,7 @@ export default function Index() {
 									</div>
 								</div>
 								<p className="text-muted-foreground">
-									"Die Kellner-App funktioniert perfekt auf unseren alten Tablets. Endlich kein
+									"Die automatische Schichtzuteilung spart uns enorm viel Zeit. Endlich kein
 									Papier-Chaos mehr!"
 								</p>
 							</CardContent>
@@ -227,8 +197,8 @@ export default function Index() {
 									</div>
 								</div>
 								<p className="text-muted-foreground">
-									"Unser Stadtfest war noch nie so gut organisiert. Die automatischen KI-Vorschläge
-									waren sehr hilfreich."
+									"Unser Stadtfest war noch nie so gut organisiert. Die Drag & Drop Planung ist
+									einfach und intuitiv."
 								</p>
 							</CardContent>
 						</Card>

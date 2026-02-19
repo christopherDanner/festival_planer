@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Shift, Station, ShiftAssignment } from './shiftService';
-import { assignMemberToShift, getShiftAssignments } from './shiftService';
+import type { Station, StationShift } from './shiftService';
+import { assignMemberToStationShift, getShiftAssignments } from './shiftService';
 import type { Member } from './memberService';
 
 export interface AutoAssignmentConfig {
@@ -13,7 +13,7 @@ export interface AssignmentResult {
 	success: boolean;
 	assignmentsCreated: number;
 	unfilledPositions: Array<{
-		shiftId: string;
+		stationShiftId: string;
 		stationId: string;
 		remainingSlots: number;
 	}>;
@@ -32,12 +32,11 @@ interface AssignmentScore {
 
 export const performAutomaticAssignment = async (
 	festivalId: string,
-	shifts: Shift[],
+	stationShifts: StationShift[],
 	stations: Station[],
 	members: Member[],
 	config: AutoAssignmentConfig,
-	stationPreferences?: Record<string, string[]>,
-	stationShiftAssignments?: Array<{ station_id: string; shift_id: string }>
+	stationPreferences?: Record<string, string[]>
 ): Promise<AssignmentResult> => {
 	const result: AssignmentResult = {
 		success: false,
@@ -57,48 +56,32 @@ export const performAutomaticAssignment = async (
 			memberShiftCounts.set(member.id, currentAssignments.length);
 		});
 
-		// Create assignment matrix for all shift-station combinations
+		// Build assignment matrix directly from station shifts
 		const assignmentMatrix: Array<{
-			shiftId: string;
+			stationShiftId: string;
 			stationId: string;
 			requiredPeople: number;
 			currentAssignments: number;
 			remainingSlots: number;
 		}> = [];
 
-		shifts.forEach((shift) => {
-			stations.forEach((station) => {
-				// Only process if this station is assigned to this shift
-				const isAssigned =
-					!stationShiftAssignments ||
-					stationShiftAssignments.some(
-						(assignment) => assignment.station_id === station.id && assignment.shift_id === shift.id
-					);
+		stationShifts.forEach((stationShift) => {
+			const currentAssignments = existingAssignments.filter(
+				(a) => a.station_shift_id === stationShift.id && a.member_id
+			).length;
 
-				if (!isAssigned) return;
+			const remainingSlots = stationShift.required_people - currentAssignments;
 
-				const currentAssignments = existingAssignments.filter(
-					(a) => a.shift_id === shift.id && a.station_id === station.id && a.member_id
-				).length;
-
-				const remainingSlots = station.required_people - currentAssignments;
-
-				// Always add to matrix, even if fully assigned (for tracking)
-				assignmentMatrix.push({
-					shiftId: shift.id,
-					stationId: station.id,
-					requiredPeople: station.required_people,
-					currentAssignments,
-					remainingSlots: Math.max(0, remainingSlots)
-				});
+			assignmentMatrix.push({
+				stationShiftId: stationShift.id,
+				stationId: stationShift.station_id,
+				requiredPeople: stationShift.required_people,
+				currentAssignments,
+				remainingSlots: Math.max(0, remainingSlots)
 			});
 		});
 
-		// Debug logging
-		console.log('Assignment Matrix:', assignmentMatrix);
-		console.log('Station-Shift Assignments:', stationShiftAssignments);
-
-		// Sort positions by priority (least filled stations first)
+		// Sort positions by priority (least filled first)
 		assignmentMatrix.sort((a, b) => {
 			const aFillRatio = a.currentAssignments / a.requiredPeople;
 			const bFillRatio = b.currentAssignments / b.requiredPeople;
@@ -109,32 +92,22 @@ export const performAutomaticAssignment = async (
 
 		// Process each position that needs filling
 		for (const position of assignmentMatrix) {
-			// Skip if no slots need filling
 			if (position.remainingSlots <= 0) continue;
 
 			const availableMembers = members.filter((member) => {
 				const currentShifts = memberShiftCounts.get(member.id) || 0;
 
-				// Check if member is already assigned to this shift
-				const alreadyAssignedToShift = existingAssignments.some(
-					(a) => a.shift_id === position.shiftId && a.member_id === member.id
+				// Check if member is already assigned to this station shift
+				const alreadyAssigned = existingAssignments.some(
+					(a) => a.station_shift_id === position.stationShiftId && a.member_id === member.id
 				);
 
 				return (
-					!alreadyAssignedToShift && currentShifts < config.maxShiftsPerMember && member.is_active
+					!alreadyAssigned && currentShifts < config.maxShiftsPerMember && member.is_active
 				);
 			});
 
-			console.log(
-				`Processing position: Shift ${position.shiftId}, Station ${position.stationId}, Remaining: ${position.remainingSlots}, Available members: ${availableMembers.length}`
-			);
-
-			if (availableMembers.length === 0) {
-				console.log(
-					`No available members for position: Shift ${position.shiftId}, Station ${position.stationId}`
-				);
-				continue;
-			}
+			if (availableMembers.length === 0) continue;
 
 			// Score members for this position
 			const memberScores: AssignmentScore[] = availableMembers.map((member) => {
@@ -173,45 +146,14 @@ export const performAutomaticAssignment = async (
 
 			// Assign slots for this position
 			const slotsToFill = Math.min(position.remainingSlots, memberScores.length);
-			console.log(
-				`Filling ${slotsToFill} slots for position: Shift ${position.shiftId}, Station ${position.stationId}`
-			);
 
 			for (let slot = 0; slot < slotsToFill; slot++) {
 				const selectedMember = memberScores[slot];
 
 				try {
-					console.log(
-						`Assigning member ${selectedMember.memberId} to shift ${position.shiftId}, station ${position.stationId}`
-					);
-
-					// Check if shift exists, if not create it
-					const { data: existingShift } = await supabase
-						.from('shifts')
-						.select('id')
-						.eq('id', position.shiftId)
-						.single();
-
-					if (!existingShift) {
-						// Find the shift data from the shifts array
-						const shiftData = shifts.find((s) => s.id === position.shiftId);
-						if (shiftData) {
-							console.log(`Creating temporary shift for ${position.shiftId}`);
-							await supabase.from('shifts').insert({
-								id: position.shiftId,
-								festival_id: festivalId,
-								name: shiftData.name,
-								start_date: shiftData.start_date,
-								start_time: shiftData.start_time,
-								end_time: shiftData.end_time
-							});
-						}
-					}
-
-					await assignMemberToShift(
+					await assignMemberToStationShift(
 						festivalId,
-						position.shiftId,
-						position.stationId,
+						position.stationShiftId,
 						selectedMember.memberId,
 						position.currentAssignments + slot + 1
 					);
@@ -223,7 +165,6 @@ export const performAutomaticAssignment = async (
 					);
 
 					assignmentsCreated++;
-					console.log(`Successfully assigned member ${selectedMember.memberId}`);
 				} catch (error) {
 					console.error('Failed to assign member:', error);
 				}
@@ -242,7 +183,7 @@ export const performAutomaticAssignment = async (
 		result.unfilledPositions = assignmentMatrix
 			.filter((pos) => pos.remainingSlots > 0)
 			.map((pos) => ({
-				shiftId: pos.shiftId,
+				stationShiftId: pos.stationShiftId,
 				stationId: pos.stationId,
 				remainingSlots: pos.remainingSlots
 			}));

@@ -14,14 +14,6 @@ export interface Member {
 	updated_at: string;
 }
 
-export interface MemberImportData {
-	first_name: string;
-	last_name: string;
-	phone?: string;
-	email?: string;
-	notes?: string;
-}
-
 // Get all members for the current user
 export const getMembers = async (): Promise<Member[]> => {
 	const { data, error } = await supabase
@@ -77,52 +69,6 @@ export const deleteMember = async (memberId: string): Promise<void> => {
 	if (error) {
 		throw new Error(error.message);
 	}
-};
-
-// Bulk import members
-export const importMembers = async (members: MemberImportData[]): Promise<void> => {
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
-	if (!user) throw new Error('User not authenticated');
-
-	const membersWithUserId = members.map((member) => ({
-		...member,
-		user_id: user.id
-	}));
-
-	const { error } = await supabase.from('members').insert(membersWithUserId);
-
-	if (error) {
-		throw new Error(error.message);
-	}
-};
-
-// Get available members (not assigned to specific station)
-export const getAvailableMembers = async (stationId?: string): Promise<Member[]> => {
-	let query = supabase.from('members').select('*').eq('is_active', true);
-
-	if (stationId) {
-		// Get members not assigned to this specific station
-		const { data: assignedMembers } = await supabase
-			.from('station_member_assignments')
-			.select('festival_member_id')
-			.eq('station_id', stationId);
-
-		const assignedIds = assignedMembers?.map((a) => a.festival_member_id) || [];
-
-		if (assignedIds.length > 0) {
-			query = query.not('id', 'in', `(${assignedIds.join(',')})`);
-		}
-	}
-
-	const { data, error } = await query.order('last_name', { ascending: true });
-
-	if (error) {
-		throw new Error(error.message);
-	}
-
-	return data || [];
 };
 
 // Update member station preferences for a specific festival
@@ -264,36 +210,21 @@ export const getAllFestivalMemberPreferencesComplete = async (
 	stationPreferences: Record<string, string[]>;
 	shiftPreferences: Record<string, string[]>;
 }> => {
-	// Use the existing function for station preferences
-	const stationPreferences = await getAllFestivalMemberPreferences(festivalId);
+	const { data, error } = await (supabase as any)
+		.from('festival_member_preferences')
+		.select('member_id, station_preferences, shift_preferences')
+		.eq('festival_id', festivalId);
 
-	// For shift preferences, we'll need to make individual calls for now
-	// This is still better than the previous approach as we're not doing it in a loop
-	const shiftPreferences: Record<string, string[]> = {};
-
-	// Get all members first to know which ones to check
-	const { data: members, error: membersError } = await (supabase as any)
-		.from('members')
-		.select('id')
-		.eq('is_active', true);
-
-	if (membersError) {
-		throw new Error(membersError.message);
+	if (error) {
+		throw new Error(error.message);
 	}
 
-	// Load shift preferences for all members in parallel
-	const shiftPrefPromises = members.map(async (member) => {
-		try {
-			const prefs = await getMemberShiftPreferences(festivalId, member.id);
-			return { memberId: member.id, preferences: prefs };
-		} catch (error) {
-			return { memberId: member.id, preferences: [] };
-		}
-	});
+	const stationPreferences: Record<string, string[]> = {};
+	const shiftPreferences: Record<string, string[]> = {};
 
-	const shiftPrefResults = await Promise.all(shiftPrefPromises);
-	shiftPrefResults.forEach(({ memberId, preferences }) => {
-		shiftPreferences[memberId] = preferences;
+	data?.forEach((item: any) => {
+		stationPreferences[item.member_id] = item.station_preferences || [];
+		shiftPreferences[item.member_id] = item.shift_preferences || [];
 	});
 
 	return { stationPreferences, shiftPreferences };

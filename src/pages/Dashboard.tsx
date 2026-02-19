@@ -102,8 +102,8 @@ export default function Dashboard() {
 			<div className="pt-16">
 				{/* Header Section */}
 				<div className="bg-background border-b">
-					<div className="container mx-auto px-4 py-8">
-						<div className="max-w-4xl">
+					<div className="w-full px-4 py-8">
+						<div>
 							<h1 className="text-3xl font-bold mb-2">Willkommen zurück!</h1>
 							<p className="text-muted-foreground mb-6">
 								Planen und organisieren Sie Ihre Feste mit unserem intelligenten Fest-Planer
@@ -129,7 +129,7 @@ export default function Dashboard() {
 				</div>
 
 				{/* Main Content */}
-				<div className="container mx-auto px-4 py-8">
+				<div className="w-full px-4 py-8">
 					{/* Festivals Section */}
 					<div className="mb-8">
 						<h2 className="text-2xl font-bold text-gray-900 mb-6">Ihre Feste</h2>

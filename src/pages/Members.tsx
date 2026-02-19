@@ -32,9 +32,7 @@ import {
 import {
 	Users,
 	UserPlus,
-	Upload,
 	Search,
-	Filter,
 	Edit,
 	Trash2,
 	Phone,
@@ -42,7 +40,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
-import MemberImport from '@/components/MemberImport';
 import Navigation from '@/components/Navigation';
 import {
 	getMembers,
@@ -62,7 +59,6 @@ const Members = () => {
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
-	const [showImport, setShowImport] = useState(false);
 	const [showAddMember, setShowAddMember] = useState(false);
 	const [editingMember, setEditingMember] = useState<Member | null>(null);
 
@@ -217,7 +213,7 @@ const Members = () => {
 			<div className="min-h-screen bg-background">
 				<Navigation />
 				<div className="pt-16">
-					<div className="container mx-auto px-4 py-8">
+					<div className="w-full px-4 py-8">
 						<div className="flex items-center justify-center">
 							<div className="text-lg">Lade Mitglieder...</div>
 						</div>
@@ -231,7 +227,7 @@ const Members = () => {
 		<div className="min-h-screen bg-background">
 			<Navigation />
 			<div className="pt-16">
-				<div className="container mx-auto px-4 py-8">
+				<div className="w-full px-4 py-8">
 					<div className="flex items-center justify-between mb-8">
 						<div>
 							<h1 className="text-3xl font-bold flex items-center gap-2">
@@ -243,10 +239,6 @@ const Members = () => {
 							</p>
 						</div>
 						<div className="flex gap-2">
-							<Button onClick={() => setShowImport(true)} variant="outline">
-								<Upload className="h-4 w-4 mr-2" />
-								CSV Import
-							</Button>
 							<Dialog open={showAddMember} onOpenChange={setShowAddMember}>
 								<DialogTrigger asChild>
 									<Button onClick={() => resetForm()}>
@@ -483,16 +475,7 @@ const Members = () => {
 						</CardContent>
 					</Card>
 
-					{/* Import Dialog */}
-					<Dialog open={showImport} onOpenChange={setShowImport}>
-						<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-							<DialogHeader>
-								<DialogTitle>Mitglieder importieren</DialogTitle>
-							</DialogHeader>
-							<MemberImport onImportComplete={loadMembers} onClose={() => setShowImport(false)} />
-						</DialogContent>
-					</Dialog>
-				</div>
+					</div>
 			</div>
 		</div>
 	);

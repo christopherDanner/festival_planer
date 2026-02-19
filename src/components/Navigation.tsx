@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, LayoutDashboard, Smartphone, Calendar } from 'lucide-react';
+import { Home, LayoutDashboard, Calendar } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 
 export default function Navigation() {
@@ -17,7 +17,7 @@ export default function Navigation() {
 
 	return (
 		<nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-			<div className="container mx-auto px-4">
+			<div className="w-full px-4">
 				<div className="flex items-center justify-between h-16">
 					{/* Logo/Brand */}
 					<div className="flex items-center space-x-2">
@@ -48,17 +48,6 @@ export default function Navigation() {
 									<LayoutDashboard className="h-4 w-4" />
 									<span className="hidden sm:inline">Dashboard</span>
 								</Button>
-
-								{/* Mobile Waiter feature temporarily hidden
-								<Button
-									variant={isActive('/mobile-waiter') ? 'festival' : 'ghost'}
-									size="sm"
-									onClick={() => navigate('/mobile-waiter')}
-									className="flex items-center gap-2">
-									<Smartphone className="h-4 w-4" />
-									<span className="hidden sm:inline">Mobile</span>
-								</Button>
-								*/}
 							</>
 						)}
 					</div>

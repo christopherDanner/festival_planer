@@ -1,7 +1,4 @@
-import { generateFestivalPlan, FestivalData } from './festivalPlanGenerator';
 import { supabase } from '@/integrations/supabase/client';
-import { getMembers } from './memberService';
-import { copyGlobalMembersToFestival } from './festivalMemberService';
 
 export interface Festival {
 	id: string;
@@ -15,37 +12,13 @@ export interface Festival {
 	updated_at: string;
 }
 
-export interface ChecklistItem {
-	id: string;
-	festival_id: string;
-	task: string;
-	completed: boolean;
-	due_date: string;
-	category: string;
-	priority: 'green' | 'yellow' | 'red';
-}
-
-export interface StationAssignment {
-	id: string;
-	festival_id: string;
-	bereich: string;
-	zeit: string;
-	personen: string[];
-	bedarf: number;
-	status: 'complete' | 'incomplete';
-	priority: 'green' | 'yellow' | 'red';
-}
-
-export interface Resource {
-	id: string;
-	festival_id: string;
-	item: string;
-	menge: string;
-	einheit: string;
-	status: 'bestellt' | 'offen';
-	lieferant: string;
-	kosten: string;
-	priority: 'green' | 'yellow' | 'red';
+export interface FestivalData {
+	name: string;
+	location: string;
+	startDate: string;
+	endDate?: string;
+	type?: string;
+	visitorCount: string;
 }
 
 export async function createFestival(festivalData: FestivalData, userId?: string): Promise<string> {
@@ -60,12 +33,6 @@ export async function createFestival(festivalData: FestivalData, userId?: string
 		}
 		actualUserId = user.id;
 	}
-	// Get user's members for shift generation
-	const { data: members } = await supabase
-		.from('members')
-		.select('*')
-		.eq('user_id', actualUserId)
-		.eq('is_active', true);
 
 	// Create festival record
 	const { data: festival, error: festivalError } = await supabase
@@ -84,17 +51,6 @@ export async function createFestival(festivalData: FestivalData, userId?: string
 
 	if (festivalError || !festival) {
 		throw new Error('Fehler beim Erstellen des Festes');
-	}
-
-	// Copy global members to festival
-	try {
-		const globalMembers = await getMembers();
-		if (globalMembers.length > 0) {
-			await copyGlobalMembersToFestival(festival.id, globalMembers);
-		}
-	} catch (error) {
-		console.warn('Could not copy global members to festival:', error);
-		// Continue even if member copying fails
 	}
 
 	// For simplified wizard, don't create stations and shifts automatically
@@ -129,76 +85,6 @@ export async function getUserFestivals(): Promise<Festival[]> {
 	return data || [];
 }
 
-export async function getFestivalChecklist(festivalId: string): Promise<ChecklistItem[]> {
-	const { data, error } = await supabase
-		.from('checklist_items')
-		.select('*')
-		.eq('festival_id', festivalId)
-		.order('due_date', { ascending: true });
-
-	if (error) {
-		throw new Error('Fehler beim Laden der Checkliste');
-	}
-
-	return (data || []) as ChecklistItem[];
-}
-
-export async function getFestivalStations(festivalId: string): Promise<StationAssignment[]> {
-	const { data, error } = await supabase
-		.from('station_assignments')
-		.select('*')
-		.eq('festival_id', festivalId);
-
-	if (error) {
-		throw new Error('Fehler beim Laden der Stationen');
-	}
-
-	return (data || []) as StationAssignment[];
-}
-
-export async function getFestivalResources(festivalId: string): Promise<Resource[]> {
-	const { data, error } = await supabase
-		.from('resources')
-		.select('*')
-		.eq('festival_id', festivalId);
-
-	if (error) {
-		throw new Error('Fehler beim Laden der Ressourcen');
-	}
-
-	return (data || []) as Resource[];
-}
-
-export async function updateChecklistItem(itemId: string, completed: boolean): Promise<void> {
-	const { error } = await supabase.from('checklist_items').update({ completed }).eq('id', itemId);
-
-	if (error) {
-		throw new Error('Fehler beim Aktualisieren der Checkliste');
-	}
-}
-
-export async function updateStationAssignment(
-	stationId: string,
-	updates: Partial<StationAssignment>
-): Promise<void> {
-	const { error } = await supabase.from('station_assignments').update(updates).eq('id', stationId);
-
-	if (error) {
-		throw new Error('Fehler beim Aktualisieren der Station');
-	}
-}
-
-export async function updateResource(
-	resourceId: string,
-	updates: Partial<Resource>
-): Promise<void> {
-	const { error } = await supabase.from('resources').update(updates).eq('id', resourceId);
-
-	if (error) {
-		throw new Error('Fehler beim Aktualisieren der Ressource');
-	}
-}
-
 export async function deleteFestival(festivalId: string): Promise<void> {
 	// Delete all related data in correct order (children first, then parent)
 	// 1. Delete shift assignments
@@ -231,51 +117,10 @@ export async function deleteFestival(festivalId: string): Promise<void> {
 		throw new Error('Fehler beim Löschen der Stationen');
 	}
 
-	// 4. Delete checklist items
-	const { error: checklistError } = await supabase
-		.from('checklist_items')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (checklistError) {
-		throw new Error('Fehler beim Löschen der Checkliste');
-	}
-
-	// 5. Delete resources
-	const { error: resourceError } = await supabase
-		.from('resources')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (resourceError) {
-		throw new Error('Fehler beim Löschen der Ressourcen');
-	}
-
-	// 6. Delete station assignments (old system)
-	const { error: stationAssignmentError } = await supabase
-		.from('station_assignments')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (stationAssignmentError) {
-		throw new Error('Fehler beim Löschen der Stationszuordnungen');
-	}
-
-	// 7. Finally delete the festival
+	// 4. Finally delete the festival
 	const { error: festivalError } = await supabase.from('festivals').delete().eq('id', festivalId);
 
 	if (festivalError) {
 		throw new Error('Fehler beim Löschen des Festes');
 	}
-}
-
-function getFestivalTypeName(type: string): string {
-	const names: { [key: string]: string } = {
-		feuerwehr: 'Feuerwehrfest',
-		musik: 'Musikfest',
-		kirtag: 'Kirtag',
-		wein: 'Weinfest',
-		weihnachten: 'Weihnachtsmarkt'
-	};
-	return names[type] || 'Fest';
 }
