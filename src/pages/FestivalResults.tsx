@@ -3,7 +3,10 @@ import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
+import MaterialListView from '@/components/material-list/MaterialListView';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CalendarDays, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Festival, getFestival } from '@/lib/festivalService';
 
@@ -79,7 +82,7 @@ export default function FestivalResults() {
 		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
 			<Navigation />
 			<div className="pt-16">
-				<div className="w-full px-4 py-8">
+				<div className="container mx-auto px-4 py-8">
 					<div className="flex justify-between items-center mb-8">
 						<div>
 							<h1 className="text-3xl font-bold mb-2">{festival.name}</h1>
@@ -97,7 +100,33 @@ export default function FestivalResults() {
 						</div>
 					</div>
 
-					<ShiftPlanningView festivalId={festivalId} />
+					<Tabs defaultValue="shifts" className="w-full">
+						<TabsList>
+							<TabsTrigger value="shifts" className="gap-2">
+								<CalendarDays className="h-4 w-4" />
+								Schichtplan
+							</TabsTrigger>
+							<TabsTrigger value="materials" className="gap-2">
+								<Package className="h-4 w-4" />
+								Materialliste
+							</TabsTrigger>
+						</TabsList>
+						<TabsContent value="shifts" className="mt-4">
+							<ShiftPlanningView
+								festivalId={festivalId}
+								festivalName={festival.name}
+								festivalDate={
+									new Date(festival.start_date).toLocaleDateString('de-AT') +
+									(festival.end_date && festival.end_date !== festival.start_date
+										? ` bis ${new Date(festival.end_date).toLocaleDateString('de-AT')}`
+										: '')
+								}
+							/>
+						</TabsContent>
+						<TabsContent value="materials" className="mt-4">
+							<MaterialListView festivalId={festivalId} />
+						</TabsContent>
+					</Tabs>
 				</div>
 			</div>
 		</div>

@@ -213,7 +213,7 @@ const Members = () => {
 			<div className="min-h-screen bg-background">
 				<Navigation />
 				<div className="pt-16">
-					<div className="w-full px-4 py-8">
+					<div className="container mx-auto px-4 py-8">
 						<div className="flex items-center justify-center">
 							<div className="text-lg">Lade Mitglieder...</div>
 						</div>
@@ -227,7 +227,7 @@ const Members = () => {
 		<div className="min-h-screen bg-background">
 			<Navigation />
 			<div className="pt-16">
-				<div className="w-full px-4 py-8">
+				<div className="container mx-auto px-4 py-8">
 					<div className="flex items-center justify-between mb-8">
 						<div>
 							<h1 className="text-3xl font-bold flex items-center gap-2">

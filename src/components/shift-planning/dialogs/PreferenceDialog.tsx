@@ -101,7 +101,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 											'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
 											isSelected
 												? 'bg-green-50 border-green-200'
-												: 'hover:bg-gray-50 border-gray-200'
+												: 'hover:bg-muted border-border'
 										)}
 										onClick={() => handleToggleStation(station.id)}>
 										<input
@@ -113,7 +113,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 										<div className="flex-1">
 											<div className="font-medium">{station.name}</div>
 											{station.description && (
-												<div className="text-sm text-gray-600">{station.description}</div>
+												<div className="text-sm text-muted-foreground">{station.description}</div>
 											)}
 										</div>
 										<Badge variant="outline">
@@ -159,7 +159,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 											)}
 										</div>
 										{station.description && (
-											<p className="text-sm text-gray-600 mb-4">{station.description}</p>
+											<p className="text-sm text-muted-foreground mb-4">{station.description}</p>
 										)}
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 											{shiftsForStation.map((shift) => {
@@ -171,7 +171,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 															'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
 															isSelected
 																? 'bg-blue-50 border-blue-200'
-																: 'hover:bg-gray-50 border-gray-200'
+																: 'hover:bg-muted border-border'
 														)}
 														onClick={() => handleToggleShift(shift.id)}>
 														<input
@@ -182,7 +182,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 														/>
 														<div className="flex-1">
 															<div className="font-medium">{shift.name}</div>
-															<div className="text-sm text-gray-600">
+															<div className="text-sm text-muted-foreground">
 																{new Date(shift.start_date).toLocaleDateString('de-DE')}{' '}
 																{shift.start_time} - {shift.end_time}
 															</div>

@@ -30,6 +30,18 @@ export interface FestivalContext {
 	visitorCount: string;
 }
 
+export interface AIMaterialItem {
+	name: string;
+	category: string | null;
+	supplier: string | null;
+	unit: string;
+	packaging_unit: string | null;
+	amount_per_packaging: number | null;
+	ordered_quantity: number;
+	unit_price: number | null;
+	notes: string | null;
+}
+
 class AIService {
 	private client: Mistral | null = null;
 
@@ -187,6 +199,191 @@ class AIService {
 		} catch (error) {
 			console.error('Error calling Mistral AI:', error);
 			return this.getFallbackInsights(context);
+		}
+	}
+
+	async extractMaterialsFromText(text: string): Promise<AIMaterialItem[]> {
+		if (!this.client) {
+			throw new Error('Mistral API key nicht konfiguriert. KI-Import ist nicht verfügbar.');
+		}
+
+		const prompt = this.buildMaterialExtractionPrompt();
+
+		try {
+			const startTime = Date.now();
+			const response = await this.client.chat.complete({
+				model: 'mistral-medium-latest',
+				messages: [
+					{ role: 'system', content: prompt },
+					{ role: 'user', content: `Extrahiere alle Bestellpositionen aus folgendem Text:\n\n${text}` }
+				],
+				temperature: 0.3,
+				maxTokens: 16000,
+				responseFormat: { type: 'json_object' }
+			});
+
+			const endTime = Date.now();
+			console.log(`[Mistral] Material text extraction took ${endTime - startTime}ms`);
+
+			const content = response.choices[0]?.message?.content;
+			if (typeof content !== 'string' || !content) {
+				throw new Error('Keine Antwort von Mistral AI erhalten');
+			}
+
+			return this.parseMaterialResponse(content);
+		} catch (error) {
+			console.error('Error extracting materials from text:', error);
+			throw error;
+		}
+	}
+
+	async extractMaterialsFromImage(base64DataUrl: string): Promise<AIMaterialItem[]> {
+		if (!this.client) {
+			throw new Error('Mistral API key nicht konfiguriert. KI-Import ist nicht verfügbar.');
+		}
+
+		const prompt = this.buildMaterialExtractionPrompt();
+
+		try {
+			const startTime = Date.now();
+			const response = await this.client.chat.complete({
+				model: 'pixtral-12b-2409',
+				messages: [
+					{ role: 'system', content: prompt },
+					{
+						role: 'user',
+						content: [
+							{ type: 'text', text: 'Extrahiere alle Bestellpositionen aus diesem Bild:' },
+							{ type: 'image_url', imageUrl: base64DataUrl }
+						] as any
+					}
+				],
+				temperature: 0.3,
+				maxTokens: 4000,
+				responseFormat: { type: 'json_object' }
+			});
+
+			const endTime = Date.now();
+			console.log(`[Mistral] Material image extraction took ${endTime - startTime}ms`);
+
+			const content = response.choices[0]?.message?.content;
+			if (typeof content !== 'string' || !content) {
+				throw new Error('Keine Antwort von Mistral AI erhalten');
+			}
+
+			return this.parseMaterialResponse(content);
+		} catch (error) {
+			console.error('Error extracting materials from image:', error);
+			throw error;
+		}
+	}
+
+	async extractTextFromPdfViaOcr(fileBytes: Uint8Array, fileName: string): Promise<string> {
+		if (!this.client) {
+			throw new Error('Mistral API key nicht konfiguriert. KI-Import ist nicht verfügbar.');
+		}
+
+		try {
+			const startTime = Date.now();
+
+			const uploaded = await this.client.files.upload({
+				file: {
+					fileName: fileName,
+					content: fileBytes
+				},
+				purpose: 'ocr' as any
+			});
+
+			const ocrResult = await (this.client as any).ocr.process({
+				model: 'mistral-ocr-latest',
+				document: {
+					type: 'file_id',
+					fileId: uploaded.id
+				}
+			});
+
+			const endTime = Date.now();
+			console.log(`[Mistral] PDF OCR took ${endTime - startTime}ms`);
+
+			const pages = ocrResult?.pages || [];
+			return pages.map((p: any) => p.markdown || '').join('\n\n');
+		} catch (error) {
+			console.error('Error extracting text from PDF via OCR:', error);
+			throw error;
+		}
+	}
+
+	private buildMaterialExtractionPrompt(): string {
+		return `Du bist ein Experte für das Extrahieren von Bestelllisten und Materiallisten.
+Analysiere den gegebenen Text oder das Bild und extrahiere alle Bestellpositionen als strukturiertes JSON.
+
+**Gültige Kategorien:** Getränke, Lebensmittel, Dekoration, Geschirr/Besteck, Technik, Sonstiges
+**Gültige Einheiten:** Stück, Liter, kg, Meter
+
+**Regeln:**
+- Wenn die Einheit unklar ist, verwende "Stück"
+- Wenn die Bestellmenge unklar ist, verwende 1
+- Setze null für unbekannte/fehlende Felder
+- Extrahiere Preise wenn vorhanden (als Zahl ohne Währungssymbol)
+- Erkenne Gebindeeinheiten (Fass, Kiste, Karton, Palette, etc.)
+- **Lieferant:** Oft steht der Lieferant nur einmal im Dokument (z.B. im Kopfbereich). Verwende diesen als "supplier" für ALLE Positionen der Liste. Falls einzelne Positionen einen eigenen Lieferanten haben, verwende diesen stattdessen.
+
+**Ausgabe-Format (JSON):**
+{
+  "materials": [
+    {
+      "name": "Artikelname",
+      "category": "Kategorie oder null",
+      "supplier": "Lieferant oder null",
+      "unit": "Stück|Liter|kg|Meter",
+      "packaging_unit": "Gebindeeinheit oder null",
+      "amount_per_packaging": null,
+      "ordered_quantity": 1,
+      "unit_price": null,
+      "notes": "Zusätzliche Infos oder null"
+    }
+  ]
+}`;
+	}
+
+	private parseMaterialResponse(content: string): AIMaterialItem[] {
+		try {
+			let parsed: any;
+			try {
+				parsed = JSON.parse(content);
+			} catch {
+				// Try to recover truncated JSON by extracting complete objects
+				const regex = /\{[^{}]*"name"\s*:\s*"[^"]+"[^{}]*"ordered_quantity"\s*:\s*\d+[^{}]*\}/g;
+				const matches = content.match(regex);
+				if (matches && matches.length > 0) {
+					const recovered = matches
+						.map((m) => { try { return JSON.parse(m); } catch { return null; } })
+						.filter(Boolean);
+					if (recovered.length > 0) {
+						console.log(`[Mistral] Recovered ${recovered.length} materials from truncated JSON`);
+						parsed = { materials: recovered };
+					} else {
+						throw new Error('KI-Antwort konnte nicht verarbeitet werden.');
+					}
+				} else {
+					throw new Error('KI-Antwort konnte nicht verarbeitet werden.');
+				}
+			}
+			const materials = parsed.materials || [];
+			return materials.filter((m: any) => m && m.name && m.ordered_quantity != null).map((m: any) => ({
+				name: String(m.name),
+				category: m.category || null,
+				supplier: m.supplier || null,
+				unit: m.unit || 'Stück',
+				packaging_unit: m.packaging_unit || null,
+				amount_per_packaging: m.amount_per_packaging != null ? Number(m.amount_per_packaging) : null,
+				ordered_quantity: Number(m.ordered_quantity) || 1,
+				unit_price: m.unit_price != null ? Number(m.unit_price) : null,
+				notes: m.notes || null
+			}));
+		} catch (error) {
+			console.error('Error parsing material response:', error);
+			throw new Error('KI-Antwort konnte nicht verarbeitet werden.');
 		}
 	}
 

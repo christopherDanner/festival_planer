@@ -102,7 +102,7 @@ export default function Dashboard() {
 			<div className="pt-16">
 				{/* Header Section */}
 				<div className="bg-background border-b">
-					<div className="w-full px-4 py-8">
+					<div className="container mx-auto px-4 py-8">
 						<div>
 							<h1 className="text-3xl font-bold mb-2">Willkommen zurück!</h1>
 							<p className="text-muted-foreground mb-6">
@@ -129,26 +129,26 @@ export default function Dashboard() {
 				</div>
 
 				{/* Main Content */}
-				<div className="w-full px-4 py-8">
+				<div className="container mx-auto px-4 py-8">
 					{/* Festivals Section */}
 					<div className="mb-8">
-						<h2 className="text-2xl font-bold text-gray-900 mb-6">Ihre Feste</h2>
+						<h2 className="text-2xl font-bold text-foreground mb-6">Ihre Feste</h2>
 
 						{loading ? (
 							<div className="text-center py-12">
 								<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-								<p className="mt-4 text-gray-600">Lade Ihre Feste...</p>
+								<p className="mt-4 text-muted-foreground">Lade Ihre Feste...</p>
 							</div>
 						) : festivals.length === 0 ? (
-							<Card className="text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100 border-dashed border-2 border-gray-300">
+							<Card className="text-center py-16 bg-gradient-to-br from-muted to-muted/70 border-dashed border-2 border-border">
 								<CardContent>
-									<div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-										<Calendar className="h-8 w-8 text-gray-400" />
+									<div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+										<Calendar className="h-8 w-8 text-muted-foreground" />
 									</div>
-									<h3 className="text-xl font-semibold text-gray-700 mb-2">
+									<h3 className="text-xl font-semibold text-foreground/80 mb-2">
 										Noch keine Feste erstellt
 									</h3>
-									<p className="text-gray-500 mb-6">
+									<p className="text-muted-foreground mb-6">
 										Beginnen Sie mit der Planung Ihres ersten Festes
 									</p>
 									<Button
@@ -165,12 +165,12 @@ export default function Dashboard() {
 								{festivals.map((festival) => (
 									<Card
 										key={festival.id}
-										className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white shadow-md hover:-translate-y-1"
+										className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-border bg-card shadow-card hover:-translate-y-1"
 										onClick={() => navigate(`/festival-results?id=${festival.id}`)}>
 										<CardHeader className="pb-4">
 											<div className="flex justify-between items-start">
 												<div className="flex-1">
-													<CardTitle className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">
+													<CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
 														{festival.name}
 													</CardTitle>
 												</div>
@@ -179,7 +179,7 @@ export default function Dashboard() {
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-8 w-8 p-0 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+															className="h-8 w-8 p-0 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
 															onClick={(e) => e.stopPropagation()}>
 															<Trash2 className="h-4 w-4" />
 														</Button>
@@ -209,7 +209,7 @@ export default function Dashboard() {
 										</CardHeader>
 										<CardContent className="pt-0">
 											<div className="space-y-3">
-												<div className="flex items-center text-sm text-gray-600">
+												<div className="flex items-center text-sm text-muted-foreground">
 													<Calendar className="h-4 w-4 mr-2 text-primary" />
 													<span>
 														{new Date(festival.start_date).toLocaleDateString('de-AT')}
@@ -219,7 +219,7 @@ export default function Dashboard() {
 													</span>
 												</div>
 											</div>
-											<div className="mt-4 pt-4 border-t border-gray-100">
+											<div className="mt-4 pt-4 border-t border-border">
 												<Button
 													variant="ghost"
 													className="w-full text-primary hover:bg-primary/10"

@@ -107,7 +107,17 @@ export async function deleteFestival(festivalId: string): Promise<void> {
 		throw new Error('Fehler beim Löschen der Schichten');
 	}
 
-	// 3. Delete stations
+	// 3. Delete materials (before stations due to station_id FK)
+	const { error: materialError } = await (supabase as any)
+		.from('festival_materials')
+		.delete()
+		.eq('festival_id', festivalId);
+
+	if (materialError) {
+		throw new Error('Fehler beim Löschen der Materialien');
+	}
+
+	// 4. Delete stations
 	const { error: stationError } = await supabase
 		.from('stations')
 		.delete()
@@ -117,7 +127,7 @@ export async function deleteFestival(festivalId: string): Promise<void> {
 		throw new Error('Fehler beim Löschen der Stationen');
 	}
 
-	// 4. Finally delete the festival
+	// 5. Finally delete the festival
 	const { error: festivalError } = await supabase.from('festivals').delete().eq('id', festivalId);
 
 	if (festivalError) {

@@ -70,7 +70,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 									'h-3 w-3',
 									stationPreferences.length > 0 || shiftPreferences.length > 0
 										? 'text-purple-500'
-										: 'text-gray-400'
+										: 'text-muted-foreground/60'
 								)}
 							/>
 						</Button>

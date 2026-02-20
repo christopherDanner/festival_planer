@@ -11,6 +11,7 @@ import StationShiftDialog from './dialogs/StationShiftDialog';
 import MemberDialog from './dialogs/MemberDialog';
 import PreferenceDialog from './dialogs/PreferenceDialog';
 import AutoAssignDialog from './dialogs/AutoAssignDialog';
+import { exportToExcel, exportToPdf } from '@/lib/exportService';
 import type { Station, StationShift, ShiftAssignmentWithMember } from '@/lib/shiftService';
 import type { Member } from '@/lib/memberService';
 
@@ -24,9 +25,11 @@ type DialogState =
 
 interface ShiftPlanningViewProps {
 	festivalId: string;
+	festivalName?: string;
+	festivalDate?: string;
 }
 
-const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId }) => {
+const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festivalName, festivalDate }) => {
 	const { toast } = useToast();
 	const data = useShiftPlanningData(festivalId);
 	const actions = useShiftPlanningActions(festivalId);
@@ -126,6 +129,17 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId }) => 
 		setDraggedMember(null);
 	};
 
+	const handleExport = (exportFn: typeof exportToExcel | typeof exportToPdf) => {
+		exportFn({
+			festivalName: festivalName || 'Schichtplan',
+			festivalDate: festivalDate || '',
+			stations: data.stations,
+			stationShifts: data.stationShifts,
+			assignments: data.assignments,
+			stationMembers: data.stationMembers,
+		});
+	};
+
 	if (data.isLoading) {
 		return (
 			<div className="flex items-center justify-center py-8">
@@ -146,10 +160,12 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId }) => 
 				onAddStation={() => setDialogState({ type: 'station' })}
 				onAutoAssign={() => setDialogState({ type: 'autoAssign' })}
 				onAddMember={() => setDialogState({ type: 'member' })}
+				onExportExcel={() => handleExport(exportToExcel)}
+				onExportPdf={() => handleExport(exportToPdf)}
 			/>
 
 			<div className="flex-1 flex overflow-hidden">
-				<div className="flex-1 overflow-auto p-6">
+				<div className="flex-1 overflow-auto p-4">
 					{data.stations.length === 0 ? (
 						<div className="flex items-center justify-center h-full">
 							<div className="text-center text-muted-foreground">
@@ -157,7 +173,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId }) => 
 							</div>
 						</div>
 					) : (
-						<div className="space-y-6">
+						<div className="space-y-4">
 							{data.stations.map((station) => (
 								<StationCard
 									key={station.id}

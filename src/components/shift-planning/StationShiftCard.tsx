@@ -1,8 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit } from 'lucide-react';
+import { Trash2, Edit, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StationShift, ShiftAssignmentWithMember } from '@/lib/shiftService';
 
@@ -15,7 +13,7 @@ interface StationShiftCardProps {
 	onDrop: (stationShiftId: string, e: React.DragEvent) => void;
 }
 
-const formatStationShiftTime = (stationShift: StationShift): string => {
+const formatShiftTime = (stationShift: StationShift): string => {
 	const startDate = new Date(stationShift.start_date).toLocaleDateString('de-AT', {
 		weekday: 'short',
 		day: '2-digit',
@@ -29,17 +27,10 @@ const formatStationShiftTime = (stationShift: StationShift): string => {
 			day: '2-digit',
 			month: '2-digit'
 		});
-		return `${startDate} ${stationShift.start_time} - ${endDateFormatted} ${stationShift.end_time}`;
+		return `${startDate} ${stationShift.start_time} – ${endDateFormatted} ${stationShift.end_time}`;
 	}
 
-	return `${startDate} ${stationShift.start_time}-${stationShift.end_time}`;
-};
-
-const getFillColor = (fillPercentage: number) => {
-	if (fillPercentage === 0) return { dot: 'bg-gray-400', bar: 'bg-gray-400 w-0', border: 'border-gray-300 bg-gray-50' };
-	if (fillPercentage < 50) return { dot: 'bg-red-500', bar: 'bg-red-500', border: 'border-red-300 bg-red-50' };
-	if (fillPercentage < 100) return { dot: 'bg-yellow-500', bar: 'bg-yellow-500', border: 'border-yellow-300 bg-yellow-50' };
-	return { dot: 'bg-green-500', bar: 'bg-green-500', border: 'border-green-300 bg-green-50' };
+	return `${startDate} ${stationShift.start_time}–${stationShift.end_time}`;
 };
 
 const StationShiftCard: React.FC<StationShiftCardProps> = ({
@@ -50,99 +41,76 @@ const StationShiftCard: React.FC<StationShiftCardProps> = ({
 	onRemoveMember,
 	onDrop
 }) => {
-	const remaining = stationShift.required_people - assignments.length;
-	const fillPercentage = (assignments.length / stationShift.required_people) * 100;
-	const colors = getFillColor(fillPercentage);
+	const filled = assignments.length;
+	const required = stationShift.required_people;
+	const isFull = filled >= required;
 
 	return (
-		<Card className="border-2">
-			<CardHeader className="pb-2">
-				<CardTitle className="text-lg flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<span>{stationShift.name}</span>
-						<Button
-							size="sm"
-							variant="ghost"
-							className="h-4 w-4 p-0 hover:bg-blue-100 hover:text-blue-600"
-							onClick={onEdit}>
-							<Edit className="h-3 w-3" />
-						</Button>
-					</div>
-					<div className="flex items-center gap-1">
-						<Badge
-							variant={
-								remaining === 0
-									? 'default'
-									: remaining < stationShift.required_people / 2
-									? 'secondary'
-									: 'destructive'
-							}>
-							{remaining > 0 ? `${remaining} fehlt` : 'Vollständig'}
-						</Badge>
-						<Button
-							size="sm"
-							variant="ghost"
-							className="h-4 w-4 p-0 hover:bg-red-100 hover:text-red-600"
-							onClick={onDelete}>
-							<Trash2 className="h-3 w-3" />
-						</Button>
-					</div>
-				</CardTitle>
-				<div className="flex items-center justify-between">
-					<p className="text-sm text-muted-foreground">
-						{formatStationShiftTime(stationShift)}
-					</p>
-					<div className="flex items-center gap-2">
-						<div className="flex items-center gap-1 text-xs">
-							<span className="text-muted-foreground">
-								{assignments.length}/{stationShift.required_people}
+		<div
+			className="border rounded-lg bg-card overflow-hidden"
+			onDragOver={(e) => e.preventDefault()}
+			onDrop={(e) => onDrop(stationShift.id, e)}>
+			{/* Header */}
+			<div className="flex items-center justify-between px-3 py-1.5 bg-muted/40 border-b">
+				<div className="flex items-center gap-1.5 min-w-0">
+					<span className="text-sm font-medium truncate">{stationShift.name}</span>
+					<Button
+						size="sm"
+						variant="ghost"
+						className="h-5 w-5 p-0 shrink-0 hover:bg-blue-100 hover:text-blue-600"
+						onClick={onEdit}>
+						<Edit className="h-3 w-3" />
+					</Button>
+				</div>
+				<div className="flex items-center gap-1.5 shrink-0">
+					<span className={cn(
+						'text-xs font-medium',
+						isFull ? 'text-green-600' : 'text-muted-foreground'
+					)}>
+						{filled}/{required}
+					</span>
+					<Button
+						size="sm"
+						variant="ghost"
+						className="h-5 w-5 p-0 hover:bg-red-100 hover:text-red-600"
+						onClick={onDelete}>
+						<Trash2 className="h-3 w-3" />
+					</Button>
+				</div>
+			</div>
+			{/* Time */}
+			<div className="px-3 py-1 text-xs text-muted-foreground bg-muted/20">
+				{formatShiftTime(stationShift)}
+			</div>
+			{/* Members drop zone */}
+			<div className={cn(
+				'px-3 py-2 min-h-[44px] border-t-2 border-dashed transition-colors',
+				filled === 0 && 'border-border',
+				filled > 0 && !isFull && 'border-yellow-300 bg-yellow-50/30',
+				isFull && 'border-green-300 bg-green-50/30'
+			)}>
+				{assignments.length > 0 ? (
+					<div className="flex flex-wrap gap-1.5">
+						{assignments.map((a) => (
+							<span
+								key={a.id}
+								className="inline-flex items-center gap-1 bg-background rounded-md px-2 py-0.5 text-xs border shadow-sm">
+								{a.member?.first_name} {a.member?.last_name}
+								<button
+									className="text-muted-foreground hover:text-destructive transition-colors"
+									onClick={() => a.member_id && onRemoveMember(a.member_id)}>
+									<X className="h-3 w-3" />
+								</button>
 							</span>
-							<div className={cn('w-2 h-2 rounded-full', colors.dot)} />
-						</div>
-						<div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
-							<div
-								className={cn('h-full transition-all duration-300', colors.bar)}
-								style={{ width: `${Math.min(fillPercentage, 100)}%` }}
-							/>
-						</div>
+						))}
 					</div>
-				</div>
-			</CardHeader>
-			<CardContent>
-				<div
-					className={cn(
-						'min-h-[100px] border-2 border-dashed rounded-lg p-3 space-y-2 transition-all duration-200',
-						colors.border
-					)}
-					onDragOver={(e) => e.preventDefault()}
-					onDrop={(e) => onDrop(stationShift.id, e)}>
-					{assignments.length > 0 ? (
-						<div className="space-y-1">
-							{assignments.map((assignment) => (
-								<div
-									key={assignment.id}
-									className="flex items-center justify-between bg-background rounded px-2 py-1 text-sm">
-									<span className="font-medium">
-										{assignment.member?.first_name} {assignment.member?.last_name}
-									</span>
-									<Button
-										size="sm"
-										variant="ghost"
-										className="h-4 w-4 p-0 hover:bg-destructive/20 hover:text-destructive"
-										onClick={() => assignment.member_id && onRemoveMember(assignment.member_id)}>
-										<Trash2 className="h-3 w-3" />
-									</Button>
-								</div>
-							))}
-						</div>
-					) : (
-						<div className="text-xs text-muted-foreground text-center">
-							Person hier ablegen
-						</div>
-					)}
-				</div>
-			</CardContent>
-		</Card>
+				) : (
+					<p className="text-xs text-muted-foreground text-center">
+						Person hierher ziehen
+					</p>
+				)}
+			</div>
+		</div>
 	);
 };
 
