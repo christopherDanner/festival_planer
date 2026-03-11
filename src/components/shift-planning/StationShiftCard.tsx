@@ -107,7 +107,7 @@ const StationShiftCard: React.FC<StationShiftCardProps> = ({
 				)}
 				onClick={selectedMember && onTapAssign ? () => onTapAssign(stationShift.id) : undefined}>
 				{assignments.length > 0 ? (
-					assignments.map((a) => (
+					[...assignments].sort((a, b) => (a.member?.last_name ?? '').localeCompare(b.member?.last_name ?? '', 'de')).map((a) => (
 						<div
 							key={a.id}
 							className="flex items-center justify-between px-3 py-1 text-xs">

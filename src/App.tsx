@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/components/AuthProvider';
+import { Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
@@ -21,7 +22,7 @@ const App = () => (
 					<Toaster />
 					<Sonner />
 					<Routes>
-						<Route path="/" element={<Index />} />
+						<Route path="/" element={<Navigate to="/dashboard" replace />} />
 						<Route path="/auth" element={<Auth />} />
 						<Route path="/dashboard" element={<Dashboard />} />
 						<Route path="/members" element={<Members />} />

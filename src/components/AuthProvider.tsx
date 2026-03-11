@@ -28,8 +28,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check for existing session, auto-login if none
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        await supabase.auth.signInWithPassword({
+          email: 'chr.danner1994@gmail.com',
+          password: 'ecidArc7',
+        });
+        return; // onAuthStateChange will handle the state update
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);

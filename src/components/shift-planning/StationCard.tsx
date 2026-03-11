@@ -126,7 +126,7 @@ const StationCard: React.FC<StationCardProps> = ({
 					onDrop={(e) => onDropOnStation(station.id, e)}
 					onClick={selectedMember && onTapAssignToStation ? () => onTapAssignToStation(station.id) : undefined}>
 					{stationMembers.length > 0 ? (
-						stationMembers.map((sm) => (
+						[...stationMembers].sort((a, b) => (a.member?.last_name ?? '').localeCompare(b.member?.last_name ?? '', 'de')).map((sm) => (
 							<div
 								key={sm.id}
 								className="flex items-center justify-between px-2 py-1.5 text-sm">
