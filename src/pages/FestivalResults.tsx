@@ -6,7 +6,8 @@ import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Package } from 'lucide-react';
+import { CalendarDays, Package, ArrowLeft } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { Festival, getFestival } from '@/lib/festivalService';
 
@@ -16,11 +17,11 @@ export default function FestivalResults() {
 	const location = useLocation();
 	const { user } = useAuth();
 	const { toast } = useToast();
+	const isMobile = useIsMobile();
 
 	const [festival, setFestival] = useState<Festival | null>(null);
 	const [loading, setLoading] = useState(true);
 
-	// Get festivalId from URL params or location state
 	const festivalId = searchParams.get('id') || location.state?.festivalId;
 
 	useEffect(() => {
@@ -63,7 +64,7 @@ export default function FestivalResults() {
 	};
 
 	if (!user) {
-		return null; // Redirect handled in useEffect
+		return null;
 	}
 
 	if (loading) {
@@ -75,59 +76,84 @@ export default function FestivalResults() {
 	}
 
 	if (!festival) {
-		return null; // Redirect handled in loadFestivalData
+		return null;
 	}
+
+	const dateString = new Date(festival.start_date).toLocaleDateString('de-AT') +
+		(festival.end_date && festival.end_date !== festival.start_date
+			? ` – ${new Date(festival.end_date).toLocaleDateString('de-AT')}`
+			: '');
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
 			<Navigation />
 			<div className="pt-16">
-				<div className="container mx-auto px-4 py-8">
-					<div className="flex justify-between items-center mb-8">
-						<div>
-							<h1 className="text-3xl font-bold mb-2">{festival.name}</h1>
-							<p className="text-muted-foreground">
-								{new Date(festival.start_date).toLocaleDateString('de-AT')}
-								{festival.end_date &&
-									festival.end_date !== festival.start_date &&
-									` bis ${new Date(festival.end_date).toLocaleDateString('de-AT')}`}
-							</p>
-						</div>
-						<div className="flex gap-2">
-							<Button variant="outline" onClick={() => navigate('/dashboard')}>
-								Zum Dashboard
+				<Tabs defaultValue="shifts" className="w-full flex flex-col">
+					{/* Header + desktop tabs */}
+					<div className="container mx-auto px-3 sm:px-4 pt-3 sm:pt-8">
+						<div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8 shrink-0"
+								onClick={() => navigate('/dashboard')}>
+								<ArrowLeft className="h-4 w-4" />
 							</Button>
+							<div className="min-w-0">
+								<h1 className="text-base sm:text-3xl font-bold truncate">{festival.name}</h1>
+								<p className="text-xs sm:text-sm text-muted-foreground">{dateString}</p>
+							</div>
 						</div>
+
+						{/* Desktop: tabs at top */}
+						{!isMobile && (
+							<TabsList className="w-auto mb-4">
+								<TabsTrigger value="shifts" className="gap-2">
+									<CalendarDays className="h-4 w-4" />
+									Schichtplan
+								</TabsTrigger>
+								<TabsTrigger value="materials" className="gap-2">
+									<Package className="h-4 w-4" />
+									Materialliste
+								</TabsTrigger>
+							</TabsList>
+						)}
 					</div>
 
-					<Tabs defaultValue="shifts" className="w-full">
-						<TabsList>
-							<TabsTrigger value="shifts" className="gap-2">
-								<CalendarDays className="h-4 w-4" />
-								Schichtplan
-							</TabsTrigger>
-							<TabsTrigger value="materials" className="gap-2">
-								<Package className="h-4 w-4" />
-								Materialliste
-							</TabsTrigger>
-						</TabsList>
-						<TabsContent value="shifts" className="mt-4">
+					{/* Content */}
+					<div className={isMobile ? 'px-3 pb-16' : 'container mx-auto px-4'}>
+						<TabsContent value="shifts" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<ShiftPlanningView
 								festivalId={festivalId}
 								festivalName={festival.name}
-								festivalDate={
-									new Date(festival.start_date).toLocaleDateString('de-AT') +
-									(festival.end_date && festival.end_date !== festival.start_date
-										? ` bis ${new Date(festival.end_date).toLocaleDateString('de-AT')}`
-										: '')
-								}
+								festivalDate={dateString}
 							/>
 						</TabsContent>
-						<TabsContent value="materials" className="mt-4">
+						<TabsContent value="materials" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<MaterialListView festivalId={festivalId} />
 						</TabsContent>
-					</Tabs>
-				</div>
+					</div>
+
+					{/* Mobile: bottom tab bar */}
+					{isMobile && (
+						<div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
+							<TabsList className="w-full h-14 rounded-none bg-transparent p-0">
+								<TabsTrigger
+									value="shifts"
+									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
+									<CalendarDays className="h-5 w-5" />
+									Schichtplan
+								</TabsTrigger>
+								<TabsTrigger
+									value="materials"
+									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
+									<Package className="h-5 w-5" />
+									Materialliste
+								</TabsTrigger>
+							</TabsList>
+						</div>
+					)}
+				</Tabs>
 			</div>
 		</div>
 	);

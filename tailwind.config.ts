@@ -55,6 +55,14 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        status: {
+          empty: "hsl(var(--status-empty))",
+          partial: "hsl(var(--status-partial))",
+          complete: "hsl(var(--status-complete))",
+          "empty-border": "hsl(var(--status-empty-border))",
+          "partial-border": "hsl(var(--status-partial-border))",
+          "complete-border": "hsl(var(--status-complete-border))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

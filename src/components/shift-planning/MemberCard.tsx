@@ -17,6 +17,7 @@ interface MemberCardProps {
 	shiftPreferences: string[];
 	onDragStart: () => void;
 	onDragEnd: () => void;
+	onTapSelect?: () => void;
 	onEditPreferences: () => void;
 	onEditMember: () => void;
 	onDeleteMember: () => void;
@@ -33,6 +34,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 	shiftPreferences,
 	onDragStart,
 	onDragEnd,
+	onTapSelect,
 	onEditPreferences,
 	onEditMember,
 	onDeleteMember
@@ -43,17 +45,26 @@ const MemberCard: React.FC<MemberCardProps> = ({
 	return (
 		<div
 			className={cn(
-				'p-3 rounded-lg border cursor-move hover:bg-accent/50 transition-colors',
-				!isAssigned && 'bg-red-50 border-red-200',
-				isAssigned && 'bg-green-50 border-green-200'
+				'bg-card border rounded-lg p-3 transition-colors',
+				onTapSelect ? 'cursor-pointer active:bg-accent/70' : 'cursor-move',
+				'hover:bg-muted/50'
 			)}
-			draggable
+			draggable={!onTapSelect}
 			onDragStart={onDragStart}
-			onDragEnd={onDragEnd}>
+			onDragEnd={onDragEnd}
+			onClick={onTapSelect ? (e) => {
+				// Don't trigger tap-select when clicking action buttons
+				if ((e.target as HTMLElement).closest('button')) return;
+				onTapSelect();
+			} : undefined}>
 			<div className="space-y-2">
 				<div className="flex items-center justify-between">
-					<span className="font-medium text-sm">
-						{member.first_name} {member.last_name}
+					<span className="font-medium text-sm flex items-center">
+						<span className={cn(
+							'w-2 h-2 rounded-full inline-block mr-2',
+							isAssigned ? 'bg-primary' : 'bg-muted-foreground/30'
+						)} />
+						{member.last_name} {member.first_name}
 					</span>
 					<div className="flex items-center gap-1">
 						<Button
@@ -63,14 +74,14 @@ const MemberCard: React.FC<MemberCardProps> = ({
 								e.stopPropagation();
 								onEditPreferences();
 							}}
-							className="h-6 w-6 p-0 hover:bg-purple-100"
+							className="h-6 w-6 p-0 hover:bg-muted"
 							title="Alle Präferenzen bearbeiten">
 							<Settings
 								className={cn(
 									'h-3 w-3',
 									stationPreferences.length > 0 || shiftPreferences.length > 0
-										? 'text-purple-500'
-										: 'text-muted-foreground/60'
+										? 'text-muted-foreground'
+										: 'text-muted-foreground/40'
 								)}
 							/>
 						</Button>
@@ -81,9 +92,9 @@ const MemberCard: React.FC<MemberCardProps> = ({
 								e.stopPropagation();
 								onEditMember();
 							}}
-							className="h-6 w-6 p-0 hover:bg-green-100"
+							className="h-6 w-6 p-0 hover:bg-muted"
 							title="Mitglied bearbeiten">
-							<Edit className="h-3 w-3 text-green-600" />
+							<Edit className="h-3 w-3 text-muted-foreground" />
 						</Button>
 						<Button
 							variant="ghost"
@@ -92,16 +103,16 @@ const MemberCard: React.FC<MemberCardProps> = ({
 								e.stopPropagation();
 								onDeleteMember();
 							}}
-							className="h-6 w-6 p-0 hover:bg-red-100"
+							className="h-6 w-6 p-0 hover:bg-destructive/10"
 							title="Mitglied löschen">
-							<UserMinus className="h-3 w-3 text-red-600" />
+							<UserMinus className="h-3 w-3 text-destructive/70" />
 						</Button>
 						{isAssigned ? (
-							<Badge variant="default" className="text-xs">
+							<Badge variant="secondary" className="text-xs">
 								{totalAssignments}x
 							</Badge>
 						) : (
-							<Badge variant="destructive" className="text-xs">
+							<Badge variant="outline" className="text-xs">
 								Frei
 							</Badge>
 						)}
@@ -117,7 +128,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 								<Badge
 									key={stationId}
 									variant="outline"
-									className="text-xs bg-pink-50 border-pink-200 text-pink-700">
+									className="text-xs bg-muted text-muted-foreground border-border">
 									<Heart className="h-2 w-2 mr-1 fill-current" />
 									{station.name}
 								</Badge>
@@ -135,7 +146,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 								<Badge
 									key={shiftId}
 									variant="outline"
-									className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+									className="text-xs bg-muted text-muted-foreground border-border">
 									<Clock className="h-2 w-2 mr-1" />
 									{stationShift.name}
 								</Badge>

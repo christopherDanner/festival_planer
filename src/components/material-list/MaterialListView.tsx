@@ -75,10 +75,33 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 		}
 	};
 
+	const totalCost = useMemo(() => {
+		return materials.reduce((sum, m) => {
+			if (m.unit_price != null) return sum + m.ordered_quantity * m.unit_price;
+			return sum;
+		}, 0);
+	}, [materials]);
+
+	const categoryCount = categories.length;
+	const stationCount = new Set(materials.map(m => m.station_id).filter(Boolean)).size;
+
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-12">
-				<p>Lade Materialliste...</p>
+			<div className="space-y-4">
+				<div className="h-10 bg-muted rounded animate-pulse" />
+				<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+					{[1, 2, 3].map((i) => (
+						<div key={i} className="rounded-lg border bg-card p-4 animate-pulse space-y-2">
+							<div className="h-3 bg-muted rounded w-1/2" />
+							<div className="h-5 bg-muted rounded w-1/3" />
+						</div>
+					))}
+				</div>
+				<div className="rounded-lg border bg-card p-6 animate-pulse space-y-3">
+					<div className="h-4 bg-muted rounded w-full" />
+					<div className="h-4 bg-muted rounded w-full" />
+					<div className="h-4 bg-muted rounded w-3/4" />
+				</div>
 			</div>
 		);
 	}
@@ -86,9 +109,27 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 	return (
 		<div className="space-y-4">
 			<MaterialListHeader
-			onAddMaterial={() => setDialogState({ type: 'material' })}
-			onImportMaterial={() => setDialogState({ type: 'import' })}
-		/>
+				onAddMaterial={() => setDialogState({ type: 'material' })}
+				onImportMaterial={() => setDialogState({ type: 'import' })}
+			/>
+
+			{/* Summary stats */}
+			{materials.length > 0 && (
+				<div className="grid grid-cols-3 gap-3">
+					<div className="rounded-lg border bg-card px-4 py-3">
+						<p className="text-xs text-muted-foreground">Materialien</p>
+						<p className="text-lg font-semibold">{materials.length}</p>
+					</div>
+					<div className="rounded-lg border bg-card px-4 py-3">
+						<p className="text-xs text-muted-foreground">Kategorien</p>
+						<p className="text-lg font-semibold">{categoryCount}</p>
+					</div>
+					<div className="rounded-lg border bg-card px-4 py-3">
+						<p className="text-xs text-muted-foreground">Geschätzte Kosten</p>
+						<p className="text-lg font-semibold">{totalCost > 0 ? `${totalCost.toFixed(0)} €` : '–'}</p>
+					</div>
+				</div>
+			)}
 
 			<MaterialFilters
 				searchTerm={searchTerm}

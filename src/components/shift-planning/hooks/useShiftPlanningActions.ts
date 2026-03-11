@@ -176,7 +176,7 @@ export const useShiftPlanningActions = (festivalId: string) => {
 			invalidateAll();
 			toast({
 				title: 'Mitglied hinzugefügt',
-				description: `${variables.first_name} ${variables.last_name} wurde erfolgreich hinzugefügt.`
+				description: `${variables.last_name} ${variables.first_name} wurde erfolgreich hinzugefügt.`
 			});
 		},
 		onError: () => {

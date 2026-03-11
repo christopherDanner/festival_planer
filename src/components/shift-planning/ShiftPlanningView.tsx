@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { useShiftPlanningData } from './hooks/useShiftPlanningData';
 import { useShiftPlanningActions } from './hooks/useShiftPlanningActions';
@@ -11,6 +12,9 @@ import StationShiftDialog from './dialogs/StationShiftDialog';
 import MemberDialog from './dialogs/MemberDialog';
 import PreferenceDialog from './dialogs/PreferenceDialog';
 import AutoAssignDialog from './dialogs/AutoAssignDialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Button } from '@/components/ui/button';
+import { Users } from 'lucide-react';
 import { exportToExcel, exportToPdf } from '@/lib/exportService';
 import type { Station, StationShift, ShiftAssignmentWithMember } from '@/lib/shiftService';
 import type { Member } from '@/lib/memberService';
@@ -31,6 +35,7 @@ interface ShiftPlanningViewProps {
 
 const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festivalName, festivalDate }) => {
 	const { toast } = useToast();
+	const isMobile = useIsMobile();
 	const data = useShiftPlanningData(festivalId);
 	const actions = useShiftPlanningActions(festivalId);
 
@@ -39,7 +44,68 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	const [stationFilter, setStationFilter] = useState('all');
 	const [assignmentFilter, setAssignmentFilter] = useState('all');
 	const [draggedMember, setDraggedMember] = useState<Member | null>(null);
+	const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 	const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+	const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
+
+	const handleTapSelect = (member: Member) => {
+		setSelectedMember(member);
+		setIsMemberDrawerOpen(false);
+		toast({
+			title: `${member.last_name} ${member.first_name} ausgewählt`,
+			description: 'Tippe auf eine Station oder Schicht zum Zuweisen. Tippe erneut auf den Button um abzubrechen.',
+		});
+	};
+
+	const handleTapAssignToShift = (stationShiftId: string) => {
+		if (!selectedMember) return;
+		const stationShift = data.stationShifts.find((s) => s.id === stationShiftId);
+		if (!stationShift) return;
+
+		const currentAssignments = getAssignmentsForStationShift(stationShiftId);
+		if (currentAssignments.length >= stationShift.required_people) {
+			toast({ title: 'Hinweis', description: 'Diese Schicht ist bereits vollständig besetzt.', variant: 'destructive' });
+			setSelectedMember(null);
+			return;
+		}
+		if (currentAssignments.some((a) => a.member_id === selectedMember.id)) {
+			toast({ title: 'Hinweis', description: `${selectedMember.last_name} ${selectedMember.first_name} ist bereits dieser Schicht zugewiesen.`, variant: 'destructive' });
+			setSelectedMember(null);
+			return;
+		}
+
+		const usedPositions = currentAssignments.map((a) => a.position).sort((a, b) => a - b);
+		let nextPosition = 1;
+		for (const pos of usedPositions) {
+			if (nextPosition === pos) nextPosition++;
+			else break;
+		}
+
+		const member = selectedMember;
+		actions.assignMember.mutate(
+			{ stationShiftId, memberId: member.id, position: nextPosition },
+			{ onSuccess: () => toast({ title: 'Erfolg', description: `${member.last_name} ${member.first_name} wurde zugewiesen.` }) }
+		);
+		setSelectedMember(null);
+	};
+
+	const handleTapAssignToStation = (stationId: string) => {
+		if (!selectedMember) return;
+
+		const currentStationMembers = data.stationMembers.filter((sm) => sm.station_id === stationId);
+		if (currentStationMembers.some((sm) => sm.member_id === selectedMember.id)) {
+			toast({ title: 'Hinweis', description: `${selectedMember.last_name} ${selectedMember.first_name} ist bereits dieser Station zugewiesen.`, variant: 'destructive' });
+			setSelectedMember(null);
+			return;
+		}
+
+		const member = selectedMember;
+		actions.assignMemberToStation.mutate(
+			{ stationId, memberId: member.id },
+			{ onSuccess: () => toast({ title: 'Erfolg', description: `${member.last_name} ${member.first_name} wurde der Station zugewiesen.` }) }
+		);
+		setSelectedMember(null);
+	};
 
 	const getAssignmentsForStationShift = (stationShiftId: string): ShiftAssignmentWithMember[] => {
 		return data.assignments.filter((a) => a.station_shift_id === stationShiftId);
@@ -66,7 +132,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		if (currentAssignments.some((a) => a.member_id === draggedMember.id)) {
 			toast({
 				title: 'Hinweis',
-				description: `${draggedMember.first_name} ${draggedMember.last_name} ist bereits dieser Schicht zugewiesen.`,
+				description: `${draggedMember.last_name} ${draggedMember.first_name} ist bereits dieser Schicht zugewiesen.`,
 				variant: 'destructive'
 			});
 			setDraggedMember(null);
@@ -86,7 +152,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				onSuccess: () => {
 					toast({
 						title: 'Erfolg',
-						description: `${draggedMember.first_name} ${draggedMember.last_name} wurde zugewiesen.`
+						description: `${draggedMember.last_name} ${draggedMember.first_name} wurde zugewiesen.`
 					});
 				}
 			}
@@ -108,7 +174,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		if (currentStationMembers.some((sm) => sm.member_id === draggedMember.id)) {
 			toast({
 				title: 'Hinweis',
-				description: `${draggedMember.first_name} ${draggedMember.last_name} ist bereits dieser Station zugewiesen.`,
+				description: `${draggedMember.last_name} ${draggedMember.first_name} ist bereits dieser Station zugewiesen.`,
 				variant: 'destructive'
 			});
 			setDraggedMember(null);
@@ -121,7 +187,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				onSuccess: () => {
 					toast({
 						title: 'Erfolg',
-						description: `${draggedMember.first_name} ${draggedMember.last_name} wurde der Station zugewiesen.`
+						description: `${draggedMember.last_name} ${draggedMember.first_name} wurde der Station zugewiesen.`
 					});
 				}
 			}
@@ -137,6 +203,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			stationShifts: data.stationShifts,
 			assignments: data.assignments,
 			stationMembers: data.stationMembers,
+			members: data.members,
 		});
 	};
 
@@ -164,8 +231,20 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				onExportPdf={() => handleExport(exportToPdf)}
 			/>
 
+			{/* Mobile: selected member banner */}
+			{isMobile && selectedMember && (
+				<div className="flex items-center justify-between px-3 py-2 bg-primary/5 border-b border-primary/20">
+					<span className="text-sm font-medium">
+						{selectedMember.last_name} {selectedMember.first_name} — tippe auf eine Station/Schicht
+					</span>
+					<Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedMember(null)}>
+						Abbrechen
+					</Button>
+				</div>
+			)}
+
 			<div className="flex-1 flex overflow-hidden">
-				<div className="flex-1 overflow-auto p-4">
+				<div className="flex-1 overflow-x-auto overflow-y-auto p-2 md:p-4">
 					{data.stations.length === 0 ? (
 						<div className="flex items-center justify-center h-full">
 							<div className="text-center text-muted-foreground">
@@ -173,83 +252,139 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 							</div>
 						</div>
 					) : (
-						<div className="space-y-4">
+						<div className="flex gap-3 md:gap-4 items-start min-h-full pb-4">
 							{data.stations.map((station) => (
-								<StationCard
-									key={station.id}
-									station={station}
-									stationShifts={data.stationShifts.filter(
-										(s) => s.station_id === station.id
-									)}
-									stationMembers={data.stationMembers.filter(
-										(sm) => sm.station_id === station.id
-									)}
-									members={data.members}
-									getAssignments={getAssignmentsForStationShift}
-									onEditStation={() => setDialogState({ type: 'station', station })}
-									onDeleteStation={() => {
-										if (
-											confirm(
-												'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
-											)
-										) {
-											actions.deleteStation.mutate(station.id);
+								<div key={station.id} className="w-[280px] md:w-[320px] shrink-0">
+									<StationCard
+										station={station}
+										stationShifts={data.stationShifts.filter(
+											(s) => s.station_id === station.id
+										)}
+										stationMembers={data.stationMembers.filter(
+											(sm) => sm.station_id === station.id
+										)}
+										members={data.members}
+										getAssignments={getAssignmentsForStationShift}
+										selectedMember={selectedMember}
+										onTapAssignToShift={handleTapAssignToShift}
+										onTapAssignToStation={handleTapAssignToStation}
+										onEditStation={() => setDialogState({ type: 'station', station })}
+										onDeleteStation={() => {
+											if (
+												confirm(
+													'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
+												)
+											) {
+												actions.deleteStation.mutate(station.id);
+											}
+										}}
+										onAddShift={() => setDialogState({ type: 'stationShift', station })}
+										onEditShift={(shift) =>
+											setDialogState({ type: 'stationShift', station, stationShift: shift })
 										}
-									}}
-									onAddShift={() => setDialogState({ type: 'stationShift', station })}
-									onEditShift={(shift) =>
-										setDialogState({ type: 'stationShift', station, stationShift: shift })
-									}
-									onDeleteShift={(shiftId) => {
-										if (
-											confirm('Sind Sie sicher, dass Sie diese Schicht löschen möchten?')
-										) {
-											actions.deleteStationShift.mutate(shiftId);
-										}
-									}}
-									onRemoveMember={(stationShiftId, memberId) => {
-										actions.removeMember.mutate({ stationShiftId, memberId });
-									}}
-									onDrop={handleDrop}
-									onDropOnStation={handleDropOnStation}
-									onRemoveStationMember={(stationId, memberId) => {
-										actions.removeMemberFromStation.mutate({ stationId, memberId });
-									}}
-								/>
+										onDeleteShift={(shiftId) => {
+											if (
+												confirm('Sind Sie sicher, dass Sie diese Schicht löschen möchten?')
+											) {
+												actions.deleteStationShift.mutate(shiftId);
+											}
+										}}
+										onRemoveMember={(stationShiftId, memberId) => {
+											actions.removeMember.mutate({ stationShiftId, memberId });
+										}}
+										onDrop={handleDrop}
+										onDropOnStation={handleDropOnStation}
+										onRemoveStationMember={(stationId, memberId) => {
+											actions.removeMemberFromStation.mutate({ stationId, memberId });
+										}}
+									/>
+								</div>
 							))}
 						</div>
 					)}
 				</div>
 
-				<MemberSidebar
-					members={data.members}
-					stations={data.stations}
-					stationShifts={data.stationShifts}
-					assignments={data.assignments}
-					stationMembers={data.stationMembers}
-					stationPreferences={data.stationPreferences}
-					shiftPreferences={data.shiftPreferences}
-					nameFilter={nameFilter}
-					stationFilter={stationFilter}
-					assignmentFilter={assignmentFilter}
-					onNameFilterChange={setNameFilter}
-					onStationFilterChange={setStationFilter}
-					onAssignmentFilterChange={setAssignmentFilter}
-					onDragStart={setDraggedMember}
-					onDragEnd={() => setDraggedMember(null)}
-					onEditPreferences={(member) => setDialogState({ type: 'preferences', member })}
-					onEditMember={(member) => setDialogState({ type: 'member', member })}
-					onDeleteMember={(member) => {
-						if (
-							confirm(
-								`Möchten Sie ${member.first_name} ${member.last_name} wirklich löschen?`
-							)
-						) {
-							actions.deleteMember.mutate(member.id);
-						}
-					}}
-				/>
+				{/* Desktop sidebar */}
+				{!isMobile && (
+					<MemberSidebar
+						members={data.members}
+						stations={data.stations}
+						stationShifts={data.stationShifts}
+						assignments={data.assignments}
+						stationMembers={data.stationMembers}
+						stationPreferences={data.stationPreferences}
+						shiftPreferences={data.shiftPreferences}
+						nameFilter={nameFilter}
+						stationFilter={stationFilter}
+						assignmentFilter={assignmentFilter}
+						onNameFilterChange={setNameFilter}
+						onStationFilterChange={setStationFilter}
+						onAssignmentFilterChange={setAssignmentFilter}
+						onDragStart={setDraggedMember}
+						onDragEnd={() => setDraggedMember(null)}
+						onEditPreferences={(member) => setDialogState({ type: 'preferences', member })}
+						onEditMember={(member) => setDialogState({ type: 'member', member })}
+						onDeleteMember={(member) => {
+							if (
+								confirm(
+									`Möchten Sie ${member.last_name} ${member.first_name} wirklich löschen?`
+								)
+							) {
+								actions.deleteMember.mutate(member.id);
+							}
+						}}
+					/>
+				)}
 			</div>
+
+			{/* Mobile FAB + Drawer */}
+			{isMobile && (
+				<>
+					<Button
+						className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-md bg-primary hover:bg-primary/90"
+						onClick={() => setIsMemberDrawerOpen(true)}
+					>
+						<Users className="h-6 w-6 text-primary-foreground" />
+					</Button>
+					<Drawer open={isMemberDrawerOpen} onOpenChange={setIsMemberDrawerOpen}>
+						<DrawerContent className="max-h-[85vh]">
+							<DrawerHeader className="pb-0">
+								<DrawerTitle>Mitglieder</DrawerTitle>
+							</DrawerHeader>
+							<MemberSidebar
+								variant="drawer"
+								members={data.members}
+								stations={data.stations}
+								stationShifts={data.stationShifts}
+								assignments={data.assignments}
+								stationMembers={data.stationMembers}
+								stationPreferences={data.stationPreferences}
+								shiftPreferences={data.shiftPreferences}
+								nameFilter={nameFilter}
+								stationFilter={stationFilter}
+								assignmentFilter={assignmentFilter}
+								onNameFilterChange={setNameFilter}
+								onStationFilterChange={setStationFilter}
+								onAssignmentFilterChange={setAssignmentFilter}
+								onDragStart={setDraggedMember}
+								onDragEnd={() => setDraggedMember(null)}
+								onTapSelect={handleTapSelect}
+								onEditPreferences={(member) => setDialogState({ type: 'preferences', member })}
+								onEditMember={(member) => setDialogState({ type: 'member', member })}
+								onDeleteMember={(member) => {
+									if (
+										confirm(
+											`Möchten Sie ${member.last_name} ${member.first_name} wirklich löschen?`
+										)
+									) {
+										actions.deleteMember.mutate(member.id);
+									}
+								}}
+							/>
+						</DrawerContent>
+					</Drawer>
+				</>
+			)}
 
 			{/* Dialogs */}
 			<StationDialog

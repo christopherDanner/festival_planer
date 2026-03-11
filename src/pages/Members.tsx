@@ -106,7 +106,7 @@ const Members = () => {
 		if (searchTerm) {
 			filtered = filtered.filter(
 				(member) =>
-					`${member.first_name} ${member.last_name}`
+					`${member.last_name} ${member.first_name}`
 						.toLowerCase()
 						.includes(searchTerm.toLowerCase()) ||
 					member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -174,7 +174,7 @@ const Members = () => {
 	};
 
 	const handleDeleteMember = async (member: Member) => {
-		if (!confirm(`Möchten Sie ${member.first_name} ${member.last_name} wirklich löschen?`)) {
+		if (!confirm(`Möchten Sie ${member.last_name} ${member.first_name} wirklich löschen?`)) {
 			return;
 		}
 
@@ -421,7 +421,7 @@ const Members = () => {
 												<TableCell>
 													<div>
 														<div className="font-medium">
-															{member.first_name} {member.last_name}
+															{member.last_name} {member.first_name}
 														</div>
 														{member.notes && (
 															<div className="text-sm text-muted-foreground truncate max-w-[200px]">

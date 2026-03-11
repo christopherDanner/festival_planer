@@ -78,7 +78,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 				<DialogHeader className="flex-shrink-0">
 					<DialogTitle className="flex items-center gap-2">
 						<Heart className="h-5 w-5 text-red-500" />
-						Präferenzen für {member?.first_name} {member?.last_name}
+						Präferenzen für {member?.last_name} {member?.first_name}
 					</DialogTitle>
 				</DialogHeader>
 				<div className="flex-1 overflow-y-auto space-y-6 pr-2">

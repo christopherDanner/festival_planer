@@ -16,7 +16,7 @@ export default function Navigation() {
 	};
 
 	return (
-		<nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-sm border-b border-border shadow-sm">
+		<nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-sm border-b border-border">
 			<div className="w-full px-4">
 				<div className="flex items-center justify-between h-16">
 					{/* Logo/Brand */}
@@ -24,16 +24,16 @@ export default function Navigation() {
 						<div className="w-8 h-8 bg-gradient-hero rounded-lg flex items-center justify-center">
 							<span className="text-primary-foreground font-bold text-sm">F</span>
 						</div>
-						<span className="font-semibold text-lg">Festmeister Österreich</span>
+						<span className="font-semibold text-base">Festmeister Österreich</span>
 					</div>
 
 					{/* Navigation Links */}
 					<div className="flex items-center space-x-1">
 						<Button
-							variant={isActive('/') ? 'festival' : 'ghost'}
+							variant="ghost"
 							size="sm"
 							onClick={() => navigate('/')}
-							className="flex items-center gap-2">
+							className={`flex items-center gap-2 ${isActive('/') ? 'border-b-2 border-primary rounded-none' : ''}`}>
 							<Home className="h-4 w-4" />
 							<span className="hidden sm:inline">Start</span>
 						</Button>
@@ -41,10 +41,10 @@ export default function Navigation() {
 						{user && (
 							<>
 								<Button
-									variant={isActive('/dashboard') ? 'festival' : 'ghost'}
+									variant="ghost"
 									size="sm"
 									onClick={() => navigate('/dashboard')}
-									className="flex items-center gap-2">
+									className={`flex items-center gap-2 ${isActive('/dashboard') ? 'border-b-2 border-primary rounded-none' : ''}`}>
 									<LayoutDashboard className="h-4 w-4" />
 									<span className="hidden sm:inline">Dashboard</span>
 								</Button>
@@ -64,7 +64,7 @@ export default function Navigation() {
 							</Button>
 						) : (
 							<Button
-								variant="festival"
+								variant="default"
 								size="sm"
 								onClick={() => navigate('/auth')}
 								className="flex items-center gap-2">

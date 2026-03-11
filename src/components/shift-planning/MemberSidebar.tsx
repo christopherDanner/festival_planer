@@ -13,6 +13,7 @@ import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWit
 import type { Member } from '@/lib/memberService';
 
 interface MemberSidebarProps {
+	variant?: 'sidebar' | 'drawer';
 	members: Member[];
 	stations: Station[];
 	stationShifts: StationShift[];
@@ -28,12 +29,14 @@ interface MemberSidebarProps {
 	onAssignmentFilterChange: (value: string) => void;
 	onDragStart: (member: Member) => void;
 	onDragEnd: () => void;
+	onTapSelect?: (member: Member) => void;
 	onEditPreferences: (member: Member) => void;
 	onEditMember: (member: Member) => void;
 	onDeleteMember: (member: Member) => void;
 }
 
 const MemberSidebar: React.FC<MemberSidebarProps> = ({
+	variant = 'sidebar',
 	members,
 	stations,
 	stationShifts,
@@ -49,10 +52,12 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 	onAssignmentFilterChange,
 	onDragStart,
 	onDragEnd,
+	onTapSelect,
 	onEditPreferences,
 	onEditMember,
 	onDeleteMember
 }) => {
+	const isDrawer = variant === 'drawer';
 	const getMemberAssignments = (memberId: string) =>
 		assignments.filter((a) => a.member_id === memberId);
 
@@ -65,7 +70,7 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 	const filteredMembers = members.filter((member) => {
 		if (
 			nameFilter &&
-			!`${member.first_name} ${member.last_name}`.toLowerCase().includes(nameFilter.toLowerCase())
+			!`${member.last_name} ${member.first_name}`.toLowerCase().includes(nameFilter.toLowerCase())
 		) {
 			return false;
 		}
@@ -82,13 +87,15 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 	const assignedCount = members.length - freeCount;
 
 	return (
-		<div className="w-80 border-l bg-muted/20 flex flex-col">
-			<div className="p-4 border-b bg-background">
-				<h3 className="font-semibold flex items-center gap-2">
-					<Users className="h-4 w-4" />
-					Mitglieder ({filteredMembers.length})
-				</h3>
-				<div className="mt-3">
+		<div className={isDrawer ? 'flex flex-col' : 'w-80 border-l bg-card flex flex-col'}>
+			<div className={isDrawer ? 'px-4 pb-3 space-y-2' : 'p-4 border-b bg-background'}>
+				{!isDrawer && (
+					<h3 className="font-semibold flex items-center gap-2">
+						<Users className="h-4 w-4" />
+						Mitglieder ({filteredMembers.length})
+					</h3>
+				)}
+				<div className={isDrawer ? '' : 'mt-3'}>
 					<Input
 						placeholder="Nach Namen suchen..."
 						value={nameFilter}
@@ -96,7 +103,7 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 						className="text-xs h-8"
 					/>
 				</div>
-				<div className="mt-3">
+				<div className={isDrawer ? 'grid grid-cols-2 gap-2' : 'mt-3 space-y-3'}>
 					<Select value={assignmentFilter} onValueChange={onAssignmentFilterChange}>
 						<SelectTrigger className="text-xs h-8">
 							<SelectValue placeholder="Zuweisungsstatus..." />
@@ -107,8 +114,6 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 							<SelectItem value="assigned">Zugeteilt ({assignedCount})</SelectItem>
 						</SelectContent>
 					</Select>
-				</div>
-				<div className="mt-3">
 					<Select value={stationFilter} onValueChange={onStationFilterChange}>
 						<SelectTrigger className="text-xs h-8">
 							<SelectValue placeholder="Station filtern..." />
@@ -124,7 +129,10 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 					</Select>
 				</div>
 			</div>
-			<div className="flex-1 overflow-y-auto p-4 space-y-2">
+			<div className={isDrawer
+				? 'overflow-y-auto px-4 pb-4 space-y-2 max-h-[50vh]'
+				: 'flex-1 overflow-y-auto p-4 space-y-2'
+			}>
 				{filteredMembers.map((member) => (
 					<MemberCard
 						key={member.id}
@@ -138,6 +146,7 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 						shiftPreferences={shiftPreferences[member.id] || []}
 						onDragStart={() => onDragStart(member)}
 						onDragEnd={onDragEnd}
+						onTapSelect={onTapSelect ? () => onTapSelect(member) : undefined}
 						onEditPreferences={() => onEditPreferences(member)}
 						onEditMember={() => onEditMember(member)}
 						onDeleteMember={() => onDeleteMember(member)}

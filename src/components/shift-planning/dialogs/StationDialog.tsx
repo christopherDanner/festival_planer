@@ -101,7 +101,7 @@ const StationDialog: React.FC<StationDialogProps> = ({ open, onOpenChange, stati
 								<SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
 								{members.map((member) => (
 									<SelectItem key={member.id} value={member.id}>
-										{member.first_name} {member.last_name}
+										{member.last_name} {member.first_name}
 									</SelectItem>
 								))}
 							</SelectContent>
