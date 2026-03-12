@@ -368,3 +368,31 @@ export const removeMemberFromStation = async (
 
 	if (error) throw error;
 };
+
+// Bulk insert helpers
+export const createStationsBulk = async (
+	stations: Omit<Station, 'id' | 'created_at' | 'updated_at' | 'responsible_member'>[]
+): Promise<Station[]> => {
+	const { data, error } = await supabase
+		.from('stations')
+		.insert(stations)
+		.select('*, responsible_member:members!stations_responsible_member_id_fkey(id, first_name, last_name)');
+	if (error) throw error;
+	return data || [];
+};
+
+export const createStationShiftsBulk = async (
+	shifts: Omit<StationShift, 'id' | 'created_at' | 'updated_at'>[]
+): Promise<StationShift[]> => {
+	const cleaned = shifts.map(s => {
+		const copy: any = { ...s };
+		if (!copy.end_date) delete copy.end_date;
+		return copy;
+	});
+	const { data, error } = await supabase
+		.from('station_shifts')
+		.insert(cleaned)
+		.select();
+	if (error) throw error;
+	return data || [];
+};

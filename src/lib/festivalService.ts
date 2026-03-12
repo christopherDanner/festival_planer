@@ -97,14 +97,24 @@ export async function deleteFestival(festivalId: string): Promise<void> {
 		throw new Error('Fehler beim Löschen der Schichtzuordnungen');
 	}
 
-	// 2. Delete shifts
+	// 2. Delete station shifts
 	const { error: shiftError } = await supabase
-		.from('shifts')
+		.from('station_shifts')
 		.delete()
 		.eq('festival_id', festivalId);
 
 	if (shiftError) {
 		throw new Error('Fehler beim Löschen der Schichten');
+	}
+
+	// 2b. Delete station members
+	const { error: stationMemberError } = await supabase
+		.from('station_members')
+		.delete()
+		.eq('festival_id', festivalId);
+
+	if (stationMemberError) {
+		throw new Error('Fehler beim Löschen der Stationsmitglieder');
 	}
 
 	// 3. Delete materials (before stations due to station_id FK)
