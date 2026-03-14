@@ -37,8 +37,9 @@ const MaterialFilters: React.FC<MaterialFiltersProps> = ({
 	const hasFilters = searchTerm || stationFilter !== 'all' || supplierFilter !== 'all' || categoryFilter !== 'all';
 
 	return (
-		<div className="flex flex-wrap items-center gap-2">
-			<div className="relative flex-1 min-w-[180px]">
+		<div className="space-y-2">
+			{/* Search - always full width */}
+			<div className="relative">
 				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 				<Input
 					value={searchTerm}
@@ -47,46 +48,49 @@ const MaterialFilters: React.FC<MaterialFiltersProps> = ({
 					className="pl-9 h-9"
 				/>
 			</div>
-			<Select value={stationFilter} onValueChange={onStationFilterChange}>
-				<SelectTrigger className="w-[140px] h-9">
-					<SelectValue placeholder="Station" />
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value="all">Alle Stationen</SelectItem>
-					<SelectItem value="__none__">Keine Station</SelectItem>
-					{stations.map((s) => (
-						<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<Select value={supplierFilter} onValueChange={onSupplierFilterChange}>
-				<SelectTrigger className="w-[140px] h-9">
-					<SelectValue placeholder="Lieferant" />
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value="all">Alle Lieferanten</SelectItem>
-					{suppliers.map((s) => (
-						<SelectItem key={s} value={s}>{s}</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<Select value={categoryFilter} onValueChange={onCategoryFilterChange}>
-				<SelectTrigger className="w-[140px] h-9">
-					<SelectValue placeholder="Kategorie" />
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value="all">Alle Kategorien</SelectItem>
-					{categories.map((c) => (
-						<SelectItem key={c} value={c}>{c}</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			{hasFilters && (
-				<Button variant="ghost" size="sm" onClick={onReset} className="gap-1 h-9">
-					<X className="h-4 w-4" />
-					<span className="hidden sm:inline">Zurücksetzen</span>
-				</Button>
-			)}
+			{/* Filter selects - wrap on mobile */}
+			<div className="flex flex-wrap items-center gap-2">
+				<Select value={stationFilter} onValueChange={onStationFilterChange}>
+					<SelectTrigger className="w-full sm:w-[140px] h-9">
+						<SelectValue placeholder="Station" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">Alle Stationen</SelectItem>
+						<SelectItem value="__none__">Keine Station</SelectItem>
+						{stations.map((s) => (
+							<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<Select value={supplierFilter} onValueChange={onSupplierFilterChange}>
+					<SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-[140px] h-9">
+						<SelectValue placeholder="Lieferant" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">Alle Lieferanten</SelectItem>
+						{suppliers.map((s) => (
+							<SelectItem key={s} value={s}>{s}</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<Select value={categoryFilter} onValueChange={onCategoryFilterChange}>
+					<SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-[140px] h-9">
+						<SelectValue placeholder="Kategorie" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">Alle Kategorien</SelectItem>
+						{categories.map((c) => (
+							<SelectItem key={c} value={c}>{c}</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				{hasFilters && (
+					<Button variant="ghost" size="sm" onClick={onReset} className="gap-1 h-9">
+						<X className="h-4 w-4" />
+						<span className="hidden sm:inline">Zurücksetzen</span>
+					</Button>
+				)}
+			</div>
 		</div>
 	);
 };

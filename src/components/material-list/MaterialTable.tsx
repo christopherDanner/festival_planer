@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
 	Table,
 	TableBody,
@@ -10,14 +10,71 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Pencil, Trash2, Package } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
+
+/** Inline editable cell for actual_quantity */
+const EditableQuantityCell: React.FC<{
+	value: number | null;
+	material: FestivalMaterialWithStation;
+	onSave: (value: number | null) => void;
+}> = ({ value, material, onSave }) => {
+	const [editing, setEditing] = useState(false);
+	const [inputValue, setInputValue] = useState('');
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	const startEdit = () => {
+		setInputValue(value != null ? String(value) : '');
+		setEditing(true);
+		setTimeout(() => inputRef.current?.focus(), 0);
+	};
+
+	const commit = () => {
+		setEditing(false);
+		const trimmed = inputValue.trim();
+		if (trimmed === '') {
+			if (value !== null) onSave(null);
+		} else {
+			const num = parseFloat(trimmed);
+			if (!isNaN(num) && num !== value) onSave(num);
+		}
+	};
+
+	if (editing) {
+		return (
+			<Input
+				ref={inputRef}
+				type="number"
+				step="any"
+				value={inputValue}
+				onChange={(e) => setInputValue(e.target.value)}
+				onBlur={commit}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter') commit();
+					if (e.key === 'Escape') setEditing(false);
+				}}
+				className="h-7 w-20 text-right text-sm px-1"
+			/>
+		);
+	}
+
+	return (
+		<span
+			onClick={startEdit}
+			className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 inline-block min-w-[40px] text-right"
+			title="Klicken zum Bearbeiten">
+			{formatQuantity(value, material)}
+		</span>
+	);
+};
 
 interface MaterialTableProps {
 	materials: FestivalMaterialWithStation[];
 	onEdit: (material: FestivalMaterialWithStation) => void;
 	onDelete: (id: string) => void;
+	onUpdateActualQuantity?: (id: string, quantity: number | null) => void;
 }
 
 function formatPackaging(m: FestivalMaterialWithStation): string {
@@ -116,7 +173,7 @@ const MaterialMobileCard: React.FC<{
 	);
 };
 
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onUpdateActualQuantity }) => {
 	const isMobile = useIsMobile();
 
 	const totalCost = materials.reduce((sum, m) => {
@@ -187,7 +244,17 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								<TableCell>{m.supplier || '–'}</TableCell>
 								<TableCell>{formatPackaging(m)}</TableCell>
 								<TableCell className="text-right">{formatQuantity(m.ordered_quantity, m)}</TableCell>
-								<TableCell className="text-right">{formatQuantity(m.actual_quantity, m)}</TableCell>
+								<TableCell className="text-right">
+									{onUpdateActualQuantity ? (
+										<EditableQuantityCell
+											value={m.actual_quantity}
+											material={m}
+											onSave={(v) => onUpdateActualQuantity(m.id, v)}
+										/>
+									) : (
+										formatQuantity(m.actual_quantity, m)
+									)}
+								</TableCell>
 								<TableCell className={`text-right ${diff.className}`}>{diff.text}</TableCell>
 								<TableCell className="text-right">{formatPrice(m.unit_price)}</TableCell>
 								<TableCell className="text-right">{formatTotal(m)}</TableCell>

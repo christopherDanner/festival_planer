@@ -6,12 +6,14 @@ import MaterialFilters from './MaterialFilters';
 import MaterialTable from './MaterialTable';
 import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialImportDialog from './dialogs/MaterialImportDialog';
+import InvoiceMatchDialog from './dialogs/InvoiceMatchDialog';
 import type { FestivalMaterialWithStation, FestivalMaterial } from '@/lib/materialService';
 
 type DialogState =
 	| { type: null }
 	| { type: 'material'; material?: FestivalMaterialWithStation }
-	| { type: 'import' };
+	| { type: 'import' }
+	| { type: 'invoice-match' };
 
 interface MaterialListViewProps {
 	festivalId: string;
@@ -89,15 +91,15 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 		return (
 			<div className="space-y-4">
 				<div className="h-10 bg-muted rounded animate-pulse" />
-				<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+				<div className="grid grid-cols-3 gap-2 sm:gap-3">
 					{[1, 2, 3].map((i) => (
-						<div key={i} className="rounded-lg border bg-card p-4 animate-pulse space-y-2">
+						<div key={i} className="rounded-lg border bg-card p-3 sm:p-4 animate-pulse space-y-2">
 							<div className="h-3 bg-muted rounded w-1/2" />
 							<div className="h-5 bg-muted rounded w-1/3" />
 						</div>
 					))}
 				</div>
-				<div className="rounded-lg border bg-card p-6 animate-pulse space-y-3">
+				<div className="rounded-lg border bg-card p-4 sm:p-6 animate-pulse space-y-3">
 					<div className="h-4 bg-muted rounded w-full" />
 					<div className="h-4 bg-muted rounded w-full" />
 					<div className="h-4 bg-muted rounded w-3/4" />
@@ -107,26 +109,27 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-3 sm:space-y-4 overflow-x-hidden">
 			<MaterialListHeader
 				onAddMaterial={() => setDialogState({ type: 'material' })}
 				onImportMaterial={() => setDialogState({ type: 'import' })}
+				onInvoiceMatch={() => setDialogState({ type: 'invoice-match' })}
 			/>
 
 			{/* Summary stats */}
 			{materials.length > 0 && (
-				<div className="grid grid-cols-3 gap-3">
-					<div className="rounded-lg border bg-card px-4 py-3">
-						<p className="text-xs text-muted-foreground">Materialien</p>
-						<p className="text-lg font-semibold">{materials.length}</p>
+				<div className="grid grid-cols-3 gap-2 sm:gap-3">
+					<div className="rounded-lg border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0">
+						<p className="text-[10px] sm:text-xs text-muted-foreground">Materialien</p>
+						<p className="text-base sm:text-lg font-semibold">{materials.length}</p>
 					</div>
-					<div className="rounded-lg border bg-card px-4 py-3">
-						<p className="text-xs text-muted-foreground">Kategorien</p>
-						<p className="text-lg font-semibold">{categoryCount}</p>
+					<div className="rounded-lg border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0">
+						<p className="text-[10px] sm:text-xs text-muted-foreground">Kategorien</p>
+						<p className="text-base sm:text-lg font-semibold">{categoryCount}</p>
 					</div>
-					<div className="rounded-lg border bg-card px-4 py-3">
-						<p className="text-xs text-muted-foreground">Geschätzte Kosten</p>
-						<p className="text-lg font-semibold">{totalCost > 0 ? `${totalCost.toFixed(0)} €` : '–'}</p>
+					<div className="rounded-lg border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0 overflow-hidden">
+						<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Gesch. Kosten</p>
+						<p className="text-base sm:text-lg font-semibold truncate">{totalCost > 0 ? `${totalCost.toFixed(0)} €` : '–'}</p>
 					</div>
 				</div>
 			)}
@@ -150,6 +153,9 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 				materials={filteredMaterials}
 				onEdit={(material) => setDialogState({ type: 'material', material })}
 				onDelete={(id) => actions.deleteMaterial.mutate(id)}
+				onUpdateActualQuantity={(id, qty) => {
+					actions.updateMaterial.mutate({ id, updates: { actual_quantity: qty } });
+				}}
 			/>
 
 			<MaterialDialog
@@ -172,6 +178,25 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 					});
 				}}
 				isImporting={actions.bulkCreateMaterials.isPending}
+			/>
+
+			<InvoiceMatchDialog
+				open={dialogState.type === 'invoice-match'}
+				onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
+				materials={materials}
+				stations={stations}
+				festivalId={festivalId}
+				onApply={(updates) => {
+					actions.bulkUpdateMaterials.mutate(updates, {
+						onSuccess: () => setDialogState({ type: null })
+					});
+				}}
+				onCreateNew={(newMaterials) => {
+					actions.bulkCreateMaterials.mutate(newMaterials, {
+						onSuccess: () => setDialogState({ type: null })
+					});
+				}}
+				isApplying={actions.bulkUpdateMaterials.isPending || actions.bulkCreateMaterials.isPending}
 			/>
 		</div>
 	);

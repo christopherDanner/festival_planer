@@ -16,6 +16,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { ImportedMaterial } from '@/lib/materialImportService';
 import type { Station } from '@/lib/shiftService';
 
@@ -36,6 +37,7 @@ const MaterialImportPreview: React.FC<MaterialImportPreviewProps> = ({
 	onBack,
 	isImporting
 }) => {
+	const isMobile = useIsMobile();
 	const selectedCount = materials.filter((m) => m._selected).length;
 	const allSelected = selectedCount === materials.length;
 
@@ -56,6 +58,81 @@ const MaterialImportPreview: React.FC<MaterialImportPreviewProps> = ({
 			)
 		);
 	};
+
+	if (isMobile) {
+		return (
+			<div className="space-y-3">
+				<div className="flex items-center justify-between">
+					<p className="text-sm text-muted-foreground">
+						{selectedCount} / {materials.length} ausgewählt
+					</p>
+					<Checkbox
+						checked={allSelected}
+						onCheckedChange={(checked) => toggleAll(!!checked)}
+					/>
+				</div>
+
+				<div className="max-h-[50vh] overflow-y-auto space-y-2">
+					{materials.map((m) => (
+						<div
+							key={m._id}
+							className={`rounded-lg border p-3 space-y-2 ${m._selected ? 'bg-card' : 'opacity-50 bg-muted/30'}`}
+						>
+							<div className="flex items-start gap-2">
+								<Checkbox
+									checked={m._selected}
+									onCheckedChange={(checked) => toggleOne(m._id, !!checked)}
+									className="mt-0.5"
+								/>
+								<div className="flex-1 min-w-0">
+									<p className="text-sm font-medium">{m.name}</p>
+									<p className="text-xs text-muted-foreground">
+										{m.ordered_quantity} {m.unit}
+										{m.category && ` · ${m.category}`}
+										{m.supplier && ` · ${m.supplier}`}
+									</p>
+									{m.unit_price != null && (
+										<p className="text-xs text-muted-foreground">
+											{`€ ${m.unit_price.toFixed(2)}`}
+											{m.packaging_unit && ` / ${m.packaging_unit}`}
+										</p>
+									)}
+								</div>
+							</div>
+							{m._selected && (
+								<div className="ml-7">
+									<Select
+										value={m._stationId || '__none__'}
+										onValueChange={(v) => updateStation(m._id, v)}>
+										<SelectTrigger className="h-7 text-xs">
+											<SelectValue placeholder="Station wählen" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="__none__">Keine Station</SelectItem>
+											{stations.map((s) => (
+												<SelectItem key={s.id} value={s.id}>
+													{s.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							)}
+						</div>
+					))}
+				</div>
+
+				<div className="flex gap-2">
+					<Button variant="outline" onClick={onBack} disabled={isImporting} size="sm" className="flex-1">
+						Zurück
+					</Button>
+					<Button onClick={onConfirm} disabled={selectedCount === 0 || isImporting} size="sm" className="flex-1">
+						{isImporting ? 'Importiere...' : `${selectedCount} importieren`}
+					</Button>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-4">

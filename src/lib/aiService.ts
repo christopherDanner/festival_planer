@@ -314,8 +314,15 @@ class AIService {
 	}
 
 	private buildMaterialExtractionPrompt(): string {
-		return `Du bist ein Experte für das Extrahieren von Bestelllisten und Materiallisten.
-Analysiere den gegebenen Text oder das Bild und extrahiere alle Bestellpositionen als strukturiertes JSON.
+		return `Du bist ein Experte für das Extrahieren von Rechnungen, Bestelllisten und Materiallisten.
+Analysiere den gegebenen Text oder das Bild und extrahiere alle Positionen als strukturiertes JSON.
+
+**WICHTIG — Lieferant erkennen:**
+Identifiziere ZUERST den Lieferanten/Absender des Dokuments. Dieser steht typischerweise:
+- Im Briefkopf / in der Kopfzeile (Firmenname, Logo-Bereich)
+- Im Absenderfeld (über oder neben der Empfängeradresse)
+- Bei Rechnungen: die Firma, die die Rechnung AUSSTELLT (nicht der Empfänger)
+Verwende diesen Firmennamen als "supplier" für ALLE Positionen. Ein kurzer, gebräuchlicher Name reicht (z.B. "GVU Scheibbs" statt "Gemeindeverband für Umweltschutz im Bezirk Scheibbs").
 
 **Gültige Kategorien:** Getränke, Lebensmittel, Dekoration, Geschirr/Besteck, Technik, Sonstiges
 **Gültige Einheiten:** Stück, Liter, kg, Meter
@@ -324,9 +331,16 @@ Analysiere den gegebenen Text oder das Bild und extrahiere alle Bestellpositione
 - Wenn die Einheit unklar ist, verwende "Stück"
 - Wenn die Bestellmenge unklar ist, verwende 1
 - Setze null für unbekannte/fehlende Felder
-- Extrahiere Preise wenn vorhanden (als Zahl ohne Währungssymbol)
 - Erkenne Gebindeeinheiten (Fass, Kiste, Karton, Palette, etc.)
-- **Lieferant:** Oft steht der Lieferant nur einmal im Dokument (z.B. im Kopfbereich). Verwende diesen als "supplier" für ALLE Positionen der Liste. Falls einzelne Positionen einen eigenen Lieferanten haben, verwende diesen stattdessen.
+- Der "supplier" darf NIEMALS null sein, wenn ein Firmenname im Dokument erkennbar ist
+
+**Mengen & Preise:**
+- "ordered_quantity": Die Gesamtmenge der Position (z.B. "2 Tag(e)" = 2, "152 Stk." = 152)
+- "unit_price": Der BRUTTO-Einzelpreis pro Einheit INKL. MwSt (als Zahl ohne Währungssymbol)
+  - Wenn nur Netto-Preis + MwSt-Satz vorhanden: berechne Brutto = Netto × (1 + MwSt/100)
+  - Wenn nur Brutto-Gesamtpreis vorhanden: berechne Einzelpreis = Brutto-Gesamt / Menge
+  - Wenn Brutto-Spalte UND Einzelpreis vorhanden: bevorzuge Brutto-Einzelpreis = Brutto-Gesamt / Menge
+- Preise immer als Brutto inkl. MwSt angeben, NIEMALS Netto-Preise
 
 **Ausgabe-Format (JSON):**
 {
@@ -334,7 +348,7 @@ Analysiere den gegebenen Text oder das Bild und extrahiere alle Bestellpositione
     {
       "name": "Artikelname",
       "category": "Kategorie oder null",
-      "supplier": "Lieferant oder null",
+      "supplier": "Lieferant (PFLICHT wenn im Dokument erkennbar)",
       "unit": "Stück|Liter|kg|Meter",
       "packaging_unit": "Gebindeeinheit oder null",
       "amount_per_packaging": null,

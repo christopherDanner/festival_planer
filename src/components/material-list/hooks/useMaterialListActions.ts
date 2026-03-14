@@ -4,6 +4,7 @@ import {
 	createMaterial,
 	createMaterialsBulk,
 	updateMaterial,
+	updateMaterialsBulk,
 	deleteMaterial,
 	type FestivalMaterial
 } from '@/lib/materialService';
@@ -82,10 +83,30 @@ export const useMaterialListActions = (festivalId: string) => {
 		}
 	});
 
+	const bulkUpdateMaterialsMutation = useMutation({
+		mutationFn: (updates: { id: string; actual_quantity: number; unit_price?: number | null }[]) =>
+			updateMaterialsBulk(updates),
+		onSuccess: (_data, variables) => {
+			invalidateAll();
+			toast({
+				title: 'Erfolg',
+				description: `${variables.length} Mengen wurden aktualisiert.`
+			});
+		},
+		onError: () => {
+			toast({
+				title: 'Fehler',
+				description: 'Mengen konnten nicht aktualisiert werden.',
+				variant: 'destructive'
+			});
+		}
+	});
+
 	return {
 		createMaterial: createMaterialMutation,
 		updateMaterial: updateMaterialMutation,
 		deleteMaterial: deleteMaterialMutation,
-		bulkCreateMaterials: bulkCreateMaterialsMutation
+		bulkCreateMaterials: bulkCreateMaterialsMutation,
+		bulkUpdateMaterials: bulkUpdateMaterialsMutation
 	};
 };

@@ -123,7 +123,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 						/>
 					</div>
 
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 						<div>
 							<Label htmlFor="mat-category">Kategorie</Label>
 							<Select
@@ -172,7 +172,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 						/>
 					</div>
 
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 						<div>
 							<Label htmlFor="mat-unit">Einheit *</Label>
 							<Select
@@ -194,7 +194,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 								id="mat-packaging"
 								value={form.packaging_unit}
 								onChange={(e) => setForm((prev) => ({ ...prev, packaging_unit: e.target.value }))}
-								placeholder="z.B. Fass, Karton, Kiste"
+								placeholder="z.B. Fass, Karton"
 							/>
 						</div>
 					</div>
@@ -214,7 +214,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 						</div>
 					)}
 
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-2 gap-3 sm:gap-4">
 						<div>
 							<Label htmlFor="mat-ordered">Bestellmenge *</Label>
 							<Input
@@ -224,11 +224,11 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 								step="any"
 								value={form.ordered_quantity}
 								onChange={(e) => setForm((prev) => ({ ...prev, ordered_quantity: e.target.value }))}
-								placeholder={form.packaging_unit ? `Anzahl ${form.packaging_unit}` : `Anzahl ${form.unit}`}
+								placeholder={form.packaging_unit ? `Anz. ${form.packaging_unit}` : `Anzahl`}
 							/>
 						</div>
 						<div>
-							<Label htmlFor="mat-actual">Tatsächlicher Verbrauch</Label>
+							<Label htmlFor="mat-actual">Verbrauch</Label>
 							<Input
 								id="mat-actual"
 								type="number"
@@ -268,10 +268,10 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					</div>
 
 					<div className="flex justify-end gap-2">
-						<Button variant="outline" onClick={() => onOpenChange(false)}>
+						<Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
 							Abbrechen
 						</Button>
-						<Button onClick={handleSave} disabled={!form.name || !form.ordered_quantity}>
+						<Button onClick={handleSave} disabled={!form.name || !form.ordered_quantity} size="sm">
 							{material ? 'Aktualisieren' : 'Hinzufügen'}
 						</Button>
 					</div>
