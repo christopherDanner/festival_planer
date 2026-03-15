@@ -4,9 +4,10 @@ import { useAuth } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
+import ScheduleView from '@/components/schedule/ScheduleView';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Package, ArrowLeft } from 'lucide-react';
+import { CalendarDays, Package, ArrowLeft, CalendarClock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { Festival, getFestival } from '@/lib/festivalService';
@@ -90,7 +91,7 @@ export default function FestivalResults() {
 			<div className="pt-16">
 				<Tabs defaultValue="shifts" className="w-full flex flex-col">
 					{/* Header + desktop tabs */}
-					<div className="container mx-auto px-3 sm:px-4 pt-3 sm:pt-8">
+					<div className="px-3 sm:px-6 pt-3 sm:pt-8">
 						<div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
 							<Button
 								variant="ghost"
@@ -116,12 +117,16 @@ export default function FestivalResults() {
 									<Package className="h-4 w-4" />
 									Materialliste
 								</TabsTrigger>
+								<TabsTrigger value="schedule" className="gap-2">
+									<CalendarClock className="h-4 w-4" />
+									Ablaufplan
+								</TabsTrigger>
 							</TabsList>
 						)}
 					</div>
 
 					{/* Content */}
-					<div className={isMobile ? 'px-3 pb-16' : 'container mx-auto px-4'}>
+					<div className={isMobile ? 'px-3 pb-16' : 'px-6'}>
 						<TabsContent value="shifts" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<ShiftPlanningView
 								festivalId={festivalId}
@@ -131,6 +136,14 @@ export default function FestivalResults() {
 						</TabsContent>
 						<TabsContent value="materials" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<MaterialListView festivalId={festivalId} />
+						</TabsContent>
+						<TabsContent value="schedule" className={isMobile ? 'mt-0' : 'mt-0'}>
+							<ScheduleView
+								festivalId={festivalId}
+								festivalName={festival.name}
+								festivalStartDate={festival.start_date}
+								festivalEndDate={festival.end_date}
+							/>
 						</TabsContent>
 					</div>
 
@@ -149,6 +162,12 @@ export default function FestivalResults() {
 									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
 									<Package className="h-5 w-5" />
 									Materialliste
+								</TabsTrigger>
+								<TabsTrigger
+									value="schedule"
+									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
+									<CalendarClock className="h-5 w-5" />
+									Ablaufplan
 								</TabsTrigger>
 							</TabsList>
 						</div>

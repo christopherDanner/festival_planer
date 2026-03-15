@@ -87,6 +87,37 @@ export async function getUserFestivals(): Promise<Festival[]> {
 
 export async function deleteFestival(festivalId: string): Promise<void> {
 	// Delete all related data in correct order (children first, then parent)
+
+	// 0a. Delete schedule entries
+	const { error: scheduleEntryError } = await (supabase as any)
+		.from('schedule_entries')
+		.delete()
+		.eq('festival_id', festivalId);
+
+	if (scheduleEntryError) {
+		throw new Error('Fehler beim Löschen der Ablaufeinträge');
+	}
+
+	// 0b. Delete schedule phases
+	const { error: schedulePhaseError } = await (supabase as any)
+		.from('schedule_phases')
+		.delete()
+		.eq('festival_id', festivalId);
+
+	if (schedulePhaseError) {
+		throw new Error('Fehler beim Löschen der Ablaufphasen');
+	}
+
+	// 0c. Delete schedule days
+	const { error: scheduleDayError } = await (supabase as any)
+		.from('schedule_days')
+		.delete()
+		.eq('festival_id', festivalId);
+
+	if (scheduleDayError) {
+		throw new Error('Fehler beim Löschen der Ablauftage');
+	}
+
 	// 1. Delete shift assignments
 	const { error: assignmentError } = await supabase
 		.from('shift_assignments')

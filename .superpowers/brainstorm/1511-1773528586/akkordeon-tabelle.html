@@ -1,0 +1,161 @@
+<h2>Akkordeon + Tabelle — Kombiniertes Layout</h2>
+<p class="subtitle">Tage & Phasen klappbar, Einträge als strukturierte Tabelle</p>
+
+<div class="mockup">
+  <div class="mockup-header">Ablaufplan — Feuerwehrfest Musterstadt 2026</div>
+  <div class="mockup-body" style="padding: 0;">
+
+    <!-- Tag 1 -->
+    <div style="border-bottom: 2px solid #333;">
+      <!-- Day Header -->
+      <div style="background: #2d2d44; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="color: #a5b4fc; font-size: 14px;">▼</span>
+          <span style="font-weight: bold; color: #fff; font-size: 15px;">Freitag, 15. August 2026</span>
+        </div>
+        <span style="color: #888; font-size: 12px;">2 Phasen · 6 Einträge</span>
+      </div>
+
+      <!-- Phase 1: Aufbau -->
+      <div style="margin: 0;">
+        <div style="background: #252545; padding: 8px 16px 8px 32px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #333;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: #a5b4fc; font-size: 12px;">▼</span>
+            <span style="color: #a5b4fc; font-weight: 600; font-size: 14px;">Aufbau</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="background: #22c55e33; color: #22c55e; font-size: 11px; padding: 2px 8px; border-radius: 10px;">1/3 erledigt</span>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background: #1a1a30; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <th style="padding: 6px 12px 6px 40px; text-align: left; width: 70px;">Zeit</th>
+              <th style="padding: 6px 8px; text-align: left; width: 14px;">Typ</th>
+              <th style="padding: 6px 8px; text-align: left;">Eintrag</th>
+              <th style="padding: 6px 8px; text-align: left; width: 120px;">Verantwortlich</th>
+              <th style="padding: 6px 12px; text-align: center; width: 50px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #1e1e36; border-bottom: 1px solid #2a2a40;">
+              <td style="padding: 8px 12px 8px 40px; color: #a5b4fc; font-weight: 500;">08:00</td>
+              <td style="padding: 8px 8px;"><span style="background: #22c55e33; color: #22c55e; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Aufgabe</span></td>
+              <td style="padding: 8px 8px; color: #e2e8f0;">Zelt aufstellen</td>
+              <td style="padding: 8px 8px; color: #94a3b8; font-size: 12px;">Huber Max</td>
+              <td style="padding: 8px 12px; text-align: center;"><span style="color: #22c55e; font-size: 16px;">✓</span></td>
+            </tr>
+            <tr style="background: #1e1e36; border-bottom: 1px solid #2a2a40;">
+              <td style="padding: 8px 12px 8px 40px; color: #a5b4fc; font-weight: 500;">10:00</td>
+              <td style="padding: 8px 8px;"><span style="background: #22c55e33; color: #22c55e; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Aufgabe</span></td>
+              <td style="padding: 8px 8px; color: #e2e8f0;">Bühne aufbauen</td>
+              <td style="padding: 8px 8px; color: #94a3b8; font-size: 12px;">Müller Franz</td>
+              <td style="padding: 8px 12px; text-align: center;"><span style="color: #555; font-size: 16px;">○</span></td>
+            </tr>
+            <tr style="background: #1e1e36;">
+              <td style="padding: 8px 12px 8px 40px; color: #666;">—</td>
+              <td style="padding: 8px 8px;"><span style="background: #22c55e33; color: #22c55e; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Aufgabe</span></td>
+              <td style="padding: 8px 8px; color: #e2e8f0;">Deko & Beleuchtung anbringen</td>
+              <td style="padding: 8px 8px; color: #666;">—</td>
+              <td style="padding: 8px 12px; text-align: center;"><span style="color: #555; font-size: 16px;">○</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Phase 2: Abendprogramm -->
+      <div style="margin: 0;">
+        <div style="background: #252545; padding: 8px 16px 8px 32px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-top: 1px solid #333; border-bottom: 1px solid #333;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: #a5b4fc; font-size: 12px;">▼</span>
+            <span style="color: #a5b4fc; font-weight: 600; font-size: 14px;">Abendprogramm</span>
+          </div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background: #1a1a30; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <th style="padding: 6px 12px 6px 40px; text-align: left; width: 70px;">Zeit</th>
+              <th style="padding: 6px 8px; text-align: left; width: 14px;">Typ</th>
+              <th style="padding: 6px 8px; text-align: left;">Eintrag</th>
+              <th style="padding: 6px 8px; text-align: left; width: 120px;">Verantwortlich</th>
+              <th style="padding: 6px 12px; text-align: center; width: 50px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #1e1e36; border-bottom: 1px solid #2a2a40;">
+              <td style="padding: 8px 12px 8px 40px; color: #a5b4fc; font-weight: 500;">18:00</td>
+              <td style="padding: 8px 8px;"><span style="background: #6366f133; color: #a5b4fc; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Programm</span></td>
+              <td style="padding: 8px 8px; color: #e2e8f0;">Eröffnung & Begrüßung</td>
+              <td style="padding: 8px 8px; color: #94a3b8; font-size: 12px;">Bürgermeister</td>
+              <td style="padding: 8px 12px; text-align: center; color: #555;">—</td>
+            </tr>
+            <tr style="background: #1e1e36; border-bottom: 1px solid #2a2a40;">
+              <td style="padding: 8px 12px 8px 40px; color: #a5b4fc; font-weight: 500;">18:30</td>
+              <td style="padding: 8px 8px;"><span style="background: #22c55e33; color: #22c55e; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Aufgabe</span></td>
+              <td style="padding: 8px 8px; color: #e2e8f0;">Ausschank öffnen</td>
+              <td style="padding: 8px 8px; color: #94a3b8; font-size: 12px;">Wagner Josef</td>
+              <td style="padding: 8px 12px; text-align: center;"><span style="color: #555; font-size: 16px;">○</span></td>
+            </tr>
+            <tr style="background: #1e1e36;">
+              <td style="padding: 8px 12px 8px 40px; color: #a5b4fc; font-weight: 500;">20:00</td>
+              <td style="padding: 8px 8px;"><span style="background: #6366f133; color: #a5b4fc; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Programm</span></td>
+              <td style="padding: 8px 8px; color: #e2e8f0;">Musikkapelle Großfeld</td>
+              <td style="padding: 8px 8px; color: #666;">—</td>
+              <td style="padding: 8px 12px; text-align: center; color: #555;">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tag 2 (collapsed) -->
+    <div>
+      <div style="background: #2d2d44; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="color: #a5b4fc; font-size: 14px;">▶</span>
+          <span style="font-weight: bold; color: #fff; font-size: 15px;">Samstag, 16. August 2026</span>
+        </div>
+        <span style="color: #888; font-size: 12px;">3 Phasen · 9 Einträge</span>
+      </div>
+    </div>
+
+    <!-- Tag 3 (collapsed) -->
+    <div style="border-top: 1px solid #333;">
+      <div style="background: #2d2d44; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="color: #a5b4fc; font-size: 14px;">▶</span>
+          <span style="font-weight: bold; color: #fff; font-size: 15px;">Sonntag, 17. August 2026</span>
+        </div>
+        <span style="color: #888; font-size: 12px;">2 Phasen · 5 Einträge</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>Warum diese Kombination?</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Vorteile</h4>
+      <ul>
+        <li><strong>Überblick:</strong> Zugeklappt sieht man alle Tage + Zusammenfassung</li>
+        <li><strong>Details on demand:</strong> Nur aufklappen was gerade relevant ist</li>
+        <li><strong>Scanbar:</strong> Tabelle mit klaren Spalten für Zeit, Typ, Eintrag</li>
+        <li><strong>Aufgabe vs. Programm:</strong> Farblich unterschieden, Status nur bei Aufgaben</li>
+        <li><strong>PDF-Export:</strong> Tabellen exportieren sich sauber</li>
+        <li><strong>Fortschritt:</strong> Pro Phase sichtbar (z.B. "1/3 erledigt")</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Zu beachten</h4>
+      <ul>
+        <li>Mobile: Tabelle wird auf kleinen Screens zu Cards umgebaut</li>
+        <li>Viele Phasen pro Tag → viel Scrollen nötig</li>
+      </ul>
+    </div>
+  </div>
+</div>
