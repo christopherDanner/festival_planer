@@ -5,12 +5,14 @@ import Navigation from '@/components/Navigation';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
 import ScheduleView from '@/components/schedule/ScheduleView';
+import FestivalOverviewView from '@/components/festival-overview/FestivalOverviewView';
+import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Package, ArrowLeft, CalendarClock } from 'lucide-react';
+import { CalendarDays, Package, ArrowLeft, CalendarClock, Pencil, LayoutDashboard } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
-import { Festival, getFestival } from '@/lib/festivalService';
+import { Festival, getFestival, updateFestival } from '@/lib/festivalService';
 
 export default function FestivalResults() {
 	const [searchParams] = useSearchParams();
@@ -22,6 +24,7 @@ export default function FestivalResults() {
 
 	const [festival, setFestival] = useState<Festival | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [editDialogOpen, setEditDialogOpen] = useState(false);
 
 	const festivalId = searchParams.get('id') || location.state?.festivalId;
 
@@ -64,6 +67,26 @@ export default function FestivalResults() {
 		}
 	};
 
+	const handleSaveFestival = async (updates: { name: string; start_date: string; end_date: string | null; location: string | null }) => {
+		if (!festivalId) return;
+		try {
+			await updateFestival(festivalId, {
+				name: updates.name,
+				start_date: updates.start_date,
+				end_date: updates.end_date ?? undefined,
+				location: updates.location ?? undefined
+			});
+			await loadFestivalData();
+			toast({ title: 'Fest aktualisiert' });
+		} catch (error: unknown) {
+			toast({
+				title: 'Fehler beim Speichern',
+				description: error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten',
+				variant: 'destructive'
+			});
+		}
+	};
+
 	if (!user) {
 		return null;
 	}
@@ -85,11 +108,15 @@ export default function FestivalResults() {
 			? ` – ${new Date(festival.end_date).toLocaleDateString('de-AT')}`
 			: '');
 
+	const subtitleParts = [dateString];
+	if (festival.location) subtitleParts.push(festival.location);
+	const subtitleString = subtitleParts.join(' \u00b7 ');
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
 			<Navigation />
 			<div className="pt-16">
-				<Tabs defaultValue="shifts" className="w-full flex flex-col">
+				<Tabs defaultValue="overview" className="w-full flex flex-col">
 					{/* Header + desktop tabs */}
 					<div className="px-3 sm:px-6 pt-3 sm:pt-8">
 						<div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
@@ -102,13 +129,24 @@ export default function FestivalResults() {
 							</Button>
 							<div className="min-w-0">
 								<h1 className="text-base sm:text-3xl font-bold truncate">{festival.name}</h1>
-								<p className="text-xs sm:text-sm text-muted-foreground">{dateString}</p>
+								<p className="text-xs sm:text-sm text-muted-foreground">{subtitleString}</p>
 							</div>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8 shrink-0"
+								onClick={() => setEditDialogOpen(true)}>
+								<Pencil className="h-4 w-4" />
+							</Button>
 						</div>
 
 						{/* Desktop: tabs at top */}
 						{!isMobile && (
 							<TabsList className="w-auto mb-4">
+								<TabsTrigger value="overview" className="gap-2">
+									<LayoutDashboard className="h-4 w-4" />
+									Übersicht
+								</TabsTrigger>
 								<TabsTrigger value="shifts" className="gap-2">
 									<CalendarDays className="h-4 w-4" />
 									Schichtplan
@@ -127,6 +165,13 @@ export default function FestivalResults() {
 
 					{/* Content */}
 					<div className={isMobile ? 'px-3 pb-16' : 'px-6'}>
+						<TabsContent value="overview" className={isMobile ? 'mt-0' : 'mt-0'}>
+							<FestivalOverviewView
+								festivalId={festivalId}
+								festival={festival}
+								onEditFestival={() => setEditDialogOpen(true)}
+							/>
+						</TabsContent>
 						<TabsContent value="shifts" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<ShiftPlanningView
 								festivalId={festivalId}
@@ -135,7 +180,7 @@ export default function FestivalResults() {
 							/>
 						</TabsContent>
 						<TabsContent value="materials" className={isMobile ? 'mt-0' : 'mt-0'}>
-							<MaterialListView festivalId={festivalId} />
+							<MaterialListView festivalId={festivalId} festivalName={festival.name} />
 						</TabsContent>
 						<TabsContent value="schedule" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<ScheduleView
@@ -151,6 +196,12 @@ export default function FestivalResults() {
 					{isMobile && (
 						<div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
 							<TabsList className="w-full h-14 rounded-none bg-transparent p-0">
+								<TabsTrigger
+									value="overview"
+									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
+									<LayoutDashboard className="h-5 w-5" />
+									Übersicht
+								</TabsTrigger>
 								<TabsTrigger
 									value="shifts"
 									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
@@ -174,6 +225,13 @@ export default function FestivalResults() {
 					)}
 				</Tabs>
 			</div>
+
+			<FestivalEditDialog
+				open={editDialogOpen}
+				onOpenChange={setEditDialogOpen}
+				festival={festival}
+				onSave={handleSaveFestival}
+			/>
 		</div>
 	);
 }

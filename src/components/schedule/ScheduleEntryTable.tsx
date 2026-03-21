@@ -1,5 +1,3 @@
-import { Button } from '@/components/ui/button';
-import { Plus, CalendarClock } from 'lucide-react';
 import ScheduleEntryRow from './ScheduleEntryRow';
 import ScheduleEntryCard from './ScheduleEntryCard';
 import type { ScheduleEntryWithMember } from '@/lib/scheduleService';
@@ -9,7 +7,6 @@ interface ScheduleEntryTableProps {
 	onEdit: (entry: ScheduleEntryWithMember) => void;
 	onDelete: (id: string) => void;
 	onToggleStatus: (entry: ScheduleEntryWithMember) => void;
-	onAddEntry: () => void;
 	onReorder: (orderedIds: string[]) => void;
 	isMobile: boolean;
 }
@@ -19,7 +16,6 @@ const ScheduleEntryTable = ({
 	onEdit,
 	onDelete,
 	onToggleStatus,
-	onAddEntry,
 	onReorder,
 	isMobile,
 }: ScheduleEntryTableProps) => {
@@ -43,43 +39,25 @@ const ScheduleEntryTable = ({
 	};
 
 	if (entries.length === 0) {
-		return (
-			<div className="text-center py-8 text-muted-foreground/60">
-				<CalendarClock className="h-8 w-8 mx-auto mb-2 opacity-40" />
-				<p className="text-sm mb-3">Eintrag hinzufügen</p>
-				<Button variant="outline" size="sm" onClick={onAddEntry}>
-					<Plus className="h-4 w-4 mr-1.5" /> Eintrag hinzufügen
-				</Button>
-			</div>
-		);
+		return null;
 	}
 
 	if (isMobile) {
 		return (
-			<div>
-				<div className="space-y-2">
-					{entries.map((entry, index) => (
-						<ScheduleEntryCard
-							key={entry.id}
-							entry={entry}
-							onEdit={onEdit}
-							onDelete={onDelete}
-							onToggleStatus={onToggleStatus}
-							isFirst={index === 0}
-							isLast={index === entries.length - 1}
-							onMoveUp={() => moveEntry(index, 'up')}
-							onMoveDown={() => moveEntry(index, 'down')}
-						/>
-					))}
-				</div>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={onAddEntry}
-					className="w-full mt-2 text-muted-foreground hover:text-foreground"
-				>
-					<Plus className="h-4 w-4 mr-1" /> Eintrag
-				</Button>
+			<div className="space-y-2">
+				{entries.map((entry, index) => (
+					<ScheduleEntryCard
+						key={entry.id}
+						entry={entry}
+						onEdit={onEdit}
+						onDelete={onDelete}
+						onToggleStatus={onToggleStatus}
+						isFirst={index === 0}
+						isLast={index === entries.length - 1}
+						onMoveUp={() => moveEntry(index, 'up')}
+						onMoveDown={() => moveEntry(index, 'down')}
+					/>
+				))}
 			</div>
 		);
 	}
@@ -136,15 +114,6 @@ const ScheduleEntryTable = ({
 					);
 				})}
 			</div>
-
-			<Button
-				variant="ghost"
-				size="sm"
-				onClick={onAddEntry}
-				className="w-full mt-2 text-muted-foreground hover:text-foreground"
-			>
-				<Plus className="h-4 w-4 mr-1" /> Eintrag
-			</Button>
 		</div>
 	);
 };

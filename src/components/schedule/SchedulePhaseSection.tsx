@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import ScheduleEntryTable from './ScheduleEntryTable';
 import type { SchedulePhaseWithEntries, ScheduleEntryWithMember } from '@/lib/scheduleService';
 
@@ -44,12 +44,12 @@ const SchedulePhaseSection = ({
 			{/* Phase header — prominent banner */}
 			<div className="group flex items-center gap-3 mb-3">
 				{/* Left accent dot on the day's border line */}
-				<div className="absolute -left-[calc(1rem+5.5px)] sm:-left-[calc(1.25rem+5.5px)] w-3 h-3 rounded-full bg-primary/30 border-2 border-background" />
+				<div className="hidden sm:block absolute -left-[calc(1rem+5.5px)] sm:-left-[calc(1.25rem+5.5px)] w-3 h-3 rounded-full bg-primary/30 border-2 border-background" />
 
 				{/* Phase banner */}
-				<div className="flex-1 flex items-center justify-between rounded-lg bg-muted/80 border border-border/50 px-4 py-2.5">
+				<div className="flex-1 flex items-center justify-between rounded-lg bg-muted/80 border border-border/50 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
 					<div className="flex items-center gap-2.5">
-						<span className="font-bold text-sm text-foreground uppercase tracking-wide">{phase.name}</span>
+						<span className="font-bold text-xs sm:text-sm text-foreground uppercase tracking-wide">{phase.name}</span>
 						{hasProgress && (
 							<Badge
 								variant="outline"
@@ -58,13 +58,13 @@ const SchedulePhaseSection = ({
 								{doneTasks.length}/{tasks.length} erledigt
 							</Badge>
 						)}
-						<span className="text-xs text-muted-foreground">
+						<span className="hidden sm:inline text-xs text-muted-foreground">
 							{phase.entries.length} {phase.entries.length === 1 ? 'Eintrag' : 'Einträge'}
 						</span>
 					</div>
 
 					{/* Action buttons */}
-					<div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+					<div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
 						<Button
 							variant="ghost"
 							size="icon"
@@ -80,6 +80,9 @@ const SchedulePhaseSection = ({
 							onClick={onMoveDown}
 						>
 							<ChevronDown className="h-3.5 w-3.5" />
+						</Button>
+						<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onAddEntry(phase.id)}>
+							<Plus className="h-3.5 w-3.5" />
 						</Button>
 						<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditPhase(phase)}>
 							<Pencil className="h-3.5 w-3.5" />
@@ -103,7 +106,6 @@ const SchedulePhaseSection = ({
 					onEdit={onEditEntry}
 					onDelete={onDeleteEntry}
 					onToggleStatus={onToggleEntryStatus}
-					onAddEntry={() => onAddEntry(phase.id)}
 					onReorder={(orderedIds) => onReorderEntries(phase.id, orderedIds)}
 					isMobile={isMobile}
 				/>

@@ -7,19 +7,22 @@ import MaterialTable from './MaterialTable';
 import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialImportDialog from './dialogs/MaterialImportDialog';
 import InvoiceMatchDialog from './dialogs/InvoiceMatchDialog';
+import MaterialExportDialog from './dialogs/MaterialExportDialog';
 import type { FestivalMaterialWithStation, FestivalMaterial } from '@/lib/materialService';
 
 type DialogState =
 	| { type: null }
 	| { type: 'material'; material?: FestivalMaterialWithStation }
 	| { type: 'import' }
-	| { type: 'invoice-match' };
+	| { type: 'invoice-match' }
+	| { type: 'export' };
 
 interface MaterialListViewProps {
 	festivalId: string;
+	festivalName?: string;
 }
 
-const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
+const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festivalName }) => {
 	const { materials, stations, isLoading } = useMaterialListData(festivalId);
 	const actions = useMaterialListActions(festivalId);
 
@@ -79,8 +82,13 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 
 	const totalCost = useMemo(() => {
 		return materials.reduce((sum, m) => {
-			if (m.unit_price != null) return sum + m.ordered_quantity * m.unit_price;
-			return sum;
+			if (m.unit_price == null) return sum;
+			let grossPrice = m.unit_price;
+			if (m.tax_rate != null && m.price_is_net) {
+				grossPrice = Math.round(m.unit_price * (1 + m.tax_rate / 100) * 100) / 100;
+			}
+			const qty = m.actual_quantity ?? m.ordered_quantity;
+			return sum + qty * grossPrice;
 		}, 0);
 	}, [materials]);
 
@@ -114,6 +122,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 				onAddMaterial={() => setDialogState({ type: 'material' })}
 				onImportMaterial={() => setDialogState({ type: 'import' })}
 				onInvoiceMatch={() => setDialogState({ type: 'invoice-match' })}
+				onExport={() => setDialogState({ type: 'export' })}
 			/>
 
 			{/* Summary stats */}
@@ -153,8 +162,8 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 				materials={filteredMaterials}
 				onEdit={(material) => setDialogState({ type: 'material', material })}
 				onDelete={(id) => actions.deleteMaterial.mutate(id)}
-				onUpdateActualQuantity={(id, qty) => {
-					actions.updateMaterial.mutate({ id, updates: { actual_quantity: qty } });
+				onUpdateField={(id, field, value) => {
+					actions.updateMaterial.mutate({ id, updates: { [field]: value } });
 				}}
 			/>
 
@@ -197,6 +206,15 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId }) => {
 					});
 				}}
 				isApplying={actions.bulkUpdateMaterials.isPending || actions.bulkCreateMaterials.isPending}
+			/>
+
+			<MaterialExportDialog
+				open={dialogState.type === 'export'}
+				onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
+				festivalName={festivalName || 'Festival'}
+				materials={materials}
+				stations={stations}
+				suppliers={suppliers}
 			/>
 		</div>
 	);

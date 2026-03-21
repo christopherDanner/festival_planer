@@ -5,15 +5,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, CheckCircle, AlertCircle, PlusCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle, AlertCircle, PlusCircle, Plus } from 'lucide-react';
 import FileDropZone from '../FileDropZone';
 import { processFileForImport } from '@/lib/materialImportService';
 import { matchMaterials, type MatchedMaterial } from '@/lib/materialMatchService';
 import type { FestivalMaterialWithStation, FestivalMaterial } from '@/lib/materialService';
 
 type Step = 'upload' | 'processing' | 'preview';
-
-const UNITS = ['Stück', 'Liter', 'kg', 'Meter'];
 
 interface NewItemOverrides {
 	category: string | null;
@@ -104,6 +102,7 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 	const [supplierForNewItems, setSupplierForNewItems] = useState('');
 	const [priceOverrides, setPriceOverrides] = useState<Record<number, string>>({});
 	const [quantityOverrides, setQuantityOverrides] = useState<Record<number, string>>({});
+	const [nameOverrides, setNameOverrides] = useState<Record<number, string>>({});
 
 	const existingSuppliers = useMemo(
 		() => [...new Set(materials.map(m => m.supplier).filter(Boolean))] as string[],
@@ -145,6 +144,7 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 		setSupplierForNewItems('');
 		setPriceOverrides({});
 		setQuantityOverrides({});
+		setNameOverrides({});
 	}, []);
 
 	const handleOpenChange = useCallback((open: boolean) => {
@@ -251,6 +251,49 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 		setQuantityOverrides(prev => ({ ...prev, [index]: value }));
 	};
 
+	const updateName = (index: number, value: string) => {
+		setNameOverrides(prev => ({ ...prev, [index]: value }));
+	};
+
+	const getDisplayName = (m: MatchedMaterial, index: number): string => {
+		return nameOverrides[index] !== undefined ? nameOverrides[index] : m.extractedName;
+	};
+
+	const addManualItem = () => {
+		const newIndex = matches.length;
+		const emptyImported: any = {
+			name: '',
+			category: null,
+			supplier: null,
+			unit: 'Stück',
+			packaging_unit: null,
+			amount_per_packaging: null,
+			ordered_quantity: 1,
+			unit_price: null,
+			tax_rate: null,
+			price_is_net: true,
+			price_per: 'unit',
+			notes: null,
+			_id: `manual-${Date.now()}`,
+			_selected: true,
+		};
+		const newMatch: MatchedMaterial = {
+			extractedName: '',
+			extractedQuantity: 1,
+			extractedUnit: 'Stück',
+			matchedMaterial: null,
+			confidence: 0,
+			selected: true,
+			createNew: true,
+			importedData: emptyImported,
+		};
+		setMatches(prev => [...prev, newMatch]);
+		setNameOverrides(prev => ({ ...prev, [newIndex]: '' }));
+		setPriceOverrides(prev => ({ ...prev, [newIndex]: '' }));
+		setQuantityOverrides(prev => ({ ...prev, [newIndex]: '1' }));
+		initOverrides(newIndex, newMatch);
+	};
+
 	const getParsedPrice = (index: number): number | null => {
 		const val = priceOverrides[index];
 		if (val === undefined || val === '') return null;
@@ -290,7 +333,7 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 				return {
 					festival_id: festivalId,
 					station_id: ov?.station_id || null,
-					name: m.importedData.name,
+					name: getDisplayName(m, i) || m.importedData.name,
 					category: ov?.category || m.importedData.category,
 					supplier,
 					unit: ov?.unit || m.importedData.unit,
@@ -299,6 +342,9 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 					ordered_quantity: qty,
 					actual_quantity: qty,
 					unit_price: price,
+					tax_rate: m.importedData.tax_rate,
+					price_is_net: m.importedData.price_is_net ?? true,
+					price_per: m.importedData.price_per ?? 'unit',
 					notes: m.importedData.notes,
 				};
 			});
@@ -396,18 +442,13 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 		<div className={mobile ? 'ml-7 grid grid-cols-2 gap-2' : 'px-3 pb-2 pt-0 ml-8 flex flex-wrap gap-2'}>
 			<div className={mobile ? '' : 'w-[140px]'}>
 				<label className="text-[10px] text-muted-foreground uppercase tracking-wide">Einheit</label>
-				<Select
+				<Input
 					value={ov.unit}
-					onValueChange={(v) => updateOverride(i, 'unit', v)}>
-					<SelectTrigger className="h-7 text-xs mt-0.5">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{UNITS.map(u => (
-							<SelectItem key={u} value={u}>{u}</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+					onChange={(e) => updateOverride(i, 'unit', e.target.value)}
+					className="h-7 text-xs mt-0.5"
+					placeholder="z.B. Stück, Flasche"
+					list="unit-suggestions-invoice"
+				/>
 			</div>
 			<div className={mobile ? '' : 'w-[140px]'}>
 				<label className="text-[10px] text-muted-foreground uppercase tracking-wide">Gebinde</label>
@@ -620,7 +661,12 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 												/>
 												<div className="flex-1 min-w-0">
 													<div className="flex items-center gap-1.5">
-														<p className="text-sm font-medium truncate flex-1">{m.extractedName}</p>
+														<Input
+															value={getDisplayName(m, i)}
+															onChange={(e) => updateName(i, e.target.value)}
+															className="h-7 text-sm font-medium px-1.5 flex-1"
+															placeholder="Bezeichnung eingeben"
+														/>
 														<MatchStatusIcon m={m} />
 													</div>
 													<div className="mt-0.5">
@@ -642,7 +688,12 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 													onCheckedChange={() => toggleMatch(i)}
 												/>
 												<div className="flex-1 min-w-0">
-													<p className="text-sm font-medium truncate">{m.extractedName}</p>
+													<Input
+														value={getDisplayName(m, i)}
+														onChange={(e) => updateName(i, e.target.value)}
+														className="h-7 text-sm font-medium px-1.5 mb-0.5"
+														placeholder="Bezeichnung eingeben"
+													/>
 													<div className="mt-0.5">
 														{renderQuantityPrice(i, m)}
 													</div>
@@ -659,6 +710,12 @@ const InvoiceMatchDialog: React.FC<InvoiceMatchDialogProps> = ({
 								);
 							})}
 						</div>
+
+						{/* Add manual item */}
+						<Button variant="outline" size="sm" onClick={addManualItem} className="w-full gap-1.5 text-muted-foreground">
+							<Plus className="h-4 w-4" />
+							Position manuell hinzufügen
+						</Button>
 
 						{/* Actions */}
 						<div className="flex gap-2 sm:gap-3">

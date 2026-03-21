@@ -89,7 +89,6 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
 				location: '',
 				startDate,
 				endDate: endDate && endDate !== startDate ? endDate : undefined,
-				type: 'kirtag',
 				visitorCount: 'medium',
 			});
 

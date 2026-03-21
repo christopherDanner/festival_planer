@@ -8,6 +8,7 @@ export interface Festival {
 	end_date?: string;
 	visitor_count: string;
 	name?: string;
+	location?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -17,7 +18,6 @@ export interface FestivalData {
 	location: string;
 	startDate: string;
 	endDate?: string;
-	type?: string;
 	visitorCount: string;
 }
 
@@ -39,7 +39,7 @@ export async function createFestival(festivalData: FestivalData, userId?: string
 		.from('festivals')
 		.insert({
 			user_id: actualUserId,
-			type: festivalData.type || 'general',
+			type: 'kirtag',
 			start_date: festivalData.startDate,
 			end_date: festivalData.endDate,
 			visitor_count: festivalData.visitorCount,
@@ -69,6 +69,18 @@ export async function getFestival(festivalId: string): Promise<Festival | null> 
 		throw new Error('Fehler beim Laden des Festes');
 	}
 
+	return data;
+}
+
+export async function updateFestival(id: string, updates: Partial<Pick<Festival, 'name' | 'start_date' | 'end_date' | 'location'>>): Promise<Festival> {
+	const { data, error } = await supabase
+		.from('festivals')
+		.update({ ...updates, updated_at: new Date().toISOString() })
+		.eq('id', id)
+		.select()
+		.single();
+
+	if (error) throw error;
 	return data;
 }
 

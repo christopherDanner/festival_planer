@@ -13,6 +13,9 @@ export interface FestivalMaterial {
 	ordered_quantity: number;
 	actual_quantity: number | null;
 	unit_price: number | null;
+	tax_rate: number | null;
+	price_is_net: boolean;
+	price_per: string; // 'unit' or 'packaging'
 	notes: string | null;
 	created_at: string;
 	updated_at: string;

@@ -39,6 +39,9 @@ export interface AIMaterialItem {
 	amount_per_packaging: number | null;
 	ordered_quantity: number;
 	unit_price: number | null;
+	tax_rate: number | null;
+	price_is_net: boolean;
+	price_per: string;
 	notes: string | null;
 }
 
@@ -318,29 +321,27 @@ class AIService {
 Analysiere den gegebenen Text oder das Bild und extrahiere alle Positionen als strukturiertes JSON.
 
 **WICHTIG — Lieferant erkennen:**
-Identifiziere ZUERST den Lieferanten/Absender des Dokuments. Dieser steht typischerweise:
-- Im Briefkopf / in der Kopfzeile (Firmenname, Logo-Bereich)
-- Im Absenderfeld (über oder neben der Empfängeradresse)
-- Bei Rechnungen: die Firma, die die Rechnung AUSSTELLT (nicht der Empfänger)
-Verwende diesen Firmennamen als "supplier" für ALLE Positionen. Ein kurzer, gebräuchlicher Name reicht (z.B. "GVU Scheibbs" statt "Gemeindeverband für Umweltschutz im Bezirk Scheibbs").
-
-**Gültige Kategorien:** Getränke, Lebensmittel, Dekoration, Geschirr/Besteck, Technik, Sonstiges
-**Gültige Einheiten:** Stück, Liter, kg, Meter
+Identifiziere ZUERST den Lieferanten/Absender des Dokuments. Dieser steht typischerweise im Briefkopf oder Absenderfeld. Verwende einen kurzen, gebräuchlichen Firmennamen.
 
 **Regeln:**
-- Wenn die Einheit unklar ist, verwende "Stück"
-- Wenn die Bestellmenge unklar ist, verwende 1
-- Setze null für unbekannte/fehlende Felder
-- Erkenne Gebindeeinheiten (Fass, Kiste, Karton, Palette, etc.)
-- Der "supplier" darf NIEMALS null sein, wenn ein Firmenname im Dokument erkennbar ist
+- Erkenne die Einheit so wie sie auf dem Dokument steht (Stück, Liter, kg, Meter, Flasche, Dose, Packung, etc.)
+- Erkenne Gebindeeinheiten (Fass, Kiste, Karton, Palette, Sack, etc.)
+- "amount_per_packaging": Wie viele Einheiten sind in einem Gebinde? (z.B. 20 Flaschen pro Kiste)
+- Wenn die Menge unklar ist, verwende 1
+- Setze null für unbekannte/fehlende Felder — NIEMALS raten!
 
-**Mengen & Preise:**
-- "ordered_quantity": Die Gesamtmenge der Position (z.B. "2 Tag(e)" = 2, "152 Stk." = 152)
-- "unit_price": Der BRUTTO-Einzelpreis pro Einheit INKL. MwSt (als Zahl ohne Währungssymbol)
-  - Wenn nur Netto-Preis + MwSt-Satz vorhanden: berechne Brutto = Netto × (1 + MwSt/100)
-  - Wenn nur Brutto-Gesamtpreis vorhanden: berechne Einzelpreis = Brutto-Gesamt / Menge
-  - Wenn Brutto-Spalte UND Einzelpreis vorhanden: bevorzuge Brutto-Einzelpreis = Brutto-Gesamt / Menge
-- Preise immer als Brutto inkl. MwSt angeben, NIEMALS Netto-Preise
+**Preise & MwSt:**
+- "unit_price": Der Einzelpreis GENAU WIE ER AUF DEM DOKUMENT STEHT (als Zahl ohne €)
+- "price_is_net": true wenn der Preis ein Netto-Preis ist (ohne MwSt), false wenn Brutto (inkl. MwSt)
+  - Hinweis: Rechnungen zwischen Firmen zeigen oft Netto-Preise
+  - Wenn "netto", "exkl. MwSt", "zzgl. MwSt" steht → price_is_net = true
+  - Wenn "brutto", "inkl. MwSt" steht oder es ein Kassenbon ist → price_is_net = false
+  - Wenn unklar → price_is_net = true (Rechnungen sind meistens netto)
+- "tax_rate": Der MwSt-Satz als Zahl (10, 13, 20). Erkenne ihn aus dem Dokument. null wenn nicht erkennbar.
+  - In Österreich: 10% (Lebensmittel, Getränke), 13% (Beherbergung), 20% (Standard)
+- "price_per": "unit" wenn der Preis sich auf eine einzelne Einheit bezieht (z.B. pro Flasche), "packaging" wenn er sich auf ein Gebinde bezieht (z.B. pro Kiste). Standard: "unit"
+
+**Kategorien (wenn erkennbar):** Getränke, Lebensmittel, Dekoration, Geschirr/Besteck, Technik, Sonstiges
 
 **Ausgabe-Format (JSON):**
 {
@@ -348,12 +349,15 @@ Verwende diesen Firmennamen als "supplier" für ALLE Positionen. Ein kurzer, geb
     {
       "name": "Artikelname",
       "category": "Kategorie oder null",
-      "supplier": "Lieferant (PFLICHT wenn im Dokument erkennbar)",
-      "unit": "Stück|Liter|kg|Meter",
+      "supplier": "Lieferant oder null",
+      "unit": "Einheit wie im Dokument",
       "packaging_unit": "Gebindeeinheit oder null",
       "amount_per_packaging": null,
       "ordered_quantity": 1,
       "unit_price": null,
+      "tax_rate": null,
+      "price_is_net": true,
+      "price_per": "unit",
       "notes": "Zusätzliche Infos oder null"
     }
   ]
@@ -393,6 +397,9 @@ Verwende diesen Firmennamen als "supplier" für ALLE Positionen. Ein kurzer, geb
 				amount_per_packaging: m.amount_per_packaging != null ? Number(m.amount_per_packaging) : null,
 				ordered_quantity: Number(m.ordered_quantity) || 1,
 				unit_price: m.unit_price != null ? Number(m.unit_price) : null,
+				tax_rate: m.tax_rate != null ? Number(m.tax_rate) : null,
+				price_is_net: m.price_is_net !== false,
+				price_per: m.price_per === 'packaging' ? 'packaging' : 'unit',
 				notes: m.notes || null
 			}));
 		} catch (error) {

@@ -39,12 +39,35 @@ function similarity(a: string, b: string): number {
 	return overlap / maxLen;
 }
 
+/** Consolidate duplicate extracted items (same name + unit + price) into one with summed quantities */
+function deduplicateExtracted(items: ImportedMaterial[]): ImportedMaterial[] {
+	const groups = new Map<string, ImportedMaterial>();
+
+	for (const item of items) {
+		const key = [
+			item.name.toLowerCase().trim(),
+			(item.unit || '').toLowerCase().trim(),
+			item.unit_price != null ? item.unit_price.toString() : '__no_price__',
+		].join('|||');
+
+		const existing = groups.get(key);
+		if (existing) {
+			existing.ordered_quantity += item.ordered_quantity;
+		} else {
+			groups.set(key, { ...item });
+		}
+	}
+
+	return Array.from(groups.values());
+}
+
 /** Match extracted items against existing materials */
 export function matchMaterials(
 	extracted: ImportedMaterial[],
 	existing: FestivalMaterialWithStation[]
 ): MatchedMaterial[] {
-	return extracted.map(item => {
+	const deduplicated = deduplicateExtracted(extracted);
+	return deduplicated.map(item => {
 		let bestMatch: FestivalMaterialWithStation | null = null;
 		let bestScore = 0;
 

@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import type { Station } from '@/lib/shiftService';
 
+const CATEGORIES = ['Getränke', 'Lebensmittel', 'Dekoration', 'Geschirr/Besteck', 'Technik', 'Sonstiges'];
+
 interface MaterialDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -26,12 +28,12 @@ interface MaterialDialogProps {
 		ordered_quantity: number;
 		actual_quantity: number | null;
 		unit_price: number | null;
+		tax_rate: number | null;
+		price_is_net: boolean;
+		price_per: string;
 		notes: string | null;
 	}) => void;
 }
-
-const CATEGORIES = ['Getränke', 'Lebensmittel', 'Dekoration', 'Geschirr/Besteck', 'Technik', 'Sonstiges'];
-const UNITS = ['Stück', 'Liter', 'kg', 'Meter'];
 
 const MaterialDialog: React.FC<MaterialDialogProps> = ({
 	open,
@@ -52,6 +54,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 		ordered_quantity: '' as string,
 		actual_quantity: '' as string,
 		unit_price: '' as string,
+		tax_rate: '' as string,
+		price_is_net: 'true' as string,
+		price_per: 'packaging' as string,
 		notes: ''
 	});
 
@@ -68,6 +73,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 				ordered_quantity: String(material.ordered_quantity),
 				actual_quantity: material.actual_quantity != null ? String(material.actual_quantity) : '',
 				unit_price: material.unit_price != null ? String(material.unit_price) : '',
+				tax_rate: material.tax_rate != null ? String(material.tax_rate) : '',
+				price_is_net: material.price_is_net ? 'true' : 'false',
+				price_per: material.price_per || 'packaging',
 				notes: material.notes || ''
 			});
 		} else {
@@ -82,6 +90,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 				ordered_quantity: '',
 				actual_quantity: '',
 				unit_price: '',
+				tax_rate: '',
+				price_is_net: 'true',
+				price_per: 'packaging',
 				notes: ''
 			});
 		}
@@ -101,6 +112,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 			ordered_quantity: Number(form.ordered_quantity),
 			actual_quantity: form.actual_quantity ? Number(form.actual_quantity) : null,
 			unit_price: form.unit_price ? Number(form.unit_price) : null,
+			tax_rate: form.tax_rate && form.tax_rate !== '__none__' ? Number(form.tax_rate) : null,
+			price_is_net: form.price_is_net === 'true',
+			price_per: form.packaging_unit ? form.price_per : 'unit',
 			notes: form.notes || null
 		});
 		onOpenChange(false);
@@ -175,33 +189,47 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 						<div>
 							<Label htmlFor="mat-unit">Einheit *</Label>
-							<Select
+							<Input
+								id="mat-unit"
 								value={form.unit}
-								onValueChange={(value) => setForm((prev) => ({ ...prev, unit: value }))}>
-								<SelectTrigger id="mat-unit">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{UNITS.map((u) => (
-										<SelectItem key={u} value={u}>{u}</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+								onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))}
+								placeholder="z.B. Stück, Liter, kg"
+								list="unit-suggestions"
+							/>
+							<datalist id="unit-suggestions">
+								<option value="Stück" />
+								<option value="Liter" />
+								<option value="kg" />
+								<option value="Meter" />
+								<option value="Packung" />
+								<option value="Dose" />
+								<option value="Flasche" />
+							</datalist>
 						</div>
 						<div>
-							<Label htmlFor="mat-packaging">Gebindeeinheit</Label>
+							<Label htmlFor="mat-packaging">Gebinde</Label>
 							<Input
 								id="mat-packaging"
 								value={form.packaging_unit}
 								onChange={(e) => setForm((prev) => ({ ...prev, packaging_unit: e.target.value }))}
-								placeholder="z.B. Fass, Karton"
+								placeholder="z.B. Fass, Karton, Kiste"
+								list="packaging-suggestions"
 							/>
+							<datalist id="packaging-suggestions">
+								<option value="Fass" />
+								<option value="Karton" />
+								<option value="Kiste" />
+								<option value="Palette" />
+								<option value="Sack" />
+								<option value="Beutel" />
+								<option value="Kanister" />
+							</datalist>
 						</div>
 					</div>
 
 					{form.packaging_unit && (
 						<div>
-							<Label htmlFor="mat-amount-per">Menge pro Gebinde ({form.unit})</Label>
+							<Label htmlFor="mat-amount-per">{form.unit} pro {form.packaging_unit}</Label>
 							<Input
 								id="mat-amount-per"
 								type="number"
@@ -241,19 +269,87 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 						</div>
 					</div>
 
-					<div>
-						<Label htmlFor="mat-price">
-							Preis pro {form.packaging_unit || form.unit} (€)
-						</Label>
-						<Input
-							id="mat-price"
-							type="number"
-							min="0"
-							step="0.01"
-							value={form.unit_price}
-							onChange={(e) => setForm((prev) => ({ ...prev, unit_price: e.target.value }))}
-							placeholder="0.00"
-						/>
+					{form.packaging_unit && (
+						<div>
+							<Label>Preis bezieht sich auf</Label>
+							<div className="flex gap-1 mt-1">
+								<Button
+									size="sm"
+									variant={form.price_per === 'unit' ? 'default' : 'outline'}
+									type="button"
+									className="flex-1 h-8 text-xs"
+									onClick={() => setForm(prev => ({...prev, price_per: 'unit'}))}
+								>
+									pro {form.unit}
+								</Button>
+								<Button
+									size="sm"
+									variant={form.price_per === 'packaging' ? 'default' : 'outline'}
+									type="button"
+									className="flex-1 h-8 text-xs"
+									onClick={() => setForm(prev => ({...prev, price_per: 'packaging'}))}
+								>
+									pro {form.packaging_unit}
+								</Button>
+							</div>
+						</div>
+					)}
+
+					<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+						<div>
+							<Label htmlFor="mat-price">
+								Preis pro {form.packaging_unit && form.price_per === 'packaging' ? form.packaging_unit : form.unit} (€)
+							</Label>
+							<Input
+								id="mat-price"
+								type="number"
+								min="0"
+								step="0.01"
+								value={form.unit_price}
+								onChange={(e) => setForm((prev) => ({ ...prev, unit_price: e.target.value }))}
+								placeholder="0.00"
+							/>
+						</div>
+						<div>
+							<Label>Preisart</Label>
+							<div className="flex gap-1 mt-1">
+								<Button
+									type="button"
+									size="sm"
+									variant={form.price_is_net === 'true' ? 'default' : 'outline'}
+									onClick={() => setForm((prev) => ({ ...prev, price_is_net: 'true' }))}
+								>
+									Netto
+								</Button>
+								<Button
+									type="button"
+									size="sm"
+									variant={form.price_is_net === 'false' ? 'default' : 'outline'}
+									onClick={() => setForm((prev) => ({ ...prev, price_is_net: 'false' }))}
+								>
+									Brutto
+								</Button>
+							</div>
+						</div>
+						<div>
+							<Label htmlFor="mat-tax-rate">MwSt-Satz</Label>
+							<Select
+								value={form.tax_rate || '__none__'}
+								onValueChange={(value) =>
+									setForm((prev) => ({ ...prev, tax_rate: value === '__none__' ? '' : value }))
+								}
+							>
+								<SelectTrigger id="mat-tax-rate">
+									<SelectValue placeholder="Keine" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="__none__">Keine</SelectItem>
+									<SelectItem value="10">10% (Lebensmittel)</SelectItem>
+									<SelectItem value="13">13% (Beherbergung)</SelectItem>
+									<SelectItem value="20">20% (Standard)</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 					</div>
 
 					<div>

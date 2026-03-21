@@ -1,18 +1,23 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Package, Upload, FileCheck } from 'lucide-react';
+import { Package, Upload, FileCheck, FileDown } from 'lucide-react';
 
 interface MaterialListHeaderProps {
 	onAddMaterial: () => void;
 	onImportMaterial: () => void;
 	onInvoiceMatch: () => void;
+	onExport: () => void;
 }
 
-const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({ onAddMaterial, onImportMaterial, onInvoiceMatch }) => {
+const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({ onAddMaterial, onImportMaterial, onInvoiceMatch, onExport }) => {
 	return (
 		<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
 			<h2 className="text-lg sm:text-xl font-semibold">Materialliste</h2>
-			<div className="grid grid-cols-3 sm:flex gap-1.5 sm:gap-2">
+			<div className="grid grid-cols-4 sm:flex gap-1.5 sm:gap-2">
+				<Button variant="outline" onClick={onExport} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" size="sm">
+					<FileDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+					<span className="truncate">Export</span>
+				</Button>
 				<Button variant="outline" onClick={onInvoiceMatch} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" size="sm">
 					<FileCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
 					<span className="truncate">Abgleich</span>

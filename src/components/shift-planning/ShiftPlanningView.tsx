@@ -12,6 +12,7 @@ import StationShiftDialog from './dialogs/StationShiftDialog';
 import MemberDialog from './dialogs/MemberDialog';
 import PreferenceDialog from './dialogs/PreferenceDialog';
 import AutoAssignDialog from './dialogs/AutoAssignDialog';
+import ShareDialog from './dialogs/ShareDialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
@@ -46,6 +47,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	const [draggedMember, setDraggedMember] = useState<Member | null>(null);
 	const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 	const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+	const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 	const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
 
 	const handleTapSelect = (member: Member) => {
@@ -219,7 +221,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		<div
 			className={cn(
 				'flex flex-col',
-				isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'h-screen'
+				isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'h-[calc(100vh-8rem)]'
 			)}>
 			<ShiftPlanningHeader
 				isFullscreen={isFullscreen}
@@ -227,8 +229,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				onAddStation={() => setDialogState({ type: 'station' })}
 				onAutoAssign={() => setDialogState({ type: 'autoAssign' })}
 				onAddMember={() => setDialogState({ type: 'member' })}
-				onExportExcel={() => handleExport(exportToExcel)}
-				onExportPdf={() => handleExport(exportToPdf)}
+				onShare={() => setIsShareDialogOpen(true)}
 			/>
 
 			{/* Mobile: selected member banner */}
@@ -490,6 +491,20 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				}}
 				onClear={() => actions.clearAssignments.mutate()}
 				isLoading={actions.autoAssign.isPending}
+			/>
+
+			<ShareDialog
+				open={isShareDialogOpen}
+				onOpenChange={setIsShareDialogOpen}
+				festivalName={festivalName || 'Schichtplan'}
+				festivalDate={festivalDate || ''}
+				stations={data.stations}
+				stationShifts={data.stationShifts}
+				assignments={data.assignments}
+				stationMembers={data.stationMembers}
+				members={data.members}
+				onExportPdf={() => handleExport(exportToPdf)}
+				onExportExcel={() => handleExport(exportToExcel)}
 			/>
 		</div>
 	);

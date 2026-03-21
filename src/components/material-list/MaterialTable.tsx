@@ -15,47 +15,49 @@ import { Pencil, Trash2, Package } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
-/** Inline editable cell for actual_quantity */
-const EditableQuantityCell: React.FC<{
-	value: number | null;
-	material: FestivalMaterialWithStation;
-	onSave: (value: number | null) => void;
-}> = ({ value, material, onSave }) => {
+/* ------------------------------------------------------------------ */
+/*  Generic inline-editable cell (text / number)                      */
+/* ------------------------------------------------------------------ */
+
+const InlineEditCell: React.FC<{
+	value: string;
+	onSave: (value: string) => void;
+	type?: 'text' | 'number';
+	placeholder?: string;
+	className?: string;
+	inputClassName?: string;
+}> = ({ value, onSave, type = 'text', placeholder, className, inputClassName }) => {
 	const [editing, setEditing] = useState(false);
 	const [inputValue, setInputValue] = useState('');
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	const startEdit = () => {
-		setInputValue(value != null ? String(value) : '');
+		setInputValue(value);
 		setEditing(true);
 		setTimeout(() => inputRef.current?.focus(), 0);
 	};
 
 	const commit = () => {
 		setEditing(false);
-		const trimmed = inputValue.trim();
-		if (trimmed === '') {
-			if (value !== null) onSave(null);
-		} else {
-			const num = parseFloat(trimmed);
-			if (!isNaN(num) && num !== value) onSave(num);
-		}
+		if (inputValue !== value) onSave(inputValue);
 	};
 
 	if (editing) {
 		return (
 			<Input
 				ref={inputRef}
-				type="number"
-				step="any"
+				type={type}
+				step={type === 'number' ? 'any' : undefined}
 				value={inputValue}
 				onChange={(e) => setInputValue(e.target.value)}
 				onBlur={commit}
 				onKeyDown={(e) => {
 					if (e.key === 'Enter') commit();
 					if (e.key === 'Escape') setEditing(false);
+					if (e.key === 'Tab') { commit(); } // Don't prevent default — let browser move focus
 				}}
-				className="h-7 w-20 text-right text-sm px-1"
+				className={inputClassName || 'h-7 w-full text-sm px-1'}
+				placeholder={placeholder}
 			/>
 		);
 	}
@@ -63,19 +65,53 @@ const EditableQuantityCell: React.FC<{
 	return (
 		<span
 			onClick={startEdit}
-			className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 inline-block min-w-[40px] text-right"
-			title="Klicken zum Bearbeiten">
-			{formatQuantity(value, material)}
+			className={`cursor-pointer hover:bg-primary/5 rounded px-1 py-0.5 -mx-1 inline-block min-w-[30px] ${className || ''}`}
+			title="Klicken zum Bearbeiten"
+		>
+			{value || <span className="text-muted-foreground/40">{placeholder || '–'}</span>}
 		</span>
 	);
 };
+
+/* ------------------------------------------------------------------ */
+/*  Inline tax-rate select                                             */
+/* ------------------------------------------------------------------ */
+
+const InlineTaxSelect: React.FC<{
+	value: number | null;
+	onSave: (value: number | null) => void;
+}> = ({ value, onSave }) => {
+	return (
+		<select
+			value={value != null ? String(value) : ''}
+			onChange={(e) => {
+				const v = e.target.value;
+				onSave(v ? Number(v) : null);
+			}}
+			className="h-7 text-xs bg-transparent border rounded px-1 cursor-pointer hover:bg-primary/5"
+		>
+			<option value="">Keine MwSt</option>
+			<option value="10">10%</option>
+			<option value="13">13%</option>
+			<option value="20">20%</option>
+		</select>
+	);
+};
+
+/* ------------------------------------------------------------------ */
+/*  Props                                                              */
+/* ------------------------------------------------------------------ */
 
 interface MaterialTableProps {
 	materials: FestivalMaterialWithStation[];
 	onEdit: (material: FestivalMaterialWithStation) => void;
 	onDelete: (id: string) => void;
-	onUpdateActualQuantity?: (id: string, quantity: number | null) => void;
+	onUpdateField: (id: string, field: string, value: any) => void;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
 
 function formatPackaging(m: FestivalMaterialWithStation): string {
 	if (m.packaging_unit && m.amount_per_packaging) {
@@ -111,17 +147,48 @@ function formatPrice(price: number | null): string {
 	return `${price.toFixed(2)} €`;
 }
 
+function calculatePrices(material: FestivalMaterialWithStation): { net: number | null; gross: number | null } {
+	if (material.unit_price == null) return { net: null, gross: null };
+	if (material.tax_rate == null) return { net: material.unit_price, gross: material.unit_price };
+	if (material.price_is_net) {
+		return {
+			net: material.unit_price,
+			gross: Math.round(material.unit_price * (1 + material.tax_rate / 100) * 100) / 100
+		};
+	} else {
+		return {
+			net: Math.round(material.unit_price / (1 + material.tax_rate / 100) * 100) / 100,
+			gross: material.unit_price
+		};
+	}
+}
+
 function formatTotal(m: FestivalMaterialWithStation): string {
 	if (m.unit_price == null) return '–';
-	const total = m.ordered_quantity * m.unit_price;
-	return `${total.toFixed(2)} €`;
+	const prices = calculatePrices(m);
+	const grossPrice = prices.gross ?? m.unit_price;
+	const qty = m.actual_quantity ?? m.ordered_quantity;
+	return `${(qty * grossPrice).toFixed(2)} €`;
 }
+
+function getTotalValue(m: FestivalMaterialWithStation): number {
+	if (m.unit_price == null) return 0;
+	const prices = calculatePrices(m);
+	const grossPrice = prices.gross ?? m.unit_price;
+	const qty = m.actual_quantity ?? m.ordered_quantity;
+	return qty * grossPrice;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Mobile card                                                        */
+/* ------------------------------------------------------------------ */
 
 const MaterialMobileCard: React.FC<{
 	material: FestivalMaterialWithStation;
 	onEdit: () => void;
 	onDelete: () => void;
-}> = ({ material, onEdit, onDelete }) => {
+	onUpdateField: (field: string, value: any) => void;
+}> = ({ material, onEdit, onDelete, onUpdateField }) => {
 	const diff = formatDifference(material);
 	return (
 		<div className="rounded-lg border bg-card shadow-sm overflow-hidden">
@@ -151,12 +218,31 @@ const MaterialMobileCard: React.FC<{
 			</div>
 			<div className="grid grid-cols-3 gap-px bg-border/50">
 				<div className="bg-card px-3 py-2">
-					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">Bestellt</span>
-					<p className="text-sm font-medium mt-0.5">{formatQuantity(material.ordered_quantity, material)}</p>
+					<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+						Bestellt <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
+					</span>
+					<div className="text-sm font-medium mt-0.5">
+						<InlineEditCell
+							value={String(material.ordered_quantity)}
+							onSave={(v) => onUpdateField('ordered_quantity', v ? Number(v) : 0)}
+							type="number"
+							inputClassName="h-6 w-full text-sm px-1"
+						/>
+					</div>
 				</div>
 				<div className="bg-card px-3 py-2">
-					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">Verbraucht</span>
-					<p className="text-sm font-medium mt-0.5">{formatQuantity(material.actual_quantity, material)}</p>
+					<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+						Verbraucht <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
+					</span>
+					<div className="text-sm font-medium mt-0.5">
+						<InlineEditCell
+							value={material.actual_quantity != null ? String(material.actual_quantity) : ''}
+							onSave={(v) => onUpdateField('actual_quantity', v ? Number(v) : null)}
+							type="number"
+							placeholder="–"
+							inputClassName="h-6 w-full text-sm px-1"
+						/>
+					</div>
 				</div>
 				<div className="bg-card px-3 py-2">
 					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">Differenz</span>
@@ -165,7 +251,11 @@ const MaterialMobileCard: React.FC<{
 			</div>
 			{material.unit_price != null && (
 				<div className="px-3 py-1.5 border-t flex items-center justify-between text-xs">
-					<span className="text-muted-foreground">{formatPackaging(material)} · {formatPrice(material.unit_price)}/Stk</span>
+					<span className="text-muted-foreground">
+						{formatPackaging(material)} · {formatPrice(material.unit_price)}
+						{material.tax_rate != null ? (material.price_is_net ? ' netto' : ' brutto') : ''}/Stk
+						{material.tax_rate != null && ` (${material.tax_rate}% MwSt)`}
+					</span>
 					<span className="font-semibold">{formatTotal(material)}</span>
 				</div>
 			)}
@@ -173,14 +263,15 @@ const MaterialMobileCard: React.FC<{
 	);
 };
 
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onUpdateActualQuantity }) => {
+/* ------------------------------------------------------------------ */
+/*  Main table component                                               */
+/* ------------------------------------------------------------------ */
+
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onUpdateField }) => {
 	const isMobile = useIsMobile();
 
 	const totalCost = materials.reduce((sum, m) => {
-		if (m.unit_price != null) {
-			return sum + m.ordered_quantity * m.unit_price;
-		}
-		return sum;
+		return sum + getTotalValue(m);
 	}, 0);
 
 	const hasCosts = materials.some((m) => m.unit_price != null);
@@ -203,6 +294,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 						material={m}
 						onEdit={() => onEdit(m)}
 						onDelete={() => onDelete(m.id)}
+						onUpdateField={(field, value) => onUpdateField(m.id, field, value)}
 					/>
 				))}
 				{hasCosts && (
@@ -241,22 +333,52 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								<TableCell className="font-medium">{m.name}</TableCell>
 								<TableCell>{m.category || '–'}</TableCell>
 								<TableCell>{m.station?.name || '–'}</TableCell>
-								<TableCell>{m.supplier || '–'}</TableCell>
+								<TableCell>
+									<InlineEditCell
+										value={m.supplier || ''}
+										onSave={(v) => onUpdateField(m.id, 'supplier', v || null)}
+										type="text"
+										placeholder="–"
+										inputClassName="h-7 w-28 text-sm px-1"
+									/>
+								</TableCell>
 								<TableCell>{formatPackaging(m)}</TableCell>
-								<TableCell className="text-right">{formatQuantity(m.ordered_quantity, m)}</TableCell>
 								<TableCell className="text-right">
-									{onUpdateActualQuantity ? (
-										<EditableQuantityCell
-											value={m.actual_quantity}
-											material={m}
-											onSave={(v) => onUpdateActualQuantity(m.id, v)}
-										/>
-									) : (
-										formatQuantity(m.actual_quantity, m)
-									)}
+									<InlineEditCell
+										value={String(m.ordered_quantity)}
+										onSave={(v) => onUpdateField(m.id, 'ordered_quantity', v ? Number(v) : 0)}
+										type="number"
+										inputClassName="h-7 w-16 text-right text-sm px-1"
+										className="text-right"
+									/>
+								</TableCell>
+								<TableCell className="text-right">
+									<InlineEditCell
+										value={m.actual_quantity != null ? String(m.actual_quantity) : ''}
+										onSave={(v) => onUpdateField(m.id, 'actual_quantity', v ? Number(v) : null)}
+										type="number"
+										placeholder="–"
+										inputClassName="h-7 w-16 text-right text-sm px-1"
+										className="text-right"
+									/>
 								</TableCell>
 								<TableCell className={`text-right ${diff.className}`}>{diff.text}</TableCell>
-								<TableCell className="text-right">{formatPrice(m.unit_price)}</TableCell>
+								<TableCell className="text-right text-xs">
+									<div className="flex flex-col items-end gap-0.5">
+										<InlineEditCell
+											value={m.unit_price != null ? String(m.unit_price) : ''}
+											onSave={(v) => onUpdateField(m.id, 'unit_price', v ? Number(v) : null)}
+											type="number"
+											placeholder="Preis"
+											inputClassName="h-6 w-16 text-right text-xs px-1"
+											className="text-right"
+										/>
+										<InlineTaxSelect
+											value={m.tax_rate}
+											onSave={(v) => onUpdateField(m.id, 'tax_rate', v)}
+										/>
+									</div>
+								</TableCell>
 								<TableCell className="text-right">{formatTotal(m)}</TableCell>
 								<TableCell>
 									<div className="flex gap-1">
