@@ -18,11 +18,6 @@ function formatCurrency(value: number | null | undefined): string {
 	return value.toFixed(2);
 }
 
-function getDifferenz(m: FestivalMaterialWithStation): number | null {
-	if (m.actual_quantity == null) return null;
-	return m.actual_quantity - m.ordered_quantity;
-}
-
 function calculatePrices(m: FestivalMaterialWithStation): { net: number | null; gross: number | null } {
 	if (m.unit_price == null) return { net: null, gross: null };
 	if (m.tax_rate == null) return { net: m.unit_price, gross: m.unit_price };
@@ -63,7 +58,7 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 
 	const headers = [
 		'Name', 'Kategorie', 'Lieferant', 'Station', 'Einheit', 'Verpackung',
-		'Menge/VE', 'Bestellt', 'Ist-Menge', 'Differenz', 'Netto (€)', 'Brutto (€)', 'MwSt %', 'Gesamt (€)', 'Notizen'
+		'Menge/VE', 'Bestellt', 'Ist-Menge', 'Netto (€)', 'Brutto (€)', 'MwSt %', 'Gesamt (€)', 'Notizen'
 	];
 
 	const rows: (string | number | null)[][] = [];
@@ -72,7 +67,6 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 	let totalCost = 0;
 
 	for (const m of materials) {
-		const diff = getDifferenz(m);
 		const gesamt = getGesamt(m);
 		if (gesamt != null) totalCost += gesamt;
 		const prices = calculatePrices(m);
@@ -87,7 +81,6 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 			m.amount_per_packaging ?? '',
 			m.ordered_quantity,
 			m.actual_quantity ?? '',
-			diff != null ? diff : '',
 			prices.net != null ? prices.net : '',
 			prices.gross != null ? prices.gross : '',
 			m.tax_rate != null ? m.tax_rate : '',
@@ -98,7 +91,7 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 
 	// Summary row
 	rows.push([]);
-	rows.push([`Gesamt: ${materials.length} Positionen`, '', '', '', '', '', '', '', '', '', '', '', '', totalCost > 0 ? totalCost : '', '']);
+	rows.push([`Gesamt: ${materials.length} Positionen`, '', '', '', '', '', '', '', '', '', '', '', totalCost > 0 ? totalCost : '', '']);
 
 	const ws = XLSX.utils.aoa_to_sheet(rows);
 
@@ -111,8 +104,7 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 		{ wch: 14 },  // Verpackung
 		{ wch: 10 },  // Menge/VE
 		{ wch: 10 },  // Bestellt
-		{ wch: 10 },  // Ist-Menge
-		{ wch: 10 },  // Differenz
+		{ wch: 12 },  // Ist-Menge
 		{ wch: 14 },  // Netto
 		{ wch: 14 },  // Brutto
 		{ wch: 10 },  // MwSt %
@@ -147,11 +139,10 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 	y += 8;
 
 	// Table
-	const head = [['Name', 'Kat.', 'Lieferant', 'Station', 'Bestellt', 'Ist', 'Diff.', 'Netto', 'Brutto', 'Gesamt']];
+	const head = [['Name', 'Kat.', 'Lieferant', 'Station', 'Bestellt', 'Ist-Menge', 'Netto', 'Brutto', 'Gesamt']];
 
 	let totalCost = 0;
 	const body = materials.map(m => {
-		const diff = getDifferenz(m);
 		const gesamt = getGesamt(m);
 		if (gesamt != null) totalCost += gesamt;
 		const prices = calculatePrices(m);
@@ -163,15 +154,11 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 			m.station?.name || '',
 			String(m.ordered_quantity),
 			m.actual_quantity != null ? String(m.actual_quantity) : '',
-			diff != null ? String(diff) : '',
 			prices.net != null ? formatCurrency(prices.net) : '',
 			prices.gross != null ? formatCurrency(prices.gross) : '',
 			gesamt != null ? formatCurrency(gesamt) : '',
 		];
 	});
-
-	// Precompute diff values for color coding
-	const diffValues = materials.map(m => getDifferenz(m));
 
 	autoTable(doc, {
 		startY: y,
@@ -198,23 +185,19 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 			2: { cellWidth: 22 },   // Lieferant
 			3: { cellWidth: 20 },   // Station
 			4: { cellWidth: 14, halign: 'right' },  // Bestellt
-			5: { cellWidth: 12, halign: 'right' },  // Ist
-			6: { cellWidth: 12, halign: 'right' },  // Diff.
-			7: { cellWidth: 16, halign: 'right' },  // Netto
-			8: { cellWidth: 16, halign: 'right' },  // Brutto
-			9: { cellWidth: 16, halign: 'right' },  // Gesamt
+			5: { cellWidth: 14, halign: 'right', fontStyle: 'bold' },  // Ist-Menge
+			6: { cellWidth: 16, halign: 'right' },  // Netto
+			7: { cellWidth: 16, halign: 'right' },  // Brutto
+			8: { cellWidth: 16, halign: 'right' },  // Gesamt
 		},
 		margin: { left: margin, right: margin },
 		didParseCell: (hookData) => {
-			if (hookData.section === 'body' && hookData.column.index === 6) {
-				const rowIdx = hookData.row.index;
-				const diff = diffValues[rowIdx];
-				if (diff != null && diff < 0) {
-					hookData.cell.styles.textColor = [200, 30, 30];
-					hookData.cell.styles.fontStyle = 'bold';
-				} else if (diff != null && diff > 0) {
-					hookData.cell.styles.textColor = [30, 140, 30];
-					hookData.cell.styles.fontStyle = 'bold';
+			// Highlight Ist-Menge column
+			if (hookData.section === 'body' && hookData.column.index === 5) {
+				const text = hookData.cell.raw as string;
+				if (text) {
+					hookData.cell.styles.fillColor = [235, 245, 255];
+					hookData.cell.styles.textColor = [30, 64, 120];
 				}
 			}
 		},

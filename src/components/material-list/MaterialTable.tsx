@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Pencil, Trash2, Package } from 'lucide-react';
+import { Pencil, Trash2, Package, Copy } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
@@ -106,6 +106,7 @@ interface MaterialTableProps {
 	materials: FestivalMaterialWithStation[];
 	onEdit: (material: FestivalMaterialWithStation) => void;
 	onDelete: (id: string) => void;
+	onCopy: (material: FestivalMaterialWithStation) => void;
 	onUpdateField: (id: string, field: string, value: any) => void;
 }
 
@@ -187,8 +188,9 @@ const MaterialMobileCard: React.FC<{
 	material: FestivalMaterialWithStation;
 	onEdit: () => void;
 	onDelete: () => void;
+	onCopy: () => void;
 	onUpdateField: (field: string, value: any) => void;
-}> = ({ material, onEdit, onDelete, onUpdateField }) => {
+}> = ({ material, onEdit, onDelete, onCopy, onUpdateField }) => {
 	const diff = formatDifference(material);
 	return (
 		<div className="rounded-lg border bg-card shadow-sm overflow-hidden">
@@ -208,6 +210,9 @@ const MaterialMobileCard: React.FC<{
 					</div>
 				</div>
 				<div className="flex gap-0.5 shrink-0">
+					<Button variant="ghost" size="icon" className="h-7 w-7" onClick={onCopy} title="Kopieren">
+						<Copy className="h-3.5 w-3.5" />
+					</Button>
 					<Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
 						<Pencil className="h-3.5 w-3.5" />
 					</Button>
@@ -267,7 +272,7 @@ const MaterialMobileCard: React.FC<{
 /*  Main table component                                               */
 /* ------------------------------------------------------------------ */
 
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onUpdateField }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onCopy, onUpdateField }) => {
 	const isMobile = useIsMobile();
 
 	const totalCost = materials.reduce((sum, m) => {
@@ -294,6 +299,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 						material={m}
 						onEdit={() => onEdit(m)}
 						onDelete={() => onDelete(m.id)}
+						onCopy={() => onCopy(m)}
 						onUpdateField={(field, value) => onUpdateField(m.id, field, value)}
 					/>
 				))}
@@ -322,7 +328,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 						<TableHead className="text-right">Differenz</TableHead>
 						<TableHead className="text-right">Preis</TableHead>
 						<TableHead className="text-right">Gesamt</TableHead>
-						<TableHead className="w-[80px]"></TableHead>
+						<TableHead className="w-[116px]"></TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -382,6 +388,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								<TableCell className="text-right">{formatTotal(m)}</TableCell>
 								<TableCell>
 									<div className="flex gap-1">
+										<Button variant="ghost" size="icon" onClick={() => onCopy(m)} title="Kopieren">
+											<Copy className="h-4 w-4" />
+										</Button>
 										<Button variant="ghost" size="icon" onClick={() => onEdit(m)}>
 											<Pencil className="h-4 w-4" />
 										</Button>

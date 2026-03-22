@@ -205,7 +205,6 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			stationShifts: data.stationShifts,
 			assignments: data.assignments,
 			stationMembers: data.stationMembers,
-			members: data.members,
 		});
 	};
 

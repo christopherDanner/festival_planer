@@ -79,7 +79,7 @@ export function exportScheduleToPdf(options: ScheduleExportOptions): void {
       y += 5;
 
       // Build table data
-      const head = [['Zeit', 'Typ', 'Eintrag', 'Verantwortlich', 'Status']];
+      const head = [['Zeit', 'Typ', 'Eintrag', 'Verantwortlich']];
       const body = entries.map(entry => {
         let timeStr = '\u2014';
         if (entry.start_time) {
@@ -93,12 +93,7 @@ export function exportScheduleToPdf(options: ScheduleExportOptions): void {
           ? `${entry.responsible_member.last_name} ${entry.responsible_member.first_name}`
           : '\u2014';
 
-        let status = '\u2014';
-        if (entry.type === 'task') {
-          status = entry.status === 'done' ? '\u2713' : '\u25CB';
-        }
-
-        return [timeStr, typeStr, entry.title, responsible, status];
+        return [timeStr, typeStr, entry.title, responsible];
       });
 
       autoTable(doc, {
@@ -126,7 +121,6 @@ export function exportScheduleToPdf(options: ScheduleExportOptions): void {
           1: { cellWidth: 22, halign: 'center' },
           2: { cellWidth: 'auto' },
           3: { cellWidth: 38 },
-          4: { cellWidth: 16, halign: 'center' },
         },
         margin: { left: margin, right: margin },
         didParseCell: (hookData) => {
@@ -142,17 +136,6 @@ export function exportScheduleToPdf(options: ScheduleExportOptions): void {
                 hookData.cell.styles.fillColor = [245, 243, 255]; // violet-50
                 hookData.cell.styles.textColor = [109, 40, 217]; // violet-700
                 hookData.cell.styles.fontStyle = 'bold';
-              }
-            }
-            // Status coloring
-            if (hookData.column.index === 4) {
-              if (text === '\u2713') {
-                hookData.cell.styles.textColor = [4, 120, 87];
-                hookData.cell.styles.fontStyle = 'bold';
-                hookData.cell.styles.fontSize = 10;
-              } else if (text === '\u25CB') {
-                hookData.cell.styles.textColor = [156, 163, 175];
-                hookData.cell.styles.fontSize = 10;
               }
             }
             // Strikethrough for done entries

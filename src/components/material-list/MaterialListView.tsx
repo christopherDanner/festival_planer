@@ -162,6 +162,25 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				materials={filteredMaterials}
 				onEdit={(material) => setDialogState({ type: 'material', material })}
 				onDelete={(id) => actions.deleteMaterial.mutate(id)}
+				onCopy={(material) => {
+					actions.createMaterial.mutate({
+						festival_id: material.festival_id,
+						name: `${material.name} (Kopie)`,
+						category: material.category,
+						station_id: material.station_id,
+						supplier: material.supplier,
+						unit: material.unit,
+						packaging_unit: material.packaging_unit,
+						amount_per_packaging: material.amount_per_packaging,
+						ordered_quantity: material.ordered_quantity,
+						actual_quantity: null,
+						unit_price: material.unit_price,
+						tax_rate: material.tax_rate,
+						price_is_net: material.price_is_net,
+						price_per: material.price_per,
+						notes: material.notes,
+					});
+				}}
 				onUpdateField={(id, field, value) => {
 					actions.updateMaterial.mutate({ id, updates: { [field]: value } });
 				}}

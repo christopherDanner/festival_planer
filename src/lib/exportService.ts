@@ -2,7 +2,6 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
 
 export interface ExportData {
 	festivalName: string;
@@ -11,7 +10,6 @@ export interface ExportData {
 	stationShifts: StationShift[];
 	assignments: ShiftAssignmentWithMember[];
 	stationMembers: StationMemberWithDetails[];
-	members: Member[];
 }
 
 function formatShiftTime(shift: StationShift): string {
@@ -66,54 +64,6 @@ function buildStationColumns(data: ExportData) {
 			shiftBlocks,
 		};
 	});
-}
-
-/** Build member overview with assigned station names */
-function buildMemberOverview(data: ExportData) {
-	// Map shift -> station for lookups
-	const shiftToStation: Record<string, string> = {};
-	for (const shift of data.stationShifts) {
-		shiftToStation[shift.id] = shift.station_id;
-	}
-
-	const stationNameMap: Record<string, string> = {};
-	for (const station of data.stations) {
-		stationNameMap[station.id] = station.name;
-	}
-
-	const memberStations: Record<string, Set<string>> = {};
-	const counts: Record<string, number> = {};
-	for (const m of data.members) {
-		memberStations[m.id] = new Set();
-		counts[m.id] = 0;
-	}
-
-	// Direct station assignments
-	for (const sm of data.stationMembers) {
-		if (counts[sm.member_id] !== undefined) {
-			counts[sm.member_id]++;
-			const name = stationNameMap[sm.station_id];
-			if (name) memberStations[sm.member_id].add(name);
-		}
-	}
-
-	// Shift assignments
-	for (const a of data.assignments) {
-		if (a.member_id && counts[a.member_id] !== undefined) {
-			counts[a.member_id]++;
-			const stationId = shiftToStation[a.station_shift_id];
-			const name = stationId ? stationNameMap[stationId] : undefined;
-			if (name) memberStations[a.member_id].add(name);
-		}
-	}
-
-	return data.members.map(m => ({
-		name: getMemberName(m),
-		id: m.id,
-		count: counts[m.id] || 0,
-		stations: [...(memberStations[m.id] || [])],
-		isActive: m.is_active,
-	}));
 }
 
 // ── Excel Export ──────────────────────────────────────────────
@@ -187,30 +137,6 @@ export function exportToExcel(data: ExportData): void {
 	}
 
 	XLSX.utils.book_append_sheet(wb, ws, 'Schichtplan');
-
-	// ── Sheet 2: Member overview ──
-	const overview = buildMemberOverview(data);
-	overview.sort((a, b) => a.count - b.count);
-
-	const ovRows: (string | number | null)[][] = [];
-	ovRows.push(['Mitgliederübersicht']);
-	ovRows.push([]);
-	ovRows.push(['Name', 'Zuweisungen', 'Station']);
-
-	for (const m of overview) {
-		const stationText = m.count === 0 ? 'FREI' : m.stations.join(', ');
-		ovRows.push([m.name, m.count, stationText]);
-	}
-
-	ovRows.push([]);
-	const freeCount = overview.filter(m => m.count === 0).length;
-	const assignedCount = overview.filter(m => m.count > 0).length;
-	ovRows.push([`Gesamt: ${overview.length} Mitglieder | ${freeCount} frei | ${assignedCount} zugewiesen`]);
-
-	const ws2 = XLSX.utils.aoa_to_sheet(ovRows);
-	ws2['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 40 }];
-
-	XLSX.utils.book_append_sheet(wb, ws2, 'Übersicht');
 
 	XLSX.writeFile(wb, `${sanitizeFilename(data.festivalName)}_Schichtplan.xlsx`);
 }
@@ -321,65 +247,6 @@ export function exportToPdf(data: ExportData): void {
 					hookData.cell.styles.fontStyle = 'italic';
 					hookData.cell.styles.textColor = [120, 120, 120];
 					hookData.cell.styles.fontSize = 6.5;
-				}
-			}
-		},
-	});
-
-	y = (doc as any).lastAutoTable.finalY + 12;
-
-	// ── Member overview ──
-	const overview = buildMemberOverview(data);
-	overview.sort((a, b) => a.count - b.count);
-
-	doc.addPage();
-	y = 15;
-
-	doc.setFontSize(13);
-	doc.setFont('helvetica', 'bold');
-	doc.text('Mitgliederübersicht', margin, y);
-	y += 6;
-
-	const freeCount = overview.filter(m => m.count === 0).length;
-	const assignedCount = overview.filter(m => m.count > 0).length;
-	doc.setFontSize(9);
-	doc.setFont('helvetica', 'normal');
-	doc.text(`${overview.length} Mitglieder gesamt | ${freeCount} frei | ${assignedCount} zugewiesen`, margin, y);
-	y += 6;
-
-	autoTable(doc, {
-		startY: y,
-		head: [['Name', 'Zuweisungen', 'Station']],
-		body: overview.map(m => [
-			m.name,
-			m.count.toString(),
-			m.count === 0 ? 'FREI' : m.stations.join(', '),
-		]),
-		theme: 'grid',
-		styles: {
-			fontSize: 8,
-			cellPadding: 2,
-			overflow: 'linebreak',
-		},
-		headStyles: { fillColor: [70, 70, 70], fontStyle: 'bold', fontSize: 9 },
-		columnStyles: {
-			0: { cellWidth: 55 },
-			1: { cellWidth: 22, halign: 'center' },
-			2: { cellWidth: 'auto' },
-		},
-		margin: { left: margin, right: margin },
-		tableWidth: usableWidth,
-		didParseCell: (hookData) => {
-			if (hookData.section === 'body') {
-				const rowIdx = hookData.row.index;
-				const memberData = overview[rowIdx];
-				if (memberData && memberData.count === 0) {
-					hookData.cell.styles.fillColor = [255, 235, 235];
-					hookData.cell.styles.textColor = [180, 40, 40];
-					hookData.cell.styles.fontStyle = 'bold';
-				} else if (memberData && memberData.count >= 3) {
-					hookData.cell.styles.fillColor = [255, 248, 225];
-					hookData.cell.styles.textColor = [160, 120, 20];
 				}
 			}
 		},
