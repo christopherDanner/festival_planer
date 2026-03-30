@@ -84,7 +84,7 @@ export const useMaterialListActions = (festivalId: string) => {
 	});
 
 	const bulkUpdateMaterialsMutation = useMutation({
-		mutationFn: (updates: { id: string; actual_quantity: number; unit_price?: number | null }[]) =>
+		mutationFn: (updates: { id: string; actual_quantity?: number; unit_price?: number | null; ordered_quantity?: number }[]) =>
 			updateMaterialsBulk(updates),
 		onSuccess: (_data, variables) => {
 			invalidateAll();
