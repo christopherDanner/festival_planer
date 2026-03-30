@@ -28,7 +28,7 @@ interface MaterialTransferDialogProps {
 	onTransfer: (
 		newMaterials: Omit<FestivalMaterial, 'id' | 'created_at' | 'updated_at'>[],
 		updates: { id: string; ordered_quantity: number }[]
-	) => void;
+	) => Promise<void>;
 	isTransferring: boolean;
 }
 
@@ -79,7 +79,12 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 		if (!open) return;
 		setLoadingFestivals(true);
 		getUserFestivals()
-			.then((data) => setFestivals(data.filter((f) => f.id !== festivalId)))
+			.then((data) => {
+				const filtered = data
+					.filter((f) => f.id !== festivalId)
+					.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+				setFestivals(filtered);
+			})
 			.catch(() => setFestivals([]))
 			.finally(() => setLoadingFestivals(false));
 	}, [open, festivalId]);
@@ -148,7 +153,7 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 		return { newCount, updateCount, total: newCount + updateCount };
 	}, [rows]);
 
-	const handleTransfer = () => {
+	const handleTransfer = async () => {
 		const newMaterials: Omit<FestivalMaterial, 'id' | 'created_at' | 'updated_at'>[] = [];
 		const updates: { id: string; ordered_quantity: number }[] = [];
 
@@ -181,7 +186,11 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 			}
 		}
 
-		onTransfer(newMaterials, updates);
+		try {
+			await onTransfer(newMaterials, updates);
+		} catch {
+			// Dialog stays open on error; error toast handled by mutation onError
+		}
 	};
 
 	const selectedFestival = festivals.find((f) => f.id === selectedFestivalId);
