@@ -7,39 +7,11 @@ export interface MaterialExportOptions {
 	festivalName: string;
 	materials: FestivalMaterialWithStation[];
 	filterLabel?: string;
+	isStationFiltered?: boolean;
 }
 
 function sanitizeFilename(name: string): string {
 	return name.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim();
-}
-
-function formatCurrency(value: number | null | undefined): string {
-	if (value == null) return '';
-	return value.toFixed(2);
-}
-
-function calculatePrices(m: FestivalMaterialWithStation): { net: number | null; gross: number | null } {
-	if (m.unit_price == null) return { net: null, gross: null };
-	if (m.tax_rate == null) return { net: m.unit_price, gross: m.unit_price };
-	if (m.price_is_net) {
-		return {
-			net: m.unit_price,
-			gross: Math.round(m.unit_price * (1 + m.tax_rate / 100) * 100) / 100
-		};
-	} else {
-		return {
-			net: Math.round(m.unit_price / (1 + m.tax_rate / 100) * 100) / 100,
-			gross: m.unit_price
-		};
-	}
-}
-
-function getGesamt(m: FestivalMaterialWithStation): number | null {
-	if (m.unit_price == null) return null;
-	const prices = calculatePrices(m);
-	const grossPrice = prices.gross ?? m.unit_price;
-	const qty = m.actual_quantity ?? m.ordered_quantity;
-	return qty * grossPrice;
 }
 
 function buildFilename(festivalName: string, suffix: string, filterLabel?: string): string {
@@ -50,66 +22,95 @@ function buildFilename(festivalName: string, suffix: string, filterLabel?: strin
 	return `${base}_Materialliste.${suffix}`;
 }
 
+const EXPLANATION_TEXT = (festivalName: string) =>
+	`Diese Liste zeigt die bestellten und tatsächlich verbrauchten Mengen des Festes „${festivalName}". ` +
+	`Bitte tragen Sie in der Spalte „Neue Menge" die gewünschte Bestellmenge für das kommende Fest ein ` +
+	`und geben Sie die ausgefüllte Liste an den Festverantwortlichen zurück.`;
+
 // ── Excel Export ──────────────────────────────────────────────
 
 export function exportMaterialsToExcel(options: MaterialExportOptions): void {
-	const { festivalName, materials, filterLabel } = options;
+	const { festivalName, materials, filterLabel, isStationFiltered } = options;
 	const wb = XLSX.utils.book_new();
 
-	const headers = [
-		'Name', 'Kategorie', 'Lieferant', 'Station', 'Einheit', 'Verpackung',
-		'Menge/VE', 'Bestellt', 'Ist-Menge', 'Netto (€)', 'Brutto (€)', 'MwSt %', 'Gesamt (€)', 'Notizen'
-	];
-
 	const rows: (string | number | null)[][] = [];
+
+	// Title rows
+	const subtitle = filterLabel ? `Materialliste — ${filterLabel}` : 'Materialliste';
+	rows.push([festivalName]);
+	rows.push([subtitle]);
+	rows.push([]); // empty row
+	rows.push([EXPLANATION_TEXT(festivalName)]);
+	rows.push([]); // empty row before table
+
+	// Headers — omit Station column when filtered by station
+	const headers = isStationFiltered
+		? ['Name', 'Lieferant', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge']
+		: ['Name', 'Lieferant', 'Station', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge'];
 	rows.push(headers);
 
-	let totalCost = 0;
-
 	for (const m of materials) {
-		const gesamt = getGesamt(m);
-		if (gesamt != null) totalCost += gesamt;
-		const prices = calculatePrices(m);
-
-		rows.push([
-			m.name,
-			m.category || '',
-			m.supplier || '',
-			m.station?.name || '',
-			m.unit,
-			m.packaging_unit || '',
-			m.amount_per_packaging ?? '',
-			m.ordered_quantity,
-			m.actual_quantity ?? '',
-			prices.net != null ? prices.net : '',
-			prices.gross != null ? prices.gross : '',
-			m.tax_rate != null ? m.tax_rate : '',
-			gesamt != null ? gesamt : '',
-			m.notes || '',
-		]);
+		const row = isStationFiltered
+			? [
+				m.name,
+				m.supplier || '',
+				m.unit,
+				m.packaging_unit || '',
+				m.amount_per_packaging ?? '',
+				m.ordered_quantity,
+				m.actual_quantity ?? '',
+				'', // Neue Menge — empty for user to fill in
+			]
+			: [
+				m.name,
+				m.supplier || '',
+				m.station?.name || '',
+				m.unit,
+				m.packaging_unit || '',
+				m.amount_per_packaging ?? '',
+				m.ordered_quantity,
+				m.actual_quantity ?? '',
+				'', // Neue Menge
+			];
+		rows.push(row);
 	}
 
 	// Summary row
 	rows.push([]);
-	rows.push([`Gesamt: ${materials.length} Positionen`, '', '', '', '', '', '', '', '', '', '', '', totalCost > 0 ? totalCost : '', '']);
+	rows.push([`Gesamt: ${materials.length} Positionen`]);
 
 	const ws = XLSX.utils.aoa_to_sheet(rows);
 
-	ws['!cols'] = [
-		{ wch: 28 },  // Name
-		{ wch: 16 },  // Kategorie
-		{ wch: 20 },  // Lieferant
-		{ wch: 18 },  // Station
-		{ wch: 10 },  // Einheit
-		{ wch: 14 },  // Verpackung
-		{ wch: 10 },  // Menge/VE
-		{ wch: 10 },  // Bestellt
-		{ wch: 12 },  // Ist-Menge
-		{ wch: 14 },  // Netto
-		{ wch: 14 },  // Brutto
-		{ wch: 10 },  // MwSt %
-		{ wch: 12 },  // Gesamt
-		{ wch: 24 },  // Notizen
+	// Column widths
+	ws['!cols'] = isStationFiltered
+		? [
+			{ wch: 28 }, // Name
+			{ wch: 20 }, // Lieferant
+			{ wch: 10 }, // Einheit
+			{ wch: 14 }, // Verpackung
+			{ wch: 10 }, // Menge/VE
+			{ wch: 10 }, // Bestellt
+			{ wch: 12 }, // Ist-Menge
+			{ wch: 14 }, // Neue Menge
+		]
+		: [
+			{ wch: 28 }, // Name
+			{ wch: 20 }, // Lieferant
+			{ wch: 18 }, // Station
+			{ wch: 10 }, // Einheit
+			{ wch: 14 }, // Verpackung
+			{ wch: 10 }, // Menge/VE
+			{ wch: 10 }, // Bestellt
+			{ wch: 12 }, // Ist-Menge
+			{ wch: 14 }, // Neue Menge
+		];
+
+	// Merge explanation text across columns
+	const colCount = headers.length;
+	ws['!merges'] = [
+		{ s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } }, // title
+		{ s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } }, // subtitle
+		{ s: { r: 3, c: 0 }, e: { r: 3, c: colCount - 1 } }, // explanation
 	];
 
 	XLSX.utils.book_append_sheet(wb, ws, 'Materialliste');
@@ -119,7 +120,7 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 // ── PDF Export ────────────────────────────────────────────────
 
 export function exportMaterialsToPdf(options: MaterialExportOptions): void {
-	const { festivalName, materials, filterLabel } = options;
+	const { festivalName, materials, filterLabel, isStationFiltered } = options;
 	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 	const pageWidth = doc.internal.pageSize.getWidth();
 	const pageHeight = doc.internal.pageSize.getHeight();
@@ -138,27 +139,59 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 	doc.text(subtitle, pageWidth / 2, y, { align: 'center' });
 	y += 8;
 
-	// Table
-	const head = [['Name', 'Kat.', 'Lieferant', 'Station', 'Bestellt', 'Ist-Menge', 'Netto', 'Brutto', 'Gesamt']];
+	// Explanation text
+	doc.setFontSize(9);
+	doc.setFont('helvetica', 'italic');
+	const explanationLines = doc.splitTextToSize(EXPLANATION_TEXT(festivalName), pageWidth - margin * 2);
+	doc.text(explanationLines, margin, y);
+	y += explanationLines.length * 4 + 4;
 
-	let totalCost = 0;
+	// Table columns — omit Station when filtered
+	const head = isStationFiltered
+		? [['Name', 'Lieferant', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge']]
+		: [['Name', 'Lieferant', 'Station', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge']];
+
 	const body = materials.map(m => {
-		const gesamt = getGesamt(m);
-		if (gesamt != null) totalCost += gesamt;
-		const prices = calculatePrices(m);
-
-		return [
+		const baseRow = [
 			m.name,
-			m.category || '',
 			m.supplier || '',
-			m.station?.name || '',
+			...(isStationFiltered ? [] : [m.station?.name || '']),
+			m.unit,
+			m.packaging_unit || '',
+			m.amount_per_packaging != null ? String(m.amount_per_packaging) : '',
 			String(m.ordered_quantity),
 			m.actual_quantity != null ? String(m.actual_quantity) : '',
-			prices.net != null ? formatCurrency(prices.net) : '',
-			prices.gross != null ? formatCurrency(prices.gross) : '',
-			gesamt != null ? formatCurrency(gesamt) : '',
+			'', // Neue Menge — empty
 		];
+		return baseRow;
 	});
+
+	// Column style indices shift based on whether station is shown
+	const neueMengeIdx = isStationFiltered ? 7 : 8;
+	const istMengeIdx = isStationFiltered ? 6 : 7;
+
+	const columnStyles: Record<number, any> = isStationFiltered
+		? {
+			0: { cellWidth: 32 },  // Name
+			1: { cellWidth: 24 },  // Lieferant
+			2: { cellWidth: 14 },  // Einheit
+			3: { cellWidth: 16 },  // VE
+			4: { cellWidth: 14, halign: 'right' },  // Menge/VE
+			5: { cellWidth: 14, halign: 'right' },  // Bestellt
+			6: { cellWidth: 16, halign: 'right', fontStyle: 'bold' },  // Ist-Menge
+			7: { cellWidth: 20, halign: 'right' },  // Neue Menge
+		}
+		: {
+			0: { cellWidth: 28 },  // Name
+			1: { cellWidth: 22 },  // Lieferant
+			2: { cellWidth: 18 },  // Station
+			3: { cellWidth: 12 },  // Einheit
+			4: { cellWidth: 14 },  // VE
+			5: { cellWidth: 12, halign: 'right' },  // Menge/VE
+			6: { cellWidth: 12, halign: 'right' },  // Bestellt
+			7: { cellWidth: 14, halign: 'right', fontStyle: 'bold' },  // Ist-Menge
+			8: { cellWidth: 18, halign: 'right' },  // Neue Menge
+		};
 
 	autoTable(doc, {
 		startY: y,
@@ -179,30 +212,25 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 			halign: 'center',
 			cellPadding: 2,
 		},
-		columnStyles: {
-			0: { cellWidth: 28 },   // Name
-			1: { cellWidth: 16 },   // Kat.
-			2: { cellWidth: 22 },   // Lieferant
-			3: { cellWidth: 20 },   // Station
-			4: { cellWidth: 14, halign: 'right' },  // Bestellt
-			5: { cellWidth: 14, halign: 'right', fontStyle: 'bold' },  // Ist-Menge
-			6: { cellWidth: 16, halign: 'right' },  // Netto
-			7: { cellWidth: 16, halign: 'right' },  // Brutto
-			8: { cellWidth: 16, halign: 'right' },  // Gesamt
-		},
+		columnStyles,
 		margin: { left: margin, right: margin },
 		didParseCell: (hookData) => {
-			// Highlight Ist-Menge column
-			if (hookData.section === 'body' && hookData.column.index === 5) {
-				const text = hookData.cell.raw as string;
-				if (text) {
-					hookData.cell.styles.fillColor = [235, 245, 255];
-					hookData.cell.styles.textColor = [30, 64, 120];
+			if (hookData.section === 'body') {
+				// Highlight Ist-Menge column in light blue
+				if (hookData.column.index === istMengeIdx) {
+					const text = hookData.cell.raw as string;
+					if (text) {
+						hookData.cell.styles.fillColor = [235, 245, 255];
+						hookData.cell.styles.textColor = [30, 64, 120];
+					}
+				}
+				// Highlight Neue Menge column in light yellow
+				if (hookData.column.index === neueMengeIdx) {
+					hookData.cell.styles.fillColor = [255, 253, 230];
 				}
 			}
 		},
-		didDrawPage: (hookData) => {
-			// Page footer with page numbers
+		didDrawPage: () => {
 			const pageCount = (doc as any).internal.getNumberOfPages();
 			const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
 			doc.setFontSize(8);
@@ -222,11 +250,7 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 	const finalY = (doc as any).lastAutoTable.finalY + 8;
 	doc.setFontSize(9);
 	doc.setFont('helvetica', 'bold');
-	const summaryParts = [`${materials.length} Positionen`];
-	if (totalCost > 0) {
-		summaryParts.push(`Gesamtkosten: ${totalCost.toFixed(2)} €`);
-	}
-	doc.text(summaryParts.join('  |  '), margin, finalY);
+	doc.text(`${materials.length} Positionen`, margin, finalY);
 
 	doc.save(buildFilename(festivalName, 'pdf', filterLabel));
 }

@@ -43,12 +43,14 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 		return undefined;
 	}, [filterMode, selectedStationId, selectedSupplier, stations]);
 
+	const isStationFiltered = filterMode === 'station' && selectedStationId !== '__none__';
+
 	const handleExportPdf = () => {
-		exportMaterialsToPdf({ festivalName, materials: filteredMaterials, filterLabel });
+		exportMaterialsToPdf({ festivalName, materials: filteredMaterials, filterLabel, isStationFiltered });
 	};
 
 	const handleExportExcel = () => {
-		exportMaterialsToExcel({ festivalName, materials: filteredMaterials, filterLabel });
+		exportMaterialsToExcel({ festivalName, materials: filteredMaterials, filterLabel, isStationFiltered });
 	};
 
 	const handleOpenChange = (open: boolean) => {
