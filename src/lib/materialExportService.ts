@@ -45,8 +45,8 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 
 	// Headers — omit Station column when filtered by station
 	const headers = isStationFiltered
-		? ['Name', 'Lieferant', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge']
-		: ['Name', 'Lieferant', 'Station', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge'];
+		? ['Name', 'Lieferant', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']
+		: ['Name', 'Lieferant', 'Station', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge'];
 	rows.push(headers);
 
 	for (const m of materials) {
@@ -90,7 +90,7 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 			{ wch: 14 }, // Verpackung
 			{ wch: 10 }, // Menge/VE
 			{ wch: 10 }, // Bestellt
-			{ wch: 12 }, // Ist-Menge
+			{ wch: 12 }, // Verbraucht
 			{ wch: 14 }, // Neue Menge
 		]
 		: [
@@ -101,7 +101,7 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 			{ wch: 14 }, // Verpackung
 			{ wch: 10 }, // Menge/VE
 			{ wch: 10 }, // Bestellt
-			{ wch: 12 }, // Ist-Menge
+			{ wch: 12 }, // Verbraucht
 			{ wch: 14 }, // Neue Menge
 		];
 
@@ -148,8 +148,8 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 
 	// Table columns — omit Station when filtered
 	const head = isStationFiltered
-		? [['Name', 'Lieferant', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge']]
-		: [['Name', 'Lieferant', 'Station', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Ist-Menge', 'Neue Menge']];
+		? [['Name', 'Lieferant', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']]
+		: [['Name', 'Lieferant', 'Station', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']];
 
 	const body = materials.map(m => {
 		const baseRow = [
@@ -178,7 +178,7 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 			3: { cellWidth: 16 },  // VE
 			4: { cellWidth: 14, halign: 'right' },  // Menge/VE
 			5: { cellWidth: 14, halign: 'right' },  // Bestellt
-			6: { cellWidth: 16, halign: 'right', fontStyle: 'bold' },  // Ist-Menge
+			6: { cellWidth: 16, halign: 'right', fontStyle: 'bold' },  // Verbraucht
 			7: { cellWidth: 20, halign: 'right' },  // Neue Menge
 		}
 		: {
@@ -189,7 +189,7 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 			4: { cellWidth: 14 },  // VE
 			5: { cellWidth: 12, halign: 'right' },  // Menge/VE
 			6: { cellWidth: 12, halign: 'right' },  // Bestellt
-			7: { cellWidth: 14, halign: 'right', fontStyle: 'bold' },  // Ist-Menge
+			7: { cellWidth: 14, halign: 'right', fontStyle: 'bold' },  // Verbraucht
 			8: { cellWidth: 18, halign: 'right' },  // Neue Menge
 		};
 
@@ -216,7 +216,7 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 		margin: { left: margin, right: margin },
 		didParseCell: (hookData) => {
 			if (hookData.section === 'body') {
-				// Highlight Ist-Menge column in light blue
+				// Highlight Verbraucht column in light blue
 				if (hookData.column.index === istMengeIdx) {
 					const text = hookData.cell.raw as string;
 					if (text) {

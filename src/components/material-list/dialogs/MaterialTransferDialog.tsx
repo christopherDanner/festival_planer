@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, ArrowDownToLine } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowDownToLine, Search, X } from 'lucide-react';
 import { getUserFestivals, type Festival } from '@/lib/festivalService';
 import { getMaterials, type FestivalMaterialWithStation, type FestivalMaterial } from '@/lib/materialService';
 
@@ -74,6 +74,9 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 	const [sourceMaterials, setSourceMaterials] = useState<FestivalMaterialWithStation[]>([]);
 	const [loadingMaterials, setLoadingMaterials] = useState(false);
 	const [rows, setRows] = useState<TransferRow[]>([]);
+	const [searchTerm, setSearchTerm] = useState('');
+	const [stationFilter, setStationFilter] = useState('all');
+	const [supplierFilter, setSupplierFilter] = useState('all');
 
 	useEffect(() => {
 		if (!open) return;
@@ -108,12 +111,54 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 			.finally(() => setLoadingMaterials(false));
 	}, [selectedFestivalId, targetMaterials]);
 
+	// Derive filter options from source materials
+	const sourceStations = useMemo(
+		() => [...new Set(sourceMaterials.map((m) => m.station?.name).filter(Boolean))] as string[],
+		[sourceMaterials]
+	);
+	const sourceSuppliers = useMemo(
+		() => [...new Set(sourceMaterials.map((m) => m.supplier).filter(Boolean))] as string[],
+		[sourceMaterials]
+	);
+
+	// Filtered row indices (filter applies to display, rows array stays intact for state)
+	const filteredIndices = useMemo(() => {
+		const indices: number[] = [];
+		for (let i = 0; i < rows.length; i++) {
+			const m = rows[i].sourceMaterial;
+			if (searchTerm) {
+				const term = searchTerm.toLowerCase();
+				const matches =
+					m.name.toLowerCase().includes(term) ||
+					(m.supplier && m.supplier.toLowerCase().includes(term));
+				if (!matches) continue;
+			}
+			if (stationFilter !== 'all') {
+				if (stationFilter === '__none__') {
+					if (m.station_id != null) continue;
+				} else if (m.station?.name !== stationFilter) continue;
+			}
+			if (supplierFilter !== 'all' && m.supplier !== supplierFilter) continue;
+			indices.push(i);
+		}
+		return indices;
+	}, [rows, searchTerm, stationFilter, supplierFilter]);
+
+	const hasFilters = searchTerm || stationFilter !== 'all' || supplierFilter !== 'all';
+
+	const resetFilters = () => {
+		setSearchTerm('');
+		setStationFilter('all');
+		setSupplierFilter('all');
+	};
+
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
 			setStep('select-festival');
 			setSelectedFestivalId('__none__');
 			setSourceMaterials([]);
 			setRows([]);
+			resetFilters();
 		}
 		onOpenChange(open);
 	};
@@ -197,7 +242,7 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-4 sm:p-6">
+			<DialogContent className="max-w-5xl max-h-[90vh] sm:max-h-[92vh] flex flex-col p-4 sm:p-6">
 				<DialogHeader>
 					<DialogTitle className="text-base sm:text-lg">
 						Material übernehmen
@@ -279,9 +324,57 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 							Trage die gewünschte Bestellmenge in der Spalte „Wunschmenge" ein. Positionen, die bereits in {festivalName} vorhanden sind, sind markiert und standardmäßig abgewählt.
 						</p>
 
+						{/* Filters */}
+						<div className="flex flex-wrap items-center gap-2">
+							<div className="relative flex-1 min-w-[150px]">
+								<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+								<Input
+									value={searchTerm}
+									onChange={(e) => setSearchTerm(e.target.value)}
+									placeholder="Suche…"
+									className="pl-8 h-8 text-sm"
+								/>
+							</div>
+							{sourceStations.length > 0 && (
+								<Select value={stationFilter} onValueChange={setStationFilter}>
+									<SelectTrigger className="w-[140px] h-8 text-sm">
+										<SelectValue placeholder="Station" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">Alle Stationen</SelectItem>
+										<SelectItem value="__none__">Keine Station</SelectItem>
+										{sourceStations.map((s) => (
+											<SelectItem key={s} value={s}>{s}</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+							{sourceSuppliers.length > 0 && (
+								<Select value={supplierFilter} onValueChange={setSupplierFilter}>
+									<SelectTrigger className="w-[140px] h-8 text-sm">
+										<SelectValue placeholder="Lieferant" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">Alle Lieferanten</SelectItem>
+										{sourceSuppliers.map((s) => (
+											<SelectItem key={s} value={s}>{s}</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+							{hasFilters && (
+								<Button variant="ghost" size="sm" onClick={resetFilters} className="h-8 gap-1 px-2">
+									<X className="h-3.5 w-3.5" />
+								</Button>
+							)}
+							<span className="text-xs text-muted-foreground ml-auto">
+								{filteredIndices.length} von {rows.length}
+							</span>
+						</div>
+
 						<div className="overflow-auto flex-1 min-h-0 border rounded-md">
 							<table className="w-full text-sm">
-								<thead className="bg-muted/50 sticky top-0 z-10">
+								<thead className="bg-muted sticky top-0 z-10">
 									<tr className="border-b">
 										<th className="p-2 w-8"></th>
 										<th className="p-2 text-left font-medium">Name</th>
@@ -291,17 +384,22 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 										<th className="p-2 text-left font-medium">VE</th>
 										<th className="p-2 text-right font-medium">Menge/VE</th>
 										<th className="p-2 text-right font-medium">Bestellt</th>
-										<th className="p-2 text-right font-medium">Ist-Menge</th>
+										<th className="p-2 text-right font-medium">Verbraucht</th>
 										<th className="p-2 text-right font-medium min-w-[100px]">Wunschmenge</th>
 									</tr>
 								</thead>
 								<tbody>
-									{rows.map((row, i) => {
+									{filteredIndices.map((i) => {
+										const row = rows[i];
 										const isExisting = !!row.existingMatch;
 										return (
 											<tr
 												key={row.sourceMaterial.id}
-												className={`border-b ${isExisting ? 'bg-muted/30 text-muted-foreground' : ''}`}
+												className={`border-b ${
+													isExisting
+														? 'bg-orange-50/60 dark:bg-orange-950/20 border-l-2 border-l-orange-300 dark:border-l-orange-700 opacity-70'
+														: 'border-l-2 border-l-green-400 dark:border-l-green-600'
+												}`}
 											>
 												<td className="p-2 text-center">
 													<Checkbox
@@ -313,7 +411,7 @@ const MaterialTransferDialog: React.FC<MaterialTransferDialogProps> = ({
 													<div className="flex items-center gap-1.5">
 														<span className={isExisting ? 'text-muted-foreground' : ''}>{row.sourceMaterial.name}</span>
 														{isExisting && (
-															<Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+															<Badge variant="outline" className="text-[10px] px-1.5 py-0 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
 																vorhanden
 															</Badge>
 														)}
