@@ -24,8 +24,29 @@ function buildFilename(festivalName: string, suffix: string, filterLabel?: strin
 
 const EXPLANATION_TEXT = (festivalName: string) =>
 	`Diese Liste zeigt die bestellten und tatsächlich verbrauchten Mengen des Festes „${festivalName}". ` +
-	`Bitte tragen Sie in der Spalte „Neue Menge" die gewünschte Bestellmenge für das kommende Fest ein ` +
-	`und geben Sie die ausgefüllte Liste an den Festverantwortlichen zurück.`;
+	`Bitte trag in der Spalte „Neue Menge" die gewünschte Bestellmenge für das kommende Fest ein ` +
+	`und gib die ausgefüllte Liste an den Festverantwortlichen zurück. ` +
+	`Materialien, die noch nicht auf der Liste stehen, aber gebraucht werden, ` +
+	`teile bitte einfach dem Festverantwortlichen mit.`;
+
+/** Greedy word wrap for plain text into lines no longer than maxChars. */
+function wrapText(text: string, maxChars: number): string[] {
+	const words = text.split(/\s+/);
+	const lines: string[] = [];
+	let current = '';
+	for (const word of words) {
+		if (!current) {
+			current = word;
+		} else if (current.length + 1 + word.length <= maxChars) {
+			current += ' ' + word;
+		} else {
+			lines.push(current);
+			current = word;
+		}
+	}
+	if (current) lines.push(current);
+	return lines;
+}
 
 // ── Excel Export ──────────────────────────────────────────────
 
@@ -35,18 +56,33 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 
 	const rows: (string | number | null)[][] = [];
 
+	// Headers — omit Station column when filtered by station
+	const headers = isStationFiltered
+		? ['Name', 'Lieferant', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']
+		: ['Name', 'Lieferant', 'Station', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge'];
+
+	// Total approximate character width of the table — used to wrap the explanation text
+	// so it doesn't get clipped (xlsx free edition does not support wrapText cell styles).
+	const totalCharWidth = isStationFiltered
+		? 28 + 20 + 10 + 14 + 10 + 10 + 12 + 14
+		: 28 + 20 + 18 + 10 + 14 + 10 + 10 + 12 + 14;
+	const maxCharsPerLine = Math.floor(totalCharWidth * 0.95);
+
 	// Title rows
 	const subtitle = filterLabel ? `Materialliste — ${filterLabel}` : 'Materialliste';
 	rows.push([festivalName]);
 	rows.push([subtitle]);
 	rows.push([]); // empty row
-	rows.push([EXPLANATION_TEXT(festivalName)]);
-	rows.push([]); // empty row before table
 
-	// Headers — omit Station column when filtered by station
-	const headers = isStationFiltered
-		? ['Name', 'Lieferant', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']
-		: ['Name', 'Lieferant', 'Station', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge'];
+	// Explanation text — wrapped manually into multiple rows
+	const explanationLines = wrapText(EXPLANATION_TEXT(festivalName), maxCharsPerLine);
+	const explanationStartRow = rows.length;
+	for (const line of explanationLines) {
+		rows.push([line]);
+	}
+	const explanationEndRow = rows.length - 1;
+
+	rows.push([]); // empty row before table
 	rows.push(headers);
 
 	for (const m of materials) {
@@ -105,13 +141,16 @@ export function exportMaterialsToExcel(options: MaterialExportOptions): void {
 			{ wch: 14 }, // Neue Menge
 		];
 
-	// Merge explanation text across columns
+	// Merge title, subtitle and each explanation line across the full table width
 	const colCount = headers.length;
-	ws['!merges'] = [
+	const merges = [
 		{ s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } }, // title
 		{ s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } }, // subtitle
-		{ s: { r: 3, c: 0 }, e: { r: 3, c: colCount - 1 } }, // explanation
 	];
+	for (let r = explanationStartRow; r <= explanationEndRow; r++) {
+		merges.push({ s: { r, c: 0 }, e: { r, c: colCount - 1 } });
+	}
+	ws['!merges'] = merges;
 
 	XLSX.utils.book_append_sheet(wb, ws, 'Materialliste');
 	XLSX.writeFile(wb, buildFilename(festivalName, 'xlsx', filterLabel));
@@ -170,27 +209,29 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 	const neueMengeIdx = isStationFiltered ? 7 : 8;
 	const istMengeIdx = isStationFiltered ? 6 : 7;
 
+	const usableWidth = pageWidth - margin * 2;
+
 	const columnStyles: Record<number, any> = isStationFiltered
 		? {
-			0: { cellWidth: 32 },  // Name
-			1: { cellWidth: 24 },  // Lieferant
-			2: { cellWidth: 14 },  // Einheit
-			3: { cellWidth: 16 },  // VE
-			4: { cellWidth: 14, halign: 'right' },  // Menge/VE
-			5: { cellWidth: 14, halign: 'right' },  // Bestellt
-			6: { cellWidth: 16, halign: 'right', fontStyle: 'bold' },  // Verbraucht
-			7: { cellWidth: 20, halign: 'right' },  // Neue Menge
+			0: { cellWidth: 36 },  // Name
+			1: { cellWidth: 26 },  // Lieferant
+			2: { cellWidth: 16 },  // Einheit
+			3: { cellWidth: 18 },  // VE
+			4: { cellWidth: 20, halign: 'right' },  // Menge/VE
+			5: { cellWidth: 20, halign: 'right' },  // Bestellt
+			6: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },  // Verbraucht
+			7: { cellWidth: 24, halign: 'right' },  // Neue Menge
 		}
 		: {
-			0: { cellWidth: 28 },  // Name
-			1: { cellWidth: 22 },  // Lieferant
-			2: { cellWidth: 18 },  // Station
-			3: { cellWidth: 12 },  // Einheit
-			4: { cellWidth: 14 },  // VE
-			5: { cellWidth: 12, halign: 'right' },  // Menge/VE
-			6: { cellWidth: 12, halign: 'right' },  // Bestellt
-			7: { cellWidth: 14, halign: 'right', fontStyle: 'bold' },  // Verbraucht
-			8: { cellWidth: 18, halign: 'right' },  // Neue Menge
+			0: { cellWidth: 30 },  // Name
+			1: { cellWidth: 24 },  // Lieferant
+			2: { cellWidth: 20 },  // Station
+			3: { cellWidth: 16 },  // Einheit
+			4: { cellWidth: 16 },  // VE
+			5: { cellWidth: 18, halign: 'right' },  // Menge/VE
+			6: { cellWidth: 18, halign: 'right' },  // Bestellt
+			7: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },  // Verbraucht
+			8: { cellWidth: 20, halign: 'right' },  // Neue Menge
 		};
 
 	autoTable(doc, {
@@ -210,10 +251,11 @@ export function exportMaterialsToPdf(options: MaterialExportOptions): void {
 			fontStyle: 'bold',
 			fontSize: 8,
 			halign: 'center',
-			cellPadding: 2,
+			cellPadding: { top: 2, right: 1, bottom: 2, left: 1 },
 		},
 		columnStyles,
 		margin: { left: margin, right: margin },
+		tableWidth: usableWidth,
 		didParseCell: (hookData) => {
 			if (hookData.section === 'body') {
 				// Highlight Verbraucht column in light blue

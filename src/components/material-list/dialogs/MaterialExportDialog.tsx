@@ -18,12 +18,25 @@ interface MaterialExportDialogProps {
 const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 	open, onOpenChange, festivalName, materials, stations, suppliers
 }) => {
+	const ALL_SEPARATE = '__all_separate__';
+	const NO_STATION = '__no_station__';
+
 	const [filterMode, setFilterMode] = useState<'all' | 'station' | 'supplier'>('all');
 	const [selectedStationId, setSelectedStationId] = useState<string>('__none__');
 	const [selectedSupplier, setSelectedSupplier] = useState<string>('__none__');
 
+	const isPerStationBulk = filterMode === 'station' && selectedStationId === ALL_SEPARATE;
+
+	const hasUnassignedMaterials = useMemo(
+		() => materials.some(m => !m.station_id),
+		[materials]
+	);
+
 	const filteredMaterials = useMemo(() => {
-		if (filterMode === 'station' && selectedStationId !== '__none__') {
+		if (filterMode === 'station' && selectedStationId === NO_STATION) {
+			return materials.filter(m => !m.station_id);
+		}
+		if (filterMode === 'station' && selectedStationId !== '__none__' && selectedStationId !== ALL_SEPARATE) {
 			return materials.filter(m => m.station_id === selectedStationId);
 		}
 		if (filterMode === 'supplier' && selectedSupplier !== '__none__') {
@@ -32,8 +45,20 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 		return materials;
 	}, [materials, filterMode, selectedStationId, selectedSupplier]);
 
+	// Stations that actually have materials assigned — used for per-station bulk export
+	const stationsWithMaterials = useMemo(() => {
+		const ids = new Set(materials.map(m => m.station_id).filter(Boolean) as string[]);
+		return stations.filter(s => ids.has(s.id));
+	}, [materials, stations]);
+
+	// Total number of files produced by the bulk export (one per station + optional "Keine Station")
+	const bulkFileCount = stationsWithMaterials.length + (hasUnassignedMaterials ? 1 : 0);
+
 	const filterLabel = useMemo(() => {
-		if (filterMode === 'station' && selectedStationId !== '__none__') {
+		if (filterMode === 'station' && selectedStationId === NO_STATION) {
+			return 'Keine Station';
+		}
+		if (filterMode === 'station' && selectedStationId !== '__none__' && selectedStationId !== ALL_SEPARATE) {
 			const station = stations.find(s => s.id === selectedStationId);
 			return station ? `Station: ${station.name}` : undefined;
 		}
@@ -43,13 +68,61 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 		return undefined;
 	}, [filterMode, selectedStationId, selectedSupplier, stations]);
 
-	const isStationFiltered = filterMode === 'station' && selectedStationId !== '__none__';
+	const isStationFiltered =
+		filterMode === 'station' &&
+		selectedStationId !== '__none__' &&
+		selectedStationId !== ALL_SEPARATE;
+
+	// Export one file per station — small delay between downloads to avoid browser blocking
+	const exportPerStation = async (format: 'pdf' | 'excel') => {
+		const jobs: Array<{ materials: FestivalMaterialWithStation[]; label: string }> = [];
+
+		for (const station of stationsWithMaterials) {
+			jobs.push({
+				materials: materials.filter(m => m.station_id === station.id),
+				label: `Station: ${station.name}`,
+			});
+		}
+
+		if (hasUnassignedMaterials) {
+			jobs.push({
+				materials: materials.filter(m => !m.station_id),
+				label: 'Keine Station',
+			});
+		}
+
+		for (let i = 0; i < jobs.length; i++) {
+			const job = jobs[i];
+			const opts = {
+				festivalName,
+				materials: job.materials,
+				filterLabel: job.label,
+				isStationFiltered: true,
+			};
+			if (format === 'pdf') {
+				exportMaterialsToPdf(opts);
+			} else {
+				exportMaterialsToExcel(opts);
+			}
+			if (i < jobs.length - 1) {
+				await new Promise(r => setTimeout(r, 350));
+			}
+		}
+	};
 
 	const handleExportPdf = () => {
+		if (isPerStationBulk) {
+			void exportPerStation('pdf');
+			return;
+		}
 		exportMaterialsToPdf({ festivalName, materials: filteredMaterials, filterLabel, isStationFiltered });
 	};
 
 	const handleExportExcel = () => {
+		if (isPerStationBulk) {
+			void exportPerStation('excel');
+			return;
+		}
 		exportMaterialsToExcel({ festivalName, materials: filteredMaterials, filterLabel, isStationFiltered });
 	};
 
@@ -109,6 +182,10 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="__none__">Station auswählen...</SelectItem>
+								<SelectItem value={ALL_SEPARATE}>Alle Stationen (einzelne Dateien)</SelectItem>
+								{hasUnassignedMaterials && (
+									<SelectItem value={NO_STATION}>Keine Station</SelectItem>
+								)}
 								{stations.map(s => (
 									<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
 								))}
@@ -133,7 +210,9 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 
 					{/* Count info */}
 					<p className="text-sm text-muted-foreground">
-						{filteredMaterials.length} Materialien
+						{isPerStationBulk
+							? `${bulkFileCount} Dateien — eine pro Station${hasUnassignedMaterials ? ' inkl. „Keine Station"' : ''}`
+							: `${filteredMaterials.length} Materialien`}
 					</p>
 
 					{/* Export buttons */}
@@ -142,7 +221,7 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 							onClick={handleExportPdf}
 							variant="outline"
 							className="flex-1 gap-2"
-							disabled={filteredMaterials.length === 0}>
+							disabled={isPerStationBulk ? bulkFileCount === 0 : filteredMaterials.length === 0}>
 							<FileDown className="h-4 w-4" />
 							PDF exportieren
 						</Button>
@@ -150,7 +229,7 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 							onClick={handleExportExcel}
 							variant="outline"
 							className="flex-1 gap-2"
-							disabled={filteredMaterials.length === 0}>
+							disabled={isPerStationBulk ? bulkFileCount === 0 : filteredMaterials.length === 0}>
 							<FileSpreadsheet className="h-4 w-4" />
 							Excel
 						</Button>
