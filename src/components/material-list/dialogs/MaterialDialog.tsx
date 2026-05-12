@@ -4,11 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@/components/ui/select';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import type { Station } from '@/lib/shiftService';
 
-const CATEGORIES = ['Getränke', 'Lebensmittel', 'Dekoration', 'Geschirr/Besteck', 'Technik', 'Sonstiges'];
+const CATEGORIES = [
+	'Getränke',
+	'Lebensmittel',
+	'Dekoration',
+	'Geschirr/Besteck',
+	'Inventar',
+	'Technik',
+	'Sonstiges'
+];
 
 interface MaterialDialogProps {
 	open: boolean;
@@ -69,7 +83,8 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 				supplier: material.supplier || '',
 				unit: material.unit,
 				packaging_unit: material.packaging_unit || '',
-				amount_per_packaging: material.amount_per_packaging != null ? String(material.amount_per_packaging) : '',
+				amount_per_packaging:
+					material.amount_per_packaging != null ? String(material.amount_per_packaging) : '',
 				ordered_quantity: String(material.ordered_quantity),
 				actual_quantity: material.actual_quantity != null ? String(material.actual_quantity) : '',
 				unit_price: material.unit_price != null ? String(material.unit_price) : '',
@@ -151,7 +166,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 								<SelectContent>
 									<SelectItem value="__none__">Keine Kategorie</SelectItem>
 									{CATEGORIES.map((cat) => (
-										<SelectItem key={cat} value={cat}>{cat}</SelectItem>
+										<SelectItem key={cat} value={cat}>
+											{cat}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
@@ -169,7 +186,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 								<SelectContent>
 									<SelectItem value="__none__">Keine Station</SelectItem>
 									{stations.map((station) => (
-										<SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+										<SelectItem key={station.id} value={station.id}>
+											{station.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
@@ -229,14 +248,18 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 
 					{form.packaging_unit && (
 						<div>
-							<Label htmlFor="mat-amount-per">{form.unit} pro {form.packaging_unit}</Label>
+							<Label htmlFor="mat-amount-per">
+								{form.unit} pro {form.packaging_unit}
+							</Label>
 							<Input
 								id="mat-amount-per"
 								type="number"
 								min="0"
 								step="any"
 								value={form.amount_per_packaging}
-								onChange={(e) => setForm((prev) => ({ ...prev, amount_per_packaging: e.target.value }))}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, amount_per_packaging: e.target.value }))
+								}
 								placeholder={`z.B. 50 für 50${form.unit === 'Liter' ? 'L' : form.unit} ${form.packaging_unit}`}
 							/>
 						</div>
@@ -278,8 +301,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 									variant={form.price_per === 'unit' ? 'default' : 'outline'}
 									type="button"
 									className="flex-1 h-8 text-xs"
-									onClick={() => setForm(prev => ({...prev, price_per: 'unit'}))}
-								>
+									onClick={() => setForm((prev) => ({ ...prev, price_per: 'unit' }))}>
 									pro {form.unit}
 								</Button>
 								<Button
@@ -287,8 +309,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 									variant={form.price_per === 'packaging' ? 'default' : 'outline'}
 									type="button"
 									className="flex-1 h-8 text-xs"
-									onClick={() => setForm(prev => ({...prev, price_per: 'packaging'}))}
-								>
+									onClick={() => setForm((prev) => ({ ...prev, price_per: 'packaging' }))}>
 									pro {form.packaging_unit}
 								</Button>
 							</div>
@@ -298,7 +319,11 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 						<div>
 							<Label htmlFor="mat-price">
-								Preis pro {form.packaging_unit && form.price_per === 'packaging' ? form.packaging_unit : form.unit} (€)
+								Preis pro{' '}
+								{form.packaging_unit && form.price_per === 'packaging'
+									? form.packaging_unit
+									: form.unit}{' '}
+								(€)
 							</Label>
 							<Input
 								id="mat-price"
@@ -317,16 +342,14 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 									type="button"
 									size="sm"
 									variant={form.price_is_net === 'true' ? 'default' : 'outline'}
-									onClick={() => setForm((prev) => ({ ...prev, price_is_net: 'true' }))}
-								>
+									onClick={() => setForm((prev) => ({ ...prev, price_is_net: 'true' }))}>
 									Netto
 								</Button>
 								<Button
 									type="button"
 									size="sm"
 									variant={form.price_is_net === 'false' ? 'default' : 'outline'}
-									onClick={() => setForm((prev) => ({ ...prev, price_is_net: 'false' }))}
-								>
+									onClick={() => setForm((prev) => ({ ...prev, price_is_net: 'false' }))}>
 									Brutto
 								</Button>
 							</div>
@@ -337,8 +360,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 								value={form.tax_rate || '__none__'}
 								onValueChange={(value) =>
 									setForm((prev) => ({ ...prev, tax_rate: value === '__none__' ? '' : value }))
-								}
-							>
+								}>
 								<SelectTrigger id="mat-tax-rate">
 									<SelectValue placeholder="Keine" />
 								</SelectTrigger>
