@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMaterialListData } from './hooks/useMaterialListData';
 import { useMaterialListActions } from './hooks/useMaterialListActions';
 import MaterialListHeader from './MaterialListHeader';
@@ -8,16 +9,14 @@ import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialImportDialog from './dialogs/MaterialImportDialog';
 import InvoiceMatchDialog from './dialogs/InvoiceMatchDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
-import MaterialTransferDialog from './dialogs/MaterialTransferDialog';
-import type { FestivalMaterialWithStation, FestivalMaterial } from '@/lib/materialService';
+import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
 type DialogState =
 	| { type: null }
 	| { type: 'material'; material?: FestivalMaterialWithStation }
 	| { type: 'import' }
 	| { type: 'invoice-match' }
-	| { type: 'export' }
-	| { type: 'transfer' };
+	| { type: 'export' };
 
 interface MaterialListViewProps {
 	festivalId: string;
@@ -25,6 +24,7 @@ interface MaterialListViewProps {
 }
 
 const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festivalName }) => {
+	const navigate = useNavigate();
 	const { materials, stations, isLoading } = useMaterialListData(festivalId);
 	const actions = useMaterialListActions(festivalId);
 
@@ -125,7 +125,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				onImportMaterial={() => setDialogState({ type: 'import' })}
 				onInvoiceMatch={() => setDialogState({ type: 'invoice-match' })}
 				onExport={() => setDialogState({ type: 'export' })}
-				onTransfer={() => setDialogState({ type: 'transfer' })}
+				onTransfer={() => navigate(`/festivals/${festivalId}/material-uebernahme`)}
 			/>
 
 			{/* Summary stats */}
@@ -239,24 +239,6 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				suppliers={suppliers}
 			/>
 
-			<MaterialTransferDialog
-				open={dialogState.type === 'transfer'}
-				onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
-				festivalId={festivalId}
-				festivalName={festivalName || 'Festival'}
-				targetMaterials={materials}
-				targetStations={stations}
-				onTransfer={async (newMaterials, updates) => {
-					if (newMaterials.length > 0) {
-						await actions.bulkCreateMaterials.mutateAsync(newMaterials);
-					}
-					if (updates.length > 0) {
-						await actions.bulkUpdateMaterials.mutateAsync(updates);
-					}
-					setDialogState({ type: null });
-				}}
-				isTransferring={actions.bulkCreateMaterials.isPending || actions.bulkUpdateMaterials.isPending}
-			/>
 		</div>
 	);
 };

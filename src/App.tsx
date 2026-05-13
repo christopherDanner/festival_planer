@@ -9,6 +9,7 @@ import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
 import FestivalResults from './pages/FestivalResults';
+import MaterialUebernahme from './pages/MaterialUebernahme';
 import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
 
@@ -27,6 +28,7 @@ const App = () => (
 						<Route path="/dashboard" element={<Dashboard />} />
 						<Route path="/members" element={<Members />} />
 						<Route path="/festival-results" element={<FestivalResults />} />
+						<Route path="/festivals/:festivalId/material-uebernahme" element={<MaterialUebernahme />} />
 						{/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 						<Route path="*" element={<NotFound />} />
 					</Routes>

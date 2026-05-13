@@ -1,5 +1,7 @@
 # Material-Übernahme & Export-Anpassung
 
+> **OBSOLET** — Ersetzt durch PRD vom 2026-05-13 (Issue #2). Die hier beschriebene Modal-Variante des Material-Transfer-Dialogs existiert nicht mehr. Aktuelle Lösung: Vollbild-Route `/festivals/:festivalId/material-uebernahme`, zielfest-zentriert mit Pro-Zeile-Speichern. Diese Datei bleibt zur Historie erhalten.
+
 **Datum:** 2026-03-30
 **Ziel:** Materialien von einem vergangenen Fest kontrolliert ins neue Fest übernehmen. Exports so anpassen, dass Stationsführende Bestellt/Ist-Mengen vergleichen und Wunschmengen eintragen können.
 
