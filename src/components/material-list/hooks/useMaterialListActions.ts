@@ -8,6 +8,7 @@ import {
 	deleteMaterial,
 	type FestivalMaterial
 } from '@/lib/materialService';
+import { createStation, type Station } from '@/lib/shiftService';
 
 export const useMaterialListActions = (festivalId: string) => {
 	const queryClient = useQueryClient();
@@ -102,11 +103,28 @@ export const useMaterialListActions = (festivalId: string) => {
 		}
 	});
 
+	const createStationMutation = useMutation({
+		mutationFn: (name: string): Promise<Station> =>
+			createStation({ festival_id: festivalId, name, required_people: 1 }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['stations', festivalId] });
+			toast({ title: 'Erfolg', description: 'Station wurde angelegt.' });
+		},
+		onError: () => {
+			toast({
+				title: 'Fehler',
+				description: 'Station konnte nicht angelegt werden.',
+				variant: 'destructive'
+			});
+		}
+	});
+
 	return {
 		createMaterial: createMaterialMutation,
 		updateMaterial: updateMaterialMutation,
 		deleteMaterial: deleteMaterialMutation,
 		bulkCreateMaterials: bulkCreateMaterialsMutation,
-		bulkUpdateMaterials: bulkUpdateMaterialsMutation
+		bulkUpdateMaterials: bulkUpdateMaterialsMutation,
+		createStation: createStationMutation
 	};
 };

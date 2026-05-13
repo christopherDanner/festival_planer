@@ -1,4 +1,5 @@
 import type { FestivalMaterialWithStation } from './materialService';
+import { toBaseQuantity } from './materialQuantity';
 
 export type MatchRowStatus = 'match' | 'only-source' | 'only-target';
 
@@ -57,8 +58,8 @@ function sumNullable(values: (number | null)[]): number | null {
 function detailFor(m: FestivalMaterialWithStation): SourceDetail {
 	return {
 		stationName: m.station?.name ?? null,
-		ordered: m.ordered_quantity,
-		actual: m.actual_quantity
+		ordered: toBaseQuantity(m.ordered_quantity, m) ?? 0,
+		actual: toBaseQuantity(m.actual_quantity, m)
 	};
 }
 
@@ -67,8 +68,12 @@ function rowFromTarget(
 	srcs: FestivalMaterialWithStation[]
 ): MatchRow {
 	const status: MatchRowStatus = srcs.length > 0 ? 'match' : 'only-target';
-	const srcOrderedTotal = srcs.length > 0 ? srcs.reduce((acc, s) => acc + s.ordered_quantity, 0) : null;
-	const srcActualTotal = srcs.length > 0 ? sumNullable(srcs.map((s) => s.actual_quantity)) : null;
+	const srcOrderedTotal =
+		srcs.length > 0
+			? srcs.reduce((acc, s) => acc + (toBaseQuantity(s.ordered_quantity, s) ?? 0), 0)
+			: null;
+	const srcActualTotal =
+		srcs.length > 0 ? sumNullable(srcs.map((s) => toBaseQuantity(s.actual_quantity, s))) : null;
 	return {
 		key: `tgt:${tgt.id}`,
 		status,
@@ -85,7 +90,7 @@ function rowFromTarget(
 		unit: tgt.unit,
 		packagingUnit: tgt.packaging_unit,
 		amountPerPackaging: tgt.amount_per_packaging,
-		targetOrderedQuantity: tgt.ordered_quantity,
+		targetOrderedQuantity: toBaseQuantity(tgt.ordered_quantity, tgt),
 		sourceDetails: srcs.map(detailFor)
 	};
 }
@@ -99,8 +104,8 @@ function rowFromOnlySource(src: FestivalMaterialWithStation): MatchRow {
 		stationName: src.station?.name ?? null,
 		targetMaterial: null,
 		sourceMaterials: [src],
-		srcOrderedTotal: src.ordered_quantity,
-		srcActualTotal: src.actual_quantity,
+		srcOrderedTotal: toBaseQuantity(src.ordered_quantity, src),
+		srcActualTotal: toBaseQuantity(src.actual_quantity, src),
 		srcAggregateCount: 1,
 		supplier: src.supplier,
 		category: src.category,

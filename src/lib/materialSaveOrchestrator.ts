@@ -1,5 +1,6 @@
 import type { MatchRow } from './materialMatcher';
 import type { FestivalMaterial } from './materialService';
+import { fromBaseQuantity } from './materialQuantity';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -124,6 +125,11 @@ export function createSaveOrchestrator(opts: CreateOrchestratorOpts): SaveOrches
 		lastValueByKey.set(row.key, num);
 		setState(row.key, { status: 'saving' });
 
+		const packagingCount = fromBaseQuantity(num, {
+			packaging_unit: row.packagingUnit,
+			amount_per_packaging: row.amountPerPackaging
+		});
+
 		const createdId = createdIdByKey.get(row.key);
 		const useCreate = row.status === 'only-source' && !createdId;
 
@@ -133,7 +139,7 @@ export function createSaveOrchestrator(opts: CreateOrchestratorOpts): SaveOrches
 		};
 
 		if (useCreate) {
-			const payload = buildCreatePayload(row, num, opts.targetFestivalId, opts.targetStations);
+			const payload = buildCreatePayload(row, packagingCount, opts.targetFestivalId, opts.targetStations);
 			opts.onCreate(payload).then(
 				(result) => {
 					createdIdByKey.set(row.key, result.id);
@@ -144,7 +150,7 @@ export function createSaveOrchestrator(opts: CreateOrchestratorOpts): SaveOrches
 			);
 		} else {
 			const id = createdId ?? row.targetMaterial!.id;
-			opts.onUpdate(id, num).then(() => {
+			opts.onUpdate(id, packagingCount).then(() => {
 				committedByKey.set(row.key, num);
 				setState(row.key, { status: 'saved' });
 			}, onError);

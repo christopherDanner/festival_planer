@@ -24,6 +24,7 @@ import { getUserFestivals, type Festival } from '@/lib/festivalService';
 import { getMaterials, createMaterial, updateMaterial, deleteMaterial } from '@/lib/materialService';
 import { getStations } from '@/lib/shiftService';
 import { matchMaterials, type MatchRow } from '@/lib/materialMatcher';
+import { formatPackaging, fromBaseQuantity, formatRequiredPackaging } from '@/lib/materialQuantity';
 import type { SaveState } from '@/lib/materialSaveOrchestrator';
 import { useSaveOrchestrator } from '@/hooks/useSaveOrchestrator';
 
@@ -465,15 +466,13 @@ export default function MaterialUebernahme() {
 							<div className="rounded-md border overflow-hidden">
 								<table className="w-full text-sm table-fixed">
 									<colgroup>
-										<col className="w-[19%]" />
-										<col className="w-[10%]" />
+										<col className="w-[20%]" />
 										<col className="w-[11%]" />
-										<col className="w-[7%]" />
-										<col className="w-[8%]" />
-										<col className="w-[8%]" />
-										<col className="w-[9%]" />
-										<col className="w-[9%]" />
+										<col className="w-[17%]" />
 										<col className="w-[15%]" />
+										<col className="w-[11%]" />
+										<col className="w-[11%]" />
+										<col className="w-[11%]" />
 										<col className="w-[4%]" />
 									</colgroup>
 									<thead className="bg-muted">
@@ -481,9 +480,7 @@ export default function MaterialUebernahme() {
 											<th className="p-2 text-left font-medium">Name</th>
 											<th className="p-2 text-left font-medium">Kategorie</th>
 											<th className="p-2 text-left font-medium">Lieferant</th>
-											<th className="p-2 text-left font-medium">Einheit</th>
-											<th className="p-2 text-left font-medium">VE</th>
-											<th className="p-2 text-right font-medium">Menge/VE</th>
+											<th className="p-2 text-left font-medium">Gebinde</th>
 											<th className="p-2 text-right font-medium">Bestellt (Quelle)</th>
 											<th className="p-2 text-right font-medium">Verbraucht (Quelle)</th>
 											<th className="p-2 text-right font-medium">Wunschmenge</th>
@@ -499,7 +496,7 @@ export default function MaterialUebernahme() {
 														className="bg-muted/50 border-b cursor-pointer hover:bg-muted"
 														onClick={() => toggleStation(group.key)}
 													>
-														<td colSpan={10} className="p-2">
+														<td colSpan={8} className="p-2">
 															<div className="flex items-center gap-2">
 																{collapsed ? (
 																	<ChevronRight className="h-4 w-4" />
@@ -620,6 +617,24 @@ function MaterialRow({
 		0
 	);
 
+	const packagingCtx = {
+		packaging_unit: row.packagingUnit,
+		amount_per_packaging: row.amountPerPackaging
+	};
+	const orderedHint =
+		row.srcOrderedTotal != null
+			? formatRequiredPackaging(fromBaseQuantity(row.srcOrderedTotal, packagingCtx), packagingCtx)
+			: null;
+	const actualHint =
+		row.srcActualTotal != null
+			? formatRequiredPackaging(fromBaseQuantity(row.srcActualTotal, packagingCtx), packagingCtx)
+			: null;
+	const desiredNum = parseFloat(desiredValue);
+	const desiredHint =
+		!Number.isNaN(desiredNum) && desiredNum > 0
+			? formatRequiredPackaging(fromBaseQuantity(desiredNum, packagingCtx), packagingCtx)
+			: null;
+
 	return (
 		<tr
 			className={`border-b ${isOnlySource ? 'border-l-2 border-l-green-500 bg-green-50/40 dark:bg-green-950/10' : ''}`}
@@ -653,14 +668,20 @@ function MaterialRow({
 			</td>
 			<td className="p-2 truncate">{row.category || '—'}</td>
 			<td className="p-2 truncate">{row.supplier || '—'}</td>
-			<td className="p-2 truncate">{row.unit}</td>
-			<td className="p-2 truncate">{row.packagingUnit || '—'}</td>
-			<td className="p-2 text-right">{row.amountPerPackaging ?? '—'}</td>
+			<td className="p-2 truncate">
+				{formatPackaging({
+					unit: row.unit,
+					packaging_unit: row.packagingUnit,
+					amount_per_packaging: row.amountPerPackaging
+				})}
+			</td>
 			<td className="p-2 text-right">
-				<div className="flex items-center justify-end gap-1">
+				<div className="flex flex-col items-end">
+				<div className="flex items-baseline justify-end gap-1">
 					<span className={row.srcOrderedTotal == null ? 'text-muted-foreground' : ''}>
 						{formatQty(row.srcOrderedTotal)}
 					</span>
+					<span className="text-xs text-muted-foreground">{row.unit}</span>
 					{isAggregate && (
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -686,14 +707,27 @@ function MaterialRow({
 						</Tooltip>
 					)}
 				</div>
+				{orderedHint && (
+					<span className="text-[10px] text-muted-foreground">→ {orderedHint}</span>
+				)}
+				</div>
 			</td>
 			<td className="p-2 text-right">
-				<span className={row.srcActualTotal == null ? 'text-muted-foreground' : ''}>
-					{formatQty(row.srcActualTotal)}
-				</span>
+				<div className="flex flex-col items-end">
+					<div className="flex items-baseline justify-end gap-1">
+						<span className={row.srcActualTotal == null ? 'text-muted-foreground' : ''}>
+							{formatQty(row.srcActualTotal)}
+						</span>
+						<span className="text-xs text-muted-foreground">{row.unit}</span>
+					</div>
+					{actualHint && (
+						<span className="text-[10px] text-muted-foreground">→ {actualHint}</span>
+					)}
+				</div>
 			</td>
 			<td className="p-2">
-				<div className="relative">
+				<div className="flex items-center gap-1">
+				<div className="relative flex-1">
 					<Input
 						type="number"
 						min="0"
@@ -737,6 +771,11 @@ function MaterialRow({
 						)}
 					</div>
 				</div>
+				<span className="text-xs text-muted-foreground shrink-0">{row.unit}</span>
+				</div>
+				{desiredHint && (
+					<div className="text-[10px] text-muted-foreground text-right mt-0.5">→ {desiredHint}</div>
+				)}
 			</td>
 			<td className="p-1 text-center">
 				{row.targetMaterial && (

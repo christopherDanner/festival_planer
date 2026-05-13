@@ -11,6 +11,7 @@ export interface Festival {
 	location?: string;
 	created_at: string;
 	updated_at: string;
+	deleted_at?: string | null;
 }
 
 export interface FestivalData {
@@ -63,6 +64,7 @@ export async function getFestival(festivalId: string): Promise<Festival | null> 
 		.from('festivals')
 		.select('*')
 		.eq('id', festivalId)
+		.is('deleted_at', null)
 		.maybeSingle();
 
 	if (error) {
@@ -88,6 +90,7 @@ export async function getUserFestivals(): Promise<Festival[]> {
 	const { data, error } = await supabase
 		.from('festivals')
 		.select('*')
+		.is('deleted_at', null)
 		.order('created_at', { ascending: false });
 
 	if (error) {
@@ -98,92 +101,12 @@ export async function getUserFestivals(): Promise<Festival[]> {
 }
 
 export async function deleteFestival(festivalId: string): Promise<void> {
-	// Delete all related data in correct order (children first, then parent)
+	const { error } = await supabase
+		.from('festivals')
+		.update({ deleted_at: new Date().toISOString() })
+		.eq('id', festivalId);
 
-	// 0a. Delete schedule entries
-	const { error: scheduleEntryError } = await (supabase as any)
-		.from('schedule_entries')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (scheduleEntryError) {
-		throw new Error('Fehler beim Löschen der Ablaufeinträge');
-	}
-
-	// 0b. Delete schedule phases
-	const { error: schedulePhaseError } = await (supabase as any)
-		.from('schedule_phases')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (schedulePhaseError) {
-		throw new Error('Fehler beim Löschen der Ablaufphasen');
-	}
-
-	// 0c. Delete schedule days
-	const { error: scheduleDayError } = await (supabase as any)
-		.from('schedule_days')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (scheduleDayError) {
-		throw new Error('Fehler beim Löschen der Ablauftage');
-	}
-
-	// 1. Delete shift assignments
-	const { error: assignmentError } = await supabase
-		.from('shift_assignments')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (assignmentError) {
-		throw new Error('Fehler beim Löschen der Schichtzuordnungen');
-	}
-
-	// 2. Delete station shifts
-	const { error: shiftError } = await supabase
-		.from('station_shifts')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (shiftError) {
-		throw new Error('Fehler beim Löschen der Schichten');
-	}
-
-	// 2b. Delete station members
-	const { error: stationMemberError } = await supabase
-		.from('station_members')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (stationMemberError) {
-		throw new Error('Fehler beim Löschen der Stationsmitglieder');
-	}
-
-	// 3. Delete materials (before stations due to station_id FK)
-	const { error: materialError } = await (supabase as any)
-		.from('festival_materials')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (materialError) {
-		throw new Error('Fehler beim Löschen der Materialien');
-	}
-
-	// 4. Delete stations
-	const { error: stationError } = await supabase
-		.from('stations')
-		.delete()
-		.eq('festival_id', festivalId);
-
-	if (stationError) {
-		throw new Error('Fehler beim Löschen der Stationen');
-	}
-
-	// 5. Finally delete the festival
-	const { error: festivalError } = await supabase.from('festivals').delete().eq('id', festivalId);
-
-	if (festivalError) {
+	if (error) {
 		throw new Error('Fehler beim Löschen des Festes');
 	}
 }

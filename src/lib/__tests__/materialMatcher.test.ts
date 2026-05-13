@@ -15,6 +15,8 @@ interface MakeOpts {
 	actual?: number | null;
 	supplier?: string | null;
 	id?: string;
+	packagingUnit?: string | null;
+	amountPerPackaging?: number | null;
 }
 
 function make(opts: MakeOpts): FestivalMaterialWithStation {
@@ -27,8 +29,8 @@ function make(opts: MakeOpts): FestivalMaterialWithStation {
 		category: null,
 		supplier: opts.supplier ?? null,
 		unit: 'Stück',
-		packaging_unit: null,
-		amount_per_packaging: null,
+		packaging_unit: opts.packagingUnit ?? null,
+		amount_per_packaging: opts.amountPerPackaging ?? null,
 		ordered_quantity: opts.ordered ?? 0,
 		actual_quantity: opts.actual === undefined ? null : opts.actual,
 		unit_price: null,
@@ -170,6 +172,62 @@ describe('matchMaterials', () => {
 		expect(result.rows).toHaveLength(1);
 		expect(result.rows[0].status).toBe('match');
 		expect(result.rows[0].srcAggregateCount).toBe(1);
+	});
+
+	it('reports srcOrderedTotal and srcActualTotal in base units when source has packaging', () => {
+		const src = [
+			make({
+				name: 'Bier',
+				station: 'Bar',
+				ordered: 5,
+				actual: 4,
+				packagingUnit: 'Fass',
+				amountPerPackaging: 50
+			})
+		];
+		const tgt = [make({ name: 'Bier', station: 'Bar' })];
+		const result = matchMaterials(src, tgt);
+
+		expect(result.rows[0].srcOrderedTotal).toBe(250);
+		expect(result.rows[0].srcActualTotal).toBe(200);
+	});
+
+	it('reports targetOrderedQuantity in base units when target has packaging', () => {
+		const tgt = [
+			make({
+				name: 'Bier',
+				station: 'Bar',
+				ordered: 3,
+				packagingUnit: 'Fass',
+				amountPerPackaging: 50
+			})
+		];
+		const result = matchMaterials([], tgt);
+
+		expect(result.rows[0].targetOrderedQuantity).toBe(150);
+	});
+
+	it('sums base-unit totals across multiple source materials with different packaging', () => {
+		const src = [
+			make({
+				name: 'Eis',
+				station: 'Bar',
+				ordered: 2,
+				packagingUnit: 'Karton',
+				amountPerPackaging: 10
+			}),
+			make({
+				name: 'Eis',
+				station: 'Küche',
+				ordered: 3,
+				packagingUnit: 'Karton',
+				amountPerPackaging: 20
+			})
+		];
+		const tgt = [make({ name: 'Eis', station: 'Kassa' })];
+		const result = matchMaterials(src, tgt);
+
+		expect(result.rows[0].srcOrderedTotal).toBe(80);
 	});
 
 	it('groupByName aggregates rowCount and srcOrderedTotal across rows with same name', () => {

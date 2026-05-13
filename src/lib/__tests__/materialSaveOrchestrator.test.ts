@@ -88,6 +88,36 @@ describe('createSaveOrchestrator', () => {
 		});
 	});
 
+	it('converts base-unit input back to packaging count when row has packaging', async () => {
+		const onUpdate = vi.fn().mockResolvedValue(undefined);
+		const tgt = makeMaterial({
+			id: 't-1',
+			name: 'Bier',
+			packaging_unit: 'Fass',
+			amount_per_packaging: 50
+		});
+		const row: MatchRow = {
+			...makeMatchRow({ key: 'r1', status: 'match', targetId: 't-1' }),
+			targetMaterial: tgt,
+			packagingUnit: 'Fass',
+			amountPerPackaging: 50
+		};
+		const orch = createSaveOrchestrator({
+			targetFestivalId: 'f-tgt',
+			targetStations: [],
+			onCreate: vi.fn(),
+			onUpdate
+		});
+
+		orch.saveRow(row, '250');
+
+		expect(onUpdate).toHaveBeenCalledWith('t-1', 5);
+
+		await vi.waitFor(() => {
+			expect(orch.getState().statesByKey['r1']?.status).toBe('saved');
+		});
+	});
+
 	it('does not call onUpdate or onCreate when value is empty', () => {
 		const onUpdate = vi.fn();
 		const onCreate = vi.fn();
@@ -177,7 +207,7 @@ describe('createSaveOrchestrator', () => {
 			onUpdate
 		});
 
-		orch.saveRow(row, '7');
+		orch.saveRow(row, '35');
 
 		expect(onUpdate).not.toHaveBeenCalled();
 		expect(onCreate).toHaveBeenCalledTimes(1);

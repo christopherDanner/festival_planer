@@ -14,6 +14,12 @@ import { Input } from '@/components/ui/input';
 import { Pencil, Trash2, Package, Copy } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
+import {
+	toBaseQuantity,
+	fromBaseQuantity,
+	formatPackaging,
+	formatRequiredPackaging
+} from '@/lib/materialQuantity';
 
 /* ------------------------------------------------------------------ */
 /*  Generic inline-editable cell (text / number)                      */
@@ -108,38 +114,21 @@ interface MaterialTableProps {
 	onDelete: (id: string) => void;
 	onCopy: (material: FestivalMaterialWithStation) => void;
 	onUpdateField: (id: string, field: string, value: any) => void;
+	onUpdateFields: (id: string, partial: Partial<FestivalMaterialWithStation>) => void;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function formatPackaging(m: FestivalMaterialWithStation): string {
-	if (m.packaging_unit && m.amount_per_packaging) {
-		const unitShort = m.unit === 'Liter' ? 'L' : m.unit;
-		return `${m.amount_per_packaging}${unitShort} ${m.packaging_unit}`;
-	}
-	if (m.packaging_unit) {
-		return m.packaging_unit;
-	}
-	return m.unit;
-}
-
-function formatQuantity(qty: number | null, m: FestivalMaterialWithStation): string {
-	if (qty == null) return '–';
-	if (m.packaging_unit && m.amount_per_packaging) {
-		const total = qty * m.amount_per_packaging;
-		const unitShort = m.unit === 'Liter' ? 'L' : m.unit;
-		return `${qty} (${total}${unitShort})`;
-	}
-	return `${qty}`;
-}
-
 function formatDifference(m: FestivalMaterialWithStation): { text: string; className: string } {
 	if (m.actual_quantity == null) return { text: '–', className: 'text-muted-foreground' };
-	const diff = m.ordered_quantity - m.actual_quantity;
-	if (diff > 0) return { text: `+${diff}`, className: 'text-status-complete-border font-medium' };
-	if (diff < 0) return { text: `${diff}`, className: 'text-destructive font-medium' };
+	const orderedBase = toBaseQuantity(m.ordered_quantity, m) ?? 0;
+	const actualBase = toBaseQuantity(m.actual_quantity, m) ?? 0;
+	const diff = orderedBase - actualBase;
+	const rounded = Math.round(diff * 100) / 100;
+	if (rounded > 0) return { text: `+${rounded}`, className: 'text-status-complete-border font-medium' };
+	if (rounded < 0) return { text: `${rounded}`, className: 'text-destructive font-medium' };
 	return { text: '0', className: 'text-muted-foreground' };
 }
 
@@ -164,20 +153,26 @@ function calculatePrices(material: FestivalMaterialWithStation): { net: number |
 	}
 }
 
+function billableQuantity(m: FestivalMaterialWithStation): number {
+	const raw = m.actual_quantity ?? m.ordered_quantity;
+	if (m.price_per === 'packaging' && m.packaging_unit && m.amount_per_packaging) {
+		return Math.ceil(raw);
+	}
+	return raw;
+}
+
 function formatTotal(m: FestivalMaterialWithStation): string {
 	if (m.unit_price == null) return '–';
 	const prices = calculatePrices(m);
 	const grossPrice = prices.gross ?? m.unit_price;
-	const qty = m.actual_quantity ?? m.ordered_quantity;
-	return `${(qty * grossPrice).toFixed(2)} €`;
+	return `${(billableQuantity(m) * grossPrice).toFixed(2)} €`;
 }
 
 function getTotalValue(m: FestivalMaterialWithStation): number {
 	if (m.unit_price == null) return 0;
 	const prices = calculatePrices(m);
 	const grossPrice = prices.gross ?? m.unit_price;
-	const qty = m.actual_quantity ?? m.ordered_quantity;
-	return qty * grossPrice;
+	return billableQuantity(m) * grossPrice;
 }
 
 /* ------------------------------------------------------------------ */
@@ -190,7 +185,8 @@ const MaterialMobileCard: React.FC<{
 	onDelete: () => void;
 	onCopy: () => void;
 	onUpdateField: (field: string, value: any) => void;
-}> = ({ material, onEdit, onDelete, onCopy, onUpdateField }) => {
+	onUpdateFields: (partial: Partial<FestivalMaterialWithStation>) => void;
+}> = ({ material, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
 	const diff = formatDifference(material);
 	return (
 		<div className="rounded-lg border bg-card shadow-sm overflow-hidden">
@@ -224,43 +220,120 @@ const MaterialMobileCard: React.FC<{
 			<div className="grid grid-cols-3 gap-px bg-border/50">
 				<div className="bg-card px-3 py-2">
 					<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-						Bestellt <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
+						Bestellt ({material.unit}) <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
 					</span>
 					<div className="text-sm font-medium mt-0.5">
 						<InlineEditCell
-							value={String(material.ordered_quantity)}
-							onSave={(v) => onUpdateField('ordered_quantity', v ? Number(v) : 0)}
+							value={String(toBaseQuantity(material.ordered_quantity, material) ?? 0)}
+							onSave={(v) =>
+								onUpdateField('ordered_quantity', v ? fromBaseQuantity(Number(v), material) : 0)
+							}
 							type="number"
 							inputClassName="h-6 w-full text-sm px-1"
 						/>
 					</div>
+					{formatRequiredPackaging(material.ordered_quantity, material) && (
+						<span className="text-[10px] text-muted-foreground">
+							→ {formatRequiredPackaging(material.ordered_quantity, material)}
+						</span>
+					)}
 				</div>
 				<div className="bg-card px-3 py-2">
 					<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-						Verbraucht <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
+						Verbraucht ({material.unit}) <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
 					</span>
 					<div className="text-sm font-medium mt-0.5">
 						<InlineEditCell
-							value={material.actual_quantity != null ? String(material.actual_quantity) : ''}
-							onSave={(v) => onUpdateField('actual_quantity', v ? Number(v) : null)}
+							value={
+								material.actual_quantity != null
+									? String(toBaseQuantity(material.actual_quantity, material) ?? '')
+									: ''
+							}
+							onSave={(v) =>
+								onUpdateField(
+									'actual_quantity',
+									v ? fromBaseQuantity(Number(v), material) : null
+								)
+							}
 							type="number"
 							placeholder="–"
 							inputClassName="h-6 w-full text-sm px-1"
 						/>
 					</div>
+					{material.actual_quantity != null && formatRequiredPackaging(material.actual_quantity, material) && (
+						<span className="text-[10px] text-muted-foreground">
+							→ {formatRequiredPackaging(material.actual_quantity, material)}
+						</span>
+					)}
 				</div>
 				<div className="bg-card px-3 py-2">
 					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">Differenz</span>
 					<p className={`text-sm mt-0.5 ${diff.className}`}>{diff.text}</p>
 				</div>
 			</div>
+			<div className="grid grid-cols-3 gap-px bg-border/50 border-t">
+				<div className="bg-card px-3 py-2">
+					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">MwSt</span>
+					<div className="text-sm font-medium mt-0.5">
+						<InlineTaxSelect
+							value={material.tax_rate}
+							onSave={(v) => onUpdateField('tax_rate', v)}
+						/>
+					</div>
+				</div>
+				{(() => {
+					const prices = calculatePrices(material);
+					const netIsSource = material.price_is_net || material.unit_price == null;
+					const grossIsSource = !material.price_is_net || material.unit_price == null;
+					return (
+						<>
+							<div className="bg-card px-3 py-2">
+								<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+									Netto € <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
+								</span>
+								<div className="text-sm font-medium mt-0.5">
+									<InlineEditCell
+										value={prices.net != null ? prices.net.toFixed(2) : ''}
+										onSave={(v) =>
+											onUpdateFields({
+												unit_price: v ? Number(v) : null,
+												price_is_net: true
+											})
+										}
+										type="number"
+										placeholder="–"
+										inputClassName="h-6 w-full text-sm px-1"
+										className={netIsSource ? '' : 'text-muted-foreground italic'}
+									/>
+								</div>
+							</div>
+							<div className="bg-card px-3 py-2">
+								<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+									Brutto € <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
+								</span>
+								<div className="text-sm font-medium mt-0.5">
+									<InlineEditCell
+										value={prices.gross != null ? prices.gross.toFixed(2) : ''}
+										onSave={(v) =>
+											onUpdateFields({
+												unit_price: v ? Number(v) : null,
+												price_is_net: false
+											})
+										}
+										type="number"
+										placeholder="–"
+										inputClassName="h-6 w-full text-sm px-1"
+										className={grossIsSource ? '' : 'text-muted-foreground italic'}
+									/>
+								</div>
+							</div>
+						</>
+					);
+				})()}
+			</div>
 			{material.unit_price != null && (
 				<div className="px-3 py-1.5 border-t flex items-center justify-between text-xs">
-					<span className="text-muted-foreground">
-						{formatPackaging(material)} · {formatPrice(material.unit_price)}
-						{material.tax_rate != null ? (material.price_is_net ? ' netto' : ' brutto') : ''}/Stk
-						{material.tax_rate != null && ` (${material.tax_rate}% MwSt)`}
-					</span>
+					<span className="text-muted-foreground">{formatPackaging(material)}</span>
 					<span className="font-semibold">{formatTotal(material)}</span>
 				</div>
 			)}
@@ -272,7 +345,7 @@ const MaterialMobileCard: React.FC<{
 /*  Main table component                                               */
 /* ------------------------------------------------------------------ */
 
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onCopy, onUpdateField }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
 	const isMobile = useIsMobile();
 
 	const totalCost = materials.reduce((sum, m) => {
@@ -301,6 +374,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 						onDelete={() => onDelete(m.id)}
 						onCopy={() => onCopy(m)}
 						onUpdateField={(field, value) => onUpdateField(m.id, field, value)}
+						onUpdateFields={(partial) => onUpdateFields(m.id, partial)}
 					/>
 				))}
 				{hasCosts && (
@@ -326,7 +400,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 						<TableHead className="text-right">Bestellt</TableHead>
 						<TableHead className="text-right">Verbraucht</TableHead>
 						<TableHead className="text-right">Differenz</TableHead>
-						<TableHead className="text-right">Preis</TableHead>
+						<TableHead className="text-right">MwSt</TableHead>
+						<TableHead className="text-right">Netto</TableHead>
+						<TableHead className="text-right">Brutto</TableHead>
 						<TableHead className="text-right">Gesamt</TableHead>
 						<TableHead className="w-[116px]"></TableHead>
 					</TableRow>
@@ -350,40 +426,100 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								</TableCell>
 								<TableCell>{formatPackaging(m)}</TableCell>
 								<TableCell className="text-right">
-									<InlineEditCell
-										value={String(m.ordered_quantity)}
-										onSave={(v) => onUpdateField(m.id, 'ordered_quantity', v ? Number(v) : 0)}
-										type="number"
-										inputClassName="h-7 w-16 text-right text-sm px-1"
-										className="text-right"
-									/>
+									<div className="flex flex-col items-end">
+										<div className="inline-flex items-baseline gap-1">
+											<InlineEditCell
+												value={String(toBaseQuantity(m.ordered_quantity, m) ?? 0)}
+												onSave={(v) =>
+													onUpdateField(m.id, 'ordered_quantity', v ? fromBaseQuantity(Number(v), m) : 0)
+												}
+												type="number"
+												inputClassName="h-7 w-16 text-right text-sm px-1"
+												className="text-right"
+											/>
+											<span className="text-xs text-muted-foreground">{m.unit}</span>
+										</div>
+										{formatRequiredPackaging(m.ordered_quantity, m) && (
+											<span className="text-[10px] text-muted-foreground">
+												→ {formatRequiredPackaging(m.ordered_quantity, m)}
+											</span>
+										)}
+									</div>
 								</TableCell>
 								<TableCell className="text-right">
-									<InlineEditCell
-										value={m.actual_quantity != null ? String(m.actual_quantity) : ''}
-										onSave={(v) => onUpdateField(m.id, 'actual_quantity', v ? Number(v) : null)}
-										type="number"
-										placeholder="–"
-										inputClassName="h-7 w-16 text-right text-sm px-1"
-										className="text-right"
-									/>
+									<div className="flex flex-col items-end">
+										<div className="inline-flex items-baseline gap-1">
+											<InlineEditCell
+												value={
+													m.actual_quantity != null
+														? String(toBaseQuantity(m.actual_quantity, m) ?? '')
+														: ''
+												}
+												onSave={(v) =>
+													onUpdateField(m.id, 'actual_quantity', v ? fromBaseQuantity(Number(v), m) : null)
+												}
+												type="number"
+												placeholder="–"
+												inputClassName="h-7 w-16 text-right text-sm px-1"
+												className="text-right"
+											/>
+											<span className="text-xs text-muted-foreground">{m.unit}</span>
+										</div>
+										{m.actual_quantity != null && formatRequiredPackaging(m.actual_quantity, m) && (
+											<span className="text-[10px] text-muted-foreground">
+												→ {formatRequiredPackaging(m.actual_quantity, m)}
+											</span>
+										)}
+									</div>
 								</TableCell>
 								<TableCell className={`text-right ${diff.className}`}>{diff.text}</TableCell>
 								<TableCell className="text-right text-xs">
-									<div className="flex flex-col items-end gap-0.5">
-										<InlineEditCell
-											value={m.unit_price != null ? String(m.unit_price) : ''}
-											onSave={(v) => onUpdateField(m.id, 'unit_price', v ? Number(v) : null)}
-											type="number"
-											placeholder="Preis"
-											inputClassName="h-6 w-16 text-right text-xs px-1"
-											className="text-right"
-										/>
-										<InlineTaxSelect
-											value={m.tax_rate}
-											onSave={(v) => onUpdateField(m.id, 'tax_rate', v)}
-										/>
-									</div>
+									<InlineTaxSelect
+										value={m.tax_rate}
+										onSave={(v) => onUpdateField(m.id, 'tax_rate', v)}
+									/>
+								</TableCell>
+								<TableCell className="text-right text-xs">
+									{(() => {
+										const prices = calculatePrices(m);
+										const isSource = m.price_is_net || m.unit_price == null;
+										return (
+											<InlineEditCell
+												value={prices.net != null ? prices.net.toFixed(2) : ''}
+												onSave={(v) =>
+													onUpdateFields(m.id, {
+														unit_price: v ? Number(v) : null,
+														price_is_net: true
+													})
+												}
+												type="number"
+												placeholder="–"
+												inputClassName="h-6 w-16 text-right text-xs px-1"
+												className={`text-right ${isSource ? '' : 'text-muted-foreground italic'}`}
+											/>
+										);
+									})()}
+								</TableCell>
+								<TableCell className="text-right text-xs">
+									{(() => {
+										const prices = calculatePrices(m);
+										const isSource = !m.price_is_net || m.unit_price == null;
+										return (
+											<InlineEditCell
+												value={prices.gross != null ? prices.gross.toFixed(2) : ''}
+												onSave={(v) =>
+													onUpdateFields(m.id, {
+														unit_price: v ? Number(v) : null,
+														price_is_net: false
+													})
+												}
+												type="number"
+												placeholder="–"
+												inputClassName="h-6 w-16 text-right text-xs px-1"
+												className={`text-right ${isSource ? '' : 'text-muted-foreground italic'}`}
+											/>
+										);
+									})()}
 								</TableCell>
 								<TableCell className="text-right">{formatTotal(m)}</TableCell>
 								<TableCell>
@@ -406,7 +542,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 				{hasCosts && (
 					<TableFooter>
 						<TableRow>
-							<TableCell colSpan={9} className="text-right font-semibold">
+							<TableCell colSpan={11} className="text-right font-semibold">
 								Gesamtkosten
 							</TableCell>
 							<TableCell className="text-right font-semibold">

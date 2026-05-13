@@ -187,6 +187,9 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				onUpdateField={(id, field, value) => {
 					actions.updateMaterial.mutate({ id, updates: { [field]: value } });
 				}}
+				onUpdateFields={(id, partial) => {
+					actions.updateMaterial.mutate({ id, updates: partial });
+				}}
 			/>
 
 			<MaterialDialog
@@ -195,6 +198,9 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				material={dialogState.type === 'material' ? dialogState.material : null}
 				stations={stations}
 				festivalId={festivalId}
+				existingSuppliers={suppliers}
+				existingCategories={categories}
+				onCreateStation={(name) => actions.createStation.mutateAsync(name)}
 				onSave={handleSave}
 			/>
 
