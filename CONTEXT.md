@@ -36,3 +36,14 @@ Eine Position ist einer Station zugeordnet (oder keiner). Stations-Mapping zwisc
 ## Station
 
 Funktionale Einheit innerhalb eines Festes (`stations`), z.B. "Bar", "Küche", "Kassa". Stationen sind pro Fest definiert, werden aber bei der Material-Übernahme per Name zwischen Festen gemappt.
+
+## Lieferant
+
+Bezugsquelle einer Material-Position (`supplier`, Freitext pro Position, kann leer sein). Dient als Gruppierungsachse beim Erstellen von Bestelllisten — alle Positionen mit demselben Lieferanten ergeben eine Bestellung. Positionen ohne Lieferanten bilden die Gruppe "Kein Lieferant".
+
+## Materialliste vs. Bestellliste
+
+Zwei verschiedene Exporte mit unterschiedlichem Zweck:
+
+- **Materialliste** — Planungs-/Referenzliste. Zeigt pro Position Bestellt- und Verbraucht-Menge plus eine leere "Neue Menge"-Spalte zum händischen Ausfüllen. Dient der Bestellplanung fürs kommende Fest.
+- **Bestellliste** — die tatsächliche Bestellung. Gruppiert nach Lieferant oder Station, enthält nur Positionen mit Bestellmenge (`ordered_quantity`) > 0, reduziert auf Bezeichnung + Menge + Einheit. Dient als Bestellung, die an einen Lieferanten gegeben bzw. an einer Station gebraucht wird.
