@@ -25,9 +25,16 @@
 5. ⬜ Bewegung als Nebenhebel: NEAT/Spazieren/Radeln realistisch einordnen
 6. ⬜ Halten statt Jojo: Übergang von Defizit zu Erhaltung
 
+## Profil (Stand: bekannt)
+- **31 J., männl., 95 kg, 180 cm.** BMR (Mifflin) ≈ 1.925 kcal.
+- Beruf **Software-Dev (sitzend)**, **kein Sport**, **baut gerade Haus um** →
+  hohe NEAT durch Umbau-Arbeit → netto ~leicht aktiv (1,375), Spitzen höher.
+- Bei 1,375: TDEE ≈ 2.650 kcal. Sehr sanft (−350) ≈ 2.300 kcal/Tag, ~0,32 kg/Wo,
+  Ziel ~Jan 2027. Standard (−500) ≈ 2.150 kcal/Tag, ~0,45 kg/Wo, Ziel ~Nov 2026.
+
 ## Status
-- Lektion 1 ausgeliefert (Energiebilanz + interaktiver Rechner).
-- LR-0001 angelegt: Ausgangsstats (95 kg/180 cm, Ziel 85 kg) + Constraints.
-- OFFEN: **Alter** des Users für exakteren BMR (Rechner nimmt es als Eingabe;
-  Default 40). Bei Gelegenheit nachfragen. Auch: aktuelle Essgewohnheiten als
-  Anker für Lektion 2/3.
+- Lektion 1 ausgeliefert; Rechner-Default-Alter auf 31 gesetzt.
+- LR-0001 (Ausgangslage/Constraints) + LR-0002 (Profil: Dev-Job + Hausumbau/NEAT).
+- Empfehlung an User: **sehr sanftes Defizit (−350)** wegen körperl. Umbau-Arbeit
+  + Stress (Energie-Risiko). Protein betonen (Lektion 2).
+- OFFEN: aktuelle Essgewohnheiten als Anker für Lektion 2/3.
