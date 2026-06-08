@@ -9,6 +9,7 @@ const renderHeader = () =>
 		<MaterialListHeader
 			onAddMaterial={noop}
 			onExport={noop}
+			onExportOrderList={noop}
 			onTransfer={noop}
 		/>
 	);
@@ -18,6 +19,12 @@ describe('MaterialListHeader', () => {
 		const html = renderHeader();
 		expect(html).toContain('>Materialliste</span>');
 		expect(html).not.toContain('>Export</span>');
+	});
+
+	it('bietet einen eigenen Bestelllisten-Export-Button neben der Materialliste', () => {
+		const html = renderHeader();
+		expect(html).toContain('>Bestellliste</span>');
+		expect(html).toContain('>Materialliste</span>');
 	});
 
 	it('zeigt weder "Import" noch "Abgleich", aber "Übernehmen" und "Neu"', () => {
