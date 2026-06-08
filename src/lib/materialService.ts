@@ -76,22 +76,6 @@ export const createMaterialsBulk = async (
 	return data || [];
 };
 
-export const updateMaterialsBulk = async (
-	updates: { id: string; actual_quantity?: number; unit_price?: number | null; ordered_quantity?: number }[]
-): Promise<void> => {
-	for (const u of updates) {
-		const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
-		if (u.actual_quantity !== undefined) updateData.actual_quantity = u.actual_quantity;
-		if (u.unit_price !== undefined) updateData.unit_price = u.unit_price;
-		if (u.ordered_quantity !== undefined) updateData.ordered_quantity = u.ordered_quantity;
-		const { error } = await (supabase as any)
-			.from('festival_materials')
-			.update(updateData)
-			.eq('id', u.id);
-		if (error) throw error;
-	}
-};
-
 export const deleteMaterial = async (id: string): Promise<void> => {
 	const { error } = await (supabase as any)
 		.from('festival_materials')

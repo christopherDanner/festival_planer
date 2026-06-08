@@ -6,16 +6,12 @@ import MaterialListHeader from './MaterialListHeader';
 import MaterialFilters from './MaterialFilters';
 import MaterialTable from './MaterialTable';
 import MaterialDialog from './dialogs/MaterialDialog';
-import MaterialImportDialog from './dialogs/MaterialImportDialog';
-import InvoiceMatchDialog from './dialogs/InvoiceMatchDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
 type DialogState =
 	| { type: null }
 	| { type: 'material'; material?: FestivalMaterialWithStation }
-	| { type: 'import' }
-	| { type: 'invoice-match' }
 	| { type: 'export' };
 
 interface MaterialListViewProps {
@@ -122,8 +118,6 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 		<div className="space-y-3 sm:space-y-4 overflow-x-hidden">
 			<MaterialListHeader
 				onAddMaterial={() => setDialogState({ type: 'material' })}
-				onImportMaterial={() => setDialogState({ type: 'import' })}
-				onInvoiceMatch={() => setDialogState({ type: 'invoice-match' })}
 				onExport={() => setDialogState({ type: 'export' })}
 				onTransfer={() => navigate(`/festivals/${festivalId}/material-uebernahme`)}
 			/>
@@ -202,38 +196,6 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				existingCategories={categories}
 				onCreateStation={(name) => actions.createStation.mutateAsync(name)}
 				onSave={handleSave}
-			/>
-
-			<MaterialImportDialog
-				open={dialogState.type === 'import'}
-				onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
-				festivalId={festivalId}
-				stations={stations}
-				onImport={(materials) => {
-					actions.bulkCreateMaterials.mutate(materials, {
-						onSuccess: () => setDialogState({ type: null })
-					});
-				}}
-				isImporting={actions.bulkCreateMaterials.isPending}
-			/>
-
-			<InvoiceMatchDialog
-				open={dialogState.type === 'invoice-match'}
-				onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
-				materials={materials}
-				stations={stations}
-				festivalId={festivalId}
-				onApply={(updates) => {
-					actions.bulkUpdateMaterials.mutate(updates, {
-						onSuccess: () => setDialogState({ type: null })
-					});
-				}}
-				onCreateNew={(newMaterials) => {
-					actions.bulkCreateMaterials.mutate(newMaterials, {
-						onSuccess: () => setDialogState({ type: null })
-					});
-				}}
-				isApplying={actions.bulkUpdateMaterials.isPending || actions.bulkCreateMaterials.isPending}
 			/>
 
 			<MaterialExportDialog

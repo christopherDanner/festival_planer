@@ -6,7 +6,23 @@ Begriffsglossar des Projekts. Wird gepflegt wenn neue fachliche Begriffe auftauc
 
 ## Fest / Festival
 
-Eine zeitlich begrenzte Veranstaltung, für die geplant, eingeteilt, eingekauft und abgerechnet wird. Im Code: `festivals`. Pro User können mehrere Feste existieren, oft ein neues pro Jahr (z.B. "Stadlfest 2024", "Stadlfest 2026").
+Eine zeitlich begrenzte Veranstaltung, für die geplant, eingeteilt, eingekauft und abgerechnet wird. Im Code: `festivals`. Mehrere Feste existieren nebeneinander, oft ein neues pro Jahr (z.B. "Stadlfest 2024", "Stadlfest 2026"). Alle Feste liegen in **einem gemeinsamen Arbeitsbereich** — sie sind nicht pro Benutzer getrennt (siehe *Gemeinsamer Arbeitsbereich* und ADR 0001).
+
+## Gemeinsamer Arbeitsbereich
+
+Festmeister hat **einen einzigen, geteilten Datenbestand** — keine Mandanten- oder Pro-Benutzer-Trennung. Jeder angemeldete Benutzer sieht und bearbeitet dieselben Feste, Stationen, Materiallisten usw. Begründung: kleine, vertraute Gruppe, die gemeinsam an denselben Festen plant. Zugangskontrolle passiert allein über *wer ein Konto bekommt* (siehe *Benutzer*), nicht über Datensichtbarkeit. Entscheidung dokumentiert in ADR 0001.
+
+Konsequenz für die DB (RLS): SELECT/INSERT/UPDATE für jeden authentifizierten Benutzer; nur **DELETE** ist auf den Ersteller (`user_id = auth.uid()`) beschränkt. `user_id` auf einem Fest ist daher kein Besitz-/Sichtbarkeits-Marker mehr, sondern nur noch Ersteller-Nachweis fürs Löschen.
+
+## Benutzer
+
+Login-Konto eines Organisators (Supabase Auth, E-Mail + Passwort). Benutzer planen Feste im *gemeinsamen Arbeitsbereich*. **Selbstregistrierung ist deaktiviert** — Konten werden manuell im Supabase-Dashboard angelegt. Das gatekeept den Zugang ("nur bestimmte Leute").
+
+Nicht zu verwechseln mit *Mitglied*: Ein Benutzer hat ein Login und Vollzugriff; ein Mitglied hat kein Login.
+
+## Mitglied
+
+Helfer/Freiwilliger, der bei einem Fest eingeteilt wird (`members`). Ein Mitglied ist **kein** Login-Benutzer — es gibt Präferenzen (Stationen, Schichten) typischerweise über einen tokenbasierten Magic-Link ohne Anmeldung ab (`magic_links`, `member_preferences`). Klar abgrenzen: *Benutzer* = Organisator mit Login, *Mitglied* = einzuteilende Person ohne Login.
 
 ## Material-Übernahme
 
@@ -36,3 +52,14 @@ Eine Position ist einer Station zugeordnet (oder keiner). Stations-Mapping zwisc
 ## Station
 
 Funktionale Einheit innerhalb eines Festes (`stations`), z.B. "Bar", "Küche", "Kassa". Stationen sind pro Fest definiert, werden aber bei der Material-Übernahme per Name zwischen Festen gemappt.
+
+## Lieferant
+
+Bezugsquelle einer Material-Position (`supplier`, Freitext pro Position, kann leer sein). Dient als Gruppierungsachse beim Erstellen von Bestelllisten — alle Positionen mit demselben Lieferanten ergeben eine Bestellung. Positionen ohne Lieferanten bilden die Gruppe "Kein Lieferant".
+
+## Materialliste vs. Bestellliste
+
+Zwei verschiedene Exporte mit unterschiedlichem Zweck:
+
+- **Materialliste** — Planungs-/Referenzliste. Zeigt pro Position Bestellt- und Verbraucht-Menge plus eine leere "Neue Menge"-Spalte zum händischen Ausfüllen. Dient der Bestellplanung fürs kommende Fest.
+- **Bestellliste** — die tatsächliche Bestellung. Gruppiert nach Lieferant oder Station, enthält nur Positionen mit Bestellmenge (`ordered_quantity`) > 0, reduziert auf Bezeichnung + Menge + Einheit. Dient als Bestellung, die an einen Lieferanten gegeben bzw. an einer Station gebraucht wird.
