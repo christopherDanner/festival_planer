@@ -32,6 +32,22 @@ peer-reviewed Reviews/Meta-Analysen. Qualität > Menge.
 - **Malik et al. — Sugar-sweetened beverages & weight gain (AJCN, syst. review).**
   Flüssige Kalorien sättigen schlecht → leichter „billiger Sieg“. Lektion 3.
   https://pmc.ncbi.nlm.nih.gov/articles/PMC3778861/
+- **Sun & Kober 2020 — Regulating Food Craving: From Mechanisms to Interventions.**
+  Kernquelle Lektion 3: Cravings sind reiz-/belohnungs-/stressgetrieben (≠ Hunger);
+  kognitive Strategien (Reiz weg, ablenken, langfristig denken) regulieren sie;
+  striktes Verbot verstärkt das Verlangen.
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC7321886/
+- **Leidy et al. 2014/2015 — High-protein breakfast & food cravings.** Proteinreiche
+  Mahlzeit senkt nachfolgende Süß-/Herzhaft-Cravings + Belohnungszentrum-Aktivität +
+  abendliches Snacken; Mahlzeit-Skipping = mehr Cravings. Lektion 3 (Mittagessen-Hebel).
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC4249715/ ·
+  https://onlinelibrary.wiley.com/doi/full/10.1002/oby.21185
+- **NHS — Calories in alcohol.** Alkohol 7 kcal/g, „leere“ Kalorien, kommen meist
+  zusätzlich dazu; Pint Lager ≈ Pizzastück; Reduktions-Tipps. Lektion 3 (Bier-Budget).
+  https://www.nhs.uk/live-well/alcohol-advice/calories-in-alcohol/
+- **Spiegel et al. 2004, Annals of Internal Medicine — Sleep curtailment → Leptin ↓,
+  Ghrelin ↑, Hunger ↑.** Beleg „zu wenig Schlaf = mehr Hunger/Heißhunger“. Lektion 3
+  (Defizit-Killer). https://www.acpjournals.org/doi/10.7326/0003-4819-141-11-200412070-00008
 
 ## Faustzahlen (belegt)
 - ~**7.700 kcal ≈ 1 kg** Körperfett (Wishnofsky-Richtwert; nicht exakt linear).
@@ -46,5 +62,6 @@ peer-reviewed Reviews/Meta-Analysen. Qualität > Menge.
 
 ## Gaps / TODO
 - ✅ Protein-Sättigung + Mengen-Quelle (Westerterp-Plantenga 2012, ISSN 2017) — erledigt für Lektion 2.
-- DGE-Seiten direkt gegenlesen (Energiebilanz-Wortlaut) vor Lektion 3.
+- ✅ Heißhunger-Mechanismen + Strategien (Sun & Kober 2020, Leidy), Alkohol (NHS), Schlaf (Spiegel) — erledigt für Lektion 3.
 - Quelle zu Metabolic Adaptation / Plateau für Lektion 4.
+- Hinweis: NHS-/PMC-Seiten via WebFetch teils 403 (geblockt) — Inhalte über Such-Snippets verifiziert, nicht volltext gegengelesen. Bei Gelegenheit nachholen.
