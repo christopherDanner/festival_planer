@@ -2,9 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import {
 	createMaterial,
-	createMaterialsBulk,
 	updateMaterial,
-	updateMaterialsBulk,
 	deleteMaterial,
 	type FestivalMaterial
 } from '@/lib/materialService';
@@ -65,44 +63,6 @@ export const useMaterialListActions = (festivalId: string) => {
 		}
 	});
 
-	const bulkCreateMaterialsMutation = useMutation({
-		mutationFn: (materials: Omit<FestivalMaterial, 'id' | 'created_at' | 'updated_at'>[]) =>
-			createMaterialsBulk(materials),
-		onSuccess: (data) => {
-			invalidateAll();
-			toast({
-				title: 'Erfolg',
-				description: `${data.length} Materialien wurden importiert.`
-			});
-		},
-		onError: () => {
-			toast({
-				title: 'Fehler',
-				description: 'Materialien konnten nicht importiert werden.',
-				variant: 'destructive'
-			});
-		}
-	});
-
-	const bulkUpdateMaterialsMutation = useMutation({
-		mutationFn: (updates: { id: string; actual_quantity?: number; unit_price?: number | null; ordered_quantity?: number }[]) =>
-			updateMaterialsBulk(updates),
-		onSuccess: (_data, variables) => {
-			invalidateAll();
-			toast({
-				title: 'Erfolg',
-				description: `${variables.length} Mengen wurden aktualisiert.`
-			});
-		},
-		onError: () => {
-			toast({
-				title: 'Fehler',
-				description: 'Mengen konnten nicht aktualisiert werden.',
-				variant: 'destructive'
-			});
-		}
-	});
-
 	const createStationMutation = useMutation({
 		mutationFn: (name: string): Promise<Station> =>
 			createStation({ festival_id: festivalId, name, required_people: 1 }),
@@ -123,8 +83,6 @@ export const useMaterialListActions = (festivalId: string) => {
 		createMaterial: createMaterialMutation,
 		updateMaterial: updateMaterialMutation,
 		deleteMaterial: deleteMaterialMutation,
-		bulkCreateMaterials: bulkCreateMaterialsMutation,
-		bulkUpdateMaterials: bulkUpdateMaterialsMutation,
 		createStation: createStationMutation
 	};
 };
