@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lektion 1 — Die SSH-Haustür absichern</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --ink:#1c1b1a; --muted:#5d5a54; --line:#e6e2da;
+    --accent:#0f766e; --accent-soft:#d7efec;
+    --danger:#b42318; --danger-soft:#fdecea;
+    --ok:#15803d; --ok-soft:#e7f5ec; --warn:#b45309; --warn-soft:#fdf2e3;
+    --code-bg:#1e1e2a; --code-ink:#e7e7ef;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:56px 24px 96px}
+  header.hero{margin-bottom:40px}
+  .kicker{font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  h1{font-size:34px; line-height:1.15; margin:.3em 0 .25em; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:18px; margin:0}
+  .meta{margin-top:18px; font-size:14px; color:var(--muted); display:flex; gap:18px; flex-wrap:wrap}
+  .meta b{color:var(--ink)}
+  h2{font-size:23px; margin:48px 0 12px; letter-spacing:-.01em}
+  h3{font-size:18px; margin:28px 0 8px}
+  p{margin:14px 0}
+  a{color:var(--accent); text-decoration:none; border-bottom:1px solid var(--accent-soft)}
+  a:hover{border-color:var(--accent)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:.88em;
+    background:#efece4; padding:.12em .4em; border-radius:4px}
+  .step{counter-increment:step; margin:22px 0; padding-left:0}
+  pre{position:relative; background:var(--code-bg); color:var(--code-ink); border-radius:10px;
+    padding:16px 16px 16px 18px; overflow:auto; font-size:14.5px; line-height:1.55;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; margin:12px 0}
+  pre code{background:none; padding:0; color:inherit; font-size:inherit}
+  .copy{position:absolute; top:9px; right:9px; background:#33334a; color:#cfcfe0;
+    border:none; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer}
+  .copy:hover{background:#44445f} .copy.done{background:var(--ok); color:#fff}
+  .cmt{color:#8a8aa3}
+  .box{border-radius:10px; padding:16px 18px; margin:22px 0; border:1px solid}
+  .box p:first-child{margin-top:0} .box p:last-child{margin-bottom:0}
+  .box .lbl{font-weight:700; font-size:13px; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:6px}
+  .info{background:var(--accent-soft); border-color:#bfe3df; color:#0c4a45}
+  .danger{background:var(--danger-soft); border-color:#f3c9c4; color:#7a1c14}
+  .warn{background:var(--warn-soft); border-color:#f1d9ad; color:#7c4308}
+  .why{background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent)}
+  ul.check{list-style:none; padding:0; margin:18px 0}
+  ul.check li{padding:10px 0 10px 38px; position:relative; border-bottom:1px solid var(--line)}
+  ul.check li::before{content:"☐"; position:absolute; left:6px; top:8px; font-size:20px; color:var(--muted)}
+  ul.check li.x::before{content:"☑"; color:var(--ok)}
+  ul.check li{cursor:pointer; user-select:none}
+  /* Quiz */
+  .quiz{background:#fff; border:1px solid var(--line); border-radius:12px; padding:22px 22px 8px; margin:24px 0}
+  .q{margin-bottom:22px}
+  .q p.qq{font-weight:600; margin:0 0 10px}
+  .opt{display:block; padding:10px 14px; border:1px solid var(--line); border-radius:8px; margin:7px 0; cursor:pointer; transition:.12s}
+  .opt:hover{border-color:var(--accent)}
+  .opt input{margin-right:10px}
+  .opt.correct{background:var(--ok-soft); border-color:#a8d8b9}
+  .opt.wrong{background:var(--danger-soft); border-color:#f3c9c4}
+  .fb{font-size:14.5px; margin:8px 2px 0; display:none; padding:10px 12px; border-radius:8px}
+  .fb.show{display:block}
+  .fb.good{background:var(--ok-soft); color:#14532d}
+  .fb.bad{background:var(--danger-soft); color:#7a1c14}
+  button.check{background:var(--accent); color:#fff; border:none; border-radius:8px; padding:11px 20px;
+    font-size:15px; font-weight:600; cursor:pointer; margin:6px 0 18px}
+  button.check:hover{filter:brightness(1.08)}
+  .score{font-weight:700; margin-left:14px}
+  footer{margin-top:56px; padding-top:22px; border-top:1px solid var(--line); color:var(--muted); font-size:14.5px}
+  .refs{font-size:14px} .refs li{margin:6px 0}
+  .pill{display:inline-block; background:var(--accent-soft); color:#0c4a45; font-size:12px;
+    font-weight:600; padding:3px 10px; border-radius:999px}
+  @media print{.copy{display:none} body{background:#fff} pre{border:1px solid #ccc}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Linux-Server &amp; Node · Lektion 1</div>
+  <h1>Die SSH-Haustür absichern</h1>
+  <p class="sub">Ein frischer Hetzner-Server lässt sich als <code>root</code> mit Passwort einloggen — das ist die Tür, an der jeden Tag tausende Bots rütteln. In dieser Lektion schließt du sie ab: eigener Benutzer, Schlüssel statt Passwort, root gesperrt.</p>
+  <div class="meta">
+    <span><b>Ziel:</b> Sicherer SSH-Zugang</span>
+    <span><b>Dauer:</b> ~20 Min</span>
+    <span><b>Modus:</b> Hands-on am echten Server</span>
+  </div>
+</header>
+
+<div class="box info">
+  <span class="lbl">Was du danach kannst</span>
+  Einen neuen Server so absichern, dass Login <b>nur noch</b> mit deinem privaten Schlüssel und über deinen eigenen sudo-Benutzer möglich ist — root-Login und Passwort-Login sind tot. Das ist der erste und wichtigste Schritt jedes Server-Setups.
+</div>
+
+<h2>1 · Warum überhaupt?</h2>
+
+<p>Drei Begriffe, dann tippst du:</p>
+
+<div class="box why">
+  <p><b>root</b> ist der Admin-Account mit unbegrenzten Rechten. Der Name ist auf <em>jedem</em> Linux-System gleich — Angreifer müssen also nur noch das Passwort raten. Deshalb: <b>nie</b> direkt als root arbeiten oder einloggen.</p>
+  <p><b>sudo-Benutzer:</b> ein normaler Account, der bei Bedarf mit <code>sudo</code> kurz Admin-Rechte „leiht“. Dein Alltags-Account. Angreifer kennen den Namen nicht.</p>
+  <p><b>SSH-Schlüsselpaar:</b> ein <b>privater Schlüssel</b> (bleibt geheim auf deinem Windows-PC) und ein <b>öffentlicher Schlüssel</b> (liegt auf dem Server). Nur wer den passenden privaten Schlüssel hat, kommt rein. Ein Passwort kann man raten — einen 4096-Bit-Schlüssel praktisch nicht.</p>
+</div>
+
+<p>Reihenfolge des Abschließens — wichtig, damit du dich nicht selbst aussperrst:</p>
+<p><span class="pill">1. Benutzer anlegen</span> → <span class="pill">2. Schlüssel hinterlegen</span> → <span class="pill">3. testen</span> → <span class="pill">4. root + Passwort sperren</span></p>
+
+<h2>2 · Schlüssel erzeugen (auf deinem Windows-PC)</h2>
+
+<p>Falls du noch <b>kein</b> SSH-Schlüsselpaar hast: PowerShell öffnen und</p>
+<pre><button class="copy">Kopieren</button><code>ssh-keygen -t ed25519 -C "christopher@festival"</code></pre>
+<p>Enter bei allen Fragen (Standard-Pfad <code>C:\Users\Du\.ssh\id_ed25519</code> reicht). Das <code>.pub</code>-File ist dein <b>öffentlicher</b> Schlüssel — den geben wir gleich dem Server. Das File ohne <code>.pub</code> ist <b>privat</b> und verlässt deinen PC nie.</p>
+
+<div class="box warn">
+  <span class="lbl">ed25519 statt rsa</span>
+  Moderne Empfehlung ist <code>ed25519</code> (kürzer, schneller, sehr sicher). Hast du schon einen <code>id_rsa</code>-Schlüssel im Einsatz, ist der völlig okay — dann diesen Schritt überspringen.
+</div>
+
+<h2>3 · Am Server: sudo-Benutzer anlegen</h2>
+<p>Logge dich (noch) als root ein — bei Hetzner meist mit dem Key, den du beim Erstellen hinterlegt hast, oder dem Initial-Passwort aus der Mail:</p>
+<pre><button class="copy">Kopieren</button><code>ssh root@DEINE_SERVER_IP</code></pre>
+
+<p>Neuen Benutzer anlegen (ersetze <code>chris</code> durch deinen Wunschnamen) und ihm sudo-Rechte geben:</p>
+<pre><button class="copy">Kopieren</button><code><span class="cmt"># interaktiv: setzt ein Passwort + fragt ein paar (optionale) Infos</span>
+adduser chris
+
+<span class="cmt"># in die sudo-Gruppe aufnehmen → darf künftig 'sudo' nutzen</span>
+usermod -aG sudo chris</code></pre>
+
+<div class="box why">
+  <p><code>-aG sudo</code>: <b>a</b>ppend (anhängen, nicht ersetzen!) zur <b>G</b>ruppe <code>sudo</code>. Das <code>-a</code> ist kritisch — ohne es würdest du den User aus allen anderen Gruppen werfen.</p>
+</div>
+
+<h2>4 · Öffentlichen Schlüssel beim neuen User hinterlegen</h2>
+<p>Damit du dich künftig <em>als <code>chris</code></em> per Schlüssel einloggen kannst, muss dein öffentlicher Schlüssel in dessen <code>~/.ssh/authorized_keys</code>. Der bequemste Weg — von deinem <b>Windows-PC</b> aus (neues PowerShell-Fenster):</p>
+<pre><button class="copy">Kopieren</button><code>ssh-copy-id chris@DEINE_SERVER_IP</code></pre>
+<p>Geht <code>ssh-copy-id</code> unter Windows nicht, kopiere den Key manuell — am Server <b>als chris</b> (nicht root!):</p>
+<pre><button class="copy">Kopieren</button><code><span class="cmt"># auf dem Server, eingeloggt als chris bzw. via 'su - chris'</span>
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+nano ~/.ssh/authorized_keys   <span class="cmt"># Inhalt deiner id_ed25519.pub hier einfügen</span>
+chmod 600 ~/.ssh/authorized_keys</code></pre>
+
+<div class="box why">
+  <p><b>Rechte sind hier Pflicht, nicht Deko:</b> SSH <em>verweigert</em> den Key-Login, wenn <code>.ssh</code> nicht <code>700</code> und <code>authorized_keys</code> nicht <code>600</code> ist (zu offene Rechte = SSH misstraut der Datei). Merke: <code>700</code> = nur der Besitzer darf alles, sonst niemand.</p>
+</div>
+
+<h2>5 · TESTEN — bevor du irgendwas sperrst</h2>
+<div class="box danger">
+  <span class="lbl">⚠ Die wichtigste Regel</span>
+  <p><b>Schließe deine aktuelle root-Verbindung NICHT.</b> Öffne ein <b>zweites</b> Terminal und teste den neuen Login. Erst wenn der funktioniert, machst du weiter. Sperrst du root/Passwort, ohne vorher den Key-Login getestet zu haben, und der Key klemmt — bist du <b>komplett ausgesperrt</b>.</p>
+</div>
+<pre><button class="copy">Kopieren</button><code><span class="cmt"># NEUES Fenster — altes root-Fenster offen lassen!</span>
+ssh chris@DEINE_SERVER_IP</code></pre>
+<p>Drin, ohne nach einem Passwort gefragt zu werden? ✅ Dann teste noch, ob sudo geht:</p>
+<pre><button class="copy">Kopieren</button><code>sudo whoami    <span class="cmt"># → muss "root" ausgeben (nach deiner Passwort-Eingabe)</span></code></pre>
+
+<h2>6 · root- &amp; Passwort-Login sperren</h2>
+<p>Jetzt — und erst jetzt — die Tür abschließen. Als <code>chris</code> mit sudo die SSH-Konfiguration bearbeiten:</p>
+<pre><button class="copy">Kopieren</button><code>sudo nano /etc/ssh/sshd_config</code></pre>
+<p>Diese drei Zeilen finden (Doppelpunkt-Such-Trick in nano: <code>Strg+W</code>) und so setzen — ggf. das führende <code>#</code> entfernen:</p>
+<pre><button class="copy">Kopieren</button><code>PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes</code></pre>
+
+<div class="box why">
+  <p><b>PermitRootLogin no</b> → root kann sich gar nicht mehr per SSH einloggen.<br>
+  <b>PasswordAuthentication no</b> → Login geht <em>nur</em> noch per Schlüssel, kein Passwort-Raten mehr möglich.<br>
+  <b>PubkeyAuthentication yes</b> → Schlüssel-Login bleibt erlaubt (Standard, zur Sicherheit explizit).</p>
+</div>
+
+<p>Speichern (<code>Strg+O</code>, Enter, <code>Strg+X</code>), dann SSH neu laden:</p>
+<pre><button class="copy">Kopieren</button><code>sudo systemctl restart ssh</code></pre>
+
+<div class="box danger">
+  <span class="lbl">⚠ Letzter Test vor dem Schließen</span>
+  Wieder im <b>noch offenen</b> Fenster: öffne ein <b>drittes</b> Terminal, logge dich erneut als <code>chris</code> ein. Funktioniert? Erst dann darfst du die alte root-Session schließen. Geht's schief, kannst du im offenen Fenster den Fehler beheben.
+</div>
+
+<div class="box info">
+  <span class="lbl">Notausgang Hetzner</span>
+  Sperrst du dich trotzdem aus: Hetzner Cloud bietet eine <b>Web-Konsole</b> (im Projekt-Dashboard, „Console“) — wie ein Monitor direkt am Server, kommt ohne SSH rein. Dort kannst du die <code>sshd_config</code> wieder reparieren. Gut zu wissen, dass es das gibt.
+</div>
+
+<h2>Checkliste — am echten Server abhaken</h2>
+<ul class="check">
+  <li>SSH-Schlüsselpaar auf dem Windows-PC vorhanden (<code>ed25519</code> oder <code>rsa</code>)</li>
+  <li>sudo-Benutzer angelegt (<code>adduser</code> + <code>usermod -aG sudo</code>)</li>
+  <li>Öffentlicher Schlüssel beim neuen User hinterlegt (Rechte 700/600)</li>
+  <li>Login als neuer User per Schlüssel getestet — <b>ohne</b> root-Fenster zu schließen</li>
+  <li><code>sudo whoami</code> gibt <code>root</code></li>
+  <li><code>PermitRootLogin no</code> + <code>PasswordAuthentication no</code> gesetzt</li>
+  <li><code>sudo systemctl restart ssh</code> ausgeführt</li>
+  <li>Neuer Login NACH dem Restart erneut getestet ✅</li>
+</ul>
+
+<h2>Wissens-Check</h2>
+<p>Beantworte die drei Fragen, dann <em>Prüfen</em>. Sofortiges Feedback.</p>
+
+<div class="quiz" id="quiz">
+  <div class="q" data-correct="b">
+    <p class="qq">1. Warum solltest du <code>PasswordAuthentication no</code> erst <em>nach</em> dem Testen des Schlüssel-Logins setzen?</p>
+    <label class="opt"><input type="radio" name="q1" value="a">Weil der Restart sonst fehlschlägt.</label>
+    <label class="opt"><input type="radio" name="q1" value="b">Weil du dich sonst dauerhaft aussperren könntest, falls der Key-Login nicht klappt.</label>
+    <label class="opt"><input type="radio" name="q1" value="c">Weil sudo sonst nicht funktioniert.</label>
+    <div class="fb"></div>
+  </div>
+
+  <div class="q" data-correct="c">
+    <p class="qq">2. Was macht das <code>-a</code> in <code>usermod -aG sudo chris</code>?</p>
+    <label class="opt"><input type="radio" name="q2" value="a">Es legt den Benutzer automatisch an.</label>
+    <label class="opt"><input type="radio" name="q2" value="b">Es vergibt ein Admin-Passwort.</label>
+    <label class="opt"><input type="radio" name="q2" value="c">Es hängt die Gruppe an, statt alle bestehenden Gruppen zu ersetzen.</label>
+    <div class="fb"></div>
+  </div>
+
+  <div class="q" data-correct="a">
+    <p class="qq">3. Welcher Schlüssel des Paars darf den Server erreichen — und welcher bleibt geheim?</p>
+    <label class="opt"><input type="radio" name="q3" value="a">Der <b>öffentliche</b> kommt auf den Server, der <b>private</b> bleibt auf deinem PC.</label>
+    <label class="opt"><input type="radio" name="q3" value="b">Beide kommen auf den Server.</label>
+    <label class="opt"><input type="radio" name="q3" value="c">Der <b>private</b> kommt auf den Server, der <b>öffentliche</b> bleibt geheim.</label>
+    <div class="fb"></div>
+  </div>
+
+  <button class="check" onclick="checkQuiz()">Prüfen</button>
+  <span class="score" id="score"></span>
+</div>
+
+<div class="box info">
+  <span class="lbl">Dein Lehrer ist erreichbar</span>
+  Hängt etwas? Frag direkt im Chat — z.B. „ssh-copy-id geht unter Windows nicht", „was ist der Unterschied zwischen <code>systemctl restart ssh</code> und <code>reload</code>?", oder „erklär mir nochmal Datei-Rechte 700/600". Genau dafür bin ich da.
+</div>
+
+<h2>Als Nächstes</h2>
+<p>Die Tür ist zu — aber der Server hat noch viele offene Fenster (Ports). <b>Lektion 2: Firewall mit UFW</b> — nur die Ports offenlassen, die du wirklich brauchst. Sag Bescheid, wenn du so weit bist.</p>
+
+<footer>
+  <p><b>Quellen</b> — diese Schritte sind gegen folgende vertrauenswürdige Anleitungen geprüft:</p>
+  <ul class="refs">
+    <li><a href="https://community.hetzner.com/tutorials/howto-initial-setup-ubuntu/">Hetzner Community — Initial Server Setup with Ubuntu</a></li>
+    <li><a href="https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu">DigitalOcean — Initial Server Setup with Ubuntu</a></li>
+    <li><a href="https://wiki.archlinux.org/title/SSH_keys">Arch Wiki — SSH keys</a></li>
+  </ul>
+  <p style="margin-top:18px">Lektion 1 · Linux-Server &amp; Node-Backend · Hands-on-Track</p>
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.copy').forEach(function(b){
+  b.addEventListener('click',function(){
+    var code=b.parentElement.querySelector('code');
+    var text=code.innerText.replace(/^\s*#.*$/gm,function(m){return m;}); // keep as-is
+    navigator.clipboard.writeText(code.innerText).then(function(){
+      b.textContent='Kopiert ✓'; b.classList.add('done');
+      setTimeout(function(){b.textContent='Kopieren'; b.classList.remove('done');},1400);
+    });
+  });
+});
+document.querySelectorAll('ul.check li').forEach(function(li){
+  li.addEventListener('click',function(){li.classList.toggle('x');});
+});
+function checkQuiz(){
+  var qs=document.querySelectorAll('#quiz .q'), correct=0;
+  qs.forEach(function(q){
+    var want=q.dataset.correct;
+    var sel=q.querySelector('input:checked');
+    var fb=q.querySelector('.fb');
+    q.querySelectorAll('.opt').forEach(function(o){o.classList.remove('correct','wrong');});
+    fb.classList.remove('show','good','bad');
+    if(!sel){ fb.textContent='Bitte eine Antwort wählen.'; fb.classList.add('show','bad'); return; }
+    var lbl=sel.closest('.opt');
+    if(sel.value===want){
+      lbl.classList.add('correct'); correct++;
+      fb.textContent='Richtig.'; fb.classList.add('show','good');
+    } else {
+      lbl.classList.add('wrong');
+      q.querySelector('.opt input[value="'+want+'"]').closest('.opt').classList.add('correct');
+      fb.classList.add('show','bad');
+      fb.textContent = {
+        '1':'Genau hier ist die Falle: ohne getesteten Key-Login + gesperrtem Passwort = ausgesperrt.',
+        '2':'-a = append. Ohne -a ersetzt usermod alle Gruppen des Users — gefährlich.',
+        '3':'Öffentlich → Server, privat → bleibt geheim bei dir. Der private verlässt deinen PC nie.'
+      }[q.querySelector('.qq').textContent.trim().charAt(0)] || 'Schau dir den Abschnitt oben nochmal an.';
+    }
+  });
+  var s=document.getElementById('score');
+  s.textContent=correct+' / '+qs.length+' richtig'+(correct===qs.length?' — sitzt! 🎯':'');
+  s.style.color = correct===qs.length ? 'var(--ok)' : 'var(--warn)';
+}
+</script>
+</body>
+</html>
