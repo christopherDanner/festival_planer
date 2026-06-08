@@ -208,24 +208,24 @@ describe('buildOrderListFilename', () => {
 
 describe('orderListColumns / orderListRowCells', () => {
 	it('verwendet auf der Lieferanten-Achse Spalten ohne Lieferant', () => {
-		expect(orderListColumns('supplier')).toEqual(['Bezeichnung', 'Menge', 'Einheit', 'Gebinde']);
+		expect(orderListColumns('supplier')).toEqual(['Bezeichnung', 'Menge', 'Gebinde']);
 	});
 
 	it('blendet auf der Stations-Achse zusätzlich eine Lieferant-Spalte ein', () => {
-		expect(orderListColumns('station')).toEqual(['Bezeichnung', 'Lieferant', 'Menge', 'Einheit', 'Gebinde']);
+		expect(orderListColumns('station')).toEqual(['Bezeichnung', 'Lieferant', 'Menge', 'Gebinde']);
 	});
 
-	it('bildet eine Zeile passend zur Achse ab (Stations-Achse zeigt Lieferant und Gebinde)', () => {
+	it('bildet eine Zeile passend zur Achse ab (Menge und Einheit in einer Spalte)', () => {
 		const [group] = buildOrderList(
 			[make({ name: 'Cola', ordered: 8, unit: 'Stück', supplier: 'Huber', station: 'Bar', packagingUnit: 'Kiste', amountPerPackaging: 18 })],
 			'station'
 		);
-		expect(orderListRowCells(group.rows[0], 'station')).toEqual(['Cola', 'Huber', '144', 'Stück', '8 Kiste']);
-		expect(orderListRowCells(group.rows[0], 'supplier')).toEqual(['Cola', '144', 'Stück', '8 Kiste']);
+		expect(orderListRowCells(group.rows[0], 'station')).toEqual(['Cola', 'Huber', '144 Stück', '8 Kiste']);
+		expect(orderListRowCells(group.rows[0], 'supplier')).toEqual(['Cola', '144 Stück', '8 Kiste']);
 	});
 
 	it('zeigt leere Zellen für fehlenden Lieferant und fehlendes Gebinde', () => {
 		const [group] = buildOrderList([make({ name: 'Salz', ordered: 3, unit: 'kg', supplier: null, station: 'Küche' })], 'station');
-		expect(orderListRowCells(group.rows[0], 'station')).toEqual(['Salz', '', '3', 'kg', '']);
+		expect(orderListRowCells(group.rows[0], 'station')).toEqual(['Salz', '', '3 kg', '']);
 	});
 });

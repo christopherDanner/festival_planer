@@ -91,18 +91,18 @@ export function axisLabel(axis: OrderListAxis): string {
  */
 export function orderListColumns(axis: OrderListAxis): string[] {
 	return axis === 'station'
-		? ['Bezeichnung', 'Lieferant', 'Menge', 'Einheit', 'Gebinde']
-		: ['Bezeichnung', 'Menge', 'Einheit', 'Gebinde'];
+		? ['Bezeichnung', 'Lieferant', 'Menge', 'Gebinde']
+		: ['Bezeichnung', 'Menge', 'Gebinde'];
 }
 
 /** Maps a row to its cell strings, aligned to {@link orderListColumns} for the same axis. */
 export function orderListRowCells(row: OrderListRow, axis: OrderListAxis): string[] {
-	const quantity = String(row.quantity);
+	const quantity = `${row.quantity} ${row.unit}`;
 	const packaging = row.packaging ?? '';
 	if (axis === 'station') {
-		return [row.name, row.supplier ?? '', quantity, row.unit, packaging];
+		return [row.name, row.supplier ?? '', quantity, packaging];
 	}
-	return [row.name, quantity, row.unit, packaging];
+	return [row.name, quantity, packaging];
 }
 
 function sanitizeFilenamePart(name: string): string {

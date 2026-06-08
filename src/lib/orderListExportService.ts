@@ -23,20 +23,18 @@ function formatDate(date: Date): string {
 }
 
 /** PDF column widths (mm); Bezeichnung takes the remaining width ('auto'). */
-function pdfColumnStyles(axis: OrderListAxis): Record<number, { cellWidth: number | 'auto'; halign?: 'right' }> {
+function pdfColumnStyles(axis: OrderListAxis): Record<number, { cellWidth: number | 'auto' }> {
 	return axis === 'station'
 		? {
-			0: { cellWidth: 'auto' },           // Bezeichnung
-			1: { cellWidth: 34 },               // Lieferant
-			2: { cellWidth: 24, halign: 'right' }, // Menge
-			3: { cellWidth: 22 },               // Einheit
-			4: { cellWidth: 28 },               // Gebinde
+			0: { cellWidth: 'auto' }, // Bezeichnung
+			1: { cellWidth: 38 },     // Lieferant
+			2: { cellWidth: 32 },     // Menge (inkl. Einheit)
+			3: { cellWidth: 30 },     // Gebinde
 		}
 		: {
-			0: { cellWidth: 'auto' },           // Bezeichnung
-			1: { cellWidth: 28, halign: 'right' }, // Menge
-			2: { cellWidth: 30 },               // Einheit
-			3: { cellWidth: 34 },               // Gebinde
+			0: { cellWidth: 'auto' }, // Bezeichnung
+			1: { cellWidth: 38 },     // Menge (inkl. Einheit)
+			2: { cellWidth: 38 },     // Gebinde
 		};
 }
 
@@ -144,8 +142,8 @@ function pushSectionRows(
 
 function excelCols(axis: OrderListAxis): { wch: number }[] {
 	return axis === 'station'
-		? [{ wch: 36 }, { wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 18 }]
-		: [{ wch: 40 }, { wch: 12 }, { wch: 14 }, { wch: 18 }];
+		? [{ wch: 36 }, { wch: 22 }, { wch: 16 }, { wch: 18 }]
+		: [{ wch: 40 }, { wch: 16 }, { wch: 18 }];
 }
 
 export function exportOrderListSingleExcel(group: OrderListGroup, meta: OrderListMeta): void {
