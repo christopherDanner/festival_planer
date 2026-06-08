@@ -1,7 +1,17 @@
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
-import { toBaseQuantity, formatRequiredPackaging } from '@/lib/materialQuantity';
+import { toBaseQuantity } from '@/lib/materialQuantity';
 
 export type OrderListAxis = 'supplier' | 'station';
+
+/** Packaging breakdown for a position, rendered inline in the Menge cell. */
+export interface OrderListPackaging {
+	/** Rounded-up number of packages (e.g. 8). */
+	count: number;
+	/** Packaging unit (e.g. "Kiste"). */
+	unit: string;
+	/** Base units per package (e.g. 18). */
+	amountPerPackaging: number;
+}
 
 export interface OrderListRow {
 	/** Bezeichnung. */
@@ -10,8 +20,8 @@ export interface OrderListRow {
 	quantity: number;
 	/** Base unit (e.g. "Stück"). */
 	unit: string;
-	/** Rounded-up packaging amount (e.g. "8 Kiste"), or null when the position has no packaging. */
-	packaging: string | null;
+	/** Packaging breakdown shown inline in the Menge cell, or null when the position has no packaging. */
+	packaging: OrderListPackaging | null;
 	/** Supplier — shown on the station axis so the buyer knows where each position is ordered. */
 	supplier: string | null;
 }
@@ -55,11 +65,15 @@ export function buildOrderList(
 			byKey.set(key, group);
 		}
 		const base = toBaseQuantity(m.ordered_quantity, m) ?? 0;
+		const packaging: OrderListPackaging | null =
+			m.packaging_unit && m.amount_per_packaging
+				? { count: Math.ceil(m.ordered_quantity), unit: m.packaging_unit, amountPerPackaging: m.amount_per_packaging }
+				: null;
 		group.rows.push({
 			name: m.name,
 			quantity: Math.round(base * 100) / 100,
 			unit: m.unit,
-			packaging: formatRequiredPackaging(m.ordered_quantity, m),
+			packaging,
 			supplier: (m.supplier ?? '').trim() || null,
 		});
 	}
@@ -91,18 +105,25 @@ export function axisLabel(axis: OrderListAxis): string {
  */
 export function orderListColumns(axis: OrderListAxis): string[] {
 	return axis === 'station'
-		? ['Bezeichnung', 'Lieferant', 'Menge', 'Gebinde']
-		: ['Bezeichnung', 'Menge', 'Gebinde'];
+		? ['Bezeichnung', 'Lieferant', 'Menge']
+		: ['Bezeichnung', 'Menge'];
+}
+
+/** Builds the Menge cell: base quantity plus, when present, the packaging breakdown (e.g. "144 Stück ( 8 Kiste á 18 Stück )"). */
+function quantityCell(row: OrderListRow): string {
+	const base = `${row.quantity} ${row.unit}`;
+	if (!row.packaging) return base;
+	const p = row.packaging;
+	return `${base} ( ${p.count} ${p.unit} á ${p.amountPerPackaging} ${row.unit} )`;
 }
 
 /** Maps a row to its cell strings, aligned to {@link orderListColumns} for the same axis. */
 export function orderListRowCells(row: OrderListRow, axis: OrderListAxis): string[] {
-	const quantity = `${row.quantity} ${row.unit}`;
-	const packaging = row.packaging ?? '';
+	const quantity = quantityCell(row);
 	if (axis === 'station') {
-		return [row.name, row.supplier ?? '', quantity, packaging];
+		return [row.name, row.supplier ?? '', quantity];
 	}
-	return [row.name, quantity, packaging];
+	return [row.name, quantity];
 }
 
 function sanitizeFilenamePart(name: string): string {
