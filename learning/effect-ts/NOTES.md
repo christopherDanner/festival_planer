@@ -27,5 +27,10 @@
 7. ⬜ (falls ja) Sauberes Setup in einem TS-Projekt: Struktur, Fehlertypen, Layer
 
 ## Status
-- Lektion 1 ausgeliefert. Noch keine Learning-Records (kein nachgewiesenes
-  Können — erst nach Quiz/Demo anlegen).
+- Lektion 1 ausgeliefert.
+- Lektion 2 (User-Detour, vorgezogen): "Effect vs. tRPC — verschiedene Achsen".
+  Grund: User nutzt tRPC im anderen Monorepo → ideale Brücke für "lohnt es sich?".
+  Kernbotschaft: Transport-Achse (tRPC ↔ @effect/rpc) vs. Logik-Achse (Effect im
+  Handler); Kombi-Weg (runPromiseExit an der Grenze → TRPCError); Schema-Validator-
+  Reibung. Arc-Themen 2 (typisierte Fehler) + 5 (Layer/R) dadurch angeteasert.
+- LR-0001 angelegt (Vorwissen: nutzt tRPC). Noch kein nachgewiesenes Effect-Können.

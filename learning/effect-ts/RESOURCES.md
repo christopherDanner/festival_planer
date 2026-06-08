@@ -27,6 +27,23 @@ als Brücke/Zweitmeinung.
 - **noqta.tn (2026) — Type-Safe Error Handling, Services, Pipelines** —
   produktionsnah. https://noqta.tn/en/tutorials/effect-ts-typescript-error-handling-pipelines-2026
 
+## tRPC ↔ Effect (Lektion 2)
+- **macwright — Effect notes: tRPC** — Effect in tRPC integrieren: Result/Exit
+  → throw, Helfer via Middleware/Context; Schema-Validator-Reibung.
+  https://macwright.com/2026/01/06/effect-trpc
+- **titouancreach (DEV) — tRPC durch @effect/rpc ersetzt (Next.js)** —
+  Erfahrungsbericht, Input/Output-Schema-Mismatch, Streaming (Teil 2).
+  https://dev.to/titouancreach/how-i-replaced-trpc-with-effect-rpc-in-a-nextjs-app-router-application-4j8p
+- **Effect-Community (answeroverflow) — ManagedRuntime + Effect.fn in tRPC** —
+  `Effect.fn(...)().pipe(MyRuntime.runPromise)`, bessere Stacktraces.
+  https://www.answeroverflow.com/m/1450782555644362894
+- **Harbor — "Why we love FP but don't use Effect-TS" (2025-11)** — fundierte
+  Gegenstimme; Kosten/Lernkurve. https://runharbor.com/blog/2025-11-24-why-we-dont-use-effect-ts
+- **tRPC Docs — Procedures / Validators** — Primärquelle Transport-Achse.
+  https://trpc.io/docs/server/procedures
+
+*Hinweis: macwright & dev.to liefern bei direktem Fetch 403 — im Browser öffnen.*
+
 ## Community / Wisdom (real-world testen)
 - **Effect Discord** — offizielle Community, sehr aktiv (Link via effect.website).
 - **r/typescript** & GitHub `Effect-TS/effect` Discussions.

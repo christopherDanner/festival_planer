@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lektion 2 — Effect vs. tRPC: verschiedene Achsen</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --ink:#1c1b1a; --muted:#5d5a54; --line:#e6e2da;
+    --accent:#5b4bd6; --accent-soft:#e6e3fb;
+    --danger:#b42318; --danger-soft:#fdecea;
+    --ok:#15803d; --ok-soft:#e7f5ec; --warn:#b45309; --warn-soft:#fdf2e3;
+    --code-bg:#1e1e2a; --code-ink:#e7e7ef;
+    --trpc:#2596be; --trpc-soft:#e2f1f6;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:56px 24px 96px}
+  header.hero{margin-bottom:40px}
+  .kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:34px;line-height:1.15;margin:.3em 0 .25em;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:18px;margin:0}
+  .meta{margin-top:18px;font-size:14px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+  .meta b{color:var(--ink)}
+  h2{font-size:23px;margin:48px 0 12px;letter-spacing:-.01em}
+  h3{font-size:18px;margin:28px 0 8px}
+  p{margin:14px 0}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+  a:hover{border-color:var(--accent)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em;
+    background:#efece4;padding:.12em .4em;border-radius:4px}
+  pre{position:relative;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+    padding:16px 16px 16px 18px;overflow:auto;font-size:14.5px;line-height:1.6;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;margin:12px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:inherit}
+  .cmt{color:#8a8aa3}
+  .kw{color:#c792ea}.str{color:#c3e88d}.typ{color:#82aaff}.fn{color:#82d8ff}
+  .box{border-radius:10px;padding:16px 18px;margin:22px 0;border:1px solid}
+  .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+  .box .lbl{font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:6px}
+  .info{background:var(--accent-soft);border-color:#cfc8f6;color:#332a78}
+  .warn{background:var(--warn-soft);border-color:#f1d9ad;color:#7c4308}
+  .why{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent)}
+  /* axes diagram */
+  .axes{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin:24px 0}
+  .axes .ax{margin:14px 0}
+  .axes .ax b{display:block;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .axes .track{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{border-radius:8px;padding:8px 12px;font-size:14.5px;border:1px solid}
+  .chip.t{background:var(--trpc-soft);border-color:#bfe0ea;color:#0e5a72}
+  .chip.l{background:var(--accent-soft);border-color:#cfc8f6;color:#332a78}
+  .chip.n{background:#f3f0ea;border-color:var(--line);color:var(--muted)}
+  .axes .hint{font-size:14px;color:var(--muted);margin-top:6px}
+  table.cmp{border-collapse:collapse;width:100%;margin:18px 0;font-size:15px}
+  table.cmp th,table.cmp td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+  table.cmp th{background:#f3f0ea}
+  table.cmp td:first-child{font-weight:600;width:30%}
+  /* Quiz */
+  .quiz{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 22px 8px;margin:24px 0}
+  .q{margin-bottom:24px;padding-bottom:4px}
+  .q p.qq{font-weight:600;margin:0 0 10px}
+  .opt{display:block;padding:10px 14px;border:1px solid var(--line);border-radius:8px;margin:7px 0;cursor:pointer;transition:.12s}
+  .opt:hover{border-color:var(--accent)}
+  .opt.correct{background:var(--ok-soft);border-color:#a8d8b9}
+  .opt.wrong{background:var(--danger-soft);border-color:#f3c9c4}
+  .opt.picked{outline:2px solid var(--accent)}
+  .fb{font-size:14.5px;margin:10px 2px 0;display:none;padding:10px 12px;border-radius:8px}
+  .fb.show{display:block}
+  .fb.good{background:var(--ok-soft);color:#14532d}
+  .fb.bad{background:var(--danger-soft);color:#7a1c14}
+  .pill{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--accent);border-radius:99px;padding:3px 10px;margin-left:8px;vertical-align:middle}
+  footer{margin-top:56px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:14px}
+  .src{font-size:13.5px;color:var(--muted)}
+  .src a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="kicker">Effect-Track · Lektion 2</div>
+    <h1>Effect vs. tRPC <span class="pill">verschiedene Achsen</span></h1>
+    <p class="sub">Kurze Antwort: Es ist meist kein „entweder/oder“. tRPC und Effect lösen Probleme auf <b>zwei verschiedenen Achsen</b> — und lassen sich kombinieren.</p>
+    <div class="meta">
+      <span>⏱ <b>~9 Min</b></span>
+      <span>🎯 Mission: <b>lohnt es sich?</b></span>
+      <span>🧩 Du kennst: <b>tRPC (Monorepo), Effect&lt;A,E,R&gt; aus Lektion 1</b></span>
+    </div>
+  </header>
+
+  <h2>Die Verwechslung, die du gerade hast</h2>
+  <p>Du kennst tRPC als „typsichere API von Client zu Server“. Effect klingt auch nach „typsicher + Fehler im Typ“. Naheliegend, sie als Konkurrenten zu sehen. Sind sie aber meistens nicht — sie sitzen auf <b>unterschiedlichen Achsen</b>:</p>
+
+  <div class="axes">
+    <div class="ax">
+      <b>Achse 1 · Transport / Vertrag (Client ↔ Server)</b>
+      <div class="track">
+        <span class="chip t">tRPC</span>
+        <span class="chip t">@effect/rpc</span>
+        <span class="chip n">REST / OpenAPI</span>
+        <span class="chip n">GraphQL</span>
+      </div>
+      <p class="hint">„Wie reden Client und Server typsicher miteinander?“ — Router, Procedures, Serialisierung, ein Client-Typ aus dem Server abgeleitet.</p>
+    </div>
+    <div class="ax">
+      <b>Achse 2 · Logik <i>innerhalb</i> einer Funktion (Fehler, Deps, Komposition)</b>
+      <div class="track">
+        <span class="chip l">Effect</span>
+        <span class="chip n">plain async/await + try/catch</span>
+        <span class="chip n">neverthrow (Result)</span>
+      </div>
+      <p class="hint">„Wie schreibe ich die Business-Logik <i>im</i> Handler?“ — typisierte Fehler (Slot E), Dependencies (Slot R), Retry, Komposition.</p>
+    </div>
+  </div>
+
+  <div class="box info"><span class="lbl">Mentales Modell</span>
+    <p>tRPC ist das <b>Rohr</b> zwischen Client und Server. Effect ist, <b>was im Rohr fließt</b> — wie du die Logik im Handler baust. „Was fließt“ ist unabhängig vom Rohr. Deshalb: <b>du kannst Effect <i>in</i> deinen tRPC-Procedures benutzen</b>, ohne tRPC aufzugeben.</p>
+  </div>
+
+  <h2>Wo es sich doch direkt vergleicht: <code>@effect/rpc</code></h2>
+  <p>Es gibt <b>einen</b> echten 1:1-Konkurrenten zu tRPC im Effect-Lager: <code>@effect/rpc</code>. Das ist Achse 1 aus dem Effect-Ökosystem — die Alternative, wenn du den Transport <i>auch</i> in Effect-Sprache (mit <code>Schema</code> end-to-end) haben willst. Manche ersetzen tRPC komplett dadurch; meist erst dann sinnvoll, wenn der Rest der App schon Effect ist.</p>
+  <p class="src">Erfahrungsbericht (tRPC → @effect/rpc, Next.js): <a href="https://dev.to/titouancreach/how-i-replaced-trpc-with-effect-rpc-in-a-nextjs-app-router-application-4j8p">titouancreach, DEV</a></p>
+
+  <h2>Der übliche Weg: kombinieren</h2>
+  <p>tRPC bleibt das Rohr. Die Logik im Handler schreibst du als <code>Effect</code> (lazy Beschreibung, Lektion 1) und <b>führst sie genau an der Grenze aus</b> — im Procedure. Typisierte Fehler mappst du dort auf <code>TRPCError</code>.</p>
+
+  <pre><code><span class="cmt">// 1) Logik = Effect. Fehler stehen im Typ (Slot E), keine throws.</span>
+<span class="kw">const</span> <span class="fn">getUser</span> = (id: <span class="typ">string</span>): <span class="typ">Effect</span>.<span class="typ">Effect</span>&lt;<span class="typ">User</span>, <span class="typ">UserNotFound</span>&gt; =&gt; <span class="cmt">/* … */</span>
+
+<span class="cmt">// 2) Ein Helfer, der den Effect an der tRPC-Grenze ausführt</span>
+<span class="cmt">//    und erwartete Fehler in TRPCError übersetzt.</span>
+<span class="kw">async function</span> <span class="fn">runAtBoundary</span>&lt;<span class="typ">A</span>, <span class="typ">E</span>&gt;(effect: <span class="typ">Effect</span>.<span class="typ">Effect</span>&lt;<span class="typ">A</span>, <span class="typ">E</span>&gt;) {
+  <span class="kw">const</span> exit = <span class="kw">await</span> Effect.<span class="fn">runPromiseExit</span>(effect)
+  <span class="kw">return</span> Exit.<span class="fn">match</span>(exit, {
+    onSuccess: (a) =&gt; a,
+    onFailure: (cause) =&gt; { <span class="kw">throw</span> <span class="fn">toTRPCError</span>(cause) }  <span class="cmt">// E → TRPCError</span>
+  })
+}
+
+<span class="cmt">// 3) Im Procedure: Effect bauen, an der Grenze ausführen.</span>
+<span class="kw">const</span> userById = publicProcedure
+  .<span class="fn">input</span>(z.<span class="fn">object</span>({ id: z.<span class="fn">string</span>() }))
+  .<span class="fn">query</span>(({ input }) =&gt; <span class="fn">runAtBoundary</span>(<span class="fn">getUser</span>(input.id)))</code></pre>
+
+  <div class="box why">
+    <p>Das ist exakt das Muster aus Lektion 1 in der Praxis: <b>Effect = Beschreibung</b>, und <code>runPromiseExit</code> ist das „Kochen“ — und zwar <b>am Rand</b> (im Procedure), nicht mitten in der Logik. tRPC will ein <code>Promise</code> oder einen <code>throw</code>; der Helfer übersetzt dorthin.</p>
+  </div>
+  <p class="src">Muster (Exit-Match → TRPCError, Helfer via Middleware/Context injizieren): <a href="https://macwright.com/2026/01/06/effect-trpc">macwright: Effect notes — tRPC</a> · <a href="https://www.answeroverflow.com/m/1450782555644362894">Effect-Community: <code>ManagedRuntime</code> + <code>Effect.fn</code> für Stacktraces</a></p>
+
+  <div class="box info"><span class="lbl">Profi-Variante</span>
+    <p>Statt blankem <code>runPromise</code> nutzt man eine <code>ManagedRuntime</code>: dort steckst du einmal deine Services/Layer rein (der <b>R-Slot</b> aus Lektion 1) und rufst <code>MyRuntime.runPromise(effect)</code>. So füllst du Dependencies <i>einmal</i> und nicht pro Request neu. (Kommt als eigene Lektion — hier nur als Ausblick.)</p>
+  </div>
+
+  <h2>Die eine echte Reibung: Schema als tRPC-Validator</h2>
+  <p>Wenn du Effects <code>Schema</code> als tRPC-<code>input</code>-Validator verwenden willst, knirscht es. Grund: tRPC nimmt an, dass <b>Eingabe-Typ = Ausgabe-Typ</b> des Validators ist. Effects <code>Schema</code> aber <i>dekodiert</i> oft (z.&nbsp;B. <code>string</code> → <code>Date</code>) → Eingabe ≠ Ausgabe. Ergebnis: manuelles En-/Decode auf beiden Seiten, fehleranfällig.</p>
+  <div class="box warn"><span class="lbl">Praktische Konsequenz</span>
+    <p>Pragmatisch: für den tRPC-<code>input</code> bei <b>Zod</b> bleiben (oder simplen Validatoren), und Effect <i>innen</i> für Logik/Fehler/Deps nutzen. Willst du <code>Schema</code> wirklich end-to-end → das ist genau der Punkt, an dem <code>@effect/rpc</code> attraktiv wird.</p>
+  </div>
+  <p class="src">Reibungspunkt belegt in beiden Erfahrungsberichten: <a href="https://macwright.com/2026/01/06/effect-trpc">macwright</a> · <a href="https://dev.to/titouancreach/how-i-replaced-trpc-with-effect-rpc-in-a-nextjs-app-router-application-4j8p">titouancreach</a>.</p>
+
+  <h2>Vor- &amp; Nachteile auf einen Blick</h2>
+  <table class="cmp">
+    <tr><th>Frage</th><th>tRPC (Transport)</th><th>Effect (Logik) — kombiniert</th></tr>
+    <tr><td>Was löst es?</td><td>Client↔Server typsicher, ein Client aus dem Server-Typ</td><td>Fehler im Typ (E), Deps im Typ (R), Retry/Concurrency/Komposition</td></tr>
+    <tr><td>Stärke</td><td>Reife, minimale Boilerplate, riesiges Ökosystem</td><td>Sichtbare Fehler &amp; DI, testbar, mächtige Bausteine</td></tr>
+    <tr><td>Kosten</td><td>An Client/Server-Monolith-Typ gebunden</td><td>Lernkurve, neue Syntax, große Lib — Team muss mit</td></tr>
+    <tr><td>Zusammen?</td><td colspan="2">✅ Ja: tRPC als Rohr, Effect im Handler, Ausführen + Fehler-Mapping an der Grenze.</td></tr>
+  </table>
+
+  <div class="box warn"><span class="lbl">Ehrlich bleiben (Gegenstimme)</span>
+    <p>Nicht jedes Team zieht Nutzen aus Effect — die Lernkurve und „alles-oder-fast-nichts“-Sogwirkung sind real. Es gibt fundierte Berichte „wir mögen FP, nutzen Effect aber bewusst nicht“. Für deine Entscheidung heißt das: Effect lässt sich <b>schrittweise</b> einführen (genau über den Kombi-Weg oben), du musst nicht den Transport mit-migrieren.</p>
+  </div>
+  <p class="src">Gegenstimme / Kosten-Sicht: <a href="https://runharbor.com/blog/2025-11-24-why-we-dont-use-effect-ts">Harbor: „Why we love FP but don’t use Effect-TS“</a></p>
+
+  <h2>Check: sitzt das Modell?</h2>
+  <p>Sofortiges Feedback — anklicken, kein Submit.</p>
+
+  <div class="quiz" id="quiz">
+    <div class="q" data-correct="2">
+      <p class="qq">1. Auf welcher „Achse“ konkurriert Effect <b>direkt</b> mit tRPC?</p>
+      <label class="opt"><input type="radio" name="q1"> Effect ersetzt tRPC immer — es ist dasselbe in funktional</label>
+      <label class="opt"><input type="radio" name="q1"> Gar nicht — Effect kann nichts über die Leitung schicken</label>
+      <label class="opt"><input type="radio" name="q1"> Auf der Transport-Achse über <code>@effect/rpc</code>; <code>Effect</code> selbst sitzt auf der Logik-Achse</label>
+      <div class="fb good" data-for="1">✔ Genau. <code>@effect/rpc</code> ist der 1:1-Gegenspieler zu tRPC (Transport). Das Kern-<code>Effect</code> dagegen lebt <i>im</i> Handler (Logik) und ist mit tRPC kombinierbar.</div>
+      <div class="fb bad" data-for="1-wrong">Zwei Achsen: Transport (tRPC ↔ <code>@effect/rpc</code>) und Logik (<code>Effect</code> im Handler). Kern-Effect ersetzt tRPC <i>nicht</i> — es füllt das Rohr.</div>
+    </div>
+
+    <div class="q" data-correct="1">
+      <p class="qq">2. Du benutzt Effect in einer tRPC-Procedure. <b>Wo</b> rufst du <code>runPromiseExit</code> auf?</p>
+      <label class="opt"><input type="radio" name="q2"> Tief in der Business-Logik, bei jedem Schritt</label>
+      <label class="opt"><input type="radio" name="q2"> An der Grenze — im Procedure-Handler, wo tRPC ein Promise/throw erwartet</label>
+      <label class="opt"><input type="radio" name="q2"> Gar nicht — tRPC führt Effects automatisch aus</label>
+      <div class="fb good" data-for="2">✔ Richtig. Logik bleibt lazy <code>Effect</code> (Beschreibung); ausgeführt wird <b>am Rand</b>, genau dort wo tRPC ein Ergebnis braucht. Dort mappst du E → <code>TRPCError</code>.</div>
+      <div class="fb bad" data-for="2-wrong">Erinnere Lektion 1: Effects sind lazy. Du hältst die Logik als Beschreibung und führst sie <b>einmal an der Grenze</b> aus (Procedure-Handler), nicht überall verstreut.</div>
+    </div>
+
+    <div class="q" data-correct="0">
+      <p class="qq">3. Warum knirscht Effects <code>Schema</code> als tRPC-<code>input</code>-Validator?</p>
+      <label class="opt"><input type="radio" name="q3"> tRPC nimmt Eingabe-Typ = Ausgabe-Typ an; <code>Schema</code> dekodiert aber (Eingabe ≠ Ausgabe)</label>
+      <label class="opt"><input type="radio" name="q3"> <code>Schema</code> ist zur Laufzeit zu langsam</label>
+      <label class="opt"><input type="radio" name="q3"> tRPC unterstützt nur GraphQL-Schemas</label>
+      <div class="fb good" data-for="3">✔ Sitzt. Genau dieser Input-/Output-Mismatch erzwingt manuelles En-/Decode. Pragmatisch: Zod für <code>input</code>, Effect innen — oder gleich <code>@effect/rpc</code>.</div>
+      <div class="fb bad" data-for="3-wrong">Es ist kein Performance- oder GraphQL-Thema: tRPC erwartet Validator-Eingabe = -Ausgabe, <code>Schema</code> transformiert aber (z.&nbsp;B. <code>string</code>→<code>Date</code>).</div>
+    </div>
+
+    <div class="q" data-correct="2">
+      <p class="qq">4. Dein Team nutzt tRPC und will Effects Nutzen <b>schrittweise</b> testen. Bester erster Schritt?</p>
+      <label class="opt"><input type="radio" name="q4"> Sofort den gesamten Transport auf <code>@effect/rpc</code> migrieren</label>
+      <label class="opt"><input type="radio" name="q4"> Warten, bis das ganze Team FP-Theorie gelernt hat</label>
+      <label class="opt"><input type="radio" name="q4"> Effect in einzelnen Procedures für Logik/Fehler nutzen, an der Grenze ausführen</label>
+      <div class="fb good" data-for="4">✔ Genau das ist der Charme des Kombi-Wegs: kleiner Radius, kein Transport-Umbau, sofort der E/R-Nutzen — und jederzeit umkehrbar.</div>
+      <div class="fb bad" data-for="4-wrong">Du musst weder alles migrieren noch erst Theorie pauken. Der risikoarme Einstieg ist Effect <i>in einer Procedure</i>, an der Grenze ausgeführt.</div>
+    </div>
+  </div>
+
+  <h2>Dein Win</h2>
+  <div class="box why">
+    <p>Du kannst jetzt sagen: tRPC und Effect sind <b>nicht</b> dasselbe und meist kein „entweder/oder“ — tRPC ist das Rohr (Transport), Effect ist, was im Rohr fließt (Logik). Direkter Konkurrent zu tRPC ist nur <code>@effect/rpc</code>. Und du kennst den konkreten Kombi-Weg (Effect im Handler → <code>runPromiseExit</code> an der Grenze → <code>TRPCError</code>) plus die eine Reibung (<code>Schema</code> als Validator). Genug, um für dein Monorepo eine begründete „lohnt sich / lohnt sich nicht“-These zu bilden.</p>
+  </div>
+
+  <footer>
+    <p><b>Frag deinen Lehrer.</b> Willst du den <code>ManagedRuntime</code>-Weg an deinem echten Monorepo-Setup durchspielen, oder <code>@effect/rpc</code> vs. tRPC genauer gegenüberstellen? Sag Bescheid — dann bauen wir die nächste Lektion darum.</p>
+    <p><b>Nächste Lektion (Vorschlag):</b> <i>Typisierte Fehler</i> (Slot E vs. <code>throw</code>/<code>try-catch</code>) — das ist genau der Teil, der deinen tRPC-Handlern oben den Mehrwert gibt.</p>
+    <p><b>Wisdom:</b> Frag im offiziellen <a href="https://effect.website/">Effect-Discord</a>, wie andere Effect <i>inkrementell</i> neben tRPC eingeführt haben — sehr aktive, architektur-affine Community.</p>
+    <p class="src">Quellen: <a href="https://macwright.com/2026/01/06/effect-trpc">macwright — Effect notes: tRPC</a> · <a href="https://dev.to/titouancreach/how-i-replaced-trpc-with-effect-rpc-in-a-nextjs-app-router-application-4j8p">titouancreach — tRPC → @effect/rpc</a> · <a href="https://www.answeroverflow.com/m/1450782555644362894">Effect-Community: ManagedRuntime + Effect.fn</a> · <a href="https://runharbor.com/blog/2025-11-24-why-we-dont-use-effect-ts">Harbor — Gegenstimme</a> · <a href="https://trpc.io/docs/server/procedures">tRPC Docs: Procedures</a></p>
+  </footer>
+</div>
+
+<script>
+  document.querySelectorAll('#quiz .q').forEach(function(q){
+    var correct = parseInt(q.getAttribute('data-correct'), 10);
+    var opts = q.querySelectorAll('.opt');
+    var fbGood = q.querySelector('.fb.good');
+    var fbBad  = q.querySelector('.fb.bad');
+    opts.forEach(function(opt, i){
+      opt.addEventListener('click', function(){
+        opts.forEach(function(o){ o.classList.remove('correct','wrong','picked'); });
+        fbGood.classList.remove('show'); fbBad.classList.remove('show');
+        opt.classList.add('picked');
+        opts[correct].classList.add('correct');
+        if(i === correct){ fbGood.classList.add('show'); }
+        else { opt.classList.add('wrong'); fbBad.classList.add('show'); }
+      });
+    });
+  });
+</script>
+</body>
+</html>
