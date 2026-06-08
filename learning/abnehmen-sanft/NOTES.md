@@ -19,7 +19,7 @@
 
 ## Curriculum-Arc (geplant, anpassbar) — Ziel: −10 kg sanft halten
 1. ✅ ausgeliefert — Energiebilanz: der einzige echte Hebel + dein Kalorienziel & Zeitfenster
-2. ⬜ Sättigung ohne Hunger: Protein + Energiedichte (viel essen, wenig kcal)
+2. ✅ ausgeliefert — Sättigung ohne Hunger: Protein + Energiedichte (viel essen, wenig kcal)
 3. ⬜ Die billigen Siege: flüssige Kalorien, Alkohol, „unsichtbare“ kcal
 4. ⬜ Tracking ohne Obsession: Wochen-Trend lesen, Plateau verstehen (Metabolic Adaptation)
 5. ⬜ Bewegung als Nebenhebel: NEAT/Spazieren/Radeln realistisch einordnen
@@ -33,8 +33,10 @@
   Ziel ~Jan 2027. Standard (−500) ≈ 2.150 kcal/Tag, ~0,45 kg/Wo, Ziel ~Nov 2026.
 
 ## Status
-- Lektion 1 ausgeliefert; Rechner-Default-Alter auf 31 gesetzt.
-- LR-0001 (Ausgangslage/Constraints) + LR-0002 (Profil: Dev-Job + Hausumbau/NEAT).
+- Lektion 1 + 2 ausgeliefert. L2: Protein-Ziel (1,2–1,6 g/kg → bei ihm ~152 g)
+  + Energiedichte + Swap-Spiel + 3 low-effort Swaps.
+- LR-0001 (Constraints) + LR-0002 (Profil) + LR-0003 (L2 ausgeliefert).
 - Empfehlung an User: **sehr sanftes Defizit (−350)** wegen körperl. Umbau-Arbeit
-  + Stress (Energie-Risiko). Protein betonen (Lektion 2).
-- OFFEN: aktuelle Essgewohnheiten als Anker für Lektion 2/3.
+  + Stress (Energie-Risiko). Protein betont (L2 erledigt).
+- OFFEN: aktuelle Essgewohnheiten als Anker für Lektion 3 (flüssige kcal/Alkohol).
+  Optional angeboten: Beispieltag aus Kalorien- + Protein-Ziel bauen.
