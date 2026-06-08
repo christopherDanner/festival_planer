@@ -28,13 +28,11 @@ function pdfColumnStyles(axis: OrderListAxis): Record<number, { cellWidth: numbe
 		? {
 			0: { cellWidth: 'auto' }, // Bezeichnung
 			1: { cellWidth: 38 },     // Lieferant
-			2: { cellWidth: 32 },     // Menge (inkl. Einheit)
-			3: { cellWidth: 30 },     // Gebinde
+			2: { cellWidth: 60 },     // Menge (inkl. Einheit und Gebinde)
 		}
 		: {
 			0: { cellWidth: 'auto' }, // Bezeichnung
-			1: { cellWidth: 38 },     // Menge (inkl. Einheit)
-			2: { cellWidth: 38 },     // Gebinde
+			1: { cellWidth: 70 },     // Menge (inkl. Einheit und Gebinde)
 		};
 }
 
@@ -142,8 +140,8 @@ function pushSectionRows(
 
 function excelCols(axis: OrderListAxis): { wch: number }[] {
 	return axis === 'station'
-		? [{ wch: 36 }, { wch: 22 }, { wch: 16 }, { wch: 18 }]
-		: [{ wch: 40 }, { wch: 16 }, { wch: 18 }];
+		? [{ wch: 36 }, { wch: 22 }, { wch: 34 }]
+		: [{ wch: 40 }, { wch: 34 }];
 }
 
 export function exportOrderListSingleExcel(group: OrderListGroup, meta: OrderListMeta): void {
