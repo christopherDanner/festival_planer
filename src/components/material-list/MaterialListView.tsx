@@ -7,12 +7,14 @@ import MaterialFilters from './MaterialFilters';
 import MaterialTable from './MaterialTable';
 import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
+import OrderListExportDialog from './dialogs/OrderListExportDialog';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
 type DialogState =
 	| { type: null }
 	| { type: 'material'; material?: FestivalMaterialWithStation }
-	| { type: 'export' };
+	| { type: 'export' }
+	| { type: 'order-export' };
 
 interface MaterialListViewProps {
 	festivalId: string;
@@ -119,6 +121,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 			<MaterialListHeader
 				onAddMaterial={() => setDialogState({ type: 'material' })}
 				onExport={() => setDialogState({ type: 'export' })}
+				onExportOrderList={() => setDialogState({ type: 'order-export' })}
 				onTransfer={() => navigate(`/festivals/${festivalId}/material-uebernahme`)}
 			/>
 
@@ -205,6 +208,13 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				materials={materials}
 				stations={stations}
 				suppliers={suppliers}
+			/>
+
+			<OrderListExportDialog
+				open={dialogState.type === 'order-export'}
+				onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
+				festivalName={festivalName || 'Festival'}
+				materials={materials}
 			/>
 
 		</div>
