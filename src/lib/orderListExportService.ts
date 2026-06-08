@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import {
 	axisLabel,
 	buildOrderListFilename,
+	orderListColumns,
+	orderListRowCells,
 	type OrderListAxis,
 	type OrderListGroup,
 } from '@/lib/orderList';
@@ -16,10 +18,26 @@ export interface OrderListMeta {
 	date?: Date;
 }
 
-const PDF_HEAD = [['Bezeichnung', 'Menge', 'Einheit']];
-
 function formatDate(date: Date): string {
 	return format(date, 'dd.MM.yyyy');
+}
+
+/** PDF column widths (mm); Bezeichnung takes the remaining width ('auto'). */
+function pdfColumnStyles(axis: OrderListAxis): Record<number, { cellWidth: number | 'auto'; halign?: 'right' }> {
+	return axis === 'station'
+		? {
+			0: { cellWidth: 'auto' },           // Bezeichnung
+			1: { cellWidth: 34 },               // Lieferant
+			2: { cellWidth: 24, halign: 'right' }, // Menge
+			3: { cellWidth: 22 },               // Einheit
+			4: { cellWidth: 28 },               // Gebinde
+		}
+		: {
+			0: { cellWidth: 'auto' },           // Bezeichnung
+			1: { cellWidth: 28, halign: 'right' }, // Menge
+			2: { cellWidth: 30 },               // Einheit
+			3: { cellWidth: 34 },               // Gebinde
+		};
 }
 
 // ── PDF ───────────────────────────────────────────────────────
@@ -63,16 +81,12 @@ function drawSection(doc: jsPDF, group: OrderListGroup, meta: OrderListMeta): vo
 
 	autoTable(doc, {
 		startY: y,
-		head: PDF_HEAD,
-		body: group.rows.map((r) => [r.name, String(r.quantity), r.unit]),
+		head: [orderListColumns(meta.axis)],
+		body: group.rows.map((r) => orderListRowCells(r, meta.axis)),
 		theme: 'grid',
 		styles: { fontSize: 9, cellPadding: 2, overflow: 'linebreak', valign: 'top', lineWidth: 0.2 },
 		headStyles: { fillColor: [70, 70, 70], fontStyle: 'bold', halign: 'left' },
-		columnStyles: {
-			0: { cellWidth: 'auto' },
-			1: { cellWidth: 30, halign: 'right' },
-			2: { cellWidth: 35 },
-		},
+		columnStyles: pdfColumnStyles(meta.axis),
 		margin: { left: margin, right: margin },
 	});
 
@@ -101,34 +115,45 @@ export function exportOrderListCollectionPdf(groups: OrderListGroup[], meta: Ord
 
 // ── Excel ─────────────────────────────────────────────────────
 
+type Merge = { s: { r: number; c: number }; e: { r: number; c: number } };
+
 /** Appends one group's block (titles + table + count) to the row matrix; returns column merges added. */
 function pushSectionRows(
 	rows: (string | number)[][],
 	group: OrderListGroup,
 	meta: OrderListMeta
-): { s: { r: number; c: number }; e: { r: number; c: number } }[] {
-	const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
+): Merge[] {
+	const columns = orderListColumns(meta.axis);
+	const lastCol = columns.length - 1;
+	const merges: Merge[] = [];
 	const titleRow = rows.length;
 	rows.push([meta.festivalName]);
 	rows.push(['Bestellliste']);
-	rows.push([`${axisLabel(meta.axis)}: ${group.name}`, '', formatDate(meta.date ?? new Date())]);
-	merges.push({ s: { r: titleRow, c: 0 }, e: { r: titleRow, c: 2 } });
-	merges.push({ s: { r: titleRow + 1, c: 0 }, e: { r: titleRow + 1, c: 2 } });
+	const headerRow: (string | number)[] = new Array(columns.length).fill('');
+	headerRow[0] = `${axisLabel(meta.axis)}: ${group.name}`;
+	headerRow[lastCol] = formatDate(meta.date ?? new Date());
+	rows.push(headerRow);
+	merges.push({ s: { r: titleRow, c: 0 }, e: { r: titleRow, c: lastCol } });
+	merges.push({ s: { r: titleRow + 1, c: 0 }, e: { r: titleRow + 1, c: lastCol } });
 	rows.push([]);
-	rows.push(['Bezeichnung', 'Menge', 'Einheit']);
-	for (const r of group.rows) rows.push([r.name, r.quantity, r.unit]);
+	rows.push(columns);
+	for (const r of group.rows) rows.push(orderListRowCells(r, meta.axis));
 	rows.push([`${group.rows.length} Positionen`]);
 	return merges;
 }
 
-const EXCEL_COLS = [{ wch: 40 }, { wch: 12 }, { wch: 16 }];
+function excelCols(axis: OrderListAxis): { wch: number }[] {
+	return axis === 'station'
+		? [{ wch: 36 }, { wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 18 }]
+		: [{ wch: 40 }, { wch: 12 }, { wch: 14 }, { wch: 18 }];
+}
 
 export function exportOrderListSingleExcel(group: OrderListGroup, meta: OrderListMeta): void {
 	const wb = XLSX.utils.book_new();
 	const rows: (string | number)[][] = [];
 	const merges = pushSectionRows(rows, group, meta);
 	const ws = XLSX.utils.aoa_to_sheet(rows);
-	ws['!cols'] = EXCEL_COLS;
+	ws['!cols'] = excelCols(meta.axis);
 	ws['!merges'] = merges;
 	XLSX.utils.book_append_sheet(wb, ws, 'Bestellliste');
 	XLSX.writeFile(wb, buildOrderListFilename(meta.festivalName, 'xlsx', meta.axis, group));
@@ -137,7 +162,7 @@ export function exportOrderListSingleExcel(group: OrderListGroup, meta: OrderLis
 export function exportOrderListCollectionExcel(groups: OrderListGroup[], meta: OrderListMeta): void {
 	const wb = XLSX.utils.book_new();
 	const rows: (string | number)[][] = [];
-	const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
+	const merges: Merge[] = [];
 	groups.forEach((group, i) => {
 		if (i > 0) {
 			rows.push([]);
@@ -146,7 +171,7 @@ export function exportOrderListCollectionExcel(groups: OrderListGroup[], meta: O
 		merges.push(...pushSectionRows(rows, group, meta));
 	});
 	const ws = XLSX.utils.aoa_to_sheet(rows);
-	ws['!cols'] = EXCEL_COLS;
+	ws['!cols'] = excelCols(meta.axis);
 	ws['!merges'] = merges;
 	XLSX.utils.book_append_sheet(wb, ws, 'Bestellliste');
 	XLSX.writeFile(wb, buildOrderListFilename(meta.festivalName, 'xlsx', meta.axis, null));
