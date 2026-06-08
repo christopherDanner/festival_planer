@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildOrderList, planOrderListExport, buildOrderListFilename } from '../orderList';
+import {
+	buildOrderList,
+	planOrderListExport,
+	buildOrderListFilename,
+	orderListColumns,
+	orderListRowCells,
+} from '../orderList';
 import type { FestivalMaterialWithStation } from '../materialService';
 
 let idCounter = 0;
@@ -14,6 +20,8 @@ interface MakeOpts {
 	unit?: string;
 	supplier?: string | null;
 	station?: string | null; // station name; null => no station
+	packagingUnit?: string | null;
+	amountPerPackaging?: number | null;
 }
 
 function make(opts: MakeOpts): FestivalMaterialWithStation {
@@ -26,8 +34,8 @@ function make(opts: MakeOpts): FestivalMaterialWithStation {
 		category: null,
 		supplier: opts.supplier === undefined ? null : opts.supplier,
 		unit: opts.unit ?? 'Stück',
-		packaging_unit: null,
-		amount_per_packaging: null,
+		packaging_unit: opts.packagingUnit ?? null,
+		amount_per_packaging: opts.amountPerPackaging ?? null,
 		ordered_quantity: opts.ordered ?? 0,
 		actual_quantity: null,
 		unit_price: null,
@@ -51,7 +59,37 @@ describe('buildOrderList — supplier axis', () => {
 		const groups = buildOrderList(materials, 'supplier');
 
 		expect(groups).toHaveLength(1);
-		expect(groups[0].rows).toEqual([{ name: 'Bier', quantity: 10, unit: 'Kiste' }]);
+		expect(groups[0].rows).toEqual([
+			{ name: 'Bier', quantity: 10, unit: 'Kiste', packaging: null, supplier: 'Huber' },
+		]);
+	});
+
+	it('zeigt bei Gebinde-Artikeln die Basismenge plus die aufgerundete Gebindemenge', () => {
+		// 8 Kisten gespeichert × 18 Stück/Kiste = 144 Stück
+		const materials = [
+			make({ name: 'Cola', ordered: 8, unit: 'Stück', supplier: 'Huber', packagingUnit: 'Kiste', amountPerPackaging: 18 }),
+		];
+
+		const [group] = buildOrderList(materials, 'supplier');
+
+		expect(group.rows[0]).toEqual({
+			name: 'Cola',
+			quantity: 144,
+			unit: 'Stück',
+			packaging: '8 Kiste',
+			supplier: 'Huber',
+		});
+	});
+
+	it('rundet die Gebindemenge auf ganze Gebinde auf', () => {
+		const materials = [
+			make({ name: 'Cola', ordered: 7.2, unit: 'Stück', supplier: 'Huber', packagingUnit: 'Kiste', amountPerPackaging: 10 }),
+		];
+
+		const [group] = buildOrderList(materials, 'supplier');
+
+		expect(group.rows[0].quantity).toBe(72);
+		expect(group.rows[0].packaging).toBe('8 Kiste');
 	});
 
 	it('gruppiert nach Lieferant und sortiert die Positionen alphabetisch nach Bezeichnung', () => {
@@ -99,7 +137,9 @@ describe('buildOrderList — station axis', () => {
 
 		expect(groups.map((g) => g.name)).toEqual(['Bar', 'Küche', 'Keine Station']);
 		const bar = groups.find((g) => g.name === 'Bar');
-		expect(bar?.rows).toEqual([{ name: 'Glaeser', quantity: 20, unit: 'Stück' }]);
+		expect(bar?.rows).toEqual([
+			{ name: 'Glaeser', quantity: 20, unit: 'Stück', packaging: null, supplier: null },
+		]);
 		const none = groups[groups.length - 1];
 		expect(none.key).toBe('');
 		expect(none.rows.map((r) => r.name)).toEqual(['Klebeband']);
@@ -163,5 +203,29 @@ describe('buildOrderListFilename', () => {
 	it('benennt das Sammeldokument je Achse "Alle Lieferanten" bzw. "Alle Stationen"', () => {
 		expect(buildOrderListFilename('Fest', 'xlsx', 'supplier', null)).toBe('Fest_Bestellliste_Alle Lieferanten.xlsx');
 		expect(buildOrderListFilename('Fest', 'pdf', 'station', null)).toBe('Fest_Bestellliste_Alle Stationen.pdf');
+	});
+});
+
+describe('orderListColumns / orderListRowCells', () => {
+	it('verwendet auf der Lieferanten-Achse Spalten ohne Lieferant', () => {
+		expect(orderListColumns('supplier')).toEqual(['Bezeichnung', 'Menge', 'Einheit', 'Gebinde']);
+	});
+
+	it('blendet auf der Stations-Achse zusätzlich eine Lieferant-Spalte ein', () => {
+		expect(orderListColumns('station')).toEqual(['Bezeichnung', 'Lieferant', 'Menge', 'Einheit', 'Gebinde']);
+	});
+
+	it('bildet eine Zeile passend zur Achse ab (Stations-Achse zeigt Lieferant und Gebinde)', () => {
+		const [group] = buildOrderList(
+			[make({ name: 'Cola', ordered: 8, unit: 'Stück', supplier: 'Huber', station: 'Bar', packagingUnit: 'Kiste', amountPerPackaging: 18 })],
+			'station'
+		);
+		expect(orderListRowCells(group.rows[0], 'station')).toEqual(['Cola', 'Huber', '144', 'Stück', '8 Kiste']);
+		expect(orderListRowCells(group.rows[0], 'supplier')).toEqual(['Cola', '144', 'Stück', '8 Kiste']);
+	});
+
+	it('zeigt leere Zellen für fehlenden Lieferant und fehlendes Gebinde', () => {
+		const [group] = buildOrderList([make({ name: 'Salz', ordered: 3, unit: 'kg', supplier: null, station: 'Küche' })], 'station');
+		expect(orderListRowCells(group.rows[0], 'station')).toEqual(['Salz', '', '3', 'kg', '']);
 	});
 });

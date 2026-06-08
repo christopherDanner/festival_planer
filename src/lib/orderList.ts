@@ -1,11 +1,19 @@
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
+import { toBaseQuantity, formatRequiredPackaging } from '@/lib/materialQuantity';
 
 export type OrderListAxis = 'supplier' | 'station';
 
 export interface OrderListRow {
+	/** Bezeichnung. */
 	name: string;
+	/** Base quantity (e.g. 144), matching the table view. */
 	quantity: number;
+	/** Base unit (e.g. "Stück"). */
 	unit: string;
+	/** Rounded-up packaging amount (e.g. "8 Kiste"), or null when the position has no packaging. */
+	packaging: string | null;
+	/** Supplier — shown on the station axis so the buyer knows where each position is ordered. */
+	supplier: string | null;
 }
 
 export const NO_SUPPLIER_LABEL = 'Kein Lieferant';
@@ -46,7 +54,14 @@ export function buildOrderList(
 			group = { key, name, rows: [] };
 			byKey.set(key, group);
 		}
-		group.rows.push({ name: m.name, quantity: m.ordered_quantity, unit: m.unit });
+		const base = toBaseQuantity(m.ordered_quantity, m) ?? 0;
+		group.rows.push({
+			name: m.name,
+			quantity: Math.round(base * 100) / 100,
+			unit: m.unit,
+			packaging: formatRequiredPackaging(m.ordered_quantity, m),
+			supplier: (m.supplier ?? '').trim() || null,
+		});
 	}
 
 	const noneLabel = axis === 'supplier' ? NO_SUPPLIER_LABEL : NO_STATION_LABEL;
@@ -68,6 +83,26 @@ export function buildOrderList(
 /** Human-readable axis label, used in headers ("Lieferant: …" / "Station: …"). */
 export function axisLabel(axis: OrderListAxis): string {
 	return axis === 'supplier' ? 'Lieferant' : 'Station';
+}
+
+/**
+ * Table column headers for the given axis. The station axis adds a "Lieferant" column,
+ * since the supplier is no longer implied by the grouping.
+ */
+export function orderListColumns(axis: OrderListAxis): string[] {
+	return axis === 'station'
+		? ['Bezeichnung', 'Lieferant', 'Menge', 'Einheit', 'Gebinde']
+		: ['Bezeichnung', 'Menge', 'Einheit', 'Gebinde'];
+}
+
+/** Maps a row to its cell strings, aligned to {@link orderListColumns} for the same axis. */
+export function orderListRowCells(row: OrderListRow, axis: OrderListAxis): string[] {
+	const quantity = String(row.quantity);
+	const packaging = row.packaging ?? '';
+	if (axis === 'station') {
+		return [row.name, row.supplier ?? '', quantity, row.unit, packaging];
+	}
+	return [row.name, quantity, row.unit, packaging];
 }
 
 function sanitizeFilenamePart(name: string): string {
