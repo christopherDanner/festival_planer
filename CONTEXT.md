@@ -63,3 +63,33 @@ Zwei verschiedene Exporte mit unterschiedlichem Zweck:
 
 - **Materialliste** — Planungs-/Referenzliste. Zeigt pro Position Bestellt- und Verbraucht-Menge plus eine leere "Neue Menge"-Spalte zum händischen Ausfüllen. Dient der Bestellplanung fürs kommende Fest.
 - **Bestellliste** — die tatsächliche Bestellung. Gruppiert nach Lieferant oder Station, enthält nur Positionen mit Bestellmenge (`ordered_quantity`) > 0, reduziert auf Bezeichnung + Menge + Einheit. Dient als Bestellung, die an einen Lieferanten gegeben bzw. an einer Station gebraucht wird.
+
+## Sponsor
+
+Firma/Person, die ein Fest finanziell oder als Sachleistung unterstützt. **Globale, wiederverwendbare Stammdaten** (wie *Mitglied*, nicht pro Fest) — eine Firma wird einmal angelegt und über Feste hinweg verknüpft. Felder: Firmenname, Ansprechpartner, Email, Telefon, Adresse, Website, Notizen. Dass ein Sponsor global lebt, ermöglicht die *Wiederkontaktierung* ohne Kopieren.
+_Avoid_: Firma (als eigener Begriff — Firma und Sponsor sind hier dasselbe), Gönner.
+
+## Sponsoring-Kategorie
+
+Eine benannte Sponsoring-Leistung mit einem Wert, z.B. "Werbeplakat", "Social-Media-Beitrag", "Logo in Speisekarte". **Pro Fest definiert** (Name + Wert), weil der Wert je Jahr variieren kann.
+_Avoid_: Paket, Leistung, Sponsoring-Stufe.
+
+## Sponsoring
+
+Die Verknüpfung *eines* Sponsors mit *einem* Fest — was diese Firma bei diesem Fest beiträgt. Besteht aus beliebig vielen zugewiesenen *Sponsoring-Kategorien* (der Wert je Zuweisung ist pro Sponsor überschreibbar, Default = Kategorie-Wert) plus optional **einem** freien Betrag. Gesamtbeitrag = Summe der Kategorie-Werte + Freibetrag. **Kein Status/Lebenszyklus** — ein Sponsor ist bei einem Fest entweder erfasst oder nicht.
+_Avoid_: Sponsoren-Beitrag, Deal.
+
+## Sponsor-Übernahme
+
+Vorgang, Sponsoren eines vergangenen Fests (Quellfest) in ein neues Fest (Zielfest) zu übernehmen. Weil *Sponsoren* global sind, wird der Sponsor selbst nur verknüpft, nicht kopiert. *Sponsoring-Kategorien* werden per Namen gemappt (gleichnamige Kategorie im Zielfest wird verknüpft, fehlende wird mit dem Vorjahreswert als Vorschlag neu angelegt) — analog zur *Material-Übernahme*. Freibetrag wird mitübernommen.
+_Avoid_: Reaktivierung.
+
+## Wiederkontaktierung
+
+Fachliches Ziel hinter der *Sponsor-Übernahme*: vergangene Sponsoren fürs neue Fest erneut anfragen. Der **automatisierte Email-Versand ist bewusst (noch) nicht Teil des Funktionsumfangs** — es gibt keine Versand-Infrastruktur (siehe AI_INTEGRATION.md: nur client-seitiges Mistral, keine Edge Functions). Aktuell deckt die *Sponsor-Übernahme* den Vorgang ab; Mailversand kann später andocken.
+_Avoid_: Follow-up.
+
+## Sponsoring-Übersicht
+
+Auswertung pro Fest: alle erfassten *Sponsoren* mit ihren Kategorien/Freibeträgen und die Gesamtsumme des Sponsorings für dieses Fest.
+_Avoid_: Sponsorenliste (mehrdeutig — kann auch die globalen Stammdaten meinen).
