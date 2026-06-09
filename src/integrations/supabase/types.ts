@@ -137,6 +137,83 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			sponsors: {
+				Row: {
+					address: string | null;
+					company_name: string;
+					contact_person: string | null;
+					created_at: string;
+					email: string | null;
+					id: string;
+					notes: string | null;
+					phone: string | null;
+					updated_at: string;
+					user_id: string;
+					website: string | null;
+				};
+				Insert: {
+					address?: string | null;
+					company_name: string;
+					contact_person?: string | null;
+					created_at?: string;
+					email?: string | null;
+					id?: string;
+					notes?: string | null;
+					phone?: string | null;
+					updated_at?: string;
+					user_id: string;
+					website?: string | null;
+				};
+				Update: {
+					address?: string | null;
+					company_name?: string;
+					contact_person?: string | null;
+					created_at?: string;
+					email?: string | null;
+					id?: string;
+					notes?: string | null;
+					phone?: string | null;
+					updated_at?: string;
+					user_id?: string;
+					website?: string | null;
+				};
+				Relationships: [];
+			};
+			sponsoring_categories: {
+				Row: {
+					created_at: string;
+					festival_id: string;
+					id: string;
+					name: string;
+					updated_at: string;
+					value: number | null;
+				};
+				Insert: {
+					created_at?: string;
+					festival_id: string;
+					id?: string;
+					name: string;
+					updated_at?: string;
+					value?: number | null;
+				};
+				Update: {
+					created_at?: string;
+					festival_id?: string;
+					id?: string;
+					name?: string;
+					updated_at?: string;
+					value?: number | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'sponsoring_categories_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					}
+				];
+			};
 			shift_assignments: {
 				Row: {
 					created_at: string;

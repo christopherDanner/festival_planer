@@ -9,6 +9,7 @@ import { Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
+import Sponsors from './pages/Sponsors';
 import FestivalResults from './pages/FestivalResults';
 import MaterialUebernahme from './pages/MaterialUebernahme';
 import Auth from './pages/Auth';
@@ -28,6 +29,7 @@ const App = () => (
 						<Route path="/auth" element={<Auth />} />
 						<Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 						<Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+						<Route path="/sponsors" element={<ProtectedRoute><Sponsors /></ProtectedRoute>} />
 						<Route path="/festival-results" element={<ProtectedRoute><FestivalResults /></ProtectedRoute>} />
 						<Route path="/festivals/:festivalId/material-uebernahme" element={<ProtectedRoute><MaterialUebernahme /></ProtectedRoute>} />
 						{/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
