@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/components/AuthProvider';
+import { useIsMobile } from '@/hooks/use-mobile';
+import FestivalTabBar, { type FestivalTab } from '@/components/festival/FestivalTabBar';
 import MaterialDialog from '@/components/material-list/dialogs/MaterialDialog';
 import {
 	AlertDialog,
@@ -76,6 +78,7 @@ export default function MaterialUebernahme() {
 	const { festivalId: routeFestivalId } = useParams<{ festivalId: string }>();
 	const navigate = useNavigate();
 	const { user, loading: authLoading } = useAuth();
+	const isMobile = useIsMobile();
 
 	const festivalsQuery = useQuery({
 		queryKey: ['userFestivals'],
@@ -286,7 +289,7 @@ export default function MaterialUebernahme() {
 	};
 
 	const handleBack = () => {
-		if (targetId) navigate(`/festival-results?id=${targetId}`);
+		if (targetId) navigate(`/festival-results?id=${targetId}&tab=materials`);
 		else navigate('/dashboard');
 	};
 
@@ -307,7 +310,7 @@ export default function MaterialUebernahme() {
 	return (
 		<div className="min-h-screen bg-background">
 			<Navigation />
-			<div className="pt-16 sm:pt-20 px-3 sm:px-6 pb-6 max-w-[1400px] mx-auto">
+			<div className="pt-16 sm:pt-20 px-3 sm:px-6 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-6 max-w-[1400px] mx-auto">
 				<div className="flex items-center gap-2 mb-4">
 					<Button variant="ghost" size="sm" onClick={handleBack} className="gap-1 px-2">
 						<ArrowLeft className="h-4 w-4" />
@@ -542,6 +545,16 @@ export default function MaterialUebernahme() {
 						queryClient.invalidateQueries({ queryKey: ['materials', targetId] });
 						setCreateDialogOpen(false);
 					}}
+				/>
+			)}
+
+			{/* Mobile: Fest-Tab-Bar bleibt auch auf dieser Unterseite sichtbar */}
+			{isMobile && targetId && (
+				<FestivalTabBar
+					active="materials"
+					onSelect={(tab: FestivalTab) =>
+						navigate(`/festival-results?id=${targetId}&tab=${tab}`)
+					}
 				/>
 			)}
 

@@ -220,7 +220,11 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		<div
 			className={cn(
 				'flex flex-col',
-				isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'h-[calc(100vh-8rem)]'
+				isFullscreen
+					? isMobile
+						? 'fixed inset-x-0 top-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 bg-background'
+						: 'fixed inset-0 z-50 bg-background'
+					: 'h-[calc(100vh-8rem)]'
 			)}>
 			<ShiftPlanningHeader
 				isFullscreen={isFullscreen}
@@ -341,7 +345,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			{isMobile && (
 				<>
 					<Button
-						className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-md bg-primary hover:bg-primary/90"
+						className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full shadow-md bg-primary hover:bg-primary/90"
 						onClick={() => setIsMemberDrawerOpen(true)}
 					>
 						<Users className="h-6 w-6 text-primary-foreground" />
