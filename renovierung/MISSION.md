@@ -3,9 +3,15 @@
 ## Why
 Hat ein Haus im Bezirk Scheibbs (NÖ) gekauft und will die Grundrenovierung selbst machen: Tapeten entfernen, Wände streichen, Parkett vollflächig kleben, Fliesen mit Fliesenlack streichen. Ziel: bezugsfertig in unter 2 Monaten, ohne teure Handwerker für diese Gewerke.
 
+## Ist-Zustand (erfasst nach Lektion 2)
+- Tapete nur an den DECKEN (nicht an Wänden!)
+- Wände: alte weiße Farbe in fast allen Räumen → meist nur neu weiß überstreichen
+- 1–2 Räume müssen gespachtelt werden, Rest direkt streichbar
+
 ## Success looks like
-- Tapeten in allen Räumen rückstandsfrei entfernt, Untergrund streichfertig
-- Wände sauber gestrichen (gerade Kanten, keine Streifen/Ansätze)
+- Decken: Tapete entfernt + gestrichen
+- Wände sauber weiß gestrichen (gerade Kante zur Decke, keine Ansätze/Streifen)
+- Die 1–2 Spachtel-Räume: glatt gespachtelt, geschliffen, gestrichen
 - Parkett in mind. einem Raum vollflächig verklebt, ohne Hohlstellen
 - Bad/Küche-Fliesen mit Fliesenlack gestrichen, haltbar (kein Abblättern nach Wochen)
 

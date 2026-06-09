@@ -9,10 +9,15 @@
 ## Geplante Lektions-Reihenfolge (= Arbeitsreihenfolge am Haus)
 1. ✅ 0001 Tapeten entfernen
 2. ✅ 0002 Untergrund prüfen + grundieren (Adler sandend/saugend) + reference/glossar.html angelegt
-3. Wände streichen (Kanten, Nass-in-nass, Reihenfolge)
-4. Parkett: Untergrund-Check (Restfeuchte, Ebenheit) — VOR Kleberkauf
-5. Parkett vollflächig kleben
-6. Fliesen streichen (vorher Gap in RESOURCES.md schließen)
+3. ✅ 0003 Wände weiß streichen (weiß auf weiß; Kreide-/Glanztest, Kanten, nass-in-nass)
+4. Decke streichen über Kopf (Deckentapete runter zuerst) — ODER
+5. Wand spachteln (für die 1–2 Spachtel-Räume) — Reihenfolge nach User-Wahl
+6. Parkett: Untergrund-Check (Restfeuchte, Ebenheit) — VOR Kleberkauf
+7. Parkett vollflächig kleben
+8. Fliesen streichen (vorher Gap in RESOURCES.md schließen)
+
+## Ist-Zustand (siehe LR-0002)
+- Tapete NUR an Decken. Wände schon weiß. 1–2 Räume spachteln, Rest direkt überstreichen.
 
 ## Arbeitsnotizen
 - Workspace liegt in renovierung/ im festival_planer-Repo (User-Entscheidung).
