@@ -1,11 +1,13 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Pencil, MapPin, Users, Package, CalendarClock, AlertCircle } from 'lucide-react';
+import { Pencil, MapPin, Users, Package, CalendarClock, AlertCircle, HandCoins } from 'lucide-react';
 import { getStations, getStationShifts, getShiftAssignments, getStationMembers } from '@/lib/shiftService';
 import { getMaterials } from '@/lib/materialService';
 import { getScheduleDays } from '@/lib/scheduleService';
 import { getMembers } from '@/lib/memberService';
+import { getSponsorings } from '@/lib/sponsorService';
+import { festivalSponsoringTotal } from '@/lib/sponsoringTotals';
 
 interface FestivalOverviewViewProps {
 	festivalId: string;
@@ -87,6 +89,11 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 		select: (data) => data.filter((m) => m.is_active)
 	});
 
+	const { data: sponsorings = [] } = useQuery({
+		queryKey: ['sponsorings', festivalId],
+		queryFn: () => getSponsorings(festivalId)
+	});
+
 	// Date string
 	const dateString = new Date(festival.start_date).toLocaleDateString('de-AT') +
 		(festival.end_date && festival.end_date !== festival.start_date
@@ -125,6 +132,10 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 		}
 		return sum;
 	}, 0);
+
+	// Stats: Sponsoring — Anzahl Sponsoren + Gesamtsumme (sponsoringTotals, keine doppelte Summenlogik)
+	const sponsorCount = sponsorings.length;
+	const sponsoringTotalSum = festivalSponsoringTotal(sponsorings);
 
 	// Stats: Schedule
 	const allEntries = scheduleDays.flatMap(day => day.phases?.flatMap(phase => phase.entries || []) || []);
@@ -186,6 +197,12 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 					value={`${doneTasks}/${totalTasks}`}
 					subtitle="Aufgaben erledigt"
 					progress={totalTasks > 0 ? doneTasks / totalTasks : 0}
+				/>
+				<StatsCard
+					title="Sponsoring"
+					icon={<HandCoins />}
+					value={sponsorCount.toString()}
+					subtitle={`Sponsoren · €${sponsoringTotalSum.toLocaleString('de-AT')}`}
 				/>
 			</div>
 
