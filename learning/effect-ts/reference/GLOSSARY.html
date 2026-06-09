@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Effect — Glossar</title>
+<style>
+  :root{--bg:#fbfaf7;--ink:#1c1b1a;--muted:#5d5a54;--line:#e6e2da;--accent:#5b4bd6;--accent-soft:#e6e3fb}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px}
+  .kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:30px;margin:.3em 0 .2em;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0 0 8px}
+  h2{font-size:18px;margin:36px 0 6px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  dt{font-weight:700;margin:18px 0 2px}
+  dt code{background:var(--accent-soft);padding:.1em .4em;border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.86em}
+  dd{margin:0 0 4px}
+  .avoid{color:var(--muted);font-size:14px;font-style:italic}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.86em;background:#efece4;padding:.1em .35em;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">Effect-Track · Referenz</div>
+  <h1>Effect — Glossar</h1>
+  <p class="sub">Kanonische Sprache dieses Workspaces. Begriffe kommen erst rein, wenn du sie sicher benutzt — nicht beim ersten Hören. Stand: nach Lektion 1.</p>
+
+  <h2>Kern</h2>
+  <dl>
+    <dt><code>Effect&lt;A, E, R&gt;</code></dt>
+    <dd>Die <b>Beschreibung</b> (kein laufendes Programm) eines Vorgangs, der einen Wert vom Typ <code>A</code> liefert, mit einem erwarteten Fehler vom Typ <code>E</code> fehlschlagen kann, und zum Laufen die Abhängigkeiten <code>R</code> braucht.</dd>
+    <dd class="avoid">Vermeiden: „ein Effect-Promise“, „async-Wrapper“</dd>
+
+    <dt>A — Success</dt>
+    <dd>Der Wert, der bei Erfolg herauskommt. Entspricht dem, was bei <code>Promise&lt;A&gt;</code> im <code>&lt;…&gt;</code> steht.</dd>
+
+    <dt>E — Error</dt>
+    <dd>Der Typ der <b>erwarteten, behandelbaren</b> Fehler. Steht im Typ — anders als bei <code>throw</code>/<code>Promise</code>, wo Fehler unsichtbar sind.</dd>
+
+    <dt>R — Requirements</dt>
+    <dd>Die Dependencies/Services, die der Effect zum Laufen braucht (Dependency Injection über das Typsystem). Solange <code>R</code> nicht leer ist, lässt er sich nicht ausführen.</dd>
+
+    <dt><code>never</code> (in E oder R)</dt>
+    <dd>„Gibt es nicht.“ <code>E = never</code> → kann nicht (mit erwartetem Fehler) fehlschlagen. <code>R = never</code> → braucht nichts mehr, ist ausführbar.</dd>
+
+    <dt>lazy / Beschreibung</dt>
+    <dd>Einen Effect zu erzeugen <b>führt nichts aus</b>. Er ist ein unveränderlicher Plan, der erst beim Ausführen läuft.</dd>
+    <dd class="avoid">Vermeiden: „der Effect wird aufgerufen“</dd>
+
+    <dt>ausführen (run)</dt>
+    <dd>Den Plan tatsächlich laufen lassen — am Rand des Programms. <code>Effect.runSync</code> (synchron) / <code>Effect.runPromise</code> (gibt ein <code>Promise</code> zurück).</dd>
+  </dl>
+
+  <p class="avoid">Noch nicht promotet (kommt in späteren Lektionen): <code>Effect.gen</code>, <code>pipe</code>, <code>Effect.fail</code>/<code>succeed</code>/<code>tryPromise</code>, <code>catchTag</code>, Context / Service / Layer, Fiber.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossar — Linux-Server &amp; Node</title>
+<style>
+  :root{--bg:#fbfaf7;--ink:#1c1b1a;--muted:#5d5a54;--line:#e6e2da;--accent:#0f766e;--accent-soft:#d7efec}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px}
+  .kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:30px;margin:.3em 0 .1em;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0 0 28px}
+  h2{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);
+    margin:36px 0 4px;padding-bottom:6px;border-bottom:2px solid var(--accent-soft)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.86em;
+    background:#efece4;padding:.1em .38em;border-radius:4px}
+  dl{margin:0}
+  dt{font-weight:700;font-size:17px;margin:22px 0 2px}
+  dd{margin:0 0 4px;color:#2c2a27}
+  .avoid{font-size:13.5px;color:var(--muted);font-style:italic}
+  .src{display:inline-block;font-size:12px;background:var(--accent-soft);color:#0c4a45;
+    padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;font-weight:600}
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
+  @media print{body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">Referenz · wächst mit jeder Lektion</div>
+  <h1>Glossar</h1>
+  <p class="sub">Die kanonische Sprache dieses Tracks. Jeder Begriff hier ist einer, den du schon verwendet hast oder gerade lernst. <span class="src">L1</span> = in Lektion 1 eingeführt.</p>
+
+  <h2>Zugang &amp; Identität</h2>
+  <dl>
+    <dt>root <span class="src">L1</span></dt>
+    <dd>Der Administrator-Account mit unbegrenzten Rechten. Name auf jedem Linux-System identisch → Haupt-Angriffsziel. Man arbeitet nie direkt als root.</dd>
+    <dd class="avoid">Avoid: „Admin", „Superuser-Login"</dd>
+
+    <dt>sudo-Benutzer <span class="src">L1</span></dt>
+    <dd>Ein normaler Account, der mit <code>sudo</code> einzelne Befehle kurzzeitig mit root-Rechten ausführt. Der Alltags-Account am Server.</dd>
+    <dd class="avoid">Avoid: „Admin-User"</dd>
+
+    <dt>sudo <span class="src">L1</span></dt>
+    <dd>Befehlspräfix, das einen einzelnen Befehl mit root-Rechten ausführt (nach Passwort-Eingabe). „Rechte leihen statt besitzen."</dd>
+
+    <dt>Gruppe <span class="src">L1</span></dt>
+    <dd>Sammlung von Benutzern mit gemeinsamen Rechten. Mitgliedschaft in der Gruppe <code>sudo</code> erlaubt das Nutzen von <code>sudo</code>.</dd>
+  </dl>
+
+  <h2>SSH &amp; Schlüssel</h2>
+  <dl>
+    <dt>SSH <span class="src">L1</span></dt>
+    <dd>Secure Shell — verschlüsselte Verbindung, um per Terminal auf einen entfernten Server zuzugreifen. Standard-Port 22.</dd>
+
+    <dt>SSH-Schlüsselpaar <span class="src">L1</span></dt>
+    <dd>Zwei zusammengehörige Dateien: der <b>private Schlüssel</b> (bleibt geheim auf deinem PC) und der <b>öffentliche Schlüssel</b> (liegt auf dem Server). Login gelingt nur, wenn beide zusammenpassen.</dd>
+    <dd class="avoid">Avoid: „SSH-Passwort", „Zertifikat" (anderes Konzept)</dd>
+
+    <dt>authorized_keys <span class="src">L1</span></dt>
+    <dd>Datei <code>~/.ssh/authorized_keys</code> eines Users; enthält die öffentlichen Schlüssel, die sich als dieser User einloggen dürfen. Braucht Rechte <code>600</code>.</dd>
+
+    <dt>sshd_config <span class="src">L1</span></dt>
+    <dd>Konfigurationsdatei des SSH-Servers unter <code>/etc/ssh/sshd_config</code>. Hier wird Login-Verhalten gesteuert (root-Login, Passwort-Login …).</dd>
+    <dd class="avoid">Avoid: „SSH-Settings" — Datei beim Namen nennen</dd>
+  </dl>
+
+  <h2>System &amp; Dateien</h2>
+  <dl>
+    <dt>Datei-Rechte (700 / 600) <span class="src">L1</span></dt>
+    <dd>Dreistellige Oktalzahl für Besitzer/Gruppe/Andere. <code>700</code> = nur Besitzer darf lesen+schreiben+ausführen, sonst niemand. <code>600</code> = nur Besitzer lesen+schreiben. SSH verweigert Keys mit zu offenen Rechten.</dd>
+
+    <dt>systemctl <span class="src">L1</span></dt>
+    <dd>Steuerbefehl für systemd-Dienste: <code>start</code>, <code>stop</code>, <code>restart</code>, <code>status</code>, <code>enable</code>. (Ausführlich ab Lektion 6.)</dd>
+  </dl>
+
+  <footer>
+    Glossar · Linux-Server &amp; Node-Backend · zuletzt erweitert in Lektion 1
+  </footer>
+</div>
+</body>
+</html>

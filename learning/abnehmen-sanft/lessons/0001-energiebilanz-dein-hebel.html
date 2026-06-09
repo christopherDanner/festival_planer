@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lektion 1 — Energiebilanz: dein einziger echter Hebel</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --ink:#1c1b1a; --muted:#5d5a54; --line:#e6e2da;
+    --accent:#1f8a5b; --accent-soft:#e2f3ea;
+    --danger:#b42318; --danger-soft:#fdecea;
+    --ok:#15803d; --ok-soft:#e7f5ec; --warn:#b45309; --warn-soft:#fdf2e3;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:56px 24px 96px}
+  header.hero{margin-bottom:36px}
+  .kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:33px;line-height:1.15;margin:.3em 0 .25em;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:18px;margin:0}
+  .meta{margin-top:18px;font-size:14px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+  .meta b{color:var(--ink)}
+  h2{font-size:23px;margin:46px 0 12px;letter-spacing:-.01em}
+  h3{font-size:18px;margin:26px 0 8px}
+  p{margin:14px 0}
+  ul{margin:14px 0;padding-left:22px}
+  li{margin:6px 0}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+  a:hover{border-color:var(--accent)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.86em;
+    background:#efece4;padding:.1em .4em;border-radius:4px}
+  .box{border-radius:10px;padding:16px 18px;margin:22px 0;border:1px solid}
+  .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+  .box .lbl{font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:6px}
+  .info{background:var(--accent-soft);border-color:#bfe4cf;color:#13503a}
+  .warn{background:var(--warn-soft);border-color:#f1d9ad;color:#7c4308}
+  .why{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent)}
+  /* balance scale visual */
+  .scale{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin:24px 0}
+  .scale .bars{display:flex;gap:14px}
+  .scale .bar{flex:1;text-align:center}
+  .scale .bar .fill{height:14px;border-radius:99px;margin:8px 0 6px}
+  .scale .in .fill{background:#d98324}
+  .scale .out .fill{background:#1f8a5b}
+  .scale .bar b{display:block;font-size:15px}
+  .scale .bar span{font-size:13.5px;color:var(--muted)}
+  /* calculator */
+  .calc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;margin:26px 0;box-shadow:0 1px 0 #f0ece3}
+  .calc h3{margin-top:0}
+  .grid{display:flex;gap:14px;flex-wrap:wrap}
+  .field{flex:1;min-width:150px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:.02em}
+  .field input,.field select{width:100%;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fdfdfb}
+  .field input:focus,.field select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .seg{display:flex;gap:8px;margin-top:6px}
+  .seg button{flex:1;font:inherit;font-size:14px;padding:9px 6px;border:1px solid var(--line);border-radius:8px;background:#fdfdfb;cursor:pointer;line-height:1.25}
+  .seg button small{display:block;color:var(--muted);font-size:12px}
+  .seg button.on{border-color:var(--accent);background:var(--accent-soft);color:#13503a;font-weight:700}
+  .out-grid{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px}
+  .stat{flex:1;min-width:140px;background:var(--accent-soft);border:1px solid #bfe4cf;border-radius:10px;padding:14px 16px}
+  .stat .k{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:#2f6a51;font-weight:700}
+  .stat .v{font-size:27px;font-weight:800;color:#13503a;line-height:1.15;margin-top:3px}
+  .stat .u{font-size:13px;color:#2f6a51}
+  .calc .hint{font-size:13.5px;color:var(--muted);margin:14px 2px 0}
+  /* quiz */
+  .quiz{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 22px 8px;margin:24px 0}
+  .q{margin-bottom:24px}
+  .q p.qq{font-weight:600;margin:0 0 10px}
+  .opt{display:block;padding:10px 14px;border:1px solid var(--line);border-radius:8px;margin:7px 0;cursor:pointer;transition:.12s}
+  .opt:hover{border-color:var(--accent)}
+  .opt.correct{background:var(--ok-soft);border-color:#a8d8b9}
+  .opt.wrong{background:var(--danger-soft);border-color:#f3c9c4}
+  .opt.picked{outline:2px solid var(--accent)}
+  .fb{font-size:14.5px;margin:10px 2px 0;display:none;padding:10px 12px;border-radius:8px}
+  .fb.show{display:block}
+  .fb.good{background:var(--ok-soft);color:#14532d}
+  .fb.bad{background:var(--danger-soft);color:#7a1c14}
+  .pill{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--accent);border-radius:99px;padding:3px 10px;margin-left:8px;vertical-align:middle}
+  footer{margin-top:56px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:14px}
+  .src{font-size:13.5px;color:var(--muted)}
+  .src a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="kicker">Abnehmen-Track · Lektion 1</div>
+    <h1>Die Energiebilanz <span class="pill">dein Hebel</span></h1>
+    <p class="sub">Gewicht fällt über <b>eine</b> Sache: weniger reinkippen, als du verbrauchst. Sport ist nett — aber nicht der Hebel. Gut für dich, denn „wenig Bewegung“ ist völlig okay.</p>
+    <div class="meta">
+      <span>⏱ <b>~9 Min</b></span>
+      <span>🎯 Mission: <b>95 → 85 kg, ohne Qual</b></span>
+      <span>🧮 Win: <b>dein Kalorienziel + Zeitfenster</b></span>
+    </div>
+  </header>
+
+  <h2>Die eine Idee: Bilanz, nicht Disziplin</h2>
+  <p>Dein Körper ist ein Konto. Oben kommt rein (Essen &amp; Trinken), unten geht raus (Verbrauch). Steht unten dauerhaft mehr als oben, holt sich der Körper die Differenz aus den Fettreserven. Das ist alles. Jede Diät der Welt — Keto, Low Carb, Fasten — wirkt nur, <i>weil</i> sie irgendwie diese Bilanz negativ macht.</p>
+
+  <div class="scale">
+    <div class="bars">
+      <div class="bar in"><b>Rein</b><div class="fill" style="width:100%"></div><span>Essen + Trinken (kcal)</span></div>
+      <div class="bar out"><b>Raus</b><div class="fill" style="width:114%"></div><span>Verbrauch = TDEE (kcal)</span></div>
+    </div>
+    <p style="text-align:center;margin:14px 0 0;color:var(--muted);font-size:14.5px">Raus &gt; Rein → <b style="color:var(--accent)">Defizit</b> → Körper verbrennt Fett. Mehr braucht es im Kern nicht.</p>
+  </div>
+  <p class="src">„Um abzunehmen, muss weniger Energie zugeführt werden, als der Körper verbraucht.“ — <a href="https://www.dge.de/gesunde-ernaehrung/diaeten-und-fasten/">DGE</a></p>
+
+  <h2>Warum „wenig Sport“ kein Problem ist</h2>
+  <p>Das ist die wichtigste Nachricht für deine Mission: <b>Abnehmen passiert in der Küche, nicht auf dem Laufband.</b> Zwei belegte Gründe:</p>
+  <ul>
+    <li><b>Der Verbrauch ist eh größtenteils Ruhe.</b> Dein Grundumsatz (BMR) — Atmen, Herz, Organe — frisst den Löwenanteil. Den hast du auch im Sessel. Sport kommt obendrauf, ist aber der kleinere Posten.</li>
+    <li><b>Bewegung wird „wegkompensiert“.</b> Trainierst du mehr, bekommst du mehr Hunger und bewegst dich sonst unbewusst weniger — der Körper holt sich einen Teil zurück. Diese Kompensation ist bei <i>Sport stärker</i> als bei der Ernährung.</li>
+  </ul>
+  <div class="box info"><span class="lbl">Heißt konkret</span>
+    <p>Du kannst eine schlechte Ernährung <b>nicht wegtrainieren</b> — und musst es auch nicht. Eine Stunde Radeln verbrennt grob, was zwei Schokoriegel reinbringen. Dein Hebel ist das, was auf dem Teller landet. Spazieren &amp; Radeln behältst du — als Bonus für Kopf, Herz und Laune, nicht als Abnehm-Motor.</p>
+  </div>
+  <p class="src">Diät schlägt Sport beim Abnehmen; Bewegung wird stärker kompensiert: <a href="https://onlinelibrary.wiley.com/doi/10.1111/obr.12783">Doucet et al. 2018, <i>Obesity Reviews</i></a>.</p>
+
+  <h2>Klein statt brutal — damit es nicht weh tut</h2>
+  <p>Deine Constraint ist „ohne Qual, ohne Energieeinbruch“. Genau dafür gibt es eine Regel: <b>mach das Defizit klein.</b> Behörden empfehlen <b>0,5–1 kg pro Woche</b>, über ein Defizit von rund <b>500–600 kcal/Tag</b>. Wir bleiben am sanften Ende.</p>
+  <ul>
+    <li><b>Sanftes Defizit (~300–500 kcal/Tag):</b> Energie bleibt stabil, Hunger hält sich in Grenzen, Muskeln bleiben. Durchhaltbar = du kommst wirklich an.</li>
+    <li><b>Crash (1000+ kcal/Tag, „Wunderdiät“):</b> Heißhunger, Müdigkeit, Muskelabbau, Jojo. Genau das, was du nicht willst.</li>
+  </ul>
+  <p>Faustzahl zum Umrechnen: <b>~7.700 kcal ≈ 1 kg Fett</b>. 500 kcal/Tag × 7 Tage = 3.500 kcal/Woche ≈ ein halbes Kilo. Nicht exakt (Wasser schwankt), aber gut genug zum Planen.</p>
+  <p class="src">Sicherer Rahmen 0,5–1 kg/Woche: <a href="https://www.nhs.uk/live-well/healthy-weight/start-the-nhs-weight-loss-plan/">NHS Weight Loss Plan</a>.</p>
+
+  <h2>🧮 Dein Win: rechne dein Ziel aus</h2>
+  <p>Hier wird es konkret. Trag dein <b>Alter</b> ein und wähle, wie aktiv dein Alltag ist und wie sanft du es angehen willst. Der Rest ist aus deiner Mission vorbefüllt. Alles rechnet sofort.</p>
+
+  <div class="calc">
+    <h3>TDEE- &amp; Defizit-Rechner</h3>
+    <div class="grid">
+      <div class="field"><label for="age">Alter (Jahre)</label><input id="age" type="number" value="31" min="16" max="90"></div>
+      <div class="field"><label for="weight">Gewicht jetzt (kg)</label><input id="weight" type="number" value="95" min="40" max="250"></div>
+      <div class="field"><label for="height">Größe (cm)</label><input id="height" type="number" value="180" min="120" max="220"></div>
+      <div class="field"><label for="goal">Ziel (kg)</label><input id="goal" type="number" value="85" min="40" max="250"></div>
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>Alltags-Aktivität (nur Spazieren/Radeln zählt hier rein)</label>
+      <div class="seg" id="act">
+        <button data-v="1.2">Sitzend<small>kaum Bewegung</small></button>
+        <button class="on" data-v="1.375">Leicht aktiv<small>spazieren/radeln 1–3×/Wo</small></button>
+        <button data-v="1.55">Aktiv<small>fast täglich unterwegs</small></button>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>Wie sanft?</label>
+      <div class="seg" id="def">
+        <button class="on" data-v="350">Sehr sanft<small>~350 kcal/Tag</small></button>
+        <button data-v="500">Standard<small>~500 kcal/Tag</small></button>
+      </div>
+    </div>
+
+    <div class="out-grid">
+      <div class="stat"><div class="k">Erhaltung (TDEE)</div><div class="v" id="o-tdee">–</div><div class="u">kcal/Tag — hier hältst du dein Gewicht</div></div>
+      <div class="stat"><div class="k">Dein Zielwert</div><div class="v" id="o-target">–</div><div class="u">kcal/Tag — so viel essen zum Abnehmen</div></div>
+    </div>
+    <div class="out-grid">
+      <div class="stat"><div class="k">Tempo</div><div class="v" id="o-rate">–</div><div class="u">kg pro Woche (Schätzung)</div></div>
+      <div class="stat"><div class="k">Bei 85 kg ca.</div><div class="v" id="o-when">–</div><div class="u" id="o-weeks">Wochen bis Ziel</div></div>
+    </div>
+    <p class="hint">Schätzung via Mifflin-St-Jeor-Grundumsatz × Aktivität. Real schwankt die Waage täglich (Wasser, Darm) — lies den <b>Wochen-Trend</b>, nicht den einzelnen Tag. Zahlen sind ein Startpunkt; nach 2–3 Wochen justierst du nach echtem Verlauf.</p>
+  </div>
+
+  <div class="box warn"><span class="lbl">Kurz & ehrlich</span>
+    <p>Das ist allgemeine Bildung, keine individuelle medizinische Beratung. Bei Vorerkrankungen, Medikamenten oder wenn du dich beim Defizit schlapp fühlst → ärztlich abklären. Und: das Zielfenster ist eine <i>Schätzung</i>, kein Versprechen — der Körper rechnet nicht so sauber wie der Taschenrechner.</p>
+  </div>
+
+  <h2>Check: sitzt das mentale Modell?</h2>
+  <p>Klick die Antwort an — sofortiges Feedback, kein Submit.</p>
+
+  <div class="quiz" id="quiz">
+    <div class="q" data-correct="1">
+      <p class="qq">1. Du willst abnehmen, hasst aber Sport. Was ist der Haupthebel?</p>
+      <label class="opt"><input type="radio" name="q1"> Täglich eine Stunde Cardio, sonst geht nichts</label>
+      <label class="opt"><input type="radio" name="q1"> Eine negative Energiebilanz — vor allem über das Essen</label>
+      <label class="opt"><input type="radio" name="q1"> Möglichst lange gar nichts essen</label>
+      <div class="fb good" data-for="1">✔ Genau. Abnehmen entsteht durch das Defizit, und das steuerst du am wirksamsten über den Teller. Sport ist optional.</div>
+      <div class="fb bad" data-for="1-wrong">Nicht nötig. Der Hebel ist die Energiebilanz (Essen) — Sport ist Bonus, und gar nichts essen ist ein Crash, den du nicht durchhältst.</div>
+    </div>
+
+    <div class="q" data-correct="2">
+      <p class="qq">2. Warum „kannst du eine schlechte Ernährung nicht wegtrainieren“?</p>
+      <label class="opt"><input type="radio" name="q2"> Sport verbrennt gar keine Kalorien</label>
+      <label class="opt"><input type="radio" name="q2"> Essen hat keine Kalorien, wenn man sich bewegt</label>
+      <label class="opt"><input type="radio" name="q2"> Sport verbrennt relativ wenig und wird durch mehr Hunger/weniger Alltagsbewegung teils kompensiert</label>
+      <div class="fb good" data-for="2">✔ Sitzt. Die Kompensation ist bei Bewegung sogar stärker als bei Diät — darum ist der Teller der zuverlässigere Hebel.</div>
+      <div class="fb bad" data-for="2-wrong">Sport verbrennt schon Kalorien — nur relativ wenig, und der Körper holt sich über Hunger/weniger Spontanbewegung einen Teil zurück.</div>
+    </div>
+
+    <div class="q" data-correct="0">
+      <p class="qq">3. Welches Defizit passt zu „ohne Qual, Energie stabil“?</p>
+      <label class="opt"><input type="radio" name="q3"> ~350–500 kcal/Tag → ca. 0,3–0,5 kg/Woche</label>
+      <label class="opt"><input type="radio" name="q3"> ~1500 kcal/Tag → so schnell wie möglich</label>
+      <label class="opt"><input type="radio" name="q3"> Egal, Hauptsache die Waage fällt täglich</label>
+      <div class="fb good" data-for="3">✔ Richtig. Klein &amp; durchhaltbar schlägt schnell &amp; brutal. Genau dein sanfter Weg — und die Waage fällt nicht jeden Tag, das ist normal.</div>
+      <div class="fb bad" data-for="3-wrong">Zu aggressiv. Große Defizite bringen Heißhunger, Müdigkeit, Muskelabbau und Jojo — das Gegenteil deiner Mission.</div>
+    </div>
+  </div>
+
+  <h2>Dein Win</h2>
+  <div class="box why">
+    <p>Du weißt jetzt: Gewicht fällt über die <b>Energiebilanz</b>, dein stärkster Stellhebel ist das <b>Essen</b> (nicht Sport — gut für dich), und ein <b>kleines Defizit</b> ist der Weg „ohne Qual“. Und du hast eine konkrete Zahl: <b>dein Kalorienziel</b> und ein realistisches <b>Zeitfenster</b> bis 85 kg. Das ist das Fundament — alles Weitere baut darauf auf.</p>
+  </div>
+
+  <footer>
+    <p><b>Frag deinen Lehrer.</b> Unsicher beim Aktivitätsfaktor? Soll ich dein echtes Alter einsetzen und das Zielfenster fix für dich rechnen? Frag einfach im Chat — dafür bin ich da.</p>
+    <p><b>Nächste Lektion (Vorschlag):</b> <i>Satt werden ohne Hunger</i> — Protein &amp; Energiedichte. Wie du das Defizit triffst, ohne dass der Magen knurrt (genau dein „ohne Qual“-Teil).</p>
+    <p class="src">Quellen: <a href="https://www.dge.de/gesunde-ernaehrung/diaeten-und-fasten/">DGE — Diäten &amp; Fasten</a> · <a href="https://www.nhs.uk/live-well/healthy-weight/start-the-nhs-weight-loss-plan/">NHS Weight Loss Plan</a> · <a href="https://onlinelibrary.wiley.com/doi/10.1111/obr.12783">Doucet et al. 2018, Obesity Reviews</a></p>
+  </footer>
+</div>
+
+<script>
+  // ---- Calculator ----
+  var actBtns = document.querySelectorAll('#act button');
+  var defBtns = document.querySelectorAll('#def button');
+  var act = 1.375, def = 350;
+
+  function seg(btns, set){
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        btns.forEach(function(x){x.classList.remove('on');});
+        b.classList.add('on');
+        set(parseFloat(b.getAttribute('data-v')));
+        recompute();
+      });
+    });
+  }
+  seg(actBtns, function(v){act=v;});
+  seg(defBtns, function(v){def=v;});
+
+  ['age','weight','height','goal'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', recompute);
+  });
+
+  function fmt(n){ return n.toLocaleString('de-DE'); }
+
+  function recompute(){
+    var age = +document.getElementById('age').value || 0;
+    var w   = +document.getElementById('weight').value || 0;
+    var h   = +document.getElementById('height').value || 0;
+    var goal= +document.getElementById('goal').value || 0;
+
+    // Mifflin-St Jeor (Mann)
+    var bmr = 10*w + 6.25*h - 5*age + 5;
+    var tdee = bmr * act;
+    var target = tdee - def;
+
+    var rate = def*7/7700;                 // kg/Woche
+    var toLose = Math.max(0, w - goal);
+    var weeks = rate > 0 ? toLose*7700/(def*7) : 0;
+
+    document.getElementById('o-tdee').textContent   = fmt(Math.round(tdee));
+    document.getElementById('o-target').textContent = fmt(Math.round(target));
+    document.getElementById('o-rate').textContent   = rate.toFixed(2).replace('.', ',');
+
+    if(toLose <= 0){
+      document.getElementById('o-when').textContent = 'erreicht';
+      document.getElementById('o-weeks').textContent = 'Ziel schon erreicht 🎉';
+    } else {
+      var d = new Date(2026, 5, 8);        // 8. Juni 2026 (Monat 0-basiert)
+      d.setDate(d.getDate() + Math.round(weeks*7));
+      var months = ['Jan','Feb','März','Apr','Mai','Juni','Juli','Aug','Sep','Okt','Nov','Dez'];
+      document.getElementById('o-when').textContent = months[d.getMonth()] + ' ' + d.getFullYear();
+      document.getElementById('o-weeks').textContent = '≈ ' + Math.round(weeks) + ' Wochen bis Ziel';
+    }
+  }
+  recompute();
+
+  // ---- Quiz ----
+  document.querySelectorAll('#quiz .q').forEach(function(q){
+    var correct = parseInt(q.getAttribute('data-correct'), 10);
+    var opts = q.querySelectorAll('.opt');
+    var fbGood = q.querySelector('.fb.good');
+    var fbBad  = q.querySelector('.fb.bad');
+    opts.forEach(function(opt, i){
+      opt.addEventListener('click', function(){
+        opts.forEach(function(o){ o.classList.remove('correct','wrong','picked'); });
+        fbGood.classList.remove('show'); fbBad.classList.remove('show');
+        opt.classList.add('picked');
+        opts[correct].classList.add('correct');
+        if(i === correct){ fbGood.classList.add('show'); }
+        else { opt.classList.add('wrong'); fbBad.classList.add('show'); }
+      });
+    });
+  });
+</script>
+</body>
+</html>

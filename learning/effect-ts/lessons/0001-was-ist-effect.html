@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lektion 1 — Was ist Effect?</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --ink:#1c1b1a; --muted:#5d5a54; --line:#e6e2da;
+    --accent:#5b4bd6; --accent-soft:#e6e3fb;
+    --danger:#b42318; --danger-soft:#fdecea;
+    --ok:#15803d; --ok-soft:#e7f5ec; --warn:#b45309; --warn-soft:#fdf2e3;
+    --code-bg:#1e1e2a; --code-ink:#e7e7ef;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:56px 24px 96px}
+  header.hero{margin-bottom:40px}
+  .kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:34px;line-height:1.15;margin:.3em 0 .25em;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:18px;margin:0}
+  .meta{margin-top:18px;font-size:14px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+  .meta b{color:var(--ink)}
+  h2{font-size:23px;margin:48px 0 12px;letter-spacing:-.01em}
+  h3{font-size:18px;margin:28px 0 8px}
+  p{margin:14px 0}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+  a:hover{border-color:var(--accent)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em;
+    background:#efece4;padding:.12em .4em;border-radius:4px}
+  pre{position:relative;background:var(--code-bg);color:var(--code-ink);border-radius:10px;
+    padding:16px 16px 16px 18px;overflow:auto;font-size:14.5px;line-height:1.6;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;margin:12px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:inherit}
+  .cmt{color:#8a8aa3}
+  .kw{color:#c792ea}.str{color:#c3e88d}.typ{color:#82aaff}.fn{color:#82d8ff}
+  .box{border-radius:10px;padding:16px 18px;margin:22px 0;border:1px solid}
+  .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+  .box .lbl{font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:6px}
+  .info{background:var(--accent-soft);border-color:#cfc8f6;color:#332a78}
+  .warn{background:var(--warn-soft);border-color:#f1d9ad;color:#7c4308}
+  .why{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent)}
+  /* slot diagram */
+  .slots{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin:24px 0;text-align:center}
+  .sig{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:22px;letter-spacing:.5px;margin:2px 0 18px}
+  .sig .a{color:#15803d;font-weight:700}.sig .e{color:#b42318;font-weight:700}.sig .r{color:#5b4bd6;font-weight:700}
+  .slots .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;text-align:left}
+  .slots .card{flex:1;min-width:180px;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .slots .card b{display:block;font-size:14px;margin-bottom:4px}
+  .slots .card.A b{color:#15803d}.slots .card.E b{color:#b42318}.slots .card.R b{color:#5b4bd6}
+  .slots .card span{font-size:14.5px;color:var(--muted)}
+  table.cmp{border-collapse:collapse;width:100%;margin:18px 0;font-size:15px}
+  table.cmp th,table.cmp td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+  table.cmp th{background:#f3f0ea}
+  table.cmp td:first-child{font-weight:600;width:34%}
+  /* Quiz */
+  .quiz{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 22px 8px;margin:24px 0}
+  .q{margin-bottom:24px;padding-bottom:4px}
+  .q p.qq{font-weight:600;margin:0 0 10px}
+  .opt{display:block;padding:10px 14px;border:1px solid var(--line);border-radius:8px;margin:7px 0;cursor:pointer;transition:.12s}
+  .opt:hover{border-color:var(--accent)}
+  .opt.correct{background:var(--ok-soft);border-color:#a8d8b9}
+  .opt.wrong{background:var(--danger-soft);border-color:#f3c9c4}
+  .opt.picked{outline:2px solid var(--accent)}
+  .fb{font-size:14.5px;margin:10px 2px 0;display:none;padding:10px 12px;border-radius:8px}
+  .fb.show{display:block}
+  .fb.good{background:var(--ok-soft);color:#14532d}
+  .fb.bad{background:var(--danger-soft);color:#7a1c14}
+  .pill{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--accent);border-radius:99px;padding:3px 10px;margin-left:8px;vertical-align:middle}
+  footer{margin-top:56px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:14px}
+  .src{font-size:13.5px;color:var(--muted)}
+  .src a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="kicker">Effect-Track · Lektion 1</div>
+    <h1>Was ist Effect? <span class="pill">eine Idee</span></h1>
+    <p class="sub">Ein Effect ist kein laufendes Programm — er ist eine <b>Beschreibung</b> davon. Und sein Typ verrät dir Erfolg, Fehler <i>und</i> Abhängigkeiten.</p>
+    <div class="meta">
+      <span>⏱ <b>~8 Min</b></span>
+      <span>🎯 Mission: <b>verstehen, ob's sich lohnt</b></span>
+      <span>🧩 Du kennst: <b>Promise, async/await, Generics</b></span>
+    </div>
+  </header>
+
+  <h2>Das Problem, das du schon kennst</h2>
+  <p>Du schreibst täglich sowas. Schau auf den <b>Rückgabetyp</b>:</p>
+  <pre><code><span class="kw">async function</span> <span class="fn">getUser</span>(id: <span class="typ">string</span>): <span class="typ">Promise</span>&lt;<span class="typ">User</span>&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/users/${id}`</span>)
+  <span class="kw">if</span> (!res.ok) <span class="kw">throw new</span> <span class="fn">UserNotFound</span>(id)   <span class="cmt">// ← verschwindet im Typ</span>
+  <span class="kw">return</span> res.<span class="fn">json</span>()
+}
+<span class="cmt">// Typ: Promise&lt;User&gt;</span></code></pre>
+
+  <p>Der Typ <code>Promise&lt;User&gt;</code> sagt dir <b>nur</b>, was bei Erfolg rauskommt. Er verschweigt drei Dinge:</p>
+  <ul>
+    <li><b>Was kann schiefgehen?</b> Das <code>throw</code> ist im Typ unsichtbar. Du musst den Code <i>lesen</i> (oder es im Prod merken).</li>
+    <li><b>Was braucht die Funktion?</b> Abhängigkeiten (HTTP-Client, DB, Config) sind nirgends sichtbar.</li>
+    <li><b>Wann läuft es?</b> Schon beim Aufruf — sofort und unwiderruflich (<i>eager</i>).</li>
+  </ul>
+
+  <h2>Die eine Idee: Effect ist eine Beschreibung</h2>
+  <p>Effect dreht das um. Du erzeugst zuerst eine <b>Beschreibung</b> dessen, was passieren soll — einen Plan. Der läuft <b>nicht</b>, bis du ihn explizit ausführst.</p>
+
+  <pre><code><span class="kw">import</span> { Effect } <span class="kw">from</span> <span class="str">"effect"</span>
+
+<span class="cmt">// Eine Beschreibung: "liefert 42, kann nicht fehlschlagen, braucht nichts"</span>
+<span class="kw">const</span> answer: <span class="typ">Effect</span>.<span class="typ">Effect</span>&lt;<span class="typ">number</span>&gt; = Effect.<span class="fn">succeed</span>(<span class="str">42</span>)
+
+<span class="cmt">// Bis hier ist NICHTS passiert. answer ist nur ein Plan.</span>
+
+<span class="cmt">// Erst hier läuft es:</span>
+<span class="kw">const</span> result = Effect.<span class="fn">runSync</span>(answer)   <span class="cmt">// 42</span></code></pre>
+
+  <div class="box info"><span class="lbl">Mentales Modell</span>
+    <p>Rezept ≠ gekochtes Essen. Ein <code>Effect</code> ist das <b>Rezept</b>. <code>runSync</code>/<code>runPromise</code> ist das Kochen. Du kannst Rezepte herumreichen, kombinieren, anpassen — ganz ohne dass die Küche anspringt.</p>
+  </div>
+
+  <p class="src">Offizielle Definition: „an immutable value that lazily describes a workflow or job.“ — <a href="https://effect.website/docs/getting-started/the-effect-type/">Effect Docs, The Effect Type</a></p>
+
+  <h2>Die drei Slots: <code>Effect&lt;A, E, R&gt;</code></h2>
+  <p>Das ist das Herzstück. Genau wie <code>Promise&lt;T&gt;</code> einen Typ-Slot hat, hat <code>Effect</code> <b>drei</b>:</p>
+
+  <div class="slots">
+    <div class="sig"><span class="typ">Effect</span>&lt;<span class="a">User</span>, <span class="e">NotFoundError</span>, <span class="r">Database</span>&gt;</div>
+    <div class="row">
+      <div class="card A"><b>A · Success</b><span>Was rauskommt, wenn alles klappt: ein <code>User</code>.</span></div>
+      <div class="card E"><b>E · Error</b><span>Womit es <i>erwartet</i> fehlschlagen kann: <code>NotFoundError</code>. Steht im Typ!</span></div>
+      <div class="card R"><b>R · Requirements</b><span>Was es zum Laufen braucht: eine <code>Database</code>. Läuft nicht, bis die da ist.</span></div>
+    </div>
+  </div>
+
+  <p>Lies den Typ laut als <b>einen Satz</b>:</p>
+  <div class="box why">
+    <p>„Wenn ich das ausführe, bekomme ich einen <b>User</b>; es kann mit <b>NotFoundError</b> fehlschlagen; und es braucht eine <b>Database</b>, um zu laufen.“</p>
+  </div>
+
+  <p>Das ist der ganze Trick von Lektion 1. Wenn du einen <code>Effect&lt;A, E, R&gt;</code> in einen Satz übersetzen kannst, hast du das mentale Modell.</p>
+
+  <div class="box info"><span class="lbl">Kurz-Notiz: <code>never</code></span>
+    <p>Lässt du <code>E</code> oder <code>R</code> weg, sind sie <code>never</code>. <code>E = never</code> → kann nicht (mit erwartetem Fehler) fehlschlagen. <code>R = never</code> → braucht nichts mehr, ist <b>ausführbar</b>. Deshalb war oben <code>Effect&lt;number&gt;</code> direkt mit <code>runSync</code> lauffähig.</p>
+  </div>
+
+  <h2>Promise vs. Effect, nebeneinander</h2>
+  <table class="cmp">
+    <tr><th>Frage</th><th><code>Promise&lt;User&gt;</code></th><th><code>Effect&lt;User, E, R&gt;</code></th></tr>
+    <tr><td>Was kommt bei Erfolg raus?</td><td>✅ <code>User</code></td><td>✅ <code>User</code> (Slot A)</td></tr>
+    <tr><td>Was kann schiefgehen?</td><td>❌ unsichtbar (<code>throw any</code>)</td><td>✅ im Typ (Slot E)</td></tr>
+    <tr><td>Was wird gebraucht?</td><td>❌ nirgends</td><td>✅ im Typ (Slot R)</td></tr>
+    <tr><td>Wann läuft es?</td><td>sofort (eager)</td><td>erst beim <code>run…</code> (lazy)</td></tr>
+  </table>
+  <p class="src">Kontrast & Begründung: <a href="https://effect.website/docs/getting-started/why-effect/">Why Effect</a> · <a href="https://www.tweag.io/blog/2024-11-07-typescript-effect/">Tweag: Exploring Effect in TypeScript</a></p>
+
+  <div class="box warn"><span class="lbl">Ehrlich bleiben</span>
+    <p>Das kostet was: neue Syntax (<code>pipe</code>/<code>Effect.gen</code>), eine Lernkurve, eine große Bibliothek. Ob sich das <i>für dich</i> lohnt, ist genau deine Mission — wir bauen das Urteil über die nächsten Lektionen auf, statt es jetzt zu raten.</p>
+  </div>
+
+  <h2>Check: kannst du Typen lesen?</h2>
+  <p>Sofortiges Feedback. Klick die Antwort an — kein Submit nötig.</p>
+
+  <div class="quiz" id="quiz">
+    <div class="q" data-correct="1">
+      <p class="qq">1. In <code>Effect&lt;Order, PaymentError, Stripe&gt;</code> — was ist <code>PaymentError</code>?</p>
+      <label class="opt"><input type="radio" name="q1"> Der Wert, der bei Erfolg rauskommt</label>
+      <label class="opt"><input type="radio" name="q1"> Der erwartete Fehler-Typ (Slot E)</label>
+      <label class="opt"><input type="radio" name="q1"> Eine Abhängigkeit, die gebraucht wird</label>
+      <div class="fb good" data-for="1">✔ Genau. Mitte = E = erwarteter, behandelbarer Fehler. Im Typ sichtbar — anders als ein <code>throw</code>.</div>
+      <div class="fb bad" data-for="1-wrong">Nicht ganz. Reihenfolge ist <code>&lt;A, E, R&gt;</code> = Success, Error, Requirements. <code>PaymentError</code> steht in der Mitte → Fehler-Typ.</div>
+    </div>
+
+    <div class="q" data-correct="0">
+      <p class="qq">2. Du schreibst <code>const e = Effect.succeed(1)</code>. Was passiert sofort?</p>
+      <label class="opt"><input type="radio" name="q2"> Nichts — <code>e</code> ist nur eine Beschreibung; es läuft erst bei <code>runSync</code>/<code>runPromise</code></label>
+      <label class="opt"><input type="radio" name="q2"> Der Wert <code>1</code> wird berechnet und in <code>e</code> gespeichert</label>
+      <label class="opt"><input type="radio" name="q2"> Es wird ein Promise gestartet, das <code>1</code> auflöst</label>
+      <div class="fb good" data-for="2">✔ Richtig. Effects sind <b>lazy</b>. Erzeugen = Plan bauen. Laufen = explizit ausführen.</div>
+      <div class="fb bad" data-for="2-wrong">Das ist die <code>Promise</code>-Denke (eager). Ein Effect macht beim Erzeugen <b>nichts</b> — er beschreibt nur.</div>
+    </div>
+
+    <div class="q" data-correct="2">
+      <p class="qq">3. Was zeigt <code>Effect&lt;User, E, R&gt;</code>, das <code>Promise&lt;User&gt;</code> <b>nicht</b> zeigt?</p>
+      <label class="opt"><input type="radio" name="q3"> Den Erfolgs-Typ <code>User</code></label>
+      <label class="opt"><input type="radio" name="q3"> Wie schnell der Code läuft</label>
+      <label class="opt"><input type="radio" name="q3"> Die möglichen Fehler und die nötigen Abhängigkeiten</label>
+      <div class="fb good" data-for="3">✔ Sitzt. E + R sind der Mehrwert: Fehler und Dependencies werden Teil des Typs (und damit vom Compiler geprüft).</div>
+      <div class="fb bad" data-for="3-wrong">Den Erfolgs-Typ zeigen beide. Der Unterschied sind die <i>zusätzlichen</i> Slots E (Fehler) und R (Abhängigkeiten).</div>
+    </div>
+
+    <div class="q" data-correct="1">
+      <p class="qq">4. Eine Funktion gibt <code>Effect&lt;string, never, never&gt;</code> zurück. Was heißt das <code>never</code> an der mittleren Stelle?</p>
+      <label class="opt"><input type="radio" name="q4"> Sie schlägt immer fehl</label>
+      <label class="opt"><input type="radio" name="q4"> Sie kann nicht mit einem erwarteten Fehler fehlschlagen</label>
+      <label class="opt"><input type="radio" name="q4"> Der Fehler-Typ ist noch unbekannt</label>
+      <div class="fb good" data-for="4">✔ Korrekt. <code>never</code> in E = „solche Fehler gibt es nicht“. Und <code>never</code> in R = braucht nichts → direkt ausführbar.</div>
+      <div class="fb bad" data-for="4-wrong"><code>never</code> ist der „leere“ Typ: <i>kein</i> erwarteter Fehler möglich. (Nicht: immer Fehler, nicht: unbekannt.)</div>
+    </div>
+  </div>
+
+  <h2>Dein Win</h2>
+  <div class="box why">
+    <p>Du kannst jetzt jeden <code>Effect&lt;A, E, R&gt;</code> in einen deutschen Satz übersetzen — „liefert A, kann mit E fehlschlagen, braucht R“ — und weißt, dass er erst beim <code>run…</code> läuft. Das ist das Fundament; alles Weitere (Fehler behandeln, ausführen, komponieren, DI) hängt daran.</p>
+  </div>
+
+  <footer>
+    <p><b>Frag deinen Lehrer.</b> Unklar, warum „lazy“ ein Vorteil sein soll? Oder wie <code>R</code> praktisch befüllt wird? Frag einfach im Chat zurück — dafür bin ich da.</p>
+    <p><b>Nächste Lektion (Vorschlag):</b> <i>Typisierte Fehler</i> — der erste echte Verkaufspunkt von E, im direkten Vergleich zu <code>throw</code>/<code>try-catch</code>.</p>
+    <p><b>Wisdom:</b> Die Effect-Community (offizieller <a href="https://effect.website/">Discord via effect.website</a>) ist sehr aktiv — guter Ort, um später echte Architektur-Fragen zu stellen.</p>
+    <p class="src">Quellen: <a href="https://effect.website/docs/getting-started/the-effect-type/">The Effect Type</a> · <a href="https://effect.website/docs/getting-started/why-effect/">Why Effect</a> · <a href="https://effect.website/docs/getting-started/creating-effects/">Creating Effects</a> · <a href="https://www.tweag.io/blog/2024-11-07-typescript-effect/">Tweag</a></p>
+  </footer>
+</div>
+
+<script>
+  document.querySelectorAll('#quiz .q').forEach(function(q){
+    var correct = parseInt(q.getAttribute('data-correct'), 10);
+    var opts = q.querySelectorAll('.opt');
+    var fbGood = q.querySelector('.fb.good');
+    var fbBad  = q.querySelector('.fb.bad');
+    opts.forEach(function(opt, i){
+      opt.addEventListener('click', function(){
+        opts.forEach(function(o){ o.classList.remove('correct','wrong','picked'); });
+        fbGood.classList.remove('show'); fbBad.classList.remove('show');
+        opt.classList.add('picked');
+        opts[correct].classList.add('correct');
+        if(i === correct){ fbGood.classList.add('show'); }
+        else { opt.classList.add('wrong'); fbBad.classList.add('show'); }
+      });
+    });
+  });
+</script>
+</body>
+</html>
