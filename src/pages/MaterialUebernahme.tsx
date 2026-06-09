@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Search, X, ChevronDown, ChevronRight, ArrowLeft, Check, AlertCircle, Plus, Trash2 } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import { Loader2, Search, X, ChevronDown, ChevronRight, Check, AlertCircle, Plus, Trash2, LayoutDashboard, LogOut } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -77,7 +77,7 @@ function groupRowsByStation(
 export default function MaterialUebernahme() {
 	const { festivalId: routeFestivalId } = useParams<{ festivalId: string }>();
 	const navigate = useNavigate();
-	const { user, loading: authLoading } = useAuth();
+	const { user, loading: authLoading, signOut } = useAuth();
 	const isMobile = useIsMobile();
 
 	const festivalsQuery = useQuery({
@@ -293,11 +293,57 @@ export default function MaterialUebernahme() {
 		else navigate('/dashboard');
 	};
 
+	const handleSignOut = async () => {
+		await signOut();
+		navigate('/');
+	};
+
+	const pageHeader = (
+		<PageHeader
+			title="Material-Übernahme"
+			onBack={handleBack}
+			actions={
+				<>
+					<Button
+						size="sm"
+						className="gap-1"
+						disabled={!targetId || targetStationsQuery.isLoading}
+						onClick={() => setCreateDialogOpen(true)}
+					>
+						<Plus className="h-4 w-4" />
+						Neue Position
+					</Button>
+					<Button variant="outline" size="sm" onClick={handleSignOut}>
+						Abmelden
+					</Button>
+				</>
+			}
+			menuItems={[
+				{
+					label: 'Neue Position',
+					icon: <Plus className="h-4 w-4" />,
+					onClick: () => setCreateDialogOpen(true),
+					disabled: !targetId || targetStationsQuery.isLoading
+				},
+				{
+					label: 'Dashboard',
+					icon: <LayoutDashboard className="h-4 w-4" />,
+					onClick: () => navigate('/dashboard')
+				},
+				{
+					label: 'Abmelden',
+					icon: <LogOut className="h-4 w-4" />,
+					onClick: handleSignOut
+				}
+			]}
+		/>
+	);
+
 	if (authLoading) {
 		return (
 			<div className="min-h-screen bg-background">
-				<Navigation />
-				<div className="pt-20 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+				{pageHeader}
+				<div className="pt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
 					<Loader2 className="h-4 w-4 animate-spin" />
 					Lade…
 				</div>
@@ -309,27 +355,8 @@ export default function MaterialUebernahme() {
 
 	return (
 		<div className="min-h-screen bg-background">
-			<Navigation />
-			<div className="pt-16 sm:pt-20 px-3 sm:px-6 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-6 max-w-[1400px] mx-auto">
-				<div className="flex items-center gap-2 mb-4">
-					<Button variant="ghost" size="sm" onClick={handleBack} className="gap-1 px-2">
-						<ArrowLeft className="h-4 w-4" />
-						Zurück
-					</Button>
-					<h1 className="text-lg sm:text-xl font-semibold">Material-Übernahme</h1>
-					<div className="ml-auto">
-						<Button
-							size="sm"
-							className="gap-1"
-							disabled={!targetId || targetStationsQuery.isLoading}
-							onClick={() => setCreateDialogOpen(true)}
-						>
-							<Plus className="h-4 w-4" />
-							<span className="hidden sm:inline">Neue Position</span>
-						</Button>
-					</div>
-				</div>
-
+			{pageHeader}
+			<div className="pt-4 px-3 sm:px-6 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-6 max-w-[1400px] mx-auto">
 				{festivalsQuery.isLoading ? (
 					<div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
 						<Loader2 className="h-4 w-4 animate-spin" />
@@ -380,7 +407,7 @@ export default function MaterialUebernahme() {
 						</div>
 
 						{/* Filter bar sticky */}
-						<div className="sticky top-14 sm:top-16 z-20 bg-background/95 backdrop-blur-sm border-b py-2 -mx-3 sm:-mx-6 px-3 sm:px-6">
+						<div className="sticky top-[53px] z-20 bg-background/95 backdrop-blur-sm border-b py-2 -mx-3 sm:-mx-6 px-3 sm:px-6">
 							<div className="flex flex-wrap items-center gap-2">
 								<div className="relative flex-1 min-w-[180px]">
 									<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />

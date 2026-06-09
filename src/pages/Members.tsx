@@ -15,8 +15,7 @@ import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
-	DialogTitle,
-	DialogTrigger
+	DialogTitle
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,16 +28,19 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import {
-	Users,
 	UserPlus,
 	Search,
 	Edit,
 	Trash2,
 	Phone,
-	Mail
+	Mail,
+	LayoutDashboard,
+	LogOut
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import Navigation from '@/components/Navigation';
+import { useAuth } from '@/components/AuthProvider';
+import PageHeader from '@/components/PageHeader';
 import {
 	getMembers,
 	createMember,
@@ -49,6 +51,13 @@ import {
 
 const Members = () => {
 	const { toast } = useToast();
+	const navigate = useNavigate();
+	const { signOut } = useAuth();
+
+	const handleSignOut = async () => {
+		await signOut();
+		navigate('/');
+	};
 
 	const [members, setMembers] = useState<Member[]>([]);
 	const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
@@ -200,15 +209,54 @@ const Members = () => {
 	};
 
 
+	const openAddMember = () => {
+		resetForm();
+		setShowAddMember(true);
+	};
+
+	const pageHeader = (
+		<PageHeader
+			title="Mitgliederverwaltung"
+			subtitle="Vereinsmitglieder für alle Feste"
+			onBack={() => navigate('/dashboard')}
+			actions={
+				<>
+					<Button size="sm" onClick={openAddMember} className="gap-2">
+						<UserPlus className="h-4 w-4" />
+						Mitglied hinzufügen
+					</Button>
+					<Button variant="outline" size="sm" onClick={handleSignOut}>
+						Abmelden
+					</Button>
+				</>
+			}
+			menuItems={[
+				{
+					label: 'Mitglied hinzufügen',
+					icon: <UserPlus className="h-4 w-4" />,
+					onClick: openAddMember
+				},
+				{
+					label: 'Dashboard',
+					icon: <LayoutDashboard className="h-4 w-4" />,
+					onClick: () => navigate('/dashboard')
+				},
+				{
+					label: 'Abmelden',
+					icon: <LogOut className="h-4 w-4" />,
+					onClick: handleSignOut
+				}
+			]}
+		/>
+	);
+
 	if (loading) {
 		return (
 			<div className="min-h-screen bg-background">
-				<Navigation />
-				<div className="pt-16">
-					<div className="container mx-auto px-4 py-8">
-						<div className="flex items-center justify-center">
-							<div className="text-lg">Lade Mitglieder...</div>
-						</div>
+				{pageHeader}
+				<div className="container mx-auto px-4 py-8">
+					<div className="flex items-center justify-center">
+						<div className="text-lg">Lade Mitglieder...</div>
 					</div>
 				</div>
 			</div>
@@ -217,28 +265,11 @@ const Members = () => {
 
 	return (
 		<div className="min-h-screen bg-background">
-			<Navigation />
-			<div className="pt-16">
-				<div className="container mx-auto px-4 py-8">
-					<div className="flex items-center justify-between mb-8">
-						<div>
-							<h1 className="text-3xl font-bold flex items-center gap-2">
-								<Users className="h-8 w-8" />
-								Mitgliederverwaltung
-							</h1>
-							<p className="text-muted-foreground mt-2">
-								Verwalten Sie Ihre Vereinsmitglieder für alle Feste
-							</p>
-						</div>
-						<div className="flex gap-2">
-							<Dialog open={showAddMember} onOpenChange={setShowAddMember}>
-								<DialogTrigger asChild>
-									<Button onClick={() => resetForm()}>
-										<UserPlus className="h-4 w-4 mr-2" />
-										Mitglied hinzufügen
-									</Button>
-								</DialogTrigger>
-								<DialogContent className="max-w-2xl">
+			{pageHeader}
+			<div>
+				<div className="container mx-auto px-4 py-6">
+					<Dialog open={showAddMember} onOpenChange={setShowAddMember}>
+						<DialogContent className="max-w-2xl">
 									<DialogHeader>
 										<DialogTitle>
 											{editingMember ? 'Mitglied bearbeiten' : 'Neues Mitglied hinzufügen'}
@@ -329,10 +360,8 @@ const Members = () => {
 											</Button>
 										</div>
 									</div>
-								</DialogContent>
-							</Dialog>
-						</div>
-					</div>
+						</DialogContent>
+					</Dialog>
 
 					{/* Filters */}
 					<Card className="mb-6">

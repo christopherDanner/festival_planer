@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import Navigation from '@/components/Navigation';
+import PageHeader from '@/components/PageHeader';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
 import ScheduleView from '@/components/schedule/ScheduleView';
@@ -10,9 +10,10 @@ import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
 import FestivalTabBar, { isFestivalTab, type FestivalTab } from '@/components/festival/FestivalTabBar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Package, ArrowLeft, CalendarClock, Pencil, LayoutDashboard, HandCoins } from 'lucide-react';
+import { CalendarDays, Package, CalendarClock, Pencil, LayoutDashboard, HandCoins, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/components/AuthProvider';
 import { Festival, getFestival, updateFestival } from '@/lib/festivalService';
 
 export default function FestivalResults() {
@@ -21,6 +22,12 @@ export default function FestivalResults() {
 	const location = useLocation();
 	const { toast } = useToast();
 	const isMobile = useIsMobile();
+	const { signOut } = useAuth();
+
+	const handleSignOut = async () => {
+		await signOut();
+		navigate('/');
+	};
 
 	const [festival, setFestival] = useState<Festival | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -118,36 +125,50 @@ export default function FestivalResults() {
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
-			<Navigation />
-			<div className="pt-16">
+			<PageHeader
+				title={festival.name || 'Fest'}
+				subtitle={subtitleString}
+				onBack={() => navigate('/dashboard')}
+				actions={
+					<>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-8 w-8"
+							aria-label="Fest bearbeiten"
+							onClick={() => setEditDialogOpen(true)}>
+							<Pencil className="h-4 w-4" />
+						</Button>
+						<Button variant="outline" size="sm" onClick={handleSignOut}>
+							Abmelden
+						</Button>
+					</>
+				}
+				menuItems={[
+					{
+						label: 'Fest bearbeiten',
+						icon: <Pencil className="h-4 w-4" />,
+						onClick: () => setEditDialogOpen(true)
+					},
+					{
+						label: 'Dashboard',
+						icon: <LayoutDashboard className="h-4 w-4" />,
+						onClick: () => navigate('/dashboard')
+					},
+					{
+						label: 'Abmelden',
+						icon: <LogOut className="h-4 w-4" />,
+						onClick: handleSignOut
+					}
+				]}
+			/>
+			<div>
 				<Tabs
 					value={activeTab}
 					onValueChange={(v) => handleTabChange(v as FestivalTab)}
 					className="w-full flex flex-col">
-					{/* Header + desktop tabs */}
-					<div className="px-3 sm:px-6 pt-3 sm:pt-8">
-						<div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 shrink-0"
-								onClick={() => navigate('/dashboard')}>
-								<ArrowLeft className="h-4 w-4" />
-							</Button>
-							<div className="min-w-0">
-								<h1 className="text-base sm:text-3xl font-bold truncate">{festival.name}</h1>
-								<p className="text-xs sm:text-sm text-muted-foreground">{subtitleString}</p>
-							</div>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 shrink-0"
-								onClick={() => setEditDialogOpen(true)}>
-								<Pencil className="h-4 w-4" />
-							</Button>
-						</div>
-
-						{/* Desktop: tabs at top */}
+					{/* Desktop: tabs at top */}
+					<div className="px-3 sm:px-6 pt-3 sm:pt-4">
 						{!isMobile && (
 							<TabsList className="w-auto mb-4">
 								<TabsTrigger value="overview" className="gap-2">

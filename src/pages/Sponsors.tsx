@@ -14,14 +14,15 @@ import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
-	DialogTitle,
-	DialogTrigger
+	DialogTitle
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, Plus, Search, Edit, Trash2, Phone, Mail, Globe } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Phone, Mail, Globe, LayoutDashboard, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import Navigation from '@/components/Navigation';
+import { useAuth } from '@/components/AuthProvider';
+import PageHeader from '@/components/PageHeader';
 import {
 	getSponsors,
 	createSponsor,
@@ -43,6 +44,13 @@ const emptyForm = {
 
 const Sponsors = () => {
 	const { toast } = useToast();
+	const navigate = useNavigate();
+	const { signOut } = useAuth();
+
+	const handleSignOut = async () => {
+		await signOut();
+		navigate('/');
+	};
 
 	const [sponsors, setSponsors] = useState<Sponsor[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -139,15 +147,54 @@ const Sponsors = () => {
 		setShowDialog(true);
 	};
 
+	const openAddSponsor = () => {
+		resetForm();
+		setShowDialog(true);
+	};
+
+	const pageHeader = (
+		<PageHeader
+			title="Sponsoren"
+			subtitle="Globale Sponsoren-Stammdaten für alle Feste"
+			onBack={() => navigate('/dashboard')}
+			actions={
+				<>
+					<Button size="sm" onClick={openAddSponsor} className="gap-2">
+						<Plus className="h-4 w-4" />
+						Sponsor hinzufügen
+					</Button>
+					<Button variant="outline" size="sm" onClick={handleSignOut}>
+						Abmelden
+					</Button>
+				</>
+			}
+			menuItems={[
+				{
+					label: 'Sponsor hinzufügen',
+					icon: <Plus className="h-4 w-4" />,
+					onClick: openAddSponsor
+				},
+				{
+					label: 'Dashboard',
+					icon: <LayoutDashboard className="h-4 w-4" />,
+					onClick: () => navigate('/dashboard')
+				},
+				{
+					label: 'Abmelden',
+					icon: <LogOut className="h-4 w-4" />,
+					onClick: handleSignOut
+				}
+			]}
+		/>
+	);
+
 	if (loading) {
 		return (
 			<div className="min-h-screen bg-background">
-				<Navigation />
-				<div className="pt-16">
-					<div className="container mx-auto px-4 py-8">
-						<div className="flex items-center justify-center">
-							<div className="text-lg">Lade Sponsoren...</div>
-						</div>
+				{pageHeader}
+				<div className="container mx-auto px-4 py-8">
+					<div className="flex items-center justify-center">
+						<div className="text-lg">Lade Sponsoren...</div>
 					</div>
 				</div>
 			</div>
@@ -156,28 +203,11 @@ const Sponsors = () => {
 
 	return (
 		<div className="min-h-screen bg-background">
-			<Navigation />
-			<div className="pt-16">
-				<div className="container mx-auto px-4 py-8">
-					<div className="flex items-center justify-between mb-8">
-						<div>
-							<h1 className="text-3xl font-bold flex items-center gap-2">
-								<Building2 className="h-8 w-8" />
-								Sponsoren
-							</h1>
-							<p className="text-muted-foreground mt-2">
-								Globale Sponsoren-Stammdaten für alle Feste
-							</p>
-						</div>
-						<div className="flex gap-2">
-							<Dialog open={showDialog} onOpenChange={setShowDialog}>
-								<DialogTrigger asChild>
-									<Button onClick={() => resetForm()}>
-										<Plus className="h-4 w-4 mr-2" />
-										Sponsor hinzufügen
-									</Button>
-								</DialogTrigger>
-								<DialogContent className="max-w-2xl">
+			{pageHeader}
+			<div>
+				<div className="container mx-auto px-4 py-6">
+					<Dialog open={showDialog} onOpenChange={setShowDialog}>
+						<DialogContent className="max-w-2xl">
 									<DialogHeader>
 										<DialogTitle>
 											{editingSponsor ? 'Sponsor bearbeiten' : 'Neuen Sponsor hinzufügen'}
@@ -281,10 +311,8 @@ const Sponsors = () => {
 											</Button>
 										</div>
 									</div>
-								</DialogContent>
-							</Dialog>
-						</div>
-					</div>
+						</DialogContent>
+					</Dialog>
 
 					{/* Filters */}
 					<Card className="mb-6">
