@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +37,6 @@ import {
 	Phone,
 	Mail
 } from 'lucide-react';
-import { useAuth } from '@/components/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import Navigation from '@/components/Navigation';
 import {
@@ -50,8 +48,6 @@ import {
 } from '@/lib/memberService';
 
 const Members = () => {
-	const { user } = useAuth();
-	const navigate = useNavigate();
 	const { toast } = useToast();
 
 	const [members, setMembers] = useState<Member[]>([]);
@@ -73,12 +69,8 @@ const Members = () => {
 	});
 
 	useEffect(() => {
-		if (!user) {
-			navigate('/auth');
-			return;
-		}
 		loadMembers();
-	}, [user, navigate]);
+	}, []);
 
 	useEffect(() => {
 		filterMembers();

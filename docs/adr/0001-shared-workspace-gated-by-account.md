@@ -15,6 +15,9 @@ Gewünscht: echter Login-Gate, Zugang nur für bestimmte Leute. Beim Durchsprech
    - SELECT / INSERT / UPDATE: jeder authentifizierte Benutzer.
    - DELETE: nur Ersteller (`user_id = auth.uid()`).
    - INSERT setzt `user_id = auth.uid()` (nur noch Ersteller-Nachweis fürs Löschen, kein Sichtbarkeits-Marker).
+1a. **Kind-Tabellen-DELETE — Variante (a) (Issue #21).** Kindtabellen haben kein eigenes `user_id`, sie hängen über `festival_id` am Fest. DELETE auf einer Kindtabelle ist nur erlaubt, wenn der aktuelle Benutzer **Ersteller des zugehörigen Fests** ist: `festival_id IN (SELECT id FROM festivals WHERE user_id = auth.uid())`. Bewusst in Kauf genommene Inkonsistenz: ein Kollaborator darf eine Kind-Position *bearbeiten*, aber nicht *löschen*. Begründung: Löschen ist durchgängig — Fest wie Kind — eine Ersteller-Operation; der Löschschutz soll überall beim Ersteller liegen. Variante (b) (Kind-DELETE für alle Eingeloggten) wäre konsistenter mit UPDATE, schwächt aber genau diesen Schutz auf und wurde daher verworfen.
+
+   Betroffene Kindtabellen (festival_id-basiert, von der Migration abgedeckt): `stations`, `station_shifts`, `station_members`, `shift_assignments`, `station_shift_assignments`, `festival_member_preferences`, `festival_materials`, `schedule_days`, `schedule_phases`, `schedule_entries`, `magic_links`, `member_preferences`. `members` trägt ein eigenes `user_id` und wird wie `festivals` behandelt (DELETE = Ersteller).
 2. **Auth per E-Mail + Passwort** (Supabase Auth).
 3. **Selbstregistrierung deaktiviert.** Konten werden manuell im Supabase-Dashboard angelegt. Das ist der Gatekeeper für "nur bestimmte Leute".
 4. **Auto-Login-Backdoor entfernt.** Hartkodierte Zugangsdaten raus; `signUp`/„Registrieren"-Tab entfernt; Routen außer `/auth` erfordern Authentifizierung.
@@ -24,7 +27,7 @@ Gewünscht: echter Login-Gate, Zugang nur für bestimmte Leute. Beim Durchsprech
 - RLS muss auf **allen** Tabellen umgeschrieben werden, nicht nur `festivals` — Kindtabellen (materials, stations, magic_links, member_preferences, …) prüften bisher den Fest-Eigentümer und würden sonst geteilte Daten verbergen.
 - Kein Pro-Benutzer-Datenschutz: jeder eingeloggte Benutzer sieht alles. Akzeptabel für kleine, vertraute Gruppe; bei Wachstum neu bewerten.
 - Magic-Link-Flow für *Mitglieder* (tokenbasiert, ohne Login) bleibt öffentlich und unberührt — er hängt nicht an Benutzer-Auth.
-- **Offen / Sicherheit:** Die im Git-Verlauf offengelegten Zugangsdaten des Alt-Accounts müssen rotiert werden (Passwort ändern), Entfernen aus dem Code genügt nicht.
+- **Offen / Sicherheit (Issue #22, manuell):** Die im Git-Verlauf offengelegten Zugangsdaten des Alt-Accounts `chr.danner1994@gmail.com` müssen im Supabase-Dashboard rotiert werden (Passwort ändern). Das Entfernen aus dem Code (siehe Punkt 4) un-leakt den Git-Verlauf **nicht**. Diese Aktion ist nicht automatisierbar und bleibt offen, bis sie im Dashboard erledigt ist.
 - Begriffe *Benutzer* vs. *Mitglied* sind in CONTEXT.md geschärft.
 
 ## Verworfene Alternativen

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
@@ -18,7 +17,6 @@ export default function FestivalResults() {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const { user } = useAuth();
 	const { toast } = useToast();
 	const isMobile = useIsMobile();
 
@@ -29,18 +27,13 @@ export default function FestivalResults() {
 	const festivalId = searchParams.get('id') || location.state?.festivalId;
 
 	useEffect(() => {
-		if (!user) {
-			navigate('/auth');
-			return;
-		}
-
 		if (!festivalId) {
 			navigate('/dashboard');
 			return;
 		}
 
 		loadFestivalData();
-	}, [user, festivalId, navigate]);
+	}, [festivalId, navigate]);
 
 	const loadFestivalData = async () => {
 		if (!festivalId) return;
@@ -86,10 +79,6 @@ export default function FestivalResults() {
 			});
 		}
 	};
-
-	if (!user) {
-		return null;
-	}
 
 	if (loading) {
 		return (

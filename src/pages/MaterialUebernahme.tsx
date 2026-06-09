@@ -302,11 +302,6 @@ export default function MaterialUebernahme() {
 		);
 	}
 
-	if (!user) {
-		navigate('/auth');
-		return null;
-	}
-
 	const materialsLoading = targetMaterialsQuery.isLoading || sourceMaterialsQuery.isLoading;
 
 	return (
