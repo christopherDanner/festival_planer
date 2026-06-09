@@ -6,7 +6,6 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -28,15 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check for existing session, auto-login if none
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        await supabase.auth.signInWithPassword({
-          email: 'chr.danner1994@gmail.com',
-          password: 'ecidArc7',
-        });
-        return; // onAuthStateChange will handle the state update
-      }
+    // Check for an existing session. No auto-login: unauthenticated users
+    // are sent to /auth by the route protection.
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -53,19 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
-      }
-    });
-    return { error };
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -74,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     signIn,
-    signUp,
     signOut,
     loading,
   };

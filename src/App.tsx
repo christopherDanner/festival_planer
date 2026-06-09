@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/components/AuthProvider';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
@@ -25,10 +26,10 @@ const App = () => (
 					<Routes>
 						<Route path="/" element={<Navigate to="/dashboard" replace />} />
 						<Route path="/auth" element={<Auth />} />
-						<Route path="/dashboard" element={<Dashboard />} />
-						<Route path="/members" element={<Members />} />
-						<Route path="/festival-results" element={<FestivalResults />} />
-						<Route path="/festivals/:festivalId/material-uebernahme" element={<MaterialUebernahme />} />
+						<Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+						<Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+						<Route path="/festival-results" element={<ProtectedRoute><FestivalResults /></ProtectedRoute>} />
+						<Route path="/festivals/:festivalId/material-uebernahme" element={<ProtectedRoute><MaterialUebernahme /></ProtectedRoute>} />
 						{/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 						<Route path="*" element={<NotFound />} />
 					</Routes>

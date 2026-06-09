@@ -45,12 +45,8 @@ export default function Dashboard() {
 	}, [toast]);
 
 	useEffect(() => {
-		if (!user) {
-			navigate('/auth');
-			return;
-		}
 		loadFestivals();
-	}, [user, navigate, loadFestivals]);
+	}, [loadFestivals]);
 
 	const handleFestivalCreated = () => {
 		setShowWizard(false);
