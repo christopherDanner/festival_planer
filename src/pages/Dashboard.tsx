@@ -18,7 +18,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Trash2, Calendar, MapPin, Plus, Users, ArrowRight, PartyPopper } from 'lucide-react';
+import { Trash2, Calendar, MapPin, Plus, Users, ArrowRight, PartyPopper, Building2 } from 'lucide-react';
 
 export default function Dashboard() {
 	const [showWizard, setShowWizard] = useState(false);
@@ -206,6 +206,10 @@ export default function Dashboard() {
 								<Button onClick={() => navigate('/members')} variant="outline" className="gap-2">
 									<Users className="h-4 w-4" />
 									Mitglieder
+								</Button>
+								<Button onClick={() => navigate('/sponsors')} variant="outline" className="gap-2">
+									<Building2 className="h-4 w-4" />
+									Sponsoren
 								</Button>
 							</div>
 						</div>

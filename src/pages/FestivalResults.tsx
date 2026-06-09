@@ -4,11 +4,12 @@ import Navigation from '@/components/Navigation';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
 import ScheduleView from '@/components/schedule/ScheduleView';
+import SponsoringView from '@/components/sponsoring/SponsoringView';
 import FestivalOverviewView from '@/components/festival-overview/FestivalOverviewView';
 import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Package, ArrowLeft, CalendarClock, Pencil, LayoutDashboard } from 'lucide-react';
+import { CalendarDays, Package, ArrowLeft, CalendarClock, Pencil, LayoutDashboard, HandCoins } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { Festival, getFestival, updateFestival } from '@/lib/festivalService';
@@ -148,6 +149,10 @@ export default function FestivalResults() {
 									<CalendarClock className="h-4 w-4" />
 									Ablaufplan
 								</TabsTrigger>
+								<TabsTrigger value="sponsoring" className="gap-2">
+									<HandCoins className="h-4 w-4" />
+									Sponsoring
+								</TabsTrigger>
 							</TabsList>
 						)}
 					</div>
@@ -179,6 +184,9 @@ export default function FestivalResults() {
 								festivalEndDate={festival.end_date}
 							/>
 						</TabsContent>
+						<TabsContent value="sponsoring" className={isMobile ? 'mt-0' : 'mt-0'}>
+							<SponsoringView festivalId={festivalId} />
+						</TabsContent>
 					</div>
 
 					{/* Mobile: bottom tab bar */}
@@ -208,6 +216,12 @@ export default function FestivalResults() {
 									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
 									<CalendarClock className="h-5 w-5" />
 									Ablaufplan
+								</TabsTrigger>
+								<TabsTrigger
+									value="sponsoring"
+									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
+									<HandCoins className="h-5 w-5" />
+									Sponsoring
 								</TabsTrigger>
 							</TabsList>
 						</div>
