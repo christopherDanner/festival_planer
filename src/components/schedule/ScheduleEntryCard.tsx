@@ -36,9 +36,31 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 		: 'border-l-4 border-l-violet-500';
 
 	if (isMobile) {
+		const canMove = !(isFirst && isLast);
 		return (
 			<div className={`rounded-lg border bg-card p-2 ${borderClass}`}>
-				<div className="flex items-start justify-between gap-2">
+				<div className="flex items-start gap-1.5">
+					{/* Move buttons */}
+					{canMove && (
+						<div className="flex flex-col shrink-0 -ml-1">
+							<Button
+								variant="ghost"
+								size="icon"
+								className={`h-6 w-6 ${isFirst ? 'invisible' : ''}`}
+								onClick={onMoveUp}
+							>
+								<ChevronUp className="h-3.5 w-3.5" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								className={`h-6 w-6 ${isLast ? 'invisible' : ''}`}
+								onClick={onMoveDown}
+							>
+								<ChevronDown className="h-3.5 w-3.5" />
+							</Button>
+						</div>
+					)}
 					<div className="flex-1 min-w-0">
 						<div className="flex items-center gap-1.5 mb-0.5">
 							{entry.type === 'task' ? (
@@ -61,25 +83,33 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 						<div className={`text-sm font-medium ${isDone ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
 							{entry.title}
 						</div>
+						{entry.responsible_member && (
+							<div className="text-[11px] text-muted-foreground mt-0.5">
+								{entry.responsible_member.last_name} {entry.responsible_member.first_name}
+							</div>
+						)}
 					</div>
-					<div className="flex items-center gap-0.5 shrink-0">
+					<div className="flex items-center gap-1 shrink-0">
 						{entry.type === 'task' && (
 							<Checkbox
 								checked={isDone}
 								onCheckedChange={() => onToggleStatus(entry)}
-								className="h-4 w-4"
+								className="h-5 w-5 mr-0.5"
 							/>
 						)}
-						<Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(entry)}>
-							<Pencil className="h-3 w-3" />
+						<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(entry)}>
+							<Pencil className="h-3.5 w-3.5" />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-7 w-7 text-destructive/70 hover:text-destructive"
+							onClick={() => onDelete(entry.id)}
+						>
+							<Trash2 className="h-3.5 w-3.5" />
 						</Button>
 					</div>
 				</div>
-				{entry.responsible_member && (
-					<div className="text-[11px] text-muted-foreground mt-0.5">
-						{entry.responsible_member.last_name} {entry.responsible_member.first_name}
-					</div>
-				)}
 			</div>
 		);
 	}

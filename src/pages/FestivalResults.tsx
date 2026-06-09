@@ -7,6 +7,7 @@ import ScheduleView from '@/components/schedule/ScheduleView';
 import SponsoringView from '@/components/sponsoring/SponsoringView';
 import FestivalOverviewView from '@/components/festival-overview/FestivalOverviewView';
 import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
+import FestivalTabBar, { isFestivalTab, type FestivalTab } from '@/components/festival/FestivalTabBar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, Package, ArrowLeft, CalendarClock, Pencil, LayoutDashboard, HandCoins } from 'lucide-react';
@@ -15,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Festival, getFestival, updateFestival } from '@/lib/festivalService';
 
 export default function FestivalResults() {
-	const [searchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { toast } = useToast();
@@ -26,6 +27,19 @@ export default function FestivalResults() {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 
 	const festivalId = searchParams.get('id') || location.state?.festivalId;
+
+	const tabParam = searchParams.get('tab');
+	const activeTab: FestivalTab = isFestivalTab(tabParam) ? tabParam : 'overview';
+	const handleTabChange = (tab: FestivalTab) => {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set('tab', tab);
+				return next;
+			},
+			{ replace: true }
+		);
+	};
 
 	useEffect(() => {
 		if (!festivalId) {
@@ -106,7 +120,10 @@ export default function FestivalResults() {
 		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
 			<Navigation />
 			<div className="pt-16">
-				<Tabs defaultValue="overview" className="w-full flex flex-col">
+				<Tabs
+					value={activeTab}
+					onValueChange={(v) => handleTabChange(v as FestivalTab)}
+					className="w-full flex flex-col">
 					{/* Header + desktop tabs */}
 					<div className="px-3 sm:px-6 pt-3 sm:pt-8">
 						<div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
@@ -158,7 +175,7 @@ export default function FestivalResults() {
 					</div>
 
 					{/* Content */}
-					<div className={isMobile ? 'px-3 pb-16' : 'px-6'}>
+					<div className={isMobile ? 'px-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))]' : 'px-6'}>
 						<TabsContent value="overview" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<FestivalOverviewView
 								festivalId={festivalId}
@@ -189,44 +206,10 @@ export default function FestivalResults() {
 						</TabsContent>
 					</div>
 
-					{/* Mobile: bottom tab bar */}
-					{isMobile && (
-						<div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
-							<TabsList className="w-full h-14 rounded-none bg-transparent p-0">
-								<TabsTrigger
-									value="overview"
-									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
-									<LayoutDashboard className="h-5 w-5" />
-									Übersicht
-								</TabsTrigger>
-								<TabsTrigger
-									value="shifts"
-									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
-									<CalendarDays className="h-5 w-5" />
-									Schichtplan
-								</TabsTrigger>
-								<TabsTrigger
-									value="materials"
-									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
-									<Package className="h-5 w-5" />
-									Materialliste
-								</TabsTrigger>
-								<TabsTrigger
-									value="schedule"
-									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
-									<CalendarClock className="h-5 w-5" />
-									Ablaufplan
-								</TabsTrigger>
-								<TabsTrigger
-									value="sponsoring"
-									className="flex-1 h-full rounded-none gap-1.5 flex-col text-[11px] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary">
-									<HandCoins className="h-5 w-5" />
-									Sponsoring
-								</TabsTrigger>
-							</TabsList>
-						</div>
-					)}
 				</Tabs>
+
+				{/* Mobile: bottom tab bar — immer sichtbar innerhalb des Festes */}
+				{isMobile && <FestivalTabBar active={activeTab} onSelect={handleTabChange} />}
 			</div>
 
 			<FestivalEditDialog

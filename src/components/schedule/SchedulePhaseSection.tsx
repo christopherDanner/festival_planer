@@ -47,13 +47,13 @@ const SchedulePhaseSection = ({
 				<div className="hidden sm:block absolute -left-[calc(1rem+5.5px)] sm:-left-[calc(1.25rem+5.5px)] w-3 h-3 rounded-full bg-primary/30 border-2 border-background" />
 
 				{/* Phase banner */}
-				<div className="flex-1 flex items-center justify-between rounded-lg bg-muted/80 border border-border/50 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
-					<div className="flex items-center gap-2.5">
-						<span className="font-bold text-xs sm:text-sm text-foreground uppercase tracking-wide">{phase.name}</span>
+				<div className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-lg bg-muted/80 border border-border/50 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
+					<div className="flex items-center gap-2.5 min-w-0">
+						<span className="font-bold text-xs sm:text-sm text-foreground uppercase tracking-wide truncate">{phase.name}</span>
 						{hasProgress && (
 							<Badge
 								variant="outline"
-								className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 font-semibold"
+								className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 font-semibold shrink-0 whitespace-nowrap"
 							>
 								{doneTasks.length}/{tasks.length} erledigt
 							</Badge>
@@ -64,7 +64,7 @@ const SchedulePhaseSection = ({
 					</div>
 
 					{/* Action buttons */}
-					<div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+					<div className="flex items-center gap-0.5 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
 						<Button
 							variant="ghost"
 							size="icon"
