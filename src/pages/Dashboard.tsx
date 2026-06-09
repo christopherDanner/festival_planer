@@ -185,7 +185,7 @@ export default function Dashboard() {
 	return (
 		<div className="min-h-screen bg-background">
 			<Navigation />
-			<div className="pt-16">
+			<div className="pt-12 sm:pt-14">
 				{/* Header */}
 				<div className="bg-background border-b">
 					<div className="px-4 sm:px-6 py-6 sm:py-8">
