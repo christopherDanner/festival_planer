@@ -144,7 +144,7 @@ const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId, festivalNam
 		<div className="space-y-8">
 			<SponsoringsSection festivalId={festivalId} festivalName={festivalName} />
 
-			<div className="flex items-center justify-between">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
 						<HandCoins className="h-5 w-5" />
@@ -154,13 +154,50 @@ const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId, festivalNam
 						Sponsoring-Leistungen für dieses Fest (Name + Wert)
 					</p>
 				</div>
-				<Button onClick={openCreate} size="sm">
+				<Button onClick={openCreate} size="sm" className="self-start sm:self-auto">
 					<Plus className="h-4 w-4 mr-2" />
 					<span>Kategorie</span>
 				</Button>
 			</div>
 
-			<div className="rounded-lg border bg-card">
+			{/* Mobile: Karten-Liste */}
+			<div className="md:hidden space-y-2">
+				{categories.length === 0 ? (
+					<div className="rounded-lg border bg-card py-8 text-center text-sm text-muted-foreground">
+						Noch keine Sponsoring-Kategorien
+					</div>
+				) : (
+					categories.map((category) => (
+						<div
+							key={category.id}
+							className="rounded-lg border bg-card p-3 flex items-center justify-between gap-2">
+							<div className="flex-1 min-w-0">
+								<div className="font-medium truncate">{category.name}</div>
+								<div className="text-sm text-muted-foreground">{formatValue(category.value)}</div>
+							</div>
+							<div className="flex items-center gap-1 shrink-0">
+								<Button
+									size="icon"
+									variant="ghost"
+									className="h-8 w-8"
+									onClick={() => openEdit(category)}>
+									<Edit className="h-4 w-4" />
+								</Button>
+								<Button
+									size="icon"
+									variant="ghost"
+									className="h-8 w-8 text-destructive/70 hover:text-destructive"
+									onClick={() => handleDelete(category)}>
+									<Trash2 className="h-4 w-4" />
+								</Button>
+							</div>
+						</div>
+					))
+				)}
+			</div>
+
+			{/* Desktop: Tabelle */}
+			<div className="hidden md:block rounded-lg border bg-card">
 				<Table>
 					<TableHeader>
 						<TableRow>

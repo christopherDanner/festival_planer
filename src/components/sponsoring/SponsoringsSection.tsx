@@ -234,7 +234,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 
 	return (
 		<div className="space-y-4">
-			<div className="flex items-center justify-between">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
 						<Building2 className="h-5 w-5" />
@@ -244,7 +244,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 						Erfasste Sponsoren mit Leistungen und Gesamtsumme
 					</p>
 				</div>
-				<div className="flex gap-2">
+				<div className="flex flex-wrap gap-2">
 					<Button onClick={() => setShowTransferDialog(true)} size="sm" variant="outline">
 						<Import className="h-4 w-4 mr-2" />
 						<span>Übernahme</span>
@@ -264,7 +264,65 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				</div>
 			</div>
 
-			<div className="rounded-lg border bg-card">
+			{/* Mobile: Karten-Liste */}
+			<div className="md:hidden space-y-2">
+				{rows.length === 0 ? (
+					<div className="rounded-lg border bg-card py-8 text-center text-sm text-muted-foreground">
+						Noch keine Sponsorings erfasst
+					</div>
+				) : (
+					<>
+						{rows.map((row) => {
+							const sponsoring = sponsorings.find((s) => s.id === row.sponsoringId)!;
+							return (
+								<div key={row.sponsoringId} className="rounded-lg border bg-card p-3">
+									<div className="flex items-start justify-between gap-2">
+										<div className="flex-1 min-w-0">
+											<div className="font-medium truncate">{row.companyName}</div>
+											<div className="text-sm font-semibold mt-0.5">{formatEuro(row.total)}</div>
+										</div>
+										<div className="flex items-center gap-1 shrink-0">
+											<Button
+												size="icon"
+												variant="ghost"
+												className="h-8 w-8"
+												onClick={() => openEdit(sponsoring)}>
+												<Edit className="h-4 w-4" />
+											</Button>
+											<Button
+												size="icon"
+												variant="ghost"
+												className="h-8 w-8 text-destructive/70 hover:text-destructive"
+												onClick={() => handleDelete(sponsoring)}>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										</div>
+									</div>
+									{(row.positions.length > 0 || row.freeAmount != null) && (
+										<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1.5">
+											{row.positions.map((p, i) => (
+												<span key={i}>
+													{p.label} ({formatEuro(p.value)})
+												</span>
+											))}
+											{row.freeAmount != null && (
+												<span>Freibetrag ({formatEuro(row.freeAmount)})</span>
+											)}
+										</div>
+									)}
+								</div>
+							);
+						})}
+						<div className="rounded-lg border bg-card p-3 flex items-center justify-between">
+							<span className="font-semibold text-sm">Gesamtsumme</span>
+							<span className="font-semibold">{formatEuro(total)}</span>
+						</div>
+					</>
+				)}
+			</div>
+
+			{/* Desktop: Tabelle */}
+			<div className="hidden md:block rounded-lg border bg-card">
 				<Table>
 					<TableHeader>
 						<TableRow>

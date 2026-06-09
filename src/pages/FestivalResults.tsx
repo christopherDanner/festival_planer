@@ -158,7 +158,7 @@ export default function FestivalResults() {
 					</div>
 
 					{/* Content */}
-					<div className={isMobile ? 'px-3 pb-16' : 'px-6'}>
+					<div className={isMobile ? 'px-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))]' : 'px-6'}>
 						<TabsContent value="overview" className={isMobile ? 'mt-0' : 'mt-0'}>
 							<FestivalOverviewView
 								festivalId={festivalId}
@@ -191,7 +191,7 @@ export default function FestivalResults() {
 
 					{/* Mobile: bottom tab bar */}
 					{isMobile && (
-						<div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
+						<div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
 							<TabsList className="w-full h-14 rounded-none bg-transparent p-0">
 								<TabsTrigger
 									value="overview"

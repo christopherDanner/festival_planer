@@ -78,7 +78,7 @@ const ScheduleDayAccordion = ({
 							</span>
 						</div>
 					</div>
-					<div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+					<div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
 						<Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onAddPhase(day.id); }}>
 							<Plus className="h-4 w-4" />
 						</Button>
