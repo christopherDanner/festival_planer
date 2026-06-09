@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lektion 6 · Wand spachteln</title>
+<style>
+  :root{--ink:#2b2620;--paper:#faf7f2;--accent:#8a5a2b;--accent-soft:#f1e4d3;--ok:#3a7d44;--bad:#b03a2e;--line:#e6d9c8;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);line-height:1.65;}
+  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 5rem;}
+  header{border-bottom:3px double var(--accent);padding-bottom:1.2rem;margin-bottom:2rem;}
+  .kicker{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 .4rem;}
+  h1{font-size:2.1rem;margin:0 0 .3rem;line-height:1.2;}
+  .lede{font-style:italic;color:#6b6155;margin:0;}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:2.6rem 0 .8rem;border-bottom:1px solid var(--line);padding-bottom:.35rem;}
+  .box{background:var(--accent-soft);border-left:4px solid var(--accent);padding:.9rem 1.1rem;border-radius:0 6px 6px 0;margin:1.2rem 0;}
+  .box strong:first-child{display:block;margin-bottom:.25rem;}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem;}
+  th,td{border:1px solid var(--line);padding:.55rem .7rem;text-align:left;vertical-align:top;}
+  th{background:#ece0cf;font-family:'Helvetica Neue',Arial,sans-serif;font-size:.85rem;}
+  ol.steps{counter-reset:step;list-style:none;padding:0;}
+  ol.steps>li{counter-increment:step;position:relative;padding:0 0 1.3rem 3.2rem;margin:0;}
+  ol.steps>li::before{content:counter(step);position:absolute;left:0;top:.1rem;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--accent);color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  ol.steps strong{display:block;margin-bottom:.15rem;}
+  .quiz{border:1px solid var(--line);border-radius:8px;padding:1.1rem 1.2rem;margin:1.2rem 0;background:#fff;}
+  .quiz p.q{font-weight:700;margin:0 0 .6rem;}
+  .quiz button{display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .8rem;font:inherit;font-size:.95rem;background:var(--paper);border:1px solid var(--line);border-radius:6px;cursor:pointer;}
+  .quiz button:hover{border-color:var(--accent);}
+  .quiz button.right{background:#e7f2e9;border-color:var(--ok);}
+  .quiz button.wrong{background:#f9e5e2;border-color:var(--bad);}
+  .quiz .fb{font-size:.9rem;margin:.6rem 0 0;display:none;}
+  .quiz .fb.show{display:block;}
+  a{color:var(--accent);}
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.9rem;color:#6b6155;}
+  @media print{.quiz button{display:none;}body{background:#fff;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Haus-Renovierung · Lektion 6 · ca. 15 min + Praxis</p>
+  <h1>Wand spachteln</h1>
+  <p class="lede">Für deine 1–2 Problemräume: Löcher, Risse und Unebenheiten so glätten, dass nach dem Streichen nichts mehr durchschaut.</p>
+</header>
+
+<div class="box">
+  <strong>📋 Wann dieser Schritt</strong>
+  Spachteln passiert <strong>vor</strong> dem Wändestreichen (Lektion 3) und nach Tapete/Untergrundprüfung. Ergebnis: glatte, geschliffene, grundierte Wand → dann erst Farbe.
+</div>
+
+<h2>Erst diagnostizieren: was hast du vor dir?</h2>
+<table>
+  <tr><th>Schaden</th><th>Material</th><th>Besonderheit</th></tr>
+  <tr><td>Dübel-/Bohrlöcher, kleine Macken</td><td>Fertigspachtel aus der Tube/Dose</td><td>Schnell, kein Anrühren. <a href="https://www.hornbach.de/projekte/waende-glaetten-und-spachteln/">[Hornbach]</a></td></tr>
+  <tr><td>Risse</td><td>Füll-/Reparaturspachtel</td><td>Riss vorher v-förmig aufkratzen, damit Masse hält. <a href="https://toom.de/selbermachen/bauen-renovieren/wand-decke/wand-deckenarbeiten/waende-spachteln-und-glaetten/">[toom]</a></td></tr>
+  <tr><td>Große Flächen / unebene Wand</td><td>Pulver-Spachtel anrühren (z.&nbsp;B. Knauf Uniflott)</td><td>Günstiger pro m², in Lagen auftragen. <a href="https://www.obi.de/magazin/bauen/wand/decke-und-waende-spachteln">[OBI]</a></td></tr>
+</table>
+
+<h2>Werkzeug</h2>
+<ul>
+  <li><strong>Glättkelle / Flächenspachtel</strong> (breit, für die Fläche) + kleiner Spachtel (für Löcher).</li>
+  <li><strong>Spachtelmasse</strong> passend zum Schaden (siehe oben).</li>
+  <li><strong>Schleifpapier/-gitter K120</strong> + Schleifbrett (oder Handschleifer), für große Flächen Schleifgiraffe.</li>
+  <li><strong>Staubmaske + Brille</strong> — Schleifstaub ist fies und fein.</li>
+  <li><strong>Tiefengrund</strong> (kennst du aus Lektion 2) — Spachtelstellen saugen stark, müssen vor dem Streichen grundiert werden.</li>
+</ul>
+
+<h2>Ablauf</h2>
+<ol class="steps">
+  <li><strong>Loses entfernen + absaugen.</strong> Bröckelndes Material wegkratzen, Loch/Riss aussaugen — Spachtel hält nur auf festem, staubfreiem Grund. <a href="https://toom.de/selbermachen/bauen-renovieren/wand-decke/wand-deckenarbeiten/waende-spachteln-und-glaetten/">[toom]</a></li>
+  <li><strong>Risse v-förmig öffnen.</strong> Mit Spachtelecke/Messer den Riss leicht aufweiten — so bekommt die Masse „Grip" und reißt nicht wieder auf. <a href="https://www.metylan.de/anleitung-tapezieren/vor-dem-tapezieren/wandvorbereitung/loch-zuspachteln-oder-riss-in-der-wand-ausbessern-so-gehts.html">[metylan]</a></li>
+  <li><strong>Grob füllen.</strong> Masse mit dem Spachtel in Löcher/Risse drücken, alle Hohlräume voll. Tiefe Löcher in <strong>mehreren Lagen</strong> (jede trocknen lassen) — dicke Einzelschicht reißt/sinkt ein.</li>
+  <li><strong>Glattziehen.</strong> Mit der breiten Kelle über die Stelle, leicht über die Wandebene hinaus. Tipp: kreisende Bewegung von unten nach oben, dann glatt abziehen. <a href="https://toom.de/selbermachen/bauen-renovieren/wand-decke/wand-deckenarbeiten/waende-spachteln-und-glaetten/">[toom]</a></li>
+  <li><strong>Trocknen lassen.</strong> Geduld — nach Herstellerangabe. Zu früh schleifen = schmiert.</li>
+  <li><strong>Schleifen.</strong> Mit K120 plan schleifen, bis die Stelle bündig mit der Wand ist. Mit der flachen Hand fühlen — die Hand merkt Übergänge, die das Auge nicht sieht. Maske auf!</li>
+  <li><strong>Entstauben + grundieren.</strong> Schleifstaub abwischen/absaugen, dann <strong>Tiefengrund</strong> auf die Spachtelstellen (sie saugen stark, sonst zieht die Farbe dort fleckig auf). Erst danach streichen (Lektion 3).</li>
+</ol>
+
+<div class="box">
+  <strong>💡 Der Trick gegen sichtbare Flecken nach dem Streichen</strong>
+  Ungegrundete Spachtelstellen saugen die Farbe weg → sie wirken matt/fleckig neben dem Rest. Darum: <em>immer</em> Spachtelstellen grundieren. Bei vielen/großen Stellen lieber die ganze Wand grundieren — dann zieht alles gleichmäßig.
+</div>
+
+<h2>Selbsttest</h2>
+
+<div class="quiz" data-correct="b">
+  <p class="q">1. Bevor du einen Riss füllst, was tust du?</p>
+  <button data-k="a">Sofort Masse drüberstreichen</button>
+  <button data-k="b">Riss v-förmig aufweiten + aussaugen, damit die Masse hält</button>
+  <button data-k="c">Mit Wasser einweichen</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="c">
+  <p class="q">2. Tiefes Loch — wie füllen?</p>
+  <button data-k="a">Eine dicke Schicht, fertig</button>
+  <button data-k="b">Mit Zeitung ausstopfen</button>
+  <button data-k="c">In mehreren Lagen, jede trocknen lassen (sonst reißt/sinkt es ein)</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="a">
+  <p class="q">3. Wie prüfst du, ob die geschliffene Stelle wirklich plan ist?</p>
+  <button data-k="a">Mit der flachen Hand drüberfühlen — spürt Übergänge besser als das Auge</button>
+  <button data-k="b">Mit Wasser benetzen</button>
+  <button data-k="c">Gar nicht, Farbe gleicht aus</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="b">
+  <p class="q">4. Warum die Spachtelstellen vor dem Streichen grundieren?</p>
+  <button data-k="a">Damit sie weißer werden</button>
+  <button data-k="b">Spachtel saugt stark → ohne Grundierung zieht die Farbe dort fleckig/matt auf</button>
+  <button data-k="c">Muss man nicht, reine Zeitverschwendung</button>
+  <p class="fb"></p>
+</div>
+
+<h2>Dein Praxis-Auftrag (eine Problemstelle)</h2>
+<p>Such dir in einem der Spachtel-Räume <strong>eine Stelle</strong> (Dübelloch oder kleinen Riss): loses raus, v-förmig öffnen, in Lagen füllen, trocknen, K120 schleifen, mit der Hand fühlen, grundieren. Das ist die komplette Kette im Kleinen. Sag mir, ob die Stelle nach dem Schleifen plan ist und ob du Pulver- oder Fertigspachtel genommen hast — danach gehen wir die großen Flächen an.</p>
+
+<footer>
+  <p><strong>Fragen?</strong> z.&nbsp;B. „Risse kommen immer wieder — was tun?", „Welche Spachtelmasse im Lagerhaus?", „Ganze Wand glätten — lohnt das?". Frag mich. Nächste Etappe: <em>Parkett-Untergrund prüfen</em> (vor Kleberkauf) → dann Parkett kleben.</p>
+  <p>Quellen: <a href="https://www.hornbach.de/projekte/waende-glaetten-und-spachteln/">Hornbach: Wände glätten &amp; spachteln</a> · <a href="https://www.obi.de/magazin/bauen/wand/decke-und-waende-spachteln">OBI: Decke &amp; Wände spachteln</a> · <a href="https://toom.de/selbermachen/bauen-renovieren/wand-decke/wand-deckenarbeiten/waende-spachteln-und-glaetten/">toom: Wände spachteln &amp; glätten</a></p>
+</footer>
+
+</div>
+<script>
+  document.querySelectorAll('.quiz').forEach(q=>{
+    const correct=q.dataset.correct,fb=q.querySelector('.fb');
+    q.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        q.querySelectorAll('button').forEach(b=>b.classList.remove('right','wrong'));
+        const ok=btn.dataset.k===correct;
+        btn.classList.add(ok?'right':'wrong');
+        if(!ok)q.querySelector('button[data-k="'+correct+'"]').classList.add('right');
+        fb.textContent=ok?'✔ Richtig!':'✘ Nicht ganz — die grün markierte Antwort ist richtig.';
+        fb.style.color=ok?'var(--ok)':'var(--bad)';
+        fb.classList.add('show');
+      });
+    });
+  });
+</script>
+</body>
+</html>
