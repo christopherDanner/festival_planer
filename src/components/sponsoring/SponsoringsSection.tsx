@@ -24,7 +24,8 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Building2, FileDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, FileDown, Import } from 'lucide-react';
+import SponsorUebernahmeDialog from '@/components/sponsoring/SponsorUebernahmeDialog';
 import { useToast } from '@/hooks/use-toast';
 import {
 	getSponsors,
@@ -72,6 +73,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 	const [loading, setLoading] = useState(true);
 
 	const [showDialog, setShowDialog] = useState(false);
+	const [showTransferDialog, setShowTransferDialog] = useState(false);
 	const [editing, setEditing] = useState<SponsoringWithDetails | null>(null);
 	const [sponsorChoice, setSponsorChoice] = useState('');
 	const [newCompanyName, setNewCompanyName] = useState('');
@@ -243,6 +245,10 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 					</p>
 				</div>
 				<div className="flex gap-2">
+					<Button onClick={() => setShowTransferDialog(true)} size="sm" variant="outline">
+						<Import className="h-4 w-4 mr-2" />
+						<span>Übernahme</span>
+					</Button>
 					<Button
 						onClick={() => exportSponsoringOverviewPdf(rows, { festivalName })}
 						size="sm"
@@ -327,6 +333,15 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 					</TableBody>
 				</Table>
 			</div>
+
+			<SponsorUebernahmeDialog
+				open={showTransferDialog}
+				onOpenChange={setShowTransferDialog}
+				festivalId={festivalId}
+				targetCategories={categories}
+				targetSponsorings={sponsorings}
+				onTransferred={loadData}
+			/>
 
 			<Dialog open={showDialog} onOpenChange={setShowDialog}>
 				<DialogContent className="max-h-[90vh] overflow-y-auto">
