@@ -8,7 +8,7 @@
 
 ## Geplante Lektions-Reihenfolge (= Arbeitsreihenfolge am Haus)
 1. ✅ 0001 Tapeten entfernen
-2. Untergrund prüfen + grundieren (Adler-Tests: sandend/saugend)
+2. ✅ 0002 Untergrund prüfen + grundieren (Adler sandend/saugend) + reference/glossar.html angelegt
 3. Wände streichen (Kanten, Nass-in-nass, Reihenfolge)
 4. Parkett: Untergrund-Check (Restfeuchte, Ebenheit) — VOR Kleberkauf
 5. Parkett vollflächig kleben
@@ -16,6 +16,6 @@
 
 ## Arbeitsnotizen
 - Workspace liegt in renovierung/ im festival_planer-Repo (User-Entscheidung).
-- Env hat Turn 1 zurückgesetzt → Dateien neu angelegt auf Branch claude/installed-skills-inventory-Wlz4d.
+- WICHTIG: Env setzt lokales Working-Dir JEDEN Turn zurück. Remote-Branch ist Source of Truth. Bei Sessionstart immer: `git fetch && git reset --hard origin/claude/installed-skills-inventory-Wlz4d`, dann arbeiten, dann committen+pushen. Sonst gehen Dateien verloren.
 - Commit/Push nur auf explizite Ansage des Users.
 - Lektionen als HTML via SendUserFile direkt schicken (User arbeitet remote, Repo-Push nicht nötig zum Anschauen).

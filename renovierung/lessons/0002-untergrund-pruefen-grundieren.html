@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lektion 2 · Untergrund prüfen &amp; grundieren</title>
+<style>
+  :root{--ink:#2b2620;--paper:#faf7f2;--accent:#2d6a8f;--accent-soft:#dceaf2;--ok:#3a7d44;--bad:#b03a2e;--line:#d6dee2;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);line-height:1.65;}
+  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 5rem;}
+  header{border-bottom:3px double var(--accent);padding-bottom:1.2rem;margin-bottom:2rem;}
+  .kicker{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 .4rem;}
+  h1{font-size:2.1rem;margin:0 0 .3rem;line-height:1.2;}
+  .lede{font-style:italic;color:#6b6155;margin:0;}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:2.6rem 0 .8rem;border-bottom:1px solid var(--line);padding-bottom:.35rem;}
+  .box{background:var(--accent-soft);border-left:4px solid var(--accent);padding:.9rem 1.1rem;border-radius:0 6px 6px 0;margin:1.2rem 0;}
+  .box strong:first-child{display:block;margin-bottom:.25rem;}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem;}
+  th,td{border:1px solid var(--line);padding:.55rem .7rem;text-align:left;vertical-align:top;}
+  th{background:#e8eff3;font-family:'Helvetica Neue',Arial,sans-serif;font-size:.85rem;}
+  ol.steps{counter-reset:step;list-style:none;padding:0;}
+  ol.steps>li{counter-increment:step;position:relative;padding:0 0 1.3rem 3.2rem;margin:0;}
+  ol.steps>li::before{content:counter(step);position:absolute;left:0;top:.1rem;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--accent);color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  ol.steps strong{display:block;margin-bottom:.15rem;}
+  .test-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0;}
+  .test-card h3{margin:.1rem 0 .5rem;font-family:'Helvetica Neue',Arial,sans-serif;color:var(--accent);}
+  .quiz{border:1px solid var(--line);border-radius:8px;padding:1.1rem 1.2rem;margin:1.2rem 0;background:#fff;}
+  .quiz p.q{font-weight:700;margin:0 0 .6rem;}
+  .quiz button{display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .8rem;font:inherit;font-size:.95rem;background:var(--paper);border:1px solid var(--line);border-radius:6px;cursor:pointer;}
+  .quiz button:hover{border-color:var(--accent);}
+  .quiz button.right{background:#e7f2e9;border-color:var(--ok);}
+  .quiz button.wrong{background:#f9e5e2;border-color:var(--bad);}
+  .quiz .fb{font-size:.9rem;margin:.6rem 0 0;display:none;}
+  .quiz .fb.show{display:block;}
+  a{color:var(--accent);}
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.9rem;color:#6b6155;}
+  @media print{.quiz button{display:none;}body{background:#fff;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Haus-Renovierung · Lektion 2 · ca. 15 min + 3 Tests an der Wand</p>
+  <h1>Untergrund prüfen &amp; grundieren</h1>
+  <p class="lede">Die nackte Wand entscheidet, ob deine Farbe hält. Drei 1-Minuten-Tests sagen dir, was die Wand vorher braucht.</p>
+</header>
+
+<h2>Warum das der wichtigste unsichtbare Schritt ist</h2>
+<p>Tapete ist runter (Lektion 1) — jetzt willst du loslegen. Aber: Ein Anstrich ist nur so gut wie der Untergrund darunter. Streichst du auf eine sandende oder stark saugende Wand, blättert die Farbe ab oder zieht fleckig auf. Die gute Nachricht: Du musst kein Profi sein, du musst nur <strong>drei Tests</strong> machen und dann das richtige aus drei Reaktionen wählen. ADLER (Tiroler Farbenhersteller) nennt die Grundregel: Der Untergrund muss <strong>trocken, sauber, tragfähig</strong> und frei von Fett/Staub sein. <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">[ADLER]</a></p>
+
+<h2>Die 3 Tests (mach sie an mehreren Stellen je Wand)</h2>
+
+<div class="test-card">
+  <h3>① Wisch-Test → sandet die Wand?</h3>
+  <p>Mit der flachen Hand fest über den Putz wischen. <strong>Bleibt Sand/Staub an der Hand, lösen sich Körner?</strong> → <em>sandende Wand</em>. Der Putz bindet nicht mehr richtig. <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">[ADLER]</a></p>
+</div>
+
+<div class="test-card">
+  <h3>② Wasser-Test → saugt die Wand?</h3>
+  <p>Etwas Leitungswasser an die Wand spritzen. <strong>Saugt sie es sofort auf und wird dunkel?</strong> → <em>stark saugende Wand</em> (typisch bei altem Putz, Gipskarton, Spachtelstellen). Perlt es ab → nicht saugend, evtl. alte Dispersionsfarbe. <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">[ADLER]</a></p>
+</div>
+
+<div class="test-card">
+  <h3>③ Schadens-Check → Löcher, Risse, Dübellöcher?</h3>
+  <p>Wand mit Streiflicht (Lampe seitlich halten) absuchen. Alles, was tiefer als die Oberfläche ist, muss vor dem Grundieren gespachtelt werden.</p>
+</div>
+
+<h2>Was die Reaktion bedeutet — deine Entscheidung</h2>
+<table>
+  <tr><th>Befund</th><th>Maßnahme</th><th>Produkt (AT)</th></tr>
+  <tr><td>Sandet (Test ①)</td><td>Tiefengrund — verfestigt den Putz, bindet den Sand</td><td>z.&nbsp;B. ADLER Aviva Tiefengrund WV (wasserverdünnbar) <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">[ADLER]</a></td></tr>
+  <tr><td>Saugt stark (Test ②)</td><td>Tiefengrund — reguliert die Saugfähigkeit, Farbe zieht gleichmäßig auf</td><td>Tiefengrund, ~5 h trocknen lassen</td></tr>
+  <tr><td>Löcher/Risse (Test ③)</td><td>Spachteln, schleifen, <em>dann</em> grundieren</td><td>Fertigspachtel / Füllspachtel + Schleifpapier K120</td></tr>
+  <tr><td>Fest, nicht saugend, glatt (z.&nbsp;B. alte Dispersionsfarbe)</td><td>Anrauen/reinigen, ggf. Haftgrund — Tiefengrund bringt hier nichts</td><td>Haftgrund / Putzgrund</td></tr>
+</table>
+
+<div class="box">
+  <strong>💡 Merksatz</strong>
+  <strong>Tiefengrund</strong> geht <em>in</em> die Wand (verfestigt, reguliert Saugen). <strong>Haftgrund</strong> liegt <em>auf</em> der Wand (gibt glatten/dichten Flächen Grip). Sandend/saugend → Tiefengrund. Glatt/dicht → Haftgrund.
+</div>
+
+<h2>Ablauf in der richtigen Reihenfolge</h2>
+<ol class="steps">
+  <li><strong>Tests machen</strong> (①②③) und je Wand notieren, was rauskommt.</li>
+  <li><strong>Spachteln</strong> wo nötig: Löcher/Risse füllen, überstehenden Spachtel nach Trocknen glatt schleifen (K120), Staub abwischen. <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">[ADLER]</a></li>
+  <li><strong>Staubfrei machen.</strong> Trockener Besen/Staubsauger über die ganze Wand — Staub ist die häufigste Haftungsbremse.</li>
+  <li><strong>Grundieren.</strong> Tiefengrund mit Rolle/Pinsel auftragen (sandende Wände satt). Gleichmäßig, keine Pfützen.</li>
+  <li><strong>Trocknen lassen.</strong> Tiefengrund ca. <strong>5 Stunden</strong>, dann ist die Wand streichfertig. <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">[ADLER]</a></li>
+</ol>
+
+<h2>Selbsttest</h2>
+
+<div class="quiz" data-correct="b">
+  <p class="q">1. Du wischst über die Wand, die Hand ist voller feiner Körnchen. Was brauchst du?</p>
+  <button data-k="a">Haftgrund — die Wand ist zu glatt</button>
+  <button data-k="b">Tiefengrund — die Wand sandet und muss verfestigt werden</button>
+  <button data-k="c">Nichts, einfach 2× streichen</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="c">
+  <p class="q">2. Spritzwasser perlt an der Wand ab, sie ist glatt und fest (alte Wandfarbe). Richtig?</p>
+  <button data-k="a">Tiefengrund auftragen, das verfestigt</button>
+  <button data-k="b">Sofort streichen, perfekter Untergrund</button>
+  <button data-k="c">Anrauen/reinigen und ggf. Haftgrund — Tiefengrund zieht hier nicht ein</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="a">
+  <p class="q">3. Reihenfolge bei einer Wand mit Dübellöchern, die auch saugt?</p>
+  <button data-k="a">Spachteln → schleifen → entstauben → Tiefengrund → trocknen → streichen</button>
+  <button data-k="b">Tiefengrund → spachteln → streichen</button>
+  <button data-k="c">Streichen → Löcher danach zuspachteln</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="b">
+  <p class="q">4. Du hast grundiert und willst nach 30 Minuten streichen. Gute Idee?</p>
+  <button data-k="a">Ja, Grundierung ist sofort überstreichbar</button>
+  <button data-k="b">Nein — Tiefengrund braucht ca. 5 h, sonst hält der Anstrich schlecht</button>
+  <button data-k="c">Egal, Hauptsache nass in nass</button>
+  <p class="fb"></p>
+</div>
+
+<h2>Dein Praxis-Auftrag (20 Minuten)</h2>
+<p>Geh durch <strong>jeden tapetenfreien Raum</strong> und mach die 3 Tests. Schreib pro Wand auf: sandet ja/nein, saugt ja/nein, Schäden ja/nein. Das ist deine Einkaufsliste (wie viel Tiefengrund, wie viel Spachtel) — und sagt mir, ob du beim Streichen (Lektion 3) Überraschungen zu erwarten hast. Sag mir, was rausgekommen ist.</p>
+
+<footer>
+  <p><strong>Fragen?</strong> Frag mich z.&nbsp;B. „Welcher Spachtel für tiefe Löcher?“, „Wand ist halb gestrichen, halb Putz — was tun?“. Nächste Lektion: <em>Wände streichen</em> — saubere Kanten, Nass-in-nass, Streichreihenfolge.</p>
+  <p>Quellen: <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">ADLER Farbenmeister: Untergrund prüfen &amp; Grundierung</a> · <a href="https://www.obi.at/magazin/wohnen/innengestaltung/wandgestaltung/waende-streichen">OBI AT: Wände streichen</a></p>
+</footer>
+
+</div>
+<script>
+  document.querySelectorAll('.quiz').forEach(q=>{
+    const correct=q.dataset.correct,fb=q.querySelector('.fb');
+    q.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        q.querySelectorAll('button').forEach(b=>b.classList.remove('right','wrong'));
+        const ok=btn.dataset.k===correct;
+        btn.classList.add(ok?'right':'wrong');
+        if(!ok)q.querySelector('button[data-k="'+correct+'"]').classList.add('right');
+        fb.textContent=ok?'✔ Richtig!':'✘ Nicht ganz — die grün markierte Antwort ist richtig.';
+        fb.style.color=ok?'var(--ok)':'var(--bad)';
+        fb.classList.add('show');
+      });
+    });
+  });
+</script>
+</body>
+</html>
