@@ -21,7 +21,12 @@ Hat ein Haus im Bezirk Scheibbs (NÖ) gekauft und will die Grundrenovierung selb
 - Region: Bezirk Scheibbs, Österreich — Produkte/Bezugsquellen österreichisch denken (Lagerhaus, Hornbach/OBI, Adler)
 - Lernsprache: Deutsch
 
+## Zusatzwunsch (erfasst Lektion 4)
+- In jedem neu gemalten Raum sollen Steckdosen + Lichtschalter getauscht werden.
+- ACHTUNG: In Österreich ist Arbeit an der fixen Elektroinstallation einem konzessionierten Elektrounternehmen vorbehalten (ETG 1992 / ETV 2020). Schwerpunkt der Lehre daher: Rechtslage verstehen, sicher planen, Elektriker koordinieren — nicht "live selbst verdrahten".
+
 ## Out of scope
-- Elektrik, Sanitär, Estrich neu machen (Profi-Gewerke)
+- Estrich neu machen, Sanitär (Profi-Gewerke)
+- Eigenständiges Verdrahten der fixen E-Installation unter Spannung (rechtlich/sicherheitstechnisch Elektriker)
 - Tapezieren (es wird gestrichen, nicht neu tapeziert)
 - Schwimmende Verlegung (Parkett wird geklebt)

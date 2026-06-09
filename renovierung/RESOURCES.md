@@ -22,6 +22,12 @@
   Use for: Fliesenlack vs. Kreidefarbe, Kostenrahmen.
 - [heimwerker.de: Fliesen streichen / lackieren](https://www.heimwerker.de/fliesen-streichen-fliesen-lackieren/)
   Use for: Reinigen/Entfetten, Anschleifen, Haftgrund, 2K-Epoxid vs. Acryl.
+- [RIS: Elektrotechnikverordnung 2020 (ETV 2020)](https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20011222)
+  Geltendes Bundesrecht. Use for: rechtlicher Rahmen, was an der E-Anlage erlaubt/vorbehalten ist.
+- [OVE-Fachinformation H02 (Laien & E-Anlagen)](https://www.ove.at/ove-standardization/normen-produkte/fachinformationen/)
+  Österr. Verband für Elektrotechnik. Use for: was Laien an Wohnanlagen dürfen/nicht dürfen.
+- [Fünf Sicherheitsregeln der Elektrotechnik](https://de.wikipedia.org/wiki/F%C3%BCnf_Sicherheitsregeln)
+  Use for: warum „Schalter aus" nicht reicht; Spannungsfreiheit zweipolig feststellen.
 
 ## Wisdom (Communities)
 
