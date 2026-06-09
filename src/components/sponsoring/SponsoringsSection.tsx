@@ -24,7 +24,7 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Building2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
 	getSponsors,
@@ -44,9 +44,11 @@ import {
 	buildSponsoringOverviewRows,
 	festivalSponsoringTotal
 } from '@/lib/sponsoringTotals';
+import { exportSponsoringOverviewPdf } from '@/lib/sponsoringExportService';
 
 interface SponsoringsSectionProps {
 	festivalId: string;
+	festivalName: string;
 }
 
 const formatEuro = (value: number): string =>
@@ -61,7 +63,7 @@ interface AssignmentDraft {
 	valueInput: string;
 }
 
-const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId }) => {
+const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, festivalName }) => {
 	const { toast } = useToast();
 
 	const [sponsorings, setSponsorings] = useState<SponsoringWithDetails[]>([]);
@@ -240,10 +242,20 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId }) =
 						Erfasste Sponsoren mit Leistungen und Gesamtsumme
 					</p>
 				</div>
-				<Button onClick={openCreate} size="sm">
-					<Plus className="h-4 w-4 mr-2" />
-					<span>Sponsoring</span>
-				</Button>
+				<div className="flex gap-2">
+					<Button
+						onClick={() => exportSponsoringOverviewPdf(rows, { festivalName })}
+						size="sm"
+						variant="outline"
+						disabled={rows.length === 0}>
+						<FileDown className="h-4 w-4 mr-2" />
+						<span>PDF</span>
+					</Button>
+					<Button onClick={openCreate} size="sm">
+						<Plus className="h-4 w-4 mr-2" />
+						<span>Sponsoring</span>
+					</Button>
+				</div>
 			</div>
 
 			<div className="rounded-lg border bg-card">

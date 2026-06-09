@@ -30,6 +30,7 @@ import {
 
 interface SponsoringViewProps {
 	festivalId: string;
+	festivalName: string;
 }
 
 const formatValue = (value: number | null): string => {
@@ -37,7 +38,7 @@ const formatValue = (value: number | null): string => {
 	return value.toLocaleString('de-AT', { style: 'currency', currency: 'EUR' });
 };
 
-const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId }) => {
+const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId, festivalName }) => {
 	const { toast } = useToast();
 
 	const [categories, setCategories] = useState<SponsoringCategory[]>([]);
@@ -141,7 +142,7 @@ const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId }) => {
 
 	return (
 		<div className="space-y-8">
-			<SponsoringsSection festivalId={festivalId} />
+			<SponsoringsSection festivalId={festivalId} festivalName={festivalName} />
 
 			<div className="flex items-center justify-between">
 				<div>
