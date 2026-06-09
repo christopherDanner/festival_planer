@@ -136,3 +136,111 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsoring_categories').delete().eq('id', categoryId);
 	if (error) throw new Error(error.message);
 };
+
+// --- Sponsorings (Firma <-> Fest, mit Kategorie-Zuweisungen) -------------
+
+export interface Sponsoring {
+	id: string;
+	festival_id: string;
+	sponsor_id: string;
+	free_amount: number | null;
+	notes: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface SponsoringCategoryAssignment {
+	id: string;
+	sponsoring_id: string;
+	category_id: string;
+	/** Überschriebener Wert; NULL = Kategorie-Wert gilt. */
+	value: number | null;
+	created_at: string;
+}
+
+export interface SponsoringAssignmentWithCategory extends SponsoringCategoryAssignment {
+	category: SponsoringCategory;
+}
+
+/** Zusammengesetztes Read-Shape für Übersicht, Summen und Übernahme. */
+export interface SponsoringWithDetails extends Sponsoring {
+	sponsor: Sponsor;
+	assignments: SponsoringAssignmentWithCategory[];
+}
+
+/** Eine Kategorie-Zuweisung beim Anlegen/Bearbeiten eines Sponsorings. */
+export interface SponsoringAssignmentInput {
+	category_id: string;
+	/** Überschriebener Wert; null = Kategorie-Wert gilt. */
+	value: number | null;
+}
+
+const SPONSORING_SELECT = '*, sponsor:sponsors(*), assignments:sponsoring_category_assignments(*, category:sponsoring_categories(*))';
+
+// Get all sponsorings of a festival incl. sponsor and assigned categories.
+export const getSponsorings = async (festivalId: string): Promise<SponsoringWithDetails[]> => {
+	const { data, error } = await supabase
+		.from('sponsorings')
+		.select(SPONSORING_SELECT)
+		.eq('festival_id', festivalId);
+
+	if (error) throw new Error(error.message);
+	return (data as unknown as SponsoringWithDetails[]) || [];
+};
+
+// Create a sponsoring linking a global sponsor to a festival.
+export const createSponsoring = async (
+	festivalId: string,
+	sponsorId: string,
+	freeAmount: number | null,
+	assignments: SponsoringAssignmentInput[],
+	notes: string | null = null
+): Promise<string> => {
+	const { data, error } = await supabase
+		.from('sponsorings')
+		.insert({ festival_id: festivalId, sponsor_id: sponsorId, free_amount: freeAmount, notes })
+		.select('id')
+		.single();
+
+	if (error) throw new Error(error.message);
+
+	if (assignments.length > 0) {
+		const { error: assignError } = await supabase
+			.from('sponsoring_category_assignments')
+			.insert(assignments.map((a) => ({ ...a, sponsoring_id: data.id })));
+		if (assignError) throw new Error(assignError.message);
+	}
+	return data.id;
+};
+
+// Update a sponsoring; the assignments replace the existing ones entirely.
+export const updateSponsoring = async (
+	sponsoringId: string,
+	updates: Partial<Pick<Sponsoring, 'free_amount' | 'notes'>>,
+	assignments: SponsoringAssignmentInput[]
+): Promise<void> => {
+	const { error } = await supabase
+		.from('sponsorings')
+		.update({ ...updates, updated_at: new Date().toISOString() })
+		.eq('id', sponsoringId);
+	if (error) throw new Error(error.message);
+
+	const { error: deleteError } = await supabase
+		.from('sponsoring_category_assignments')
+		.delete()
+		.eq('sponsoring_id', sponsoringId);
+	if (deleteError) throw new Error(deleteError.message);
+
+	if (assignments.length > 0) {
+		const { error: insertError } = await supabase
+			.from('sponsoring_category_assignments')
+			.insert(assignments.map((a) => ({ ...a, sponsoring_id: sponsoringId })));
+		if (insertError) throw new Error(insertError.message);
+	}
+};
+
+// Delete a sponsoring (RLS restricts this to the festival creator).
+export const deleteSponsoring = async (sponsoringId: string): Promise<void> => {
+	const { error } = await supabase.from('sponsorings').delete().eq('id', sponsoringId);
+	if (error) throw new Error(error.message);
+};

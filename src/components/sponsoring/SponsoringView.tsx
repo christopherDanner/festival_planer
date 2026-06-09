@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, HandCoins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import SponsoringsSection from '@/components/sponsoring/SponsoringsSection';
 import {
 	getCategories,
 	createCategory,
@@ -139,7 +140,9 @@ const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId }) => {
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-8">
+			<SponsoringsSection festivalId={festivalId} />
+
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">

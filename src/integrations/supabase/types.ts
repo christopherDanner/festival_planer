@@ -214,6 +214,90 @@ export type Database = {
 					}
 				];
 			};
+			sponsorings: {
+				Row: {
+					created_at: string;
+					festival_id: string;
+					free_amount: number | null;
+					id: string;
+					notes: string | null;
+					sponsor_id: string;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					festival_id: string;
+					free_amount?: number | null;
+					id?: string;
+					notes?: string | null;
+					sponsor_id: string;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					festival_id?: string;
+					free_amount?: number | null;
+					id?: string;
+					notes?: string | null;
+					sponsor_id?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'sponsorings_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'sponsorings_sponsor_id_fkey';
+						columns: ['sponsor_id'];
+						isOneToOne: false;
+						referencedRelation: 'sponsors';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			sponsoring_category_assignments: {
+				Row: {
+					category_id: string;
+					created_at: string;
+					id: string;
+					sponsoring_id: string;
+					value: number | null;
+				};
+				Insert: {
+					category_id: string;
+					created_at?: string;
+					id?: string;
+					sponsoring_id: string;
+					value?: number | null;
+				};
+				Update: {
+					category_id?: string;
+					created_at?: string;
+					id?: string;
+					sponsoring_id?: string;
+					value?: number | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'sponsoring_category_assignments_sponsoring_id_fkey';
+						columns: ['sponsoring_id'];
+						isOneToOne: false;
+						referencedRelation: 'sponsorings';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'sponsoring_category_assignments_category_id_fkey';
+						columns: ['category_id'];
+						isOneToOne: false;
+						referencedRelation: 'sponsoring_categories';
+						referencedColumns: ['id'];
+					}
+				];
+			};
 			shift_assignments: {
 				Row: {
 					created_at: string;
