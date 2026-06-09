@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, HandCoins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import SponsoringsSection from '@/components/sponsoring/SponsoringsSection';
 import {
 	getCategories,
 	createCategory,
@@ -29,6 +30,7 @@ import {
 
 interface SponsoringViewProps {
 	festivalId: string;
+	festivalName: string;
 }
 
 const formatValue = (value: number | null): string => {
@@ -36,7 +38,7 @@ const formatValue = (value: number | null): string => {
 	return value.toLocaleString('de-AT', { style: 'currency', currency: 'EUR' });
 };
 
-const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId }) => {
+const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId, festivalName }) => {
 	const { toast } = useToast();
 
 	const [categories, setCategories] = useState<SponsoringCategory[]>([]);
@@ -139,7 +141,9 @@ const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId }) => {
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-8">
+			<SponsoringsSection festivalId={festivalId} festivalName={festivalName} />
+
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">

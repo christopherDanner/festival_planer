@@ -185,7 +185,7 @@ export default function FestivalResults() {
 							/>
 						</TabsContent>
 						<TabsContent value="sponsoring" className={isMobile ? 'mt-0' : 'mt-0'}>
-							<SponsoringView festivalId={festivalId} />
+							<SponsoringView festivalId={festivalId} festivalName={festival.name} />
 						</TabsContent>
 					</div>
 
