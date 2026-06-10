@@ -1,6 +1,6 @@
 # 0001 — Gemeinsamer Arbeitsbereich, gegated über Kontovergabe
 
-Status: Accepted
+Status: Accepted (Entscheidung 1 zu DELETE teilweise superseded durch ADR 0002)
 Datum: 2026-06-07
 
 ## Kontext
@@ -34,4 +34,4 @@ Gewünscht: echter Login-Gate, Zugang nur für bestimmte Leute. Beim Durchsprech
 
 - **Pro-Benutzer-Daten beibehalten** — widerspricht der gemeinsamen Planung; jeder müsste Feste duplizieren.
 - **Allowlist-/Einladungs-Registrierung** — mehr Code (Allowlist-Tabelle bzw. Invite-Tokens/Mailversand) ohne Mehrwert bei einer kleinen, bekannten Gruppe. Manuelles Anlegen genügt.
-- **DELETE für alle erlauben** — verworfen; Löschen ist destruktiv, daher auf den Ersteller beschränkt.
+- **DELETE für alle erlauben** — verworfen; Löschen ist destruktiv, daher auf den Ersteller beschränkt. (Teilweise revidiert: ADR 0002 öffnet DELETE für Line-Items, Container bleiben creator-only.)
