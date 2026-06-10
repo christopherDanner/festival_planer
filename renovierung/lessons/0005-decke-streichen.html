@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lektion 5 · Decke streichen (über Kopf)</title>
+<style>
+  :root{--ink:#2b2620;--paper:#faf7f2;--accent:#6a4d8f;--accent-soft:#e7def3;--ok:#3a7d44;--bad:#b03a2e;--line:#ddd3ea;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);line-height:1.65;}
+  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 5rem;}
+  header{border-bottom:3px double var(--accent);padding-bottom:1.2rem;margin-bottom:2rem;}
+  .kicker{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 .4rem;}
+  h1{font-size:2.1rem;margin:0 0 .3rem;line-height:1.2;}
+  .lede{font-style:italic;color:#6b6155;margin:0;}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:2.6rem 0 .8rem;border-bottom:1px solid var(--line);padding-bottom:.35rem;}
+  .box{background:var(--accent-soft);border-left:4px solid var(--accent);padding:.9rem 1.1rem;border-radius:0 6px 6px 0;margin:1.2rem 0;}
+  .box strong:first-child{display:block;margin-bottom:.25rem;}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem;}
+  th,td{border:1px solid var(--line);padding:.55rem .7rem;text-align:left;vertical-align:top;}
+  th{background:#ede5f5;font-family:'Helvetica Neue',Arial,sans-serif;font-size:.85rem;}
+  ol.steps{counter-reset:step;list-style:none;padding:0;}
+  ol.steps>li{counter-increment:step;position:relative;padding:0 0 1.3rem 3.2rem;margin:0;}
+  ol.steps>li::before{content:counter(step);position:absolute;left:0;top:.1rem;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--accent);color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  ol.steps strong{display:block;margin-bottom:.15rem;}
+  .lightdiag{background:#fff;border:1px solid var(--line);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:.92rem;}
+  .lightdiag .row{display:flex;align-items:center;gap:.8rem;margin:.4rem 0;}
+  .arrow{font-size:1.4rem;color:var(--accent);}
+  .quiz{border:1px solid var(--line);border-radius:8px;padding:1.1rem 1.2rem;margin:1.2rem 0;background:#fff;}
+  .quiz p.q{font-weight:700;margin:0 0 .6rem;}
+  .quiz button{display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .8rem;font:inherit;font-size:.95rem;background:var(--paper);border:1px solid var(--line);border-radius:6px;cursor:pointer;}
+  .quiz button:hover{border-color:var(--accent);}
+  .quiz button.right{background:#e7f2e9;border-color:var(--ok);}
+  .quiz button.wrong{background:#f9e5e2;border-color:var(--bad);}
+  .quiz .fb{font-size:.9rem;margin:.6rem 0 0;display:none;}
+  .quiz .fb.show{display:block;}
+  a{color:var(--accent);}
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.9rem;color:#6b6155;}
+  @media print{.quiz button{display:none;}body{background:#fff;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Haus-Renovierung · Lektion 5 · ca. 12 min + Praxis</p>
+  <h1>Decke streichen — über Kopf</h1>
+  <p class="lede">Die Decke ist die unbarmherzigste Fläche: jeder Ansatz wirft im Streiflicht einen Schatten. Mit der richtigen Richtung und Farbe wird sie trotzdem streifenfrei.</p>
+</header>
+
+<div class="box">
+  <strong>📋 Dein Ablauf erinnert</strong>
+  Deckentapete ist runter (Lektion 1). Reihenfolge im Raum: <strong>Decke ZUERST</strong>, dann die Wände (Lektion 3) — Spritzer fallen so auf noch-zu-streichende Flächen. Also: dieser Schritt vor dem Wändestreichen pro Raum.
+</div>
+
+<h2>Die EINE Regel, die über Erfolg entscheidet: zum Licht arbeiten</h2>
+<p>Streifen entstehen, weil Rollansätze im flachen Licht Schatten werfen. Lösung: in Richtung des Lichteinfalls streichen — also <strong>vom Fenster weg</strong> in den Raum. Profis gehen sogar zweifach: erst <em>längs</em> zum Licht, dann <em>quer</em> dazu. <a href="https://alpina-farben.de/artikel/decke-streifenfrei-streichen/">[Alpina]</a></p>
+<div class="lightdiag">
+  <div class="row"><span class="arrow">🪟</span> Fenster — hier ist die Lichtquelle</div>
+  <div class="row"><span class="arrow">⬇️</span> 1. Durchgang: in Bahnen <strong>vom Fenster weg</strong> (längs zum Licht)</div>
+  <div class="row"><span class="arrow">➡️</span> 2. Durchgang (solange nass!): einmal <strong>quer</strong> drüber — verteilt &amp; vereinheitlicht</div>
+</div>
+
+<h2>Die richtige Farbe &amp; Werkzeug — gegen Tropfen über Kopf</h2>
+<table>
+  <tr><th>Was</th><th>Warum</th></tr>
+  <tr><td><strong>Deckenfarbe</strong> (nicht normale Wandfarbe)</td><td>Dickflüssiger / tropfgehemmt → tropft kaum auf dich, deckt in 1 Gang. <a href="https://www.tedox.de/blog/renovieren/decke-streichen-tropfenfrei/">[tedox]</a></td></tr>
+  <tr><td>Farbe mit <strong>langer Offenzeit</strong></td><td>Bleibt länger nass → keine Rollansätze beim Verteilen. <a href="https://alpina-farben.de/artikel/decke-streifenfrei-streichen/">[Alpina]</a></td></tr>
+  <tr><td><strong>Teleskopstange</strong> an der Rolle</td><td>Vom Boden aus arbeiten statt Leiter-Geklettere → schneller, gleichmäßiger, sicherer.</td></tr>
+  <tr><td><strong>Kühler Raum</strong></td><td>Wärme steigt nach oben → Decke trocknet sonst zu schnell, nass-in-nass unmöglich. Heizung aus. <a href="https://www.tedox.de/blog/renovieren/decke-streichen-tropfenfrei/">[tedox]</a></td></tr>
+  <tr><td><strong>Schutzbrille + Kopftuch/Kappe</strong></td><td>Auch tropfgehemmte Farbe sprüht feine Tropfen — Augen schützen.</td></tr>
+</table>
+
+<h2>Ablauf</h2>
+<ol class="steps">
+  <li><strong>Schützen &amp; vorbereiten.</strong> Boden mit Malervlies, Heizung aus, Brille + Kopfbedeckung auf. Lampen-Anschluss/Klemmdose: Strom raus (Lektion 4!) und großzügig drumherum freilassen.</li>
+  <li><strong>Ränder vorschneiden.</strong> Mit Pinsel/kleiner Rolle einen Streifen entlang aller Wandkanten ziehen. Da die Wände danach noch gestrichen werden, musst du hier nicht millimetergenau sein — die Wandfarbe deckt die Deckenkante-Linie später ab.</li>
+  <li><strong>1. Durchgang längs zum Licht.</strong> Farbe satt in Bahnen vom Fenster weg auftragen, nass in nass an die vorige Bahn anschließen. Nicht trockenrollen.</li>
+  <li><strong>2. Durchgang quer.</strong> Solange alles feucht ist: einmal quer zum Licht leicht überrollen. Das killt Wolken und Ansätze. <a href="https://alpina-farben.de/artikel/decke-streifenfrei-streichen/">[Alpina]</a></li>
+  <li><strong>In einem Zug fertig.</strong> Wie bei der Wand: eine Decke nie mit Pause in der Mitte — angetrocknete Kante = Ansatz. Kleinere Räume zuerst zum Üben.</li>
+  <li><strong>Trocknen, im Streiflicht prüfen.</strong> Lampe schräg halten. Wolken? Zweiter Anstrich — wieder ganze Decke, längs+quer.</li>
+</ol>
+
+<div class="box">
+  <strong>💡 Profi-Reihenfolge fürs ganze Haus</strong>
+  Pro Raum: Decke (diese Lektion) → trocknen → Wände (Lektion 3). So tropft nichts auf Fertiges, und die Wandfarbe kaschiert die Deckenkante. Erst danach kommt Boden/Parkett.
+</div>
+
+<h2>Selbsttest</h2>
+
+<div class="quiz" data-correct="b">
+  <p class="q">1. In welche Richtung streichst du die Decke im ersten Durchgang?</p>
+  <button data-k="a">Quer zum Fenster</button>
+  <button data-k="b">Vom Fenster weg, längs zum Lichteinfall</button>
+  <button data-k="c">Egal, Hauptsache deckend</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="c">
+  <p class="q">2. Warum spezielle Deckenfarbe statt normaler Wandfarbe?</p>
+  <button data-k="a">Sie ist weißer</button>
+  <button data-k="b">Sie ist billiger</button>
+  <button data-k="c">Dickflüssig/tropfgehemmt + lange Offenzeit → tropft kaum, keine Ansätze</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="a">
+  <p class="q">3. Warum Heizung aus / kühler Raum beim Deckenstreichen?</p>
+  <button data-k="a">Wärme steigt nach oben, Decke trocknet sonst zu schnell → nass-in-nass unmöglich</button>
+  <button data-k="b">Damit die Farbe schneller trocknet</button>
+  <button data-k="c">Spart Energie</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="b">
+  <p class="q">4. Decke oder Wand zuerst im Raum?</p>
+  <button data-k="a">Wand zuerst, dann Decke</button>
+  <button data-k="b">Decke zuerst — Spritzer fallen auf noch-zu-streichende Wände</button>
+  <button data-k="c">Gleichzeitig</button>
+  <p class="fb"></p>
+</div>
+
+<h2>Dein Praxis-Auftrag (kleinster Raum zuerst)</h2>
+<p>Nimm den <strong>kleinsten</strong> tapetenfreien Raum (Decke kleiner = leichter in einem Zug). Heizung aus, Brille auf, Teleskopstange dran. Ränder vorschneiden, dann längs zum Licht + quer. Achte aufs „in einem Zug". Sag mir danach: tropfgehemmte Deckenfarbe verwendet? Streifenfrei im Streiflicht, oder Wolken? Dann optimieren wir, bevor du die großen Räume angehst.</p>
+
+<footer>
+  <p><strong>Fragen?</strong> z.&nbsp;B. „Welche Deckenfarbe im Lagerhaus?", „Risse in der Decke — erst spachteln?", „Lampe ab oder dranlassen?". Frag mich. Nächste Lektion: <em>Wand spachteln</em> für die 1–2 Räume.</p>
+  <p>Quellen: <a href="https://alpina-farben.de/artikel/decke-streifenfrei-streichen/">Alpina: Decke streifenfrei streichen</a> · <a href="https://www.tedox.de/blog/renovieren/decke-streichen-tropfenfrei/">tedox: Decke tropfenfrei streichen</a> · <a href="https://www.adler-farbenmeister.com/tipps/waende-richtig-streichen-5-tipps-fuer-saubere-kanten-und-gerade-linien">ADLER: saubere Kanten</a></p>
+</footer>
+
+</div>
+<script>
+  document.querySelectorAll('.quiz').forEach(q=>{
+    const correct=q.dataset.correct,fb=q.querySelector('.fb');
+    q.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        q.querySelectorAll('button').forEach(b=>b.classList.remove('right','wrong'));
+        const ok=btn.dataset.k===correct;
+        btn.classList.add(ok?'right':'wrong');
+        if(!ok)q.querySelector('button[data-k="'+correct+'"]').classList.add('right');
+        fb.textContent=ok?'✔ Richtig!':'✘ Nicht ganz — die grün markierte Antwort ist richtig.';
+        fb.style.color=ok?'var(--ok)':'var(--bad)';
+        fb.classList.add('show');
+      });
+    });
+  });
+</script>
+</body>
+</html>

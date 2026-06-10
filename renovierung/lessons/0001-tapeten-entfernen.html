@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lektion 1 · Tapeten entfernen</title>
+<style>
+  :root {
+    --ink: #2b2620;
+    --paper: #faf7f2;
+    --accent: #b5542d;
+    --accent-soft: #f3e3d9;
+    --ok: #3a7d44;
+    --bad: #b03a2e;
+    --line: #e2d9cc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.65;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+  header { border-bottom: 3px double var(--accent); padding-bottom: 1.2rem; margin-bottom: 2rem; }
+  .kicker {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: .78rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 .4rem;
+  }
+  h1 { font-size: 2.1rem; margin: 0 0 .3rem; line-height: 1.2; }
+  .lede { font-style: italic; color: #6b6155; margin: 0; }
+  h2 {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.05rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--accent); margin: 2.6rem 0 .8rem;
+    border-bottom: 1px solid var(--line); padding-bottom: .35rem;
+  }
+  .box {
+    background: var(--accent-soft); border-left: 4px solid var(--accent);
+    padding: .9rem 1.1rem; border-radius: 0 6px 6px 0; margin: 1.2rem 0;
+  }
+  .box strong:first-child { display: block; margin-bottom: .25rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
+  th, td { border: 1px solid var(--line); padding: .55rem .7rem; text-align: left; vertical-align: top; }
+  th { background: #f1ebe1; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: .85rem; }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative;
+    padding: 0 0 1.3rem 3.2rem; margin: 0;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: .1rem;
+    width: 2.1rem; height: 2.1rem; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps strong { display: block; margin-bottom: .15rem; }
+  .check { list-style: none; padding: 0; }
+  .check li { margin: .35rem 0; }
+  .check label { cursor: pointer; display: flex; gap: .6rem; align-items: baseline; }
+  .check input { transform: scale(1.25); accent-color: var(--accent); }
+  .check input:checked + span { color: #8a8071; text-decoration: line-through; }
+  .quiz { border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem 1.2rem; margin: 1.2rem 0; background: #fff; }
+  .quiz p.q { font-weight: 700; margin: 0 0 .6rem; }
+  .quiz button {
+    display: block; width: 100%; text-align: left;
+    margin: .35rem 0; padding: .55rem .8rem;
+    font: inherit; font-size: .95rem;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+  }
+  .quiz button:hover { border-color: var(--accent); }
+  .quiz button.right { background: #e7f2e9; border-color: var(--ok); }
+  .quiz button.wrong { background: #f9e5e2; border-color: var(--bad); }
+  .quiz .fb { font-size: .9rem; margin: .6rem 0 0; display: none; }
+  .quiz .fb.show { display: block; }
+  a { color: var(--accent); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: .9rem; color: #6b6155; }
+  @media print {
+    .quiz button { display: none; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Haus-Renovierung · Lektion 1 · ca. 15 min Lesen + Test an der Wand</p>
+  <h1>Tapeten entfernen</h1>
+  <p class="lede">Der erste Schritt zur streichfertigen Wand: Tapetentyp erkennen, richtig einweichen, sauber abziehen.</p>
+</header>
+
+<h2>Warum zuerst?</h2>
+<p>Farbe hält nur auf tragfähigem Untergrund. Über alte Tapete streichen geht fast immer schief: Sie wirft Blasen, löst sich, und du machst die Arbeit doppelt. Deshalb ist das hier <em>der</em> Hebel für deinen 2-Monats-Plan — jede sauber abgelöste Wand ist eine Wand, die du nächste Woche streichen kannst.</p>
+
+<h2>Schritt 0 — Den Tapetentyp bestimmen (2 Minuten, entscheidet alles)</h2>
+<p>Geh zu einer Ecke oder Naht, löse sie mit dem Spachtel an und zieh <strong>trocken</strong> ein Stück ab:</p>
+<table>
+  <tr><th>Was passiert</th><th>Tapetentyp</th><th>Deine Strategie</th></tr>
+  <tr>
+    <td>Bahn löst sich in einem Stück, ganzflächig</td>
+    <td><strong>Vliestapete</strong></td>
+    <td>Glück gehabt: trocken Bahn für Bahn abziehen, kein Wasser nötig. <a href="https://www.hornbach.de/projekte/tapeten-entfernen/">[Hornbach]</a></td>
+  </tr>
+  <tr>
+    <td>Reißt in kleinen Fetzen, Papierschicht bleibt kleben</td>
+    <td><strong>Papier- / Raufasertapete</strong></td>
+    <td>Einweichen, 10–15 min warten, abspachteln. <a href="https://www.hornbach.de/projekte/tapeten-entfernen/">[Hornbach]</a></td>
+  </tr>
+  <tr>
+    <td>Wasser perlt beim Test-Sprühen ab, nichts weicht ein</td>
+    <td><strong>Beschichtete Tapete</strong> (abwaschbar, Vinyl)</td>
+    <td>Erst mit Stachelwalze („Tapetenigel“) perforieren, dann einweichen. <a href="https://www.obi.de/magazin/bauen/wand/tapeten-entfernen">[OBI]</a></td>
+  </tr>
+</table>
+
+<h2>Werkzeug &amp; Material</h2>
+<ul class="check" id="material">
+  <li><label><input type="checkbox"><span>Breiter Malerspachtel (8–10 cm) — dein Hauptwerkzeug</span></label></li>
+  <li><label><input type="checkbox"><span>Drucksprüher oder Sprühflasche (großer Drucksprüher spart bei ganzen Räumen enorm Zeit)</span></label></li>
+  <li><label><input type="checkbox"><span>Warmes Wasser + Spritzer Spülmittel (oder Tapetenlöser-Konzentrat, Baumarkt ~5 €)</span></label></li>
+  <li><label><input type="checkbox"><span>Stachelwalze / Tapetenigel (nur bei beschichteten Tapeten)</span></label></li>
+  <li><label><input type="checkbox"><span>Malervlies oder Karton für den Boden (Folie alleine ist rutschig!)</span></label></li>
+  <li><label><input type="checkbox"><span>Müllsäcke, Schwamm, Kübel</span></label></li>
+  <li><label><input type="checkbox"><span>Schraubenzieher für Steckdosen-/Schalterabdeckungen</span></label></li>
+</ul>
+<p style="font-size:.85rem;color:#8a8071;">Häkchen werden im Browser gespeichert — du kannst die Seite als Einkaufsliste wiederverwenden. Alles gibt's im Lagerhaus oder Baumarkt (OBI/Hornbach Richtung Amstetten).</p>
+
+<h2>Die Anleitung</h2>
+<ol class="steps">
+  <li><strong>Raum vorbereiten.</strong> Möbel raus, Boden mit Malervlies auslegen, Sockelleisten und Fensterbänke abkleben. <strong>Sicherung raus</strong>, dann Steckdosen- und Schalterabdeckungen abschrauben — dahinter sitzt immer Tapete. <a href="https://www.hornbach.de/projekte/tapeten-entfernen/">[Hornbach]</a></li>
+  <li><strong>(Nur beschichtete Tapeten) Perforieren.</strong> Mit der Stachelwalze in kreuzenden Bahnen über die ganze Wand — ohne Löcher kommt kein Wasser an den Kleister. Nicht zu fest drücken, sonst zerkratzt du den Putz. <a href="https://www.obi.de/magazin/bauen/wand/tapeten-entfernen">[OBI]</a></li>
+  <li><strong>Einweichen.</strong> Warmes Wasser mit Spülmittel satt aufsprühen, von oben nach unten. Die Tapete muss richtig durchnässt sein. <strong>10–15 Minuten warten</strong> — das ist der Schritt, den Ungeduldige ruinieren. Profi-Trick: Während Wand 1 einweicht, sprühst du schon Wand 2 ein. <a href="https://www.hornbach.de/projekte/tapeten-entfernen/">[Hornbach]</a></li>
+  <li><strong>Abziehen.</strong> Spachtel an einer Naht unten ansetzen, flach halten (sonst Kratzer im Putz), Bahn nach oben abschieben/abziehen. Was nicht geht: nochmal einsprühen statt kratzen. Gewalt erzeugt nur Putzschäden, die du nachher spachteln musst.</li>
+  <li><strong>Kleisterreste abwaschen.</strong> Mit Schwamm und klarem Wasser über die nackte Wand. Kleisterreste unter neuer Farbe = Blasen.</li>
+  <li><strong>Wand checken &amp; entsorgen.</strong> Löcher/Risse merken (kommt in Lektion 2: spachteln + grundieren). Nasse Tapetenreste in den <strong>Restmüll</strong>, nicht ins Altpapier — Kleister und Beschichtung machen sie unrecycelbar.</li>
+</ol>
+
+<div class="box">
+  <strong>⚠️ Stopp-Signal</strong>
+  Wenn beim Abziehen großflächig Putz mitkommt (nicht nur oberflächlich, sondern bröckelnd bis aufs Mauerwerk): Foto machen und mich fragen, bevor du weitermachst. Das ändert den Plan für diese Wand.
+</div>
+
+<h2>Selbsttest</h2>
+
+<div class="quiz" data-correct="b">
+  <p class="q">1. Du ziehst trocken an einer Ecke und die ganze Bahn löst sich am Stück. Was tust du?</p>
+  <button data-k="a">Trotzdem einweichen, sicher ist sicher</button>
+  <button data-k="b">Trocken weiterziehen, Bahn für Bahn — das ist Vliestapete</button>
+  <button data-k="c">Mit der Stachelwalze perforieren</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="c">
+  <p class="q">2. Du sprühst Wasser auf, aber es perlt ab und die Tapete bleibt trocken. Woran liegt's?</p>
+  <button data-k="a">Wasser zu kalt</button>
+  <button data-k="b">Zu wenig Spülmittel</button>
+  <button data-k="c">Beschichtete Oberfläche — erst perforieren, dann einweichen</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="a">
+  <p class="q">3. Nach 3 Minuten Einweichen gehst du mit dem Spachtel dran, es kommen nur Fetzen. Fehler?</p>
+  <button data-k="a">Zu früh — 10–15 Minuten einwirken lassen, notfalls nochmal sprühen</button>
+  <button data-k="b">Falscher Spachtel — du brauchst einen schmäleren</button>
+  <button data-k="c">Die Tapete ist nicht entfernbar, überstreichen</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="b">
+  <p class="q">4. Tapete ist runter, ein paar Kleisterreste glänzen noch auf der Wand. Streichen?</p>
+  <button data-k="a">Ja, Kleister ist wasserlöslich wie die Farbe — kein Problem</button>
+  <button data-k="b">Nein — erst mit Schwamm und Wasser abwaschen, sonst Blasen unter der Farbe</button>
+  <button data-k="c">Nur mit Tiefengrund drüber, das versiegelt den Kleister</button>
+  <p class="fb"></p>
+</div>
+
+<h2>Dein Praxis-Auftrag (heute, 30 Minuten)</h2>
+<p>Nimm <strong>eine einzige Wand</strong> im unwichtigsten Raum: Tapetentyp-Test machen, einweichen, eine Bahn abziehen. Damit weißt du, welcher Typ bei dir verbaut ist und wie lang eine Wand realistisch dauert — das ist die Basis für deine 2-Monats-Planung. Sag mir danach, welcher Typ es war und wie's gelaufen ist.</p>
+
+<footer>
+  <p><strong>Fragen?</strong> Ich bin dein Lehrer — frag mich alles, was unklar ist (z.&nbsp;B. „Putz kommt mit, was jetzt?“, „Welcher Tapetenlöser?“). Nächste Lektion: <em>Untergrund prüfen &amp; grundieren</em> — der Adler-Test für sandende und saugende Wände.</p>
+  <p>Quellen: <a href="https://www.hornbach.de/projekte/tapeten-entfernen/">Hornbach: Tapeten entfernen</a> · <a href="https://www.obi.de/magazin/bauen/wand/tapeten-entfernen">OBI Magazin: Alte Tapeten entfernen</a> · <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">ADLER Farbenmeister: Untergrund prüfen</a></p>
+</footer>
+
+</div>
+<script>
+  // Checkliste in localStorage
+  document.querySelectorAll('#material input').forEach((cb, i) => {
+    const key = 'reno-l1-mat-' + i;
+    cb.checked = localStorage.getItem(key) === '1';
+    cb.addEventListener('change', () => localStorage.setItem(key, cb.checked ? '1' : '0'));
+  });
+  // Quiz mit Sofort-Feedback
+  document.querySelectorAll('.quiz').forEach(q => {
+    const correct = q.dataset.correct;
+    const fb = q.querySelector('.fb');
+    q.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        q.querySelectorAll('button').forEach(b => b.classList.remove('right', 'wrong'));
+        const ok = btn.dataset.k === correct;
+        btn.classList.add(ok ? 'right' : 'wrong');
+        if (!ok) q.querySelector('button[data-k="' + correct + '"]').classList.add('right');
+        fb.textContent = ok ? '✔ Richtig!' : '✘ Nicht ganz — die grün markierte Antwort ist richtig.';
+        fb.style.color = ok ? 'var(--ok)' : 'var(--bad)';
+        fb.classList.add('show');
+      });
+    });
+  });
+</script>
+</body>
+</html>

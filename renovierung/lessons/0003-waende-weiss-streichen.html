@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lektion 3 · Wände weiß streichen (weiß auf weiß)</title>
+<style>
+  :root{--ink:#2b2620;--paper:#faf7f2;--accent:#3a7d44;--accent-soft:#daf0df;--ok:#3a7d44;--bad:#b03a2e;--line:#d3e2d6;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);line-height:1.65;}
+  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 5rem;}
+  header{border-bottom:3px double var(--accent);padding-bottom:1.2rem;margin-bottom:2rem;}
+  .kicker{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 .4rem;}
+  h1{font-size:2.1rem;margin:0 0 .3rem;line-height:1.2;}
+  .lede{font-style:italic;color:#6b6155;margin:0;}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:2.6rem 0 .8rem;border-bottom:1px solid var(--line);padding-bottom:.35rem;}
+  .box{background:var(--accent-soft);border-left:4px solid var(--accent);padding:.9rem 1.1rem;border-radius:0 6px 6px 0;margin:1.2rem 0;}
+  .box strong:first-child{display:block;margin-bottom:.25rem;}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem;}
+  th,td{border:1px solid var(--line);padding:.55rem .7rem;text-align:left;vertical-align:top;}
+  th{background:#e6f1e9;font-family:'Helvetica Neue',Arial,sans-serif;font-size:.85rem;}
+  ol.steps{counter-reset:step;list-style:none;padding:0;}
+  ol.steps>li{counter-increment:step;position:relative;padding:0 0 1.3rem 3.2rem;margin:0;}
+  ol.steps>li::before{content:counter(step);position:absolute;left:0;top:.1rem;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--accent);color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  ol.steps strong{display:block;margin-bottom:.15rem;}
+  .test-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0;}
+  .test-card h3{margin:.1rem 0 .5rem;font-family:'Helvetica Neue',Arial,sans-serif;color:var(--accent);}
+  .quiz{border:1px solid var(--line);border-radius:8px;padding:1.1rem 1.2rem;margin:1.2rem 0;background:#fff;}
+  .quiz p.q{font-weight:700;margin:0 0 .6rem;}
+  .quiz button{display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .8rem;font:inherit;font-size:.95rem;background:var(--paper);border:1px solid var(--line);border-radius:6px;cursor:pointer;}
+  .quiz button:hover{border-color:var(--accent);}
+  .quiz button.right{background:#e7f2e9;border-color:var(--ok);}
+  .quiz button.wrong{background:#f9e5e2;border-color:var(--bad);}
+  .quiz .fb{font-size:.9rem;margin:.6rem 0 0;display:none;}
+  .quiz .fb.show{display:block;}
+  a{color:var(--accent);}
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.9rem;color:#6b6155;}
+  @media print{.quiz button{display:none;}body{background:#fff;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Haus-Renovierung · Lektion 3 · ca. 15 min + Praxis</p>
+  <h1>Wände weiß streichen — weiß auf weiß</h1>
+  <p class="lede">Deine Wände sind schon weiß. Klingt easy, hat aber zwei Tücken: man sieht nicht, wo man schon war, und die Kante zur Decke muss sitzen.</p>
+</header>
+
+<div class="box">
+  <strong>📋 Dein konkreter Fall</strong>
+  Tapete sitzt nur an den <strong>Decken</strong> (→ erst Decke fertigmachen, siehe Reihenfolge unten). Wände haben alte weiße Farbe: die meisten Räume nur überstreichen, 1–2 Räume brauchen vorher Spachteln (eigene Lektion 4). Diese Lektion = der Bulk: weiß auf weiß, schnell und sauber.
+</div>
+
+<h2>Erst die 30-Sekunden-Prüfung: Ist die alte Farbe überstreichbar?</h2>
+<p>Über alte Farbe darf man fast immer direkt streichen — <em>außer</em> in drei Fällen. ADLER: Untergrund muss tragfähig und frei von trennenden Substanzen sein. <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">[ADLER]</a></p>
+
+<div class="test-card">
+  <h3>Kreide-Test → kreidet die alte Farbe?</h3>
+  <p>Mit dunklem Tuch/Hand über die Wand wischen. <strong>Bleibt weißer Abrieb hängen?</strong> → alte Farbe kreidet (häufig bei alten Leimfarben). Dann: gründlich abwaschen + <strong>Tiefengrund</strong> drüber, sonst hält nichts.</p>
+</div>
+<table>
+  <tr><th>Befund alte Farbe</th><th>Vor dem Streichen</th></tr>
+  <tr><td>Matt, fest, sauber (Normalfall)</td><td>Nur entstauben → direkt streichen ✅</td></tr>
+  <tr><td>Kreidet (Abrieb)</td><td>Abwaschen, trocknen, Tiefengrund, dann streichen</td></tr>
+  <tr><td>Glänzt (alte Lack-/Glanzfarbe)</td><td>Leicht anrauen (Schleifvlies) + Haftgrund, sonst perlt neue Farbe ab</td></tr>
+  <tr><td>Flecken (Wasser, Nikotin, Filzstift)</td><td>Mit Isoliergrund/Sperrgrund vorbehandeln, sonst schlagen sie durch</td></tr>
+</table>
+
+<h2>Reihenfolge im Raum — von oben nach unten</h2>
+<p>Eiserne Regel: <strong>Decke vor Wand</strong>. Bei dir heißt das: erst Deckentapete runter (Lektion 1) + Decke streichen, <em>dann</em> Wände. So fällt Spritzer von oben auf noch-zu-streichende Flächen. <a href="https://www.obi.at/magazin/wohnen/innengestaltung/wandgestaltung/waende-streichen">[OBI AT]</a></p>
+
+<h2>Werkzeug</h2>
+<ul>
+  <li><strong>Farbe:</strong> matte weiße Wandfarbe / Dispersion, gute Deckkraft (Deckkraftklasse 1). Bei weiß-auf-weiß reicht meist <strong>1 Anstrich</strong>, plan aber Farbe für 2 ein.</li>
+  <li><strong>Rolle:</strong> Velours/mittelflorige Walze + Teleskopstange + Abstreifgitter im Eimer (nicht in der Wanne — gleichmäßiger).</li>
+  <li><strong>Pinsel/Heizkörperrolle</strong> für Ecken &amp; Kanten.</li>
+  <li><strong>Malerkrepp</strong> (gutes, z.&nbsp;B. Gold/Washi) für die Kante zur Decke und zu Steckdosen.</li>
+</ul>
+
+<h2>Die Technik gegen die zwei Tücken</h2>
+<ol class="steps">
+  <li><strong>Kanten zuerst ("vorschneiden").</strong> Mit Pinsel/kleiner Rolle einen ~5 cm Streifen entlang Decke, Ecken, Sockel ziehen — <em>bevor</em> du die Fläche rollst. Tipp gegen Farbgrate: Krepp abziehen, solange die Farbe noch feucht ist. <a href="https://www.adler-farbenmeister.com/tipps/waende-richtig-streichen-5-tipps-fuer-saubere-kanten-und-gerade-linien">[ADLER Kanten]</a></li>
+  <li><strong>Fläche nass in nass rollen.</strong> Farbe in W-/M-Form auftragen, dann ohne neue Farbe gleichmäßig verteilen. <strong>Nass in nass</strong> heißt: immer an die noch feuchte Kante anschließen, nie auf angetrocknete Bahn — sonst Ansätze (sichtbare Streifen). <a href="https://www.obi.at/magazin/wohnen/innengestaltung/wandgestaltung/waende-streichen">[OBI AT]</a></li>
+  <li><strong>In eine Richtung abrollen.</strong> Zum Schluss jede Bahn einmal von oben nach unten leicht überrollen — vereinheitlicht die Struktur, killt Wolken.</li>
+  <li><strong>Gegen "ich seh nicht wo ich war":</strong> bei Tageslicht / Lampe seitlich arbeiten, systematisch Bahn an Bahn von einer Ecke weg. Eine Wand komplett fertig machen, keine Pausen mitten in der Wand.</li>
+  <li><strong>Trocknen &amp; prüfen.</strong> Trocknen lassen, mit Streiflicht checken. Decklücken? Zweiter Anstrich — dann ganze Wand, nie nur Flecken.</li>
+</ol>
+
+<div class="box">
+  <strong>💡 Der häufigste Anfängerfehler</strong>
+  Pause mitten in der Wand → die Kante trocknet an → nach der Pause gibt's einen sichtbaren Ansatz. Regel: <em>Eine Wand wird in einem Zug fertig.</em> Lieber kleinere Wand zuerst.
+</div>
+
+<h2>Selbsttest</h2>
+
+<div class="quiz" data-correct="b">
+  <p class="q">1. Was machst du, bevor du die Wandfläche rollst?</p>
+  <button data-k="a">Die ganze Wand grundieren</button>
+  <button data-k="b">Kanten/Ecken mit Pinsel ~5 cm vorschneiden</button>
+  <button data-k="c">Erst die Mitte rollen, Kanten zuletzt</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="c">
+  <p class="q">2. Du wischst über die alte weiße Wand, weißer Abrieb bleibt an der Hand. Bedeutung?</p>
+  <button data-k="a">Wand ist sauber, sofort streichen</button>
+  <button data-k="b">Wand glänzt, anrauen</button>
+  <button data-k="c">Farbe kreidet — abwaschen + Tiefengrund, sonst hält der Anstrich nicht</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="a">
+  <p class="q">3. Warum „nass in nass“ rollen?</p>
+  <button data-k="a">Damit keine sichtbaren Ansätze/Streifen entstehen</button>
+  <button data-k="b">Damit man weniger Farbe braucht</button>
+  <button data-k="c">Damit es schneller trocknet</button>
+  <p class="fb"></p>
+</div>
+
+<div class="quiz" data-correct="b">
+  <p class="q">4. In welcher Reihenfolge in einem Raum mit Tapete an der Decke?</p>
+  <button data-k="a">Wände streichen, dann Deckentapete runter</button>
+  <button data-k="b">Deckentapete runter → Decke streichen → dann Wände</button>
+  <button data-k="c">Egal, Hauptsache trocken</button>
+  <p class="fb"></p>
+</div>
+
+<h2>Dein Praxis-Auftrag (1 Raum, der NICHT gespachtelt werden muss)</h2>
+<p>Nimm einen einfachen Raum: Kreide-/Glanz-Check an einer Wand machen, dann <strong>eine Wand</strong> komplett streichen — Kante vorschneiden, Fläche nass in nass, eine Richtung abrollen. Achte bewusst darauf, die Wand in einem Zug fertigzumachen. Sag mir danach: deckt es in einem Anstrich? Siehst du Ansätze? Dann optimieren wir Lektion 4 (Decke streichen über Kopf) oder Spachteln, je nachdem was du als nächstes brauchst.</p>
+
+<footer>
+  <p><strong>Fragen?</strong> z.&nbsp;B. „Welche weiße Farbe im Lagerhaus?“, „Krepp zieht Farbe mit ab — warum?“. Nächste Lektionen wählbar: <em>Decke streichen (über Kopf)</em> oder <em>Wand spachteln</em> für die 1–2 Räume.</p>
+  <p>Quellen: <a href="https://www.adler-farbenmeister.com/tipps/waende-richtig-streichen-5-tipps-fuer-saubere-kanten-und-gerade-linien">ADLER: saubere Kanten</a> · <a href="https://www.adler-farbenmeister.com/tipps/untergrund-pruefen-und-grundierung-an-der-wand">ADLER: Untergrund prüfen</a> · <a href="https://www.obi.at/magazin/wohnen/innengestaltung/wandgestaltung/waende-streichen">OBI AT: Wände streichen</a></p>
+</footer>
+
+</div>
+<script>
+  document.querySelectorAll('.quiz').forEach(q=>{
+    const correct=q.dataset.correct,fb=q.querySelector('.fb');
+    q.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        q.querySelectorAll('button').forEach(b=>b.classList.remove('right','wrong'));
+        const ok=btn.dataset.k===correct;
+        btn.classList.add(ok?'right':'wrong');
+        if(!ok)q.querySelector('button[data-k="'+correct+'"]').classList.add('right');
+        fb.textContent=ok?'✔ Richtig!':'✘ Nicht ganz — die grün markierte Antwort ist richtig.';
+        fb.style.color=ok?'var(--ok)':'var(--bad)';
+        fb.classList.add('show');
+      });
+    });
+  });
+</script>
+</body>
+</html>
