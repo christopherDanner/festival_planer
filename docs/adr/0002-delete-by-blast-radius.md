@@ -1,29 +1,33 @@
-# 0002 — DELETE nach Blast-Radius statt durchgängig creator-only
+# 0002 — DELETE im geteilten Bestand öffnen, nur das Fest bleibt geschützt
 
 Status: Accepted
 Datum: 2026-06-10
-Supersedes: ADR 0001, Entscheidung 1 (DELETE nur Ersteller) — für Line-Item-Tabellen
+Supersedes: ADR 0001, Entscheidung 1 + 1a (DELETE nur Ersteller / Fest-Ersteller) — für alle Tabellen außer `festivals`
 
 ## Kontext
 
-ADR 0001 beschränkte **DELETE** auf allen Tabellen auf den Ersteller (`user_id = auth.uid()`) und verwarf "DELETE für alle" als zu destruktiv. In der Praxis behindert das die gemeinsame Planung: Eine Material-Position oder ein Ablauf-Eintrag, den Benutzer A angelegt hat, kann Benutzer B nicht entfernen — obwohl beide am selben Fest arbeiten und alles andere gemeinsam bearbeiten dürfen. Das widerspricht dem *Gemeinsamen Arbeitsbereich*.
+ADR 0001 (Entscheidung 1 + 1a, umgesetzt in Migration `20260609000001_shared_workspace_rls.sql`) gatete DELETE durchgängig auf den Ersteller: `festivals`/`members` über `user_id = auth.uid()`, alle Kindtabellen über den **Ersteller des zugehörigen Fests** (`festival_id IN (SELECT id FROM festivals WHERE user_id = auth.uid())`, Variante a).
+
+In der Praxis blockiert das die gemeinsame Planung: Eine Material-Position oder ein Ablauf-Eintrag, den Benutzer A angelegt hat, lässt sich von Benutzer B nicht löschen — obwohl beide am selben Fest arbeiten und alles andere gemeinsam bearbeiten dürfen. Das widerspricht dem *Gemeinsamen Arbeitsbereich*. Die Tabellen tragen ohnehin kein Pro-Zeile-`user_id`; der „Ersteller", an dem das Löschen scheiterte, war faktisch der **Fest-Ersteller**.
 
 ## Entscheidung
 
-DELETE wird nach **Tragweite** gegated, nicht pauschal auf den Ersteller:
+DELETE wird nach **Blast-Radius** gegated, mit genau einer geschützten Grenze:
 
-- **Line-Items** — `festival_materials`, `schedule_days`, `schedule_phases`, `schedule_entries`: DELETE für jeden authentifizierten Benutzer, dasselbe Prädikat wie SELECT/UPDATE (Sichtbarkeit des Fests). Keine Sonderbehandlung fürs Löschen mehr.
-- **Container** — `festivals`, `stations`, `members`: DELETE bleibt creator-only wie in ADR 0001. Ein ganzes Fest zu löschen ist katastrophal (Cascade über alle Kinddaten), das soll bewusst nur der Ersteller können.
+- **`festivals`** — bleibt creator-only (`user_id = auth.uid()`). Ein ganzes Fest zu löschen reißt per Cascade alle Kinddaten mit; das soll bewusst nur der Ersteller können.
+- **Alle übrigen Tabellen** — `members`, `stations`, `station_shifts`, `station_members`, `shift_assignments`, `station_shift_assignments`, `festival_member_preferences`, `festival_materials`, `schedule_days`, `schedule_phases`, `schedule_entries`, `magic_links`, `member_preferences`: DELETE für jeden authentifizierten Benutzer, dasselbe Prädikat wie SELECT/UPDATE (`USING (true)`).
 
-Begründung der Grenze: Ein einzelnes Line-Item ist schnell wiederhergestellt, ein gelöschter Container reißt große Datenmengen mit. Routine vs. katastrophal.
+Leitlinie: Alles *innerhalb* eines Fests ist routinemäßig und gemeinsam pflegbar — inklusive Löschen. Nur das Fest als Ganzes ist die katastrophale Operation, die geschützt bleibt.
 
 ## Konsequenzen
 
-- Umsetzung rein in RLS (Migration). Kein Client-Code betroffen — die UI zeigte die Löschen-Buttons ohnehin immer; bisher scheiterte das Löschen still an RLS.
-- Etwaige Ersteller-Spalten auf den Line-Item-Tabellen bleiben erhalten (Audit), werden fürs DELETE-Gating aber nicht mehr ausgewertet.
-- Asymmetrie ist gewollt und dokumentiert: gemeinsamer Bestand, aber Container-Löschung bleibt geschützt.
+- Umsetzung rein in RLS (Migration `20260610000001_open_delete_within_festival.sql`). Kein Client-Code betroffen — die UI zeigte die Löschen-Buttons ohnehin immer; bisher scheiterte das Löschen still an RLS.
+- Die Migration ersetzt **nur** die DELETE-Policies. Der öffentliche, tokenbasierte Magic-Link-Flow (anon-Policies auf `magic_links` / `member_preferences` für SELECT/INSERT/UPDATE) bleibt unangetastet.
+- `user_id` auf `festivals` bleibt Ersteller-Nachweis fürs Löschen; auf `members` verliert es seine Löschschutz-Funktion (DELETE jetzt für alle), `user_id` bleibt aber als Ersteller-Audit erhalten.
+- Kein Pro-Benutzer-Schutz mehr unterhalb des Fests: jeder Eingeloggte kann jede Position/Station/Schicht löschen. Akzeptabel für die kleine, vertraute Gruppe (vgl. ADR 0001); bei Wachstum neu bewerten.
 
 ## Verworfene Alternativen
 
-- **DELETE überall für alle öffnen** — konsequenter, aber gibt den Schutz für katastrophale Fest-Löschungen ohne Not auf.
-- **Bei creator-only bleiben (ADR 0001 unverändert)** — verworfen, weil es die gemeinsame Planung an der Stelle blockiert, an der sie am häufigsten gebraucht wird.
+- **Bei Ersteller-/Fest-Ersteller-Gating bleiben (ADR 0001, 1a)** — verworfen, weil es die gemeinsame Planung an der häufigsten Stelle blockiert.
+- **Nur Material + Ablauf öffnen, Rest gegated lassen** — als Zwischenschritt erwogen, aber inkonsistent: Schicht- und Zuteilungstabellen sind genauso Line-Items. Eine einzige klare Grenze (nur das Fest) ist verständlicher.
+- **DELETE komplett für alle, auch das Fest** — verworfen; die Fest-Cascade ist zu destruktiv, um sie ungeschützt zu lassen.

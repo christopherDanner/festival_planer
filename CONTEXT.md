@@ -12,12 +12,12 @@ Eine zeitlich begrenzte Veranstaltung, für die geplant, eingeteilt, eingekauft 
 
 Festmeister hat **einen einzigen, geteilten Datenbestand** — keine Mandanten- oder Pro-Benutzer-Trennung. Jeder angemeldete Benutzer sieht und bearbeitet dieselben Feste, Stationen, Materiallisten usw. Begründung: kleine, vertraute Gruppe, die gemeinsam an denselben Festen plant. Zugangskontrolle passiert allein über *wer ein Konto bekommt* (siehe *Benutzer*), nicht über Datensichtbarkeit. Entscheidung dokumentiert in ADR 0001.
 
-Konsequenz für die DB (RLS): SELECT/INSERT/UPDATE für jeden authentifizierten Benutzer. **DELETE** richtet sich nach der Tragweite (Blast-Radius, siehe ADR 0002):
+Konsequenz für die DB (RLS): SELECT/INSERT/UPDATE für jeden authentifizierten Benutzer. **DELETE** richtet sich nach der Tragweite (Blast-Radius, siehe ADR 0002) — mit genau einer geschützten Grenze:
 
-- **Container** (ganzes Fest, Station, Mitglied) — Löschen ist katastrophal und bleibt auf den Ersteller (`user_id = auth.uid()`) beschränkt.
-- **Line-Items** (Material-Position, Ablauf-Tage/-Phasen/-Einträge) — routinemäßiges Löschen; jeder authentifizierte Benutzer darf löschen, dasselbe Prädikat wie SELECT/UPDATE.
+- **Ganzes Fest** (`festivals`) — Löschen ist katastrophal (Cascade über alle Kinddaten) und bleibt auf den Ersteller (`user_id = auth.uid()`) beschränkt.
+- **Alles innerhalb eines Fests** (Stationen, Schichten, Mitglieder, Material-Positionen, Ablauf-Einträge usw.) — routinemäßiges Löschen; jeder authentifizierte Benutzer darf löschen, dasselbe Prädikat wie SELECT/UPDATE.
 
-`user_id` auf einem Fest ist daher kein Besitz-/Sichtbarkeits-Marker mehr, sondern nur noch Ersteller-Nachweis fürs Löschen von Containern.
+`user_id` auf einem Fest ist daher kein Besitz-/Sichtbarkeits-Marker mehr, sondern nur noch Ersteller-Nachweis fürs Löschen des Fests selbst.
 
 ## Benutzer
 
