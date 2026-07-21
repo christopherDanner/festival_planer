@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['"Public Sans Variable"', "system-ui", "sans-serif"],
+        display: ['"Oswald Variable"', '"Public Sans Variable"', "sans-serif"],
+      },
       colors: {
         papier: "oklch(var(--papier) / <alpha-value>)",
         tinte: {

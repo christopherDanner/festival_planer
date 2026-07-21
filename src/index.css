@@ -80,7 +80,9 @@ oklch(var(--token) / <alpha-value>). Keine hsl()-Tokens mehr.
 		background-color: oklch(var(--background));
 		color: #253029;
 		color: oklch(var(--foreground));
-		font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-family: 'Public Sans Variable', system-ui, sans-serif;
+		/* Vision §4: Zahlen überall tabellarisch — tabular-nums wirkt nur auf Ziffern */
+		font-variant-numeric: tabular-nums;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 	}
