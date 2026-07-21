@@ -94,6 +94,10 @@ _Avoid_: Reaktivierung.
 Fachliches Ziel hinter der *Sponsor-Übernahme*: vergangene Sponsoren fürs neue Fest erneut anfragen. Der **automatisierte Email-Versand ist bewusst (noch) nicht Teil des Funktionsumfangs** — es gibt keine Versand-Infrastruktur (siehe AI_INTEGRATION.md: nur client-seitiges Mistral, keine Edge Functions). Aktuell deckt die *Sponsor-Übernahme* den Vorgang ab; Mailversand kann später andocken.
 _Avoid_: Follow-up.
 
+## Werkzeug-Bausteine (Toolkit)
+
+Die wiederkehrenden UI-Bausteine der Werkzeug-Plakat-Handschrift (`design-vision/DESIGN-VISION.md` §4): Maßband-Ruler, Namens-Marke, Wertmarke, Stempel, Segment-Schalter, Ampel-Logik, Freier Platz. Im Code englisch benannt unter `src/components/toolkit/` (`<Ruler>`, `<NameChip>`, `<ValueTag>`, `<Stamp>`, `<SegmentedControl>`, `<ModeToggle>`, `<StatusBar>`, `<OpenSlot>`) — Mapping und Komponentenstrategie in ADR 0003. Abgrenzung: `src/components/ui/` = Radix-Verhalten (shadcn, nur restylt), `toolkit/` = Handschrift.
+
 ## Sponsoring-Übersicht
 
 Auswertung pro Fest: alle erfassten *Sponsoren* mit ihren Kategorien/Freibeträgen und die Gesamtsumme des Sponsorings für dieses Fest.
