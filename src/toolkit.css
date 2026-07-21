@@ -43,6 +43,23 @@ Komponenten (<Ruler />), nie diese Klassen. */
 		background: oklch(var(--tinte));
 	}
 
+	/* <NameChip> — getönte Fläche + Stanzloch-Punkt links; die Rundung des
+	Stanzlochs ist die erlaubte Ausnahme innerhalb einer Toolkit-Komponente
+	(ADR 0003 §3) */
+	.name-chip {
+		background: oklch(0.94 0.015 110);
+	}
+
+	.name-chip::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		border: 1.5px solid oklch(var(--tinte-soft));
+		background: oklch(var(--papier));
+		flex: none;
+	}
+
 	/* <Stamp> — Stempel-Rotation */
 	.stamp--tilt-left {
 		transform: rotate(-2deg);
