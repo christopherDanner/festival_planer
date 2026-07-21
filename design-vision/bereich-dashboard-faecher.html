@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Bereichs-Fächer FEST-DASHBOARD: 5 Umsetzungen innerhalb der
+     Gesamtrichtung F „Werkzeug-Plakat". Nutzer-Vorgabe: sofort sehen, WO gehandelt werden
+     muss (Stationen mit fehlenden Personen KONKRET benannt), offene Aufgaben/Programmpunkte,
+     Eckdaten des Fests, das Programm, Material-Werte (bestellt € vs. verbraucht €),
+     Sponsoring — und Dinge, an die man nicht denkt (Fristen). ?variant=a|b|c|d|e -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Bereichs-Fächer Dashboard (5 Umsetzungen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.active { display: block; }
+  button { font: inherit; cursor: pointer; }
+  a { color: inherit; }
+
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  .variant { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 120px; }
+
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .when b { color: var(--yellow); }
+  nav.tabs { display: flex; border: 2.5px solid var(--ink); border-top: 0; background: #fff; overflow-x: auto; }
+  nav.tabs a { color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 14px; padding: 11px 18px; white-space: nowrap; border-right: 1px solid var(--line); }
+  nav.tabs a:hover { color: var(--ink); background: oklch(0.955 0.01 100); }
+  nav.tabs a.on { color: var(--ink); background: var(--yellow); box-shadow: inset 0 -3px 0 var(--ink); }
+
+  .variant h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+  .variant h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .variant h2 a { font-size: 12.5px; letter-spacing: .02em; text-transform: none; color: var(--green); text-decoration: none; font-weight: 700; }
+
+  /* Maßband-KPIs */
+  .gauges { display: grid; grid-template-columns: repeat(4, 1fr); border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .gauge { padding: 15px 18px 13px; border-right: 1px solid var(--line); }
+  .gauge:last-child { border-right: 0; }
+  .gauge .glabel { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; gap: 8px; }
+  .gauge .glabel b { font-size: 13px; font-weight: 700; }
+  .gauge .glabel .val { font-family: "Anton", sans-serif; font-size: 17px; letter-spacing: .02em; white-space: nowrap; }
+  .gauge .val.warn { color: var(--red); }
+  .gauge .val.ok { color: var(--green); }
+  .ruler { position: relative; height: 20px; border: 1.5px solid var(--ink); background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+  .gauge .gnote { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  .gauge .gnote b { color: var(--red); }
+
+  /* Bausteine */
+  .go { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--green); text-decoration: none; white-space: nowrap; }
+  .go:hover { text-decoration: underline; }
+  .badge { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; padding: 2px 8px; white-space: nowrap; }
+  .badge.red { background: var(--red); color: #fff; }
+  .badge.yellow { background: var(--yellow); color: var(--ink); }
+  .badge.outline { border: 1.5px solid var(--ink-soft); color: var(--ink-soft); }
+  .lineup { border: 2px solid var(--ink); background: #fff; list-style: none; }
+  .lineup li { display: flex; gap: 12px; align-items: baseline; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .lineup li:last-child { border-bottom: 0; }
+  .lineup time { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .02em; width: 60px; flex: none; }
+  .lineup .what b { font-weight: 700; }
+  .lineup .what span { display: block; font-size: 12px; color: var(--ink-soft); }
+  .lineup .zday { font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--green); padding: 8px 14px 2px; border-bottom: 0; }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 210px; text-align: center; letter-spacing: .01em; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+
+  @media (max-width: 900px) {
+    .frame { padding: 12px 12px 120px; }
+    .gauges { grid-template-columns: 1fr 1fr; }
+    .gauge { border-bottom: 1px solid var(--line); }
+    .gauge:nth-child(n+3) { border-bottom: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ################################################################
+     VARIANTE A — „Werkstatt-Tafel"
+     Kern: die abgenommene F-Grundform, geschärft. Maßband-KPIs oben,
+     darunter links die KONKRETEN Lücken (Station + Schicht + wie
+     viele fehlen, klickbar), Material-Werte als Soll/Ist-Kasten,
+     rechts Eckdaten-Steckbrief + Programm.
+     ################################################################ -->
+<section class="variant" data-v="a">
+<style>
+  [data-v="a"] .duo { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 30px; align-items: start; }
+  [data-v="a"] .gap { border: 2px solid var(--ink); background: #fff; margin-bottom: 14px; }
+  [data-v="a"] .gap .ghead { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 2px solid var(--ink); }
+  [data-v="a"] .gap .ghead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="a"] .gap .ghead .badge { margin-left: auto; }
+  [data-v="a"] .gaprow { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  [data-v="a"] .gaprow:last-child { border-bottom: 0; }
+  [data-v="a"] .gaprow time { font-weight: 700; width: 92px; flex: none; font-variant-numeric: tabular-nums; }
+  [data-v="a"] .gaprow .miss { color: var(--red); font-weight: 800; }
+  [data-v="a"] .gaprow .go { margin-left: auto; }
+  [data-v="a"] .matbox { border: 2px solid var(--ink); background: #fff; display: grid; grid-template-columns: 1fr 1fr 1fr; }
+  [data-v="a"] .matbox .cell { padding: 13px 16px; border-right: 1px solid var(--line); }
+  [data-v="a"] .matbox .cell:last-child { border-right: 0; }
+  [data-v="a"] .matbox .cell .l { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  [data-v="a"] .matbox .cell .v { font-family: "Anton", sans-serif; font-size: 22px; letter-spacing: .02em; margin-top: 3px; }
+  [data-v="a"] .matbox .cell .v.green { color: var(--green); }
+  [data-v="a"] .matbox .cell .s { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+  [data-v="a"] .steck { border: 2px solid var(--ink); background: #fff; margin-bottom: 22px; }
+  [data-v="a"] .steck .srow { display: flex; justify-content: space-between; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  [data-v="a"] .steck .srow:last-child { border-bottom: 0; }
+  [data-v="a"] .steck .srow .k { color: var(--ink-soft); font-weight: 600; }
+  [data-v="a"] .steck .srow .w { font-weight: 700; text-align: right; }
+  @media (max-width: 900px) { [data-v="a"] .duo { grid-template-columns: 1fr; } [data-v="a"] .matbox { grid-template-columns: 1fr; } [data-v="a"] .matbox .cell { border-right: 0; border-bottom: 1px solid var(--line); } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a class="on" href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="gauges">
+    <div class="gauge"><div class="glabel"><b>Schichtplan</b><span class="val warn">41/52</span></div><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div><div class="gnote"><b>11 Personen fehlen</b> in 4 Stationen</div></div>
+    <div class="gauge"><div class="glabel"><b>Aufgaben</b><span class="val warn">22/31</span></div><div class="ruler"><i style="width:71%"></i><em style="left:71%"></em></div><div class="gnote"><b>9 offen</b> · Frist: AKM bis Mi 22.</div></div>
+    <div class="gauge"><div class="glabel"><b>Material bestellt</b><span class="val">€ 7.431</span></div><div class="ruler"><i style="width:86%"></i><em style="left:86%"></em></div><div class="gnote"><b>12 ohne Preis</b> · 86 Positionen</div></div>
+    <div class="gauge"><div class="glabel"><b>Sponsoring</b><span class="val ok">€ 4.850</span></div><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><div class="gnote">14 Sponsoren · Ziel € 5.000</div></div>
+  </div>
+
+  <div class="duo">
+    <div>
+      <h2>Hier fehlen noch Leute <a href="#">Schichtplan →</a></h2>
+      <div class="gap">
+        <div class="ghead"><h3>Ausschank</h3><span style="font-size:12px;color:var(--ink-soft)">Zelt Nord</span><span class="badge red">3 FEHLEN</span></div>
+        <div class="gaprow"><time>Sa 15–19</time><span class="miss">+1 Person</span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="gaprow"><time>Sa 19–23</time><span class="miss">+1 Person</span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="gaprow"><time>Sa 23–02</time><span class="miss">+1 Person</span><span style="font-size:11px;color:var(--ink-soft)">Barbetrieb — kritisch</span><a class="go" href="#">BESETZEN →</a></div>
+      </div>
+      <div class="gap">
+        <div class="ghead"><h3>Grill</h3><span class="badge red">2 FEHLEN</span></div>
+        <div class="gaprow"><time>Sa 11–15</time><span class="miss">+1 Person</span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="gaprow"><time>Sa 15–19</time><span class="miss">+1 Person</span><a class="go" href="#">BESETZEN →</a></div>
+      </div>
+      <div class="gap">
+        <div class="ghead"><h3>Weinlaube + Kassa</h3><span class="badge red">3 FEHLEN</span></div>
+        <div class="gaprow"><time>Sa 16–20</time><span>Weinlaube</span><span class="miss">+1</span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="gaprow"><time>Sa 20–24</time><span>Weinlaube</span><span class="miss">+1</span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="gaprow"><time>Sa 19–24</time><span>Abendkassa</span><span class="miss">+1</span><a class="go" href="#">BESETZEN →</a></div>
+      </div>
+
+      <h2>Material · Wert <a href="#">Materialliste →</a></h2>
+      <div class="matbox">
+        <div class="cell"><div class="l">Bestellt</div><div class="v">€ 7.431</div><div class="s">86 Positionen · 12 ohne Preis</div></div>
+        <div class="cell"><div class="l">Verbraucht</div><div class="v green">€ 6.212</div><div class="s">erfasst bei 55 von 86</div></div>
+        <div class="cell"><div class="l">Differenz</div><div class="v green">− € 1.219</div><div class="s">Bier −2 Fass · Hendl +62 Stk.</div></div>
+      </div>
+    </div>
+    <div>
+      <h2>Eckdaten</h2>
+      <div class="steck">
+        <div class="srow"><span class="k">Termin</span><span class="w">Fr 24. – So 26. Juli 2026</span></div>
+        <div class="srow"><span class="k">Countdown</span><span class="w" style="color:var(--red)">noch 4 Tage</span></div>
+        <div class="srow"><span class="k">Ort</span><span class="w">Festgelände Steinbach</span></div>
+        <div class="srow"><span class="k">Erwartet</span><span class="w">300–800 Besucher</span></div>
+        <div class="srow"><span class="k">Helfer</span><span class="w">24 Mitglieder · 15 eingeteilt</span></div>
+      </div>
+      <h2>Programm <a href="#">Ablaufplan →</a></h2>
+      <ul class="lineup">
+        <li class="zday">Freitag</li>
+        <li><time>18:00</time><span class="what"><b>Eröffnung + Fassanstich</b></span></li>
+        <li><time>19:30</time><span class="what"><b>„Die Steinbacher"</b></span></li>
+        <li class="zday">Samstag</li>
+        <li><time>11:00</time><span class="what"><b>Frühschoppen — MV Steinbach</b></span></li>
+        <li><time>15:00</time><span class="what"><b>Gastkapelle Purgstall</b></span></li>
+        <li><time>19:30</time><span class="what"><b>„Die Lauser"</b><span>Einlass 18:30 · Kassa +2!</span></span></li>
+        <li class="zday">Sonntag</li>
+        <li><time>09:30</time><span class="what"><b>Feldmesse</b></span></li>
+        <li><time>16:00</time><span class="what"><b>Tombola-Verlosung</b></span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE B — „Offene Posten"
+     Kern: EINE priorisierte Liste aller Handlungsbedarfe aus allen
+     Bereichen — sortiert nach Dringlichkeit, jede Zeile mit
+     Bereichs-Stempel und Absprung. KPIs kompakt daneben. Das
+     Dashboard als Abarbeitungs-Maschine.
+     ################################################################ -->
+<section class="variant" data-v="b">
+<style>
+  [data-v="b"] .board { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 26px; align-items: start; margin-top: 26px; }
+  [data-v="b"] .posten { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="b"] .posten .phead { padding: 11px 16px; border-bottom: 2.5px solid var(--ink); background: var(--red); color: #fff; display: flex; justify-content: space-between; align-items: baseline; }
+  [data-v="b"] .posten .phead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 17px; letter-spacing: .04em; text-transform: uppercase; }
+  [data-v="b"] .posten .phead .n { font-family: "Anton", sans-serif; font-size: 20px; }
+  [data-v="b"] .prow { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  [data-v="b"] .prow:last-child { border-bottom: 0; }
+  [data-v="b"] .prow .badge { flex: none; width: 92px; text-align: center; }
+  [data-v="b"] .prow .ti { flex: 1; min-width: 0; }
+  [data-v="b"] .prow .ti b { font-weight: 700; }
+  [data-v="b"] .prow .ti .sub { display: block; font-size: 12px; color: var(--ink-soft); }
+  [data-v="b"] .prow .go { flex: none; }
+  [data-v="b"] .prow.urgent { background: oklch(0.975 0.015 60); box-shadow: inset 3.5px 0 0 var(--red); }
+  [data-v="b"] .minis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+  [data-v="b"] .mini { border: 2px solid var(--ink); background: #fff; padding: 11px 14px; }
+  [data-v="b"] .mini .l { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  [data-v="b"] .mini .v { font-family: "Anton", sans-serif; font-size: 19px; letter-spacing: .02em; margin-top: 2px; }
+  [data-v="b"] .mini .v.warn { color: var(--red); } [data-v="b"] .mini .v.ok { color: var(--green); }
+  [data-v="b"] .mini .s { font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
+  @media (max-width: 900px) { [data-v="b"] .board { grid-template-columns: 1fr; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · Festgelände Steinbach · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a class="on" href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+
+  <div class="board">
+    <div>
+      <div class="posten" style="margin-top:26px">
+        <div class="phead"><h3>Offene Posten — das muss noch passieren</h3><span class="n">14</span></div>
+        <div class="prow urgent"><span class="badge outline">FRIST</span><span class="ti"><b>Musikeranmeldung AKM</b><span class="sub">Frist Mittwoch 22. Juli — in 2 Tagen! · Obmann</span></span><a class="go" href="#">ERLEDIGEN →</a></div>
+        <div class="prow urgent"><span class="badge red">SCHICHT</span><span class="ti"><b>Ausschank Sa 23–02: 1 Person fehlt</b><span class="sub">Barbetrieb — kritisch, nur 1 von 2 besetzt</span></span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="prow"><span class="badge red">SCHICHT</span><span class="ti"><b>Grill Sa 11–15 und 15–19: je 1 Person fehlt</b><span class="sub">wünschen sich Grill: J. Steiner, F. Haas</span></span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="prow"><span class="badge red">SCHICHT</span><span class="ti"><b>Weinlaube Sa: 2 Personen fehlen</b><span class="sub">16–20 und 20–24 je +1</span></span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="prow"><span class="badge red">SCHICHT</span><span class="ti"><b>Ausschank Sa 15–19 / 19–23, Abendkassa: je +1</b></span><a class="go" href="#">BESETZEN →</a></div>
+        <div class="prow"><span class="badge yellow">AUFGABE</span><span class="ti"><b>Kühlwagen-Anlieferung</b><span class="sub">Do 15:00 · F. Hochauer</span></span><a class="go" href="#">ABLAUFPLAN →</a></div>
+        <div class="prow"><span class="badge yellow">AUFGABE</span><span class="ti"><b>Strom + Beleuchtung verlegen</b><span class="sub">Do 16:00 · P. Gruber</span></span><a class="go" href="#">ABLAUFPLAN →</a></div>
+        <div class="prow"><span class="badge yellow">MATERIAL</span><span class="ti"><b>12 Positionen ohne Preis</b><span class="sub">Kostenschätzung unvollständig — u. a. Kassenrollen, Kabel</span></span><a class="go" href="#">NACHTRAGEN →</a></div>
+        <div class="prow"><span class="badge outline">SPONSOR</span><span class="ti"><b>2 Sponsoren-Logos fehlen fürs Plakat</b><span class="sub">Raiffeisen, Lagerhaus — Ansprechpartner s. Sponsoring</span></span><a class="go" href="#">SPONSORING →</a></div>
+      </div>
+    </div>
+    <div>
+      <h2>Stand heute</h2>
+      <div class="minis">
+        <div class="mini"><div class="l">Countdown</div><div class="v warn">4 Tage</div><div class="s">Fr 24. – So 26. Juli</div></div>
+        <div class="mini"><div class="l">Schichten</div><div class="v warn">41/52</div><div class="s">11 fehlen</div></div>
+        <div class="mini"><div class="l">Aufgaben</div><div class="v warn">22/31</div><div class="s">9 offen</div></div>
+        <div class="mini"><div class="l">Material bestellt</div><div class="v">€ 7.431</div><div class="s">86 Positionen</div></div>
+        <div class="mini"><div class="l">Verbraucht</div><div class="v ok">€ 6.212</div><div class="s">55/86 erfasst</div></div>
+        <div class="mini"><div class="l">Sponsoring</div><div class="v ok">€ 4.850</div><div class="s">14 Sponsoren</div></div>
+      </div>
+      <h2>Programm <a href="#">Ablaufplan →</a></h2>
+      <ul class="lineup">
+        <li><time>Fr 18:00</time><span class="what"><b>Eröffnung + Fassanstich</b></span></li>
+        <li><time>Fr 19:30</time><span class="what"><b>„Die Steinbacher"</b></span></li>
+        <li><time>Sa 11:00</time><span class="what"><b>Frühschoppen — MV Steinbach</b></span></li>
+        <li><time>Sa 15:00</time><span class="what"><b>Gastkapelle Purgstall</b></span></li>
+        <li><time>Sa 19:30</time><span class="what"><b>„Die Lauser"</b></span></li>
+        <li><time>So 09:30</time><span class="what"><b>Feldmesse + Frühschoppen</b></span></li>
+        <li><time>So 16:00</time><span class="what"><b>Tombola-Verlosung</b></span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE C — „Festplakat"
+     Kern: die Eckdaten ALS Plakat — das Fest selbst steht groß im
+     Zentrum (Datum, Ort, Programm wie ein Aushang), die Arbeit
+     rundherum: links Lücken, rechts Zahlen. Identität + Werkzeug.
+     ################################################################ -->
+<section class="variant" data-v="c">
+<style>
+  [data-v="c"] .trio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 26px; }
+  [data-v="c"] .poster { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; text-align: center; padding: 26px 20px 20px; }
+  [data-v="c"] .poster .fm { font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .12em; color: var(--yellow); }
+  [data-v="c"] .poster h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 30px; letter-spacing: .02em; text-transform: uppercase; margin: 6px 0 2px; }
+  [data-v="c"] .poster .date { font-family: "Anton", sans-serif; font-size: 17px; color: var(--yellow); letter-spacing: .04em; }
+  [data-v="c"] .poster .ort { font-size: 12.5px; color: oklch(0.92 0.02 110); margin-top: 2px; }
+  [data-v="c"] .poster .cd { display: inline-block; background: var(--yellow); color: var(--ink); font-family: "Anton", sans-serif; font-size: 14px; letter-spacing: .05em; padding: 5px 14px; margin-top: 12px; }
+  [data-v="c"] .poster .prg { background: #fff; color: var(--ink); border: 2px solid var(--ink); margin-top: 16px; text-align: left; }
+  [data-v="c"] .poster .prg .zd { font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--green); padding: 8px 14px 2px; }
+  [data-v="c"] .poster .prg .zr { display: flex; gap: 10px; padding: 4px 14px; font-size: 12.5px; align-items: baseline; }
+  [data-v="c"] .poster .prg .zr time { font-family: "Anton", sans-serif; font-size: 13px; width: 46px; flex: none; }
+  [data-v="c"] .poster .prg .zr b { font-weight: 700; }
+  [data-v="c"] .poster .prg .zfoot { border-top: 1.5px solid var(--line); margin-top: 8px; padding: 7px 14px; font-size: 10.5px; color: var(--ink-soft); }
+  [data-v="c"] .col h4 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  [data-v="c"] .col h4::after { content: ""; flex: 1; height: 6px; background-image: radial-gradient(oklch(0.78 0.02 120) 1px, transparent 1.2px); background-size: 7px 7px; }
+  [data-v="c"] .lack { border: 2px solid var(--ink); background: #fff; margin-bottom: 10px; padding: 10px 13px; }
+  [data-v="c"] .lack .t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  [data-v="c"] .lack .t b { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="c"] .lack .t .m { color: var(--red); font-weight: 800; font-size: 12px; white-space: nowrap; }
+  [data-v="c"] .lack .d { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+  [data-v="c"] .lack a { display: inline-block; margin-top: 6px; }
+  [data-v="c"] .num { border: 2px solid var(--ink); background: #fff; margin-bottom: 10px; padding: 11px 13px; }
+  [data-v="c"] .num .l { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); display: flex; justify-content: space-between; }
+  [data-v="c"] .num .v { font-family: "Anton", sans-serif; font-size: 21px; letter-spacing: .02em; margin: 3px 0 5px; }
+  [data-v="c"] .num .v.warn { color: var(--red); } [data-v="c"] .num .v.ok { color: var(--green); }
+  [data-v="c"] .num .rulermini { position: relative; height: 12px; border: 1.5px solid var(--ink); background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0.85 0.01 100) 8px 9px); background-size: 100% 45%; background-repeat: repeat-x; background-position: bottom; }
+  [data-v="c"] .num .rulermini i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .6; }
+  [data-v="c"] .num .s { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+  @media (max-width: 900px) { [data-v="c"] .trio { grid-template-columns: 1fr; } [data-v="c"] .poster { order: -1; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when"><b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a class="on" href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+
+  <div class="trio">
+    <div class="col">
+      <h4>Da fehlt noch was</h4>
+      <div class="lack">
+        <div class="t"><b>Ausschank</b><span class="m">3 PERSONEN</span></div>
+        <div class="d">Sa 15–19, 19–23, 23–02 (kritisch) je +1</div>
+        <a class="go" href="#">BESETZEN →</a>
+      </div>
+      <div class="lack">
+        <div class="t"><b>Grill</b><span class="m">2 PERSONEN</span></div>
+        <div class="d">Sa 11–15 und 15–19 · Wunsch: Steiner, Haas</div>
+        <a class="go" href="#">BESETZEN →</a>
+      </div>
+      <div class="lack">
+        <div class="t"><b>Weinlaube + Kassa</b><span class="m">3 PERSONEN</span></div>
+        <div class="d">Weinlaube Sa 16–20/20–24, Abendkassa +1</div>
+        <a class="go" href="#">BESETZEN →</a>
+      </div>
+      <div class="lack">
+        <div class="t"><b>Aufgaben</b><span class="m">9 OFFEN</span></div>
+        <div class="d">Nächste Frist: <b style="color:var(--red)">AKM bis Mi 22.</b> · Kühlwagen Do 15:00</div>
+        <a class="go" href="#">ABLAUFPLAN →</a>
+      </div>
+    </div>
+
+    <div class="poster">
+      <div class="fm">DER MUSIKVEREIN STEINBACH LÄDT</div>
+      <h3>Musikfest Steinbach</h3>
+      <div class="date">FR 24. – SO 26. JULI 2026</div>
+      <div class="ort">Festgelände Steinbach · Eintritt frei bis 18:00</div>
+      <span class="cd">NOCH 4 TAGE</span>
+      <div class="prg">
+        <div class="zd">Freitag</div>
+        <div class="zr"><time>18:00</time><b>Eröffnung + Fassanstich</b></div>
+        <div class="zr"><time>19:30</time><b>„Die Steinbacher"</b></div>
+        <div class="zd">Samstag</div>
+        <div class="zr"><time>11:00</time><b>Frühschoppen — MV Steinbach</b></div>
+        <div class="zr"><time>15:00</time><b>Gastkapelle Purgstall</b></div>
+        <div class="zr"><time>19:30</time><b>„Die Lauser"</b></div>
+        <div class="zd">Sonntag</div>
+        <div class="zr"><time>09:30</time><b>Feldmesse + Frühschoppen</b></div>
+        <div class="zr"><time>16:00</time><b>Tombola-Verlosung</b></div>
+        <div class="zfoot">9 Programmpunkte · alle Zeiten fix · Aushang druckbereit</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <h4>Zahlen</h4>
+      <div class="num"><div class="l"><span>Schichten besetzt</span><a class="go" href="#">→</a></div><div class="v warn">41/52</div><div class="rulermini"><i style="width:79%"></i></div><div class="s">11 fehlen · Samstag ist der Engpass</div></div>
+      <div class="num"><div class="l"><span>Material bestellt</span><a class="go" href="#">→</a></div><div class="v">€ 7.431</div><div class="rulermini"><i style="width:86%"></i></div><div class="s">86 Positionen · 12 ohne Preis</div></div>
+      <div class="num"><div class="l"><span>Verbraucht (Ist)</span><a class="go" href="#">→</a></div><div class="v ok">€ 6.212</div><div class="rulermini"><i style="width:72%"></i></div><div class="s">erfasst bei 55/86 · Δ − € 1.219</div></div>
+      <div class="num"><div class="l"><span>Sponsoring</span><a class="go" href="#">→</a></div><div class="v ok">€ 4.850</div><div class="rulermini"><i style="width:97%"></i></div><div class="s">14 Sponsoren · Ziel € 5.000</div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE D — „Vier Werkbänke"
+     Kern: das Dashboard als Portal — je Bereich eine Werkbank-Karte
+     mit eigenem Maßband, den konkreten Top-Lücken und Absprung.
+     Man sieht pro Bereich, was los ist, und springt direkt hinein.
+     ################################################################ -->
+<section class="variant" data-v="d">
+<style>
+  [data-v="d"] .eck { display: flex; gap: 18px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; font-size: 12.5px; align-items: baseline; }
+  [data-v="d"] .eck b { font-weight: 800; }
+  [data-v="d"] .eck .cd { color: var(--red); font-weight: 800; }
+  [data-v="d"] .eck .sep { color: oklch(0.8 0.02 120); }
+  [data-v="d"] .benches { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; }
+  [data-v="d"] .bench { border: 2.5px solid var(--ink); background: #fff; display: flex; flex-direction: column; }
+  [data-v="d"] .bench .bh { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  [data-v="d"] .bench .bh h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="d"] .bench .bh .v { margin-left: auto; font-family: "Anton", sans-serif; font-size: 15px; color: var(--yellow); }
+  [data-v="d"] .bench .rulerwrap { padding: 10px 14px 0; }
+  [data-v="d"] .bench ul { list-style: none; padding: 8px 0 4px; flex: 1; }
+  [data-v="d"] .bench li { display: flex; gap: 9px; padding: 5px 14px; font-size: 12.5px; align-items: baseline; }
+  [data-v="d"] .bench li .dot { color: var(--red); font-weight: 800; flex: none; }
+  [data-v="d"] .bench li .dot.ok { color: var(--green); }
+  [data-v="d"] .bench li b { font-weight: 700; }
+  [data-v="d"] .bench .bf { border-top: 1.5px solid var(--line); padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  [data-v="d"] .bench .bf .s { font-size: 11.5px; color: var(--ink-soft); }
+  @media (max-width: 900px) { [data-v="d"] .benches { grid-template-columns: 1fr; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when"><b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a class="on" href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="eck">
+    <span><b>Fr 24. – So 26. Juli 2026</b></span><span class="sep">·</span>
+    <span>Festgelände Steinbach</span><span class="sep">·</span>
+    <span class="cd">noch 4 Tage</span><span class="sep">·</span>
+    <span>erwartet: 300–800 Besucher</span><span class="sep">·</span>
+    <span>24 Mitglieder · 15 eingeteilt</span><span class="sep">·</span>
+    <span>9 Programmpunkte fixiert</span>
+  </div>
+
+  <div class="benches">
+    <div class="bench">
+      <div class="bh"><h3>Schichtplan</h3><span class="v">41/52</span></div>
+      <div class="rulerwrap"><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+      <ul>
+        <li><span class="dot">●</span><span><b>Ausschank Sa 23–02:</b> 1 fehlt — kritisch (Barbetrieb)</span></li>
+        <li><span class="dot">●</span><span><b>Grill Sa:</b> 2 fehlen · Wunschkandidaten: Steiner, Haas</span></li>
+        <li><span class="dot">●</span><span><b>Weinlaube + Kassa:</b> 3 fehlen am Sa-Abend</span></li>
+      </ul>
+      <div class="bf"><span class="s">11 Personen fehlen · 9 Helfer noch frei</span><a class="go" href="#">SCHICHTPLAN →</a></div>
+    </div>
+    <div class="bench">
+      <div class="bh"><h3>Ablaufplan</h3><span class="v">22/31</span></div>
+      <div class="rulerwrap"><div class="ruler"><i style="width:71%"></i><em style="left:71%"></em></div></div>
+      <ul>
+        <li><span class="dot">●</span><span><b>AKM-Anmeldung:</b> Frist Mi 22. Juli — in 2 Tagen!</span></li>
+        <li><span class="dot">●</span><span><b>Aufbautag Do:</b> Kühlwagen 15:00, Strom 16:00 offen</span></li>
+        <li><span class="dot ok">●</span><span>Programm komplett: 9 Punkte an 3 Tagen fixiert</span></li>
+      </ul>
+      <div class="bf"><span class="s">9 Aufgaben offen · 4 davon Nachbereitung</span><a class="go" href="#">ABLAUFPLAN →</a></div>
+    </div>
+    <div class="bench">
+      <div class="bh"><h3>Material</h3><span class="v">€ 7.431</span></div>
+      <div class="rulerwrap"><div class="ruler"><i style="width:86%"></i><em style="left:86%"></em></div></div>
+      <ul>
+        <li><span class="dot">●</span><span><b>12 Positionen ohne Preis</b> — Schätzung unvollständig</span></li>
+        <li><span class="dot ok">●</span><span>Verbraucht erfasst: <b>€ 6.212</b> (55/86) · Δ − € 1.219</span></li>
+        <li><span class="dot ok">●</span><span>Übernahme aus 2025: 42 Positionen fertig</span></li>
+      </ul>
+      <div class="bf"><span class="s">86 Positionen · 5 Stationen</span><a class="go" href="#">MATERIAL →</a></div>
+    </div>
+    <div class="bench">
+      <div class="bh"><h3>Sponsoring</h3><span class="v">€ 4.850</span></div>
+      <div class="rulerwrap"><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div></div>
+      <ul>
+        <li><span class="dot ok">●</span><span><b>14 Sponsoren</b> · größter: Brauerei Wieselburger</span></li>
+        <li><span class="dot">●</span><span><b>2 Logos fehlen</b> fürs Plakat (Raiffeisen, Lagerhaus)</span></li>
+        <li><span class="dot ok">●</span><span>Ziel € 5.000 zu 97 % erreicht</span></li>
+      </ul>
+      <div class="bf"><span class="s">Kategorien: Plakat, Speisekarte, Social</span><a class="go" href="#">SPONSORING →</a></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE E — „Lagebericht"
+     Kern: das Dashboard spricht. Ein gesetzter Druck-Lagebericht in
+     ganzen Sätzen — wie das Rundschreiben des Obmanns — mit den
+     Zahlen im Satz verlinkt. Daneben Programm + Eckdaten. Unerwartet,
+     aber radikal lesbar: man LIEST, was zu tun ist.
+     ################################################################ -->
+<section class="variant" data-v="e">
+<style>
+  [data-v="e"] .duo { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 26px; align-items: start; margin-top: 26px; }
+  [data-v="e"] .brief { border: 2.5px solid var(--ink); background: #fff; padding: 26px 30px; }
+  [data-v="e"] .brief .bh { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2.5px solid var(--ink); padding-bottom: 12px; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+  [data-v="e"] .brief .bh h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 20px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="e"] .brief .bh .d { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  [data-v="e"] .brief p { font-size: 14.5px; line-height: 1.75; margin-bottom: 14px; }
+  [data-v="e"] .brief p:last-child { margin-bottom: 0; }
+  [data-v="e"] .brief .hl { background: oklch(0.95 0.1 92); padding: 0 3px; font-weight: 700; }
+  [data-v="e"] .brief .warn { color: var(--red); font-weight: 800; }
+  [data-v="e"] .brief a { color: var(--green); font-weight: 700; text-decoration: none; border-bottom: 1.5px solid var(--green); }
+  [data-v="e"] .brief a:hover { background: oklch(0.95 0.03 160); }
+  [data-v="e"] .brief .sig { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  [data-v="e"] .side .steck { border: 2px solid var(--ink); background: #fff; margin-bottom: 22px; }
+  [data-v="e"] .side .steck .srow { display: flex; justify-content: space-between; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  [data-v="e"] .side .steck .srow:last-child { border-bottom: 0; }
+  [data-v="e"] .side .steck .k { color: var(--ink-soft); font-weight: 600; }
+  [data-v="e"] .side .steck .w { font-weight: 700; text-align: right; }
+  @media (max-width: 900px) { [data-v="e"] .duo { grid-template-columns: 1fr; } [data-v="e"] .brief { padding: 18px 16px; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when"><b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a class="on" href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+
+  <div class="duo">
+    <div class="brief">
+      <div class="bh"><h3>Lagebericht</h3><span class="d">Montag, 20. Juli 2026 · 4 Tage vor dem Fest</span></div>
+      <p>Am dringendsten: die <span class="warn">AKM-Anmeldung</span> muss <b>bis Mittwoch</b> raus (Obmann) — <a href="#">jetzt erledigen →</a></p>
+      <p>Im Schichtplan fehlen noch <span class="hl">11 Personen</span>. Der Engpass ist der <b>Samstag</b>: im <a href="#">Ausschank</a> sind drei Schichten unterbesetzt — kritisch ist der Barbetrieb <b>23–02 Uhr</b> —, am <a href="#">Grill</a> fehlen zwei (Steiner und Haas wünschen sich die Station), in <a href="#">Weinlaube und Abendkassa</a> je eine. 9 Helfer sind noch frei.</p>
+      <p>Der <a href="#">Ablaufplan</a> steht bei <span class="hl">22 von 31 Aufgaben</span>. Am Aufbautag Donnerstag sind noch Kühlwagen (15:00, Hochauer) und Strom (16:00, Gruber) offen. Das <b>Programm ist komplett</b>: 9 Punkte an drei Tagen.</p>
+      <p>Beim <a href="#">Material</a> sind <span class="hl">€ 7.431</span> bestellt (86 Positionen); bei 12 fehlt noch der Preis. Als Verbrauch sind bisher <span class="hl">€ 6.212</span> erfasst — Bier liegt 2 Fässer unter, Hendl 62 Stück über Plan.</p>
+      <p>Das <a href="#">Sponsoring</a> steht bei <span class="hl">€ 4.850</span> von € 5.000 (14 Sponsoren). Für das Plakat fehlen noch die Logos von Raiffeisen und Lagerhaus.</p>
+      <div class="sig"><span>Alle Angaben live aus Schichtplan, Material, Ablaufplan, Sponsoring.</span><span>FESTMEISTER</span></div>
+    </div>
+
+    <div class="side">
+      <h2>Eckdaten</h2>
+      <div class="steck">
+        <div class="srow"><span class="k">Termin</span><span class="w">Fr 24. – So 26. Juli</span></div>
+        <div class="srow"><span class="k">Ort</span><span class="w">Festgelände Steinbach</span></div>
+        <div class="srow"><span class="k">Erwartet</span><span class="w">300–800 Besucher</span></div>
+        <div class="srow"><span class="k">Helfer</span><span class="w">24 · davon 15 eingeteilt</span></div>
+        <div class="srow"><span class="k">Budgetrahmen</span><span class="w">€ 9.000 · 83 % verplant</span></div>
+      </div>
+      <h2>Programm <a href="#">Ablaufplan →</a></h2>
+      <ul class="lineup">
+        <li><time>Fr 18:00</time><span class="what"><b>Eröffnung + Fassanstich</b></span></li>
+        <li><time>Fr 19:30</time><span class="what"><b>„Die Steinbacher"</b></span></li>
+        <li><time>Sa 11:00</time><span class="what"><b>Frühschoppen — MV Steinbach</b></span></li>
+        <li><time>Sa 15:00</time><span class="what"><b>Gastkapelle Purgstall</b></span></li>
+        <li><time>Sa 19:30</time><span class="what"><b>„Die Lauser"</b></span></li>
+        <li><time>So 09:30</time><span class="what"><b>Feldmesse + Frühschoppen</b></span></li>
+        <li><time>So 16:00</time><span class="what"><b>Tombola-Verlosung</b></span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<div id="switcher">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <div class="lbl"><span id="lblMain">A — Werkstatt-Tafel</span><small id="lblSub">F-Grundform geschärft: KPIs, konkrete Lücken, Werte</small></div>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</div>
+
+<script>
+  const VARIANTS = [
+    ["a", "Werkstatt-Tafel", "F-Grundform geschärft: KPIs, konkrete Lücken, Werte"],
+    ["b", "Offene Posten", "EINE priorisierte Liste über alle Bereiche"],
+    ["c", "Festplakat", "Das Fest im Zentrum, die Arbeit rundherum"],
+    ["d", "Vier Werkbänke", "Je Bereich eine Karte mit Top-Lücken + Absprung"],
+    ["e", "Lagebericht", "Das Dashboard spricht in Sätzen — Rundschreiben-Stil"]
+  ];
+  function currentKey() {
+    const v = new URLSearchParams(location.search).get("variant");
+    return VARIANTS.some(x => x[0] === v) ? v : "a";
+  }
+  function show(key) {
+    document.querySelectorAll(".variant").forEach(s => s.classList.toggle("active", s.dataset.v === key));
+    const v = VARIANTS.find(x => x[0] === key);
+    document.getElementById("lblMain").textContent = key.toUpperCase() + " — " + v[1];
+    document.getElementById("lblSub").textContent = v[2];
+    try { history.replaceState(null, "", "?variant=" + key); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function cycle(dir) {
+    const i = VARIANTS.findIndex(x => x[0] === currentKey());
+    show(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0]);
+  }
+  document.getElementById("prev").addEventListener("click", () => cycle(-1));
+  document.getElementById("next").addEventListener("click", () => cycle(1));
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") cycle(-1);
+    if (e.key === "ArrowRight") cycle(1);
+  });
+  show(currentKey());
+</script>
+</body>
+</html>

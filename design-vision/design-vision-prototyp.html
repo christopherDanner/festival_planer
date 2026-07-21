@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<!-- MASTER-PROTOTYP Festmeister Design-Vision — wächst Bereich um Bereich.
+     Gesamtrichtung: F „Werkzeug-Plakat" (abgenommen).
+     Abgenommen: SCHICHTPLAN = Variante E „Fokus-Werkbank" (Bereichs-Fächer 20.07.2026)
+       + Anforderung: Soll/Ist/Fehlt auf jeder Ebene sichtbar, Drag & Drop aus Helferliste.
+     Platzhalter: Dashboard (Feinschliff folgt), Material, Ablaufplan, Mitglieder, Sponsoring. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Design-Vision Master-Prototyp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  button { font: inherit; cursor: pointer; }
+
+  /* ============ Verbindliche F-Handschrift ============ */
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); min-height: 100vh; }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 80px; }
+
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .when b { color: var(--yellow); }
+  nav.tabs { display: flex; border: 2.5px solid var(--ink); border-top: 0; background: #fff; overflow-x: auto; }
+  nav.tabs button { color: var(--ink-soft); background: none; border: 0; font-weight: 600; font-size: 14px; padding: 11px 18px; white-space: nowrap; border-right: 1px solid var(--line); }
+  nav.tabs button:hover { color: var(--ink); background: oklch(0.955 0.01 100); }
+  nav.tabs button.on { color: var(--ink); background: var(--yellow); box-shadow: inset 0 -3px 0 var(--ink); }
+
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  /* Werkzeugleiste + Maßband */
+  .planbar { display: flex; align-items: center; gap: 14px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 250px; flex: 1; flex-wrap: wrap; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .02em; color: var(--red); white-space: nowrap; }
+  .planbar .kpi .val.ok { color: var(--green); }
+  .planbar .kpi .miss { font-size: 12px; font-weight: 700; color: var(--red); white-space: nowrap; }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 90px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.primary { background: var(--yellow); }
+  .btn.primary:hover { background: oklch(0.9 0.14 92); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.quiet:hover { color: var(--ink); background: oklch(0.94 0.015 110); }
+
+  /* Namens-Marke */
+  .mchip { display: inline-flex; align-items: center; gap: 7px; background: oklch(0.94 0.015 110); padding: 4px 10px 4px 7px; font-weight: 500; font-size: 12.5px; }
+  .mchip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--paper); flex: none; }
+  .mchip .x { color: var(--ink-soft); font-weight: 700; margin-left: 2px; cursor: pointer; }
+  .mchip .x:hover { color: var(--red); }
+  .mchip.picked { background: var(--yellow); outline: 2px solid var(--ink); }
+  .crown { color: var(--yellow); font-size: 13px; }
+
+  /* ============ SCHICHTPLAN (abgenommen: E „Fokus-Werkbank") ============ */
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 26px; }
+  .stab { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 10px 12px 9px; }
+  .stab h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .stab h3 .q { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stab .miss { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; margin-top: 3px; color: var(--red); }
+  .stab .miss.ok { color: var(--green); }
+  .stab .mini { position: relative; height: 10px; border: 1.5px solid var(--ink); margin-top: 6px; background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0.85 0.01 100) 8px 9px); background-size: 100% 45%; background-repeat: repeat-x; background-position: bottom; }
+  .stab .mini i { position: absolute; inset: 0 auto 0 0; }
+  .stab.full .mini i { background: var(--green); }
+  .stab.part .mini i { background: var(--yellow); }
+  .stab.crit .mini i { background: var(--red); }
+  .stab.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+  .stab:hover:not(.on) { background: oklch(0.955 0.01 100); }
+
+  .bench { display: grid; grid-template-columns: minmax(0, 1fr) 264px; gap: 22px; align-items: start; margin-top: 18px; }
+  .focus { border: 2.5px solid var(--ink); background: #fff; }
+  .focus .fhead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 14px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .focus .fhead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 24px; letter-spacing: .02em; text-transform: uppercase; }
+  .focus .fhead .meta { font-size: 12.5px; color: oklch(0.92 0.02 110); }
+  .focus .fhead .meta b { color: var(--yellow); }
+  .focus .fhead .auto { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0; padding: 8px 13px; font-weight: 700; font-size: 12px; }
+  .focus .fhead .auto:hover { background: oklch(0.9 0.14 92); }
+  .shiftrow { padding: 13px 18px; border-bottom: 1px solid var(--line); }
+  .shiftrow.dragover { background: oklch(0.95 0.06 92); }
+  .shiftrow.reject { animation: rej .5s; }
+  @keyframes rej { 0%, 100% { box-shadow: none; } 40% { box-shadow: inset 0 0 0 2.5px var(--red); } }
+  .shiftrow .t { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
+  .shiftrow .t time { font-family: "Anton", sans-serif; font-size: 18px; letter-spacing: .02em; }
+  .shiftrow .t .nm { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  .shiftrow .t .st { margin-left: auto; font-size: 12px; font-weight: 800; letter-spacing: .05em; white-space: nowrap; }
+  .shiftrow .t .st .frac { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .02em; font-weight: 400; }
+  .shiftrow .t .st.ok { color: var(--green); } .shiftrow .t .st.warn { color: var(--red); }
+  .bigslots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+  .bslot { border: 1.5px solid var(--ink); padding: 7px 10px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; background: oklch(0.97 0.008 95); }
+  .bslot .p { font-family: "Anton", sans-serif; font-size: 11px; color: var(--ink-soft); }
+  .bslot .x { margin-left: auto; color: var(--ink-soft); font-weight: 700; cursor: pointer; }
+  .bslot .x:hover { color: var(--red); }
+  .bslot.free { border-style: dashed; border-color: var(--red); color: var(--red); font-weight: 700; font-size: 11.5px; letter-spacing: .03em; background: #fff; cursor: pointer; }
+  .bslot.free:hover { background: oklch(0.97 0.02 30); }
+  .stmemrow { padding: 10px 18px; border-top: 2px solid var(--ink); background: oklch(0.955 0.01 100); font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .stmemrow b { text-transform: uppercase; letter-spacing: .05em; font-size: 10.5px; color: var(--ink-soft); }
+
+  .crew { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  .crew .chead { padding: 9px 12px; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; background: oklch(0.93 0.02 105); }
+  .crew .cbody { padding: 10px 12px; display: grid; gap: 8px; }
+  .crew .grp { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--green); margin-top: 4px; }
+  .crew .grp.rest { color: var(--ink-soft); }
+  .crew .list { display: flex; flex-wrap: wrap; gap: 5px; }
+  .crew .list .mchip { cursor: grab; }
+  .crew .list .mchip:active { cursor: grabbing; }
+  .crew .list .mchip .n { font-size: 10.5px; color: var(--ink-soft); font-weight: 700; }
+  .crew .hint { font-size: 11px; color: var(--ink-soft); border-top: 1px solid var(--line); padding: 8px 12px; }
+  .crew .addrow { display: flex; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .crew .addrow .search { flex: 1; min-width: 0; }
+  .crew .addrow .btn { padding: 7px 11px; }
+  .search { width: 100%; border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+  .search::placeholder { color: var(--ink-soft); }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { flex: 1; border: 0; background: none; font-weight: 600; font-size: 12px; padding: 6px 4px; color: var(--ink-soft); border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+
+  /* ============ MATERIAL (abgenommen: B „Stationskästen" + Übernahme-Modus aus C) ============ */
+  .modeseg { display: flex; border: 2px solid var(--ink); }
+  .modeseg button { border: 0; background: #fff; font-weight: 700; font-size: 12.5px; padding: 8px 16px; color: var(--ink-soft); border-right: 1px solid var(--line); white-space: nowrap; }
+  .modeseg button:last-child { border-right: 0; }
+  .modeseg button.on { background: var(--ink); color: var(--yellow); }
+  .register { display: flex; gap: 8px; margin-top: 26px; flex-wrap: wrap; }
+  .reg { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 9px 14px 8px; min-width: 150px; }
+  .reg h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .reg h3 .n { font-size: 12px; }
+  .reg .meta { font-size: 11px; color: var(--ink-soft); margin-top: 2px; display: flex; justify-content: space-between; gap: 8px; }
+  .reg .meta .warn { color: var(--red); font-weight: 700; }
+  .reg.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+  .reg:hover:not(.on) { background: oklch(0.955 0.01 100); }
+  .kasten { border: 2.5px solid var(--ink); background: #fff; margin-top: 14px; }
+  .khead { display: flex; align-items: center; gap: 14px; padding: 11px 16px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; flex-wrap: wrap; }
+  .khead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 18px; letter-spacing: .02em; text-transform: uppercase; }
+  .khead .meta { font-size: 12px; color: oklch(0.92 0.02 110); }
+  .khead .meta b { color: var(--yellow); }
+  .khead .btn { margin-left: auto; border: 0; background: var(--yellow); }
+  .cats { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
+  .cats .lbl { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-right: 4px; }
+  .cats .cat { border: 1.5px solid var(--ink); background: #fff; font-size: 11.5px; font-weight: 700; padding: 3px 10px; }
+  .cats .cat.on { background: var(--ink); color: #fff; }
+  .mtable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .mtable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .mtable td { padding: 8px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .mtable tr:hover td { background: oklch(0.965 0.012 100); }
+  .mtable th.num, .mtable td.num { text-align: right; }
+  .mtable td b { font-weight: 700; }
+  .mtable .sub { font-size: 11px; color: var(--ink-soft); display: block; }
+  .mtable .pos { color: var(--red); font-weight: 700; } .mtable .neg { color: var(--green); font-weight: 700; }
+  .mtable .none { color: var(--ink-soft); }
+  .mtable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .mtable .warncell { outline: 1.5px dashed var(--red); outline-offset: -1.5px; color: var(--red); font-weight: 700; }
+  .mtable .grphead td { background: oklch(0.93 0.02 105) !important; border-bottom: 1.5px solid var(--ink); font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; padding: 7px 10px; }
+  .mtable th.src, .mtable td.src { background: oklch(0.955 0.012 100); }
+  .mtable thead .over { border-bottom: 1.5px solid var(--ink); font-size: 10px; text-align: center; background: oklch(0.93 0.02 105); }
+  .tablewrap { overflow-x: auto; }
+  .pair { display: flex; align-items: center; gap: 10px; margin: 22px 0 12px; flex-wrap: wrap; }
+  .pair .fest { border: 2px solid var(--ink); background: #fff; padding: 8px 14px; font-weight: 700; font-size: 13px; }
+  .pair .fest small { display: block; font-weight: 600; font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+  .pair .arrow { font-family: "Anton", sans-serif; font-size: 20px; color: var(--green); }
+  .pair .note { font-size: 12px; color: var(--ink-soft); margin-left: auto; }
+  .wish { width: 74px; border: 2px solid var(--ink); padding: 4px 6px; font: 700 13px "Public Sans", sans-serif; text-align: right; background: #fff; }
+  .wish:focus { background: var(--yellow); outline: 0; }
+  .stamp { font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 2px 7px; white-space: nowrap; }
+  .stamp.saved { color: var(--green); border: 1.5px solid var(--green); }
+  .stamp.new { color: #fff; background: var(--green); }
+  .stamp.skip { color: var(--ink-soft); border: 1.5px dashed var(--ink-soft); }
+  .matfoot { display: flex; gap: 18px; padding: 10px 14px; border: 2.5px solid var(--ink); border-top: 0; background: oklch(0.955 0.01 100); font-size: 12.5px; flex-wrap: wrap; }
+  .matfoot b { color: var(--green); }
+
+  /* ============ ABLAUFPLAN (abgenommen: C „Schreibtisch" — Aufgaben + Programmzettel) ============ */
+  .desk { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 24px; }
+  .work { border: 2.5px solid var(--ink); background: #fff; }
+  .work .whead { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .work .whead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; margin-right: auto; }
+  .work .gh { padding: 8px 14px 5px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); background: oklch(0.965 0.01 100); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; }
+  .work .gh .go { color: var(--red); }
+  .trow { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .trow .cb { display: inline-flex; width: 17px; height: 17px; border: 2px solid var(--ink); background: #fff; flex: none; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; cursor: pointer; }
+  .trow.done .cb { background: var(--green); border-color: var(--green); }
+  .trow.done .cb::after { content: "✓"; }
+  .trow .ttime { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .02em; width: 84px; flex: none; font-variant-numeric: tabular-nums; }
+  .trow .ttime small { display: block; font-family: "Public Sans", sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .05em; color: var(--ink-soft); text-transform: uppercase; }
+  .trow .ti { flex: 1; min-width: 0; }
+  .trow .ti b { font-weight: 700; }
+  .trow .ti .sub { display: block; font-size: 11.5px; color: var(--ink-soft); }
+  .trow.done .ti b { color: var(--ink-soft); text-decoration: line-through; }
+  .trow .resp { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; flex: none; }
+  .trow .resp::before { content: ""; width: 5px; height: 5px; border-radius: 50%; border: 1.5px solid var(--ink-soft); }
+  .work .wfoot { padding: 9px 14px; font-size: 12px; color: var(--ink-soft); display: flex; gap: 16px; flex-wrap: wrap; }
+  .work .wfoot b { color: var(--red); }
+  .zettel { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  .zettel .zhead { text-align: center; padding: 16px 14px 12px; border-bottom: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  .zettel .zhead .fm { font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .1em; color: var(--yellow); }
+  .zettel .zhead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 21px; letter-spacing: .03em; text-transform: uppercase; margin-top: 3px; }
+  .zettel .zday { padding: 10px 16px 4px; font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--green); display: flex; align-items: center; gap: 10px; }
+  .zettel .zday::after { content: ""; flex: 1; height: 5px; background-image: radial-gradient(oklch(0.8 0.02 120) 0.9px, transparent 1.1px); background-size: 6px 6px; }
+  .zettel .zrow { display: flex; gap: 12px; padding: 6px 16px; font-size: 13px; align-items: baseline; }
+  .zettel .zrow time { font-family: "Anton", sans-serif; font-size: 14px; width: 52px; flex: none; }
+  .zettel .zrow b { font-weight: 700; }
+  .zettel .zrow .sub { display: block; font-size: 11px; color: var(--ink-soft); }
+  .zettel .zfoot { margin-top: 10px; border-top: 2px solid var(--ink); padding: 9px 16px; font-size: 11px; color: var(--ink-soft); display: flex; justify-content: space-between; gap: 10px; }
+  select.fsel { border: 2px solid var(--ink); background: #fff; font: 600 12px "Public Sans", sans-serif; padding: 6px 8px; color: var(--ink); }
+
+  /* ============ DASHBOARD (abgenommen: C „Festplakat") ============ */
+  .trio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 26px; }
+  .trio h4 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .trio h4::after { content: ""; flex: 1; height: 6px; background-image: radial-gradient(oklch(0.78 0.02 120) 1px, transparent 1.2px); background-size: 7px 7px; }
+  .go { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--green); text-decoration: none; white-space: nowrap; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
+  .go:hover { text-decoration: underline; }
+  .poster { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; text-align: center; padding: 26px 20px 20px; }
+  .poster .fm { font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .12em; color: var(--yellow); }
+  .poster h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 30px; letter-spacing: .02em; text-transform: uppercase; margin: 6px 0 2px; }
+  .poster .date { font-family: "Anton", sans-serif; font-size: 17px; color: var(--yellow); letter-spacing: .04em; }
+  .poster .ort { font-size: 12.5px; color: oklch(0.92 0.02 110); margin-top: 2px; }
+  .poster .cd { display: inline-block; background: var(--yellow); color: var(--ink); font-family: "Anton", sans-serif; font-size: 14px; letter-spacing: .05em; padding: 5px 14px; margin-top: 12px; }
+  .poster .prg { background: #fff; color: var(--ink); border: 2px solid var(--ink); margin-top: 16px; text-align: left; }
+  .poster .prg .zd { font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--green); padding: 8px 14px 2px; }
+  .poster .prg .zr { display: flex; gap: 10px; padding: 4px 14px; font-size: 12.5px; align-items: baseline; }
+  .poster .prg .zr time { font-family: "Anton", sans-serif; font-size: 13px; width: 46px; flex: none; }
+  .poster .prg .zr b { font-weight: 700; }
+  .poster .prg .zfoot { border-top: 1.5px solid var(--line); margin-top: 8px; padding: 7px 14px; font-size: 10.5px; color: var(--ink-soft); }
+  .lack { border: 2px solid var(--ink); background: #fff; margin-bottom: 10px; padding: 10px 13px; }
+  .lack .t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .lack .t b { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; }
+  .lack .t .m { color: var(--red); font-weight: 800; font-size: 12px; white-space: nowrap; }
+  .lack .d { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+  .lack .go { display: inline-block; margin-top: 6px; }
+  .zahl { border: 2px solid var(--ink); background: #fff; margin-bottom: 10px; padding: 11px 13px; }
+  .zahl .l { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); display: flex; justify-content: space-between; }
+  .zahl .v { font-family: "Anton", sans-serif; font-size: 21px; letter-spacing: .02em; margin: 3px 0 5px; }
+  .zahl .v.warn { color: var(--red); } .zahl .v.ok { color: var(--green); }
+  .zahl .rulermini { position: relative; height: 12px; border: 1.5px solid var(--ink); background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0.85 0.01 100) 8px 9px); background-size: 100% 45%; background-repeat: repeat-x; background-position: bottom; }
+  .zahl .rulermini i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .6; }
+  .zahl .s { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+
+  /* ============ SPONSORING (abgenommen: C „Paket-Matrix" + Sachleistungen) ============ */
+  .stable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .stable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .stable td { padding: 8px 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: middle; }
+  .stable tr:hover td { background: oklch(0.965 0.012 100); }
+  .stable th.num, .stable td.num { text-align: right; }
+  .stable td b { font-weight: 700; }
+  .stable .sub { font-size: 11px; color: var(--ink-soft); display: block; }
+  .stable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .stable .total { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .02em; font-weight: 400; }
+  .stable th .kw { display: block; font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .02em; color: var(--green); text-transform: none; }
+  .stable td.c, .stable tfoot td.c { text-align: center; }
+  .mcell { display: inline-block; min-width: 58px; padding: 3px 7px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; border: 1.5px solid transparent; }
+  .mcell.on { background: oklch(0.94 0.03 160); color: var(--green); border-color: var(--green); }
+  .mcell.on.ovr { color: var(--red); border-color: var(--red); background: oklch(0.97 0.02 30); }
+  .mcell.off { border: 1.5px dashed oklch(0.8 0.02 120); color: oklch(0.8 0.02 120); }
+  .mcell.off:hover { border-color: var(--green); color: var(--green); }
+  .sach { display: inline-flex; align-items: baseline; gap: 5px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 11px; font-weight: 700; padding: 2px 8px; white-space: nowrap; }
+  .sach .w { font-family: "Anton", sans-serif; font-size: 11.5px; color: var(--ink); }
+
+  /* ============ FEST-EINSTIEG (abgenommen: A „Plakatwand" + D „Frachtbrief") ============ */
+  .mast .wordmark { cursor: pointer; }
+  .mast .wordmark:hover { text-decoration: underline; }
+  .mast .newbtn { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0; padding: 9px 15px; font-weight: 700; font-size: 12.5px; }
+  .wall { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; margin-top: 24px; align-items: start; }
+  .plakat { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; text-align: center; padding: 24px 18px 18px; }
+  .plakat .fm { font-family: "Anton", sans-serif; font-size: 11px; letter-spacing: .1em; color: var(--yellow); }
+  .plakat h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 24px; letter-spacing: .02em; text-transform: uppercase; margin: 5px 0 2px; }
+  .plakat .date { font-family: "Anton", sans-serif; font-size: 14px; color: var(--yellow); letter-spacing: .04em; }
+  .plakat .cd2 { display: inline-block; background: var(--yellow); color: var(--ink); font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .05em; padding: 4px 12px; margin-top: 10px; }
+  .plakat .stats { display: flex; justify-content: center; gap: 16px; margin-top: 12px; font-size: 11.5px; color: oklch(0.92 0.02 110); flex-wrap: wrap; }
+  .plakat .openbtn { display: block; margin-top: 12px; background: #fff; color: var(--ink); border: 0; padding: 9px; font-weight: 700; font-size: 12.5px; width: 100%; }
+  .plakat.past { background: oklch(0.93 0.015 100); color: var(--ink); border-color: var(--ink-soft); position: relative; padding: 18px 14px 14px; }
+  .plakat.past .fm, .plakat.past .date { color: var(--ink-soft); }
+  .plakat.past h3 { font-size: 17px; }
+  .plakat.past .stampd { position: absolute; top: 10px; right: -8px; border: 2px solid var(--green); color: var(--green); font-family: "Anton", sans-serif; font-size: 10.5px; letter-spacing: .08em; padding: 2px 8px; transform: rotate(6deg); background: #fff; }
+  .plakat.past .stats { color: var(--ink-soft); font-size: 11px; }
+  .plakat.past .row2 { display: flex; gap: 6px; margin-top: 10px; }
+  .plakat.past .row2 .btn { flex: 1; padding: 6px; font-size: 11px; }
+  /* Frachtbrief */
+  .cbx { width: 16px; height: 16px; border: 2px solid var(--ink); background: #fff; flex: none; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 10.5px; font-weight: 800; cursor: pointer; }
+  .cbx.on { background: var(--green); border-color: var(--green); }
+  .cbx.on::after { content: "✓"; }
+  .rad { width: 15px; height: 15px; border: 2px solid var(--ink); border-radius: 50%; background: #fff; flex: none; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .rad.on::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .btn.big { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .04em; padding: 11px 22px; }
+  /* Kopierwerk (C): Stempelkarten-Stepper links, Schritt-Werkbank rechts */
+  .kboard { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 24px; }
+  .kcard { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  .kcard .ch { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  .kcard .ch h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; }
+  .kcard .ch .s { font-size: 11px; color: oklch(0.92 0.02 110); margin-top: 2px; }
+  .kstep { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 700; }
+  .kstep:last-of-type { border-bottom: 0; }
+  .kstep .n { width: 24px; height: 24px; border: 2px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; font-family: "Anton", sans-serif; font-size: 12px; flex: none; }
+  .kstep.done { color: var(--green); }
+  .kstep.done .n { background: var(--green); border-color: var(--green); color: #fff; }
+  .kstep.on { background: var(--yellow); box-shadow: inset 4px 0 0 var(--ink); }
+  .kstep .s { display: block; font-size: 10.5px; font-weight: 600; color: var(--ink-soft); }
+  .kwork { border: 2.5px solid var(--ink); background: #fff; }
+  .kwork .wh2 { padding: 12px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .kwork .wh2 h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 19px; letter-spacing: .02em; text-transform: uppercase; }
+  .kwork .wh2 .m { font-size: 12px; color: var(--ink-soft); }
+  .kstrow { border-bottom: 1px solid var(--line); }
+  .kstrow .t { display: flex; align-items: center; gap: 11px; padding: 11px 18px; font-size: 13.5px; }
+  .kstrow .t b { font-weight: 700; }
+  .kstrow .t .m { margin-left: auto; font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
+  .kstrow .t .fold { border: 0; background: none; font-weight: 800; color: var(--green); font-size: 11px; cursor: pointer; }
+  .kshifts { padding: 0 18px 10px 47px; display: grid; gap: 4px; }
+  .kshifts .sh { display: flex; gap: 10px; font-size: 12px; color: var(--ink-soft); align-items: baseline; flex-wrap: wrap; }
+  .kshifts .sh time { font-weight: 700; color: var(--ink); width: 118px; font-variant-numeric: tabular-nums; }
+  .kshifts .sh .arrow { color: var(--green); font-weight: 800; }
+  .kwork .opts { padding: 11px 18px; display: flex; gap: 20px; flex-wrap: wrap; border-bottom: 1px solid var(--line); font-size: 12.5px; align-items: center; }
+  .kwork .opts .o { display: flex; align-items: center; gap: 8px; }
+  .kwork .wf { padding: 12px 18px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+  /* ============ Platzhalter-Panels ============ */
+  .todo { border: 2.5px solid var(--ink); background: #fff; margin-top: 26px; padding: 34px 26px; text-align: center; }
+  .todo .stamp { display: inline-block; border: 2.5px solid var(--red); color: var(--red); font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .08em; padding: 7px 16px; transform: rotate(-2deg); text-transform: uppercase; }
+  .todo p { margin-top: 14px; font-size: 13.5px; color: var(--ink-soft); }
+
+  @media (max-width: 900px) {
+    .frame { padding: 12px 12px 80px; }
+    .strip { grid-template-columns: 1fr 1fr; }
+    .bench { grid-template-columns: 1fr; }
+    .crew { position: static; }
+    .focus .fhead .auto { margin-left: 0; }
+    .khead .btn { margin-left: 0; }
+    .pair .note { margin-left: 0; }
+    .desk { grid-template-columns: minmax(0, 1fr); }
+    .zettel { position: static; }
+    .trow { flex-wrap: wrap; }
+    .trow .resp { width: 100%; padding-left: 29px; }
+    .trio { grid-template-columns: minmax(0, 1fr); }
+    .poster { order: -1; }
+    .wall { grid-template-columns: 1fr; }
+    .mast .newbtn { margin-left: 0; }
+    .kboard { grid-template-columns: minmax(0, 1fr); }
+    .kcard { position: static; }
+    .kshifts { padding-left: 18px; }
+    .kstrow .t { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="mast" id="mastFeste" style="display:none">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Meine Feste</h1>
+    <span class="when">Musikverein Steinbach</span>
+    <button class="newbtn" id="btnNeuesFest">+ NEUES FEST</button>
+  </header>
+  <header class="mast" id="mastKopier" style="display:none">
+    <span class="wordmark" data-goto="feste">FESTMEISTER</span>
+    <h1>Neues Fest anlegen</h1>
+    <span class="when">Vorlage: <b id="kopierQuelleMast">Musikfest Steinbach 2026</b></span>
+    <button class="newbtn" data-goto="feste">ABBRECHEN ×</button>
+  </header>
+  <header class="mast" id="mastFest">
+    <span class="wordmark" data-goto="feste" title="Zur Festliste">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs" id="tabs">
+    <button data-p="dashboard" class="on">Dashboard</button>
+    <button data-p="schichtplan">Schichtplan</button>
+    <button data-p="material">Material</button>
+    <button data-p="ablaufplan">Ablaufplan</button>
+    <button data-p="sponsoring">Sponsoring</button>
+  </nav>
+
+  <!-- ============ SCHICHTPLAN — ABGENOMMEN (E „Fokus-Werkbank") ============ -->
+  <section class="panel" data-p="schichtplan">
+    <div class="planbar">
+      <div class="kpi"><b>Besetzt · Sa</b><span class="val" id="kpiVal">–</span><div class="ruler"><i id="kpiFill"></i><em id="kpiMark"></em></div><span class="miss" id="kpiMiss"></span></div>
+      <button class="btn">+ STATION</button>
+      <button class="btn">AUTO-ZUTEILUNG</button>
+      <button class="btn quiet">Präferenzen</button>
+      <button class="btn quiet">Teilen / Export</button>
+    </div>
+
+    <div class="strip" id="strip"></div>
+
+    <div class="bench">
+      <div class="focus" id="focus"></div>
+      <aside class="crew">
+        <div class="chead" id="crewHead">Helfer</div>
+        <div class="cbody">
+          <input class="search" id="crewSearch" placeholder="Name suchen …">
+          <div class="seg" id="crewSeg">
+            <button data-f="alle">Alle</button><button data-f="frei" class="on">Frei</button><button data-f="zugeteilt">Zugeteilt</button>
+          </div>
+          <div id="crewLists"></div>
+          <div class="addrow"><input class="search" id="crewNew" placeholder="Neuen Helfer anlegen …"><button class="btn" id="crewAdd">+</button></div>
+        </div>
+        <div class="hint">Marke auf eine Schicht ziehen (oder Marke antippen, dann freien Platz antippen). Volle Schichten lehnen ab. × entfernt einen Helfer aus dem Fest.</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ Platzhalter ============ -->
+  <!-- ============ FEST-EINSTIEG — ABGENOMMEN (A „Plakatwand" + D „Frachtbrief") ============ -->
+  <section class="panel" data-p="feste">
+    <div class="wall">
+      <div class="plakat">
+        <div class="fm">NÄCHSTES FEST</div>
+        <h3>Musikfest Steinbach 2026</h3>
+        <div class="date">FR 24. – SO 26. JULI</div>
+        <span class="cd2">NOCH 4 TAGE</span>
+        <div class="stats"><span>41/52 Schichten</span><span>86 Materialien</span><span>€ 4.850 Sponsoring</span></div>
+        <button class="openbtn" data-goto="dashboard">FEST ÖFFNEN →</button>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2025</div>
+        <h3>Musikfest Steinbach</h3>
+        <div class="date">25.–27. JULI 2025</div>
+        <div class="stats"><span>52 Schichten</span><span>€ 4.400 Sponsoring</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary vorlage" data-q="Musikfest Steinbach 2025">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2025</div>
+        <h3>Stadlfest</h3>
+        <div class="date">5.–6. SEPT. 2025</div>
+        <div class="stats"><span>18 Schichten</span><span>34 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary vorlage" data-q="Stadlfest 2025">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2024</div>
+        <h3>Musikfest Steinbach</h3>
+        <div class="date">26.–28. JULI 2024</div>
+        <div class="stats"><span>48 Schichten</span><span>€ 3.900 Sponsoring</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary vorlage" data-q="Musikfest Steinbach 2024">ALS VORLAGE</button></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Kopierwerk (C): eigene Seite fürs Anlegen aus Vorlage -->
+  <section class="panel" data-p="kopierwerk">
+    <div class="kboard">
+      <aside class="kcard">
+        <div class="ch"><h3>Musikfest 2027</h3><div class="s">Fr 23. – So 25. Juli 2027 · aus Vorlage <span id="kopierQuelle">Musikfest Steinbach 2026</span></div></div>
+        <div class="kstep done"><span class="n">✓</span><span>Name & Datum<span class="s">Musikfest Steinbach 2027</span></span></div>
+        <div class="kstep on"><span class="n">2</span><span>Stationen & Schichten<span class="s">4 Stationen · 11 Schichten</span></span></div>
+        <div class="kstep"><span class="n">3</span><span>Material<span class="s">86 Positionen · Mengenquelle</span></span></div>
+        <div class="kstep"><span class="n">4</span><span>Sponsoring<span class="s">4 Kategorien · 14 Firmen</span></span></div>
+      </aside>
+
+      <div class="kwork">
+        <div class="wh2"><h3>Stationen & Schichten</h3><span class="m">Alles Gewählte wird ins neue Fest kopiert — Schichten rücken automatisch auf die neuen Tage.</span></div>
+        <div class="kstrow">
+          <div class="t"><span class="cbx on"></span><b>Ausschank</b><span class="m">Zelt Nord · 14 Pers. · 4 Schichten</span><button class="fold" data-fold="sh1">ZUKLAPPEN ▴</button></div>
+          <div class="kshifts" id="sh1">
+            <span class="sh"><time>Sa 11–15</time><span>Frühschoppen · 4 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+            <span class="sh"><time>Sa 15–19</time><span>4 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+            <span class="sh"><time>Sa 19–23</time><span>4 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+            <span class="sh"><time>Sa 23–02</time><span>Barbetrieb · 2 Plätze</span><span class="arrow">→ Sa/So 2027</span></span>
+          </div>
+        </div>
+        <div class="kstrow"><div class="t"><span class="cbx on"></span><b>Grill</b><span class="m">Küchenzeile · 6 Pers. · 2 Schichten</span><button class="fold" data-fold="sh2">AUFKLAPPEN ▾</button></div>
+          <div class="kshifts" id="sh2" style="display:none">
+            <span class="sh"><time>Sa 11–15</time><span>Mittag · 3 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+            <span class="sh"><time>Sa 15–19</time><span>Nachmittag · 3 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+          </div>
+        </div>
+        <div class="kstrow"><div class="t"><span class="cbx on"></span><b>Kassa</b><span class="m">Eingang · 7 Pers. · 3 Schichten</span><button class="fold" data-fold="sh3">AUFKLAPPEN ▾</button></div>
+          <div class="kshifts" id="sh3" style="display:none">
+            <span class="sh"><time>Sa 10–14</time><span>2 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+            <span class="sh"><time>Sa 14–19</time><span>2 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+            <span class="sh"><time>Sa 19–24</time><span>Abendkassa · 3 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+          </div>
+        </div>
+        <div class="kstrow"><div class="t"><span class="cbx on"></span><b>Weinlaube</b><span class="m">4 Pers. · 2 Schichten</span><button class="fold" data-fold="sh4">AUFKLAPPEN ▾</button></div>
+          <div class="kshifts" id="sh4" style="display:none">
+            <span class="sh"><time>Sa 16–20</time><span>2 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+            <span class="sh"><time>Sa 20–24</time><span>2 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+          </div>
+        </div>
+        <div class="opts">
+          <span class="o"><span class="cbx"></span>Zuweisungen übernehmen (Helfer + Verantwortliche)</span>
+          <span style="font-size:11.5px;color:var(--ink-soft)">Helfer bleiben sonst leer — Präferenzen kommen mit.</span>
+        </div>
+        <div class="wf">
+          <button class="btn quiet">← Name & Datum</button>
+          <button class="btn primary">WEITER: MATERIAL →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DASHBOARD — ABGENOMMEN (C „Festplakat") ============ -->
+  <section class="panel on" data-p="dashboard">
+    <div class="trio">
+      <div>
+        <h4>Da fehlt noch was</h4>
+        <div class="lack">
+          <div class="t"><b>Ausschank</b><span class="m">3 PERSONEN</span></div>
+          <div class="d">Sa 15–19, 19–23, 23–02 (kritisch) je +1</div>
+          <button class="go" data-goto="schichtplan">BESETZEN →</button>
+        </div>
+        <div class="lack">
+          <div class="t"><b>Grill</b><span class="m">2 PERSONEN</span></div>
+          <div class="d">Sa 11–15 und 15–19 · Wunsch: Steiner, Haas</div>
+          <button class="go" data-goto="schichtplan">BESETZEN →</button>
+        </div>
+        <div class="lack">
+          <div class="t"><b>Weinlaube + Kassa</b><span class="m">3 PERSONEN</span></div>
+          <div class="d">Weinlaube Sa 16–20/20–24, Abendkassa +1</div>
+          <button class="go" data-goto="schichtplan">BESETZEN →</button>
+        </div>
+        <div class="lack">
+          <div class="t"><b>Aufgaben</b><span class="m">9 OFFEN</span></div>
+          <div class="d">Nächste Frist: <b style="color:var(--red)">AKM bis Mi 22.</b> · Kühlwagen Do 15:00</div>
+          <button class="go" data-goto="ablaufplan">ABLAUFPLAN →</button>
+        </div>
+        <div class="lack">
+          <div class="t"><b>Material</b><span class="m">12 OHNE PREIS</span></div>
+          <div class="d">Kostenschätzung unvollständig — u. a. Kassenrollen, Kabel</div>
+          <button class="go" data-goto="material">NACHTRAGEN →</button>
+        </div>
+      </div>
+
+      <div class="poster">
+        <div class="fm">DER MUSIKVEREIN STEINBACH LÄDT</div>
+        <h3>Musikfest Steinbach</h3>
+        <div class="date">FR 24. – SO 26. JULI 2026</div>
+        <div class="ort">Festgelände Steinbach · Eintritt frei bis 18:00</div>
+        <span class="cd">NOCH 4 TAGE</span>
+        <div class="prg">
+          <div class="zd">Freitag</div>
+          <div class="zr"><time>18:00</time><b>Eröffnung + Fassanstich</b></div>
+          <div class="zr"><time>19:30</time><b>„Die Steinbacher"</b></div>
+          <div class="zd">Samstag</div>
+          <div class="zr"><time>11:00</time><b>Frühschoppen — MV Steinbach</b></div>
+          <div class="zr"><time>15:00</time><b>Gastkapelle Purgstall</b></div>
+          <div class="zr"><time>19:30</time><b>„Die Lauser"</b></div>
+          <div class="zd">Sonntag</div>
+          <div class="zr"><time>09:30</time><b>Feldmesse + Frühschoppen</b></div>
+          <div class="zr"><time>16:00</time><b>Tombola-Verlosung</b></div>
+          <div class="zfoot">9 Programmpunkte · alle Zeiten fix · Aushang druckbereit</div>
+        </div>
+      </div>
+
+      <div>
+        <h4>Zahlen</h4>
+        <div class="zahl"><div class="l"><span>Schichten besetzt</span><button class="go" data-goto="schichtplan">→</button></div><div class="v warn">41/52</div><div class="rulermini"><i style="width:79%"></i></div><div class="s">11 fehlen · Samstag ist der Engpass</div></div>
+        <div class="zahl"><div class="l"><span>Material bestellt</span><button class="go" data-goto="material">→</button></div><div class="v">€ 7.431</div><div class="rulermini"><i style="width:86%"></i></div><div class="s">86 Positionen · 12 ohne Preis</div></div>
+        <div class="zahl"><div class="l"><span>Verbraucht (Ist)</span><button class="go" data-goto="material">→</button></div><div class="v ok">€ 6.212</div><div class="rulermini"><i style="width:72%"></i></div><div class="s">erfasst bei 55/86 · Δ − € 1.219</div></div>
+        <div class="zahl"><div class="l"><span>Sponsoring</span><button class="go" data-goto="sponsoring">→</button></div><div class="v ok">€ 4.850</div><div class="rulermini"><i style="width:97%"></i></div><div class="s">14 Sponsoren · Ziel € 5.000</div></div>
+        <div class="zahl"><div class="l"><span>Helfer</span><button class="go" data-goto="schichtplan">→</button></div><div class="v">15/24</div><div class="rulermini"><i style="width:63%"></i></div><div class="s">eingeteilt · 9 noch frei</div></div>
+      </div>
+    </div>
+  </section>
+  <!-- ============ MATERIAL — ABGENOMMEN (B „Stationskästen" + Übernahme-Modus) ============ -->
+  <section class="panel" data-p="material">
+    <div class="planbar">
+      <div class="modeseg" id="matMode"><button data-m="arbeit" class="on">ARBEITSLISTE</button><button data-m="uebernahme">ÜBERNAHME</button></div>
+      <input class="search" id="matSearch" placeholder="Über alle Stationen suchen …" style="flex:1;min-width:140px">
+      <button class="btn primary">+ NEU</button>
+      <button class="btn quiet">Import</button>
+      <button class="btn quiet">Abgleich</button>
+      <button class="btn quiet">Export</button>
+    </div>
+
+    <!-- Modus Arbeitsliste -->
+    <div id="matArbeit">
+      <div class="register" id="matRegister"></div>
+      <div class="kasten" id="matKasten"></div>
+    </div>
+
+    <!-- Modus Übernahme -->
+    <div id="matUebernahme" style="display:none">
+      <div class="pair">
+        <span class="fest"><small>Quellfest</small>Musikfest Steinbach 2025 ▾</span>
+        <span class="arrow">→</span>
+        <span class="fest"><small>Zielfest</small>Musikfest Steinbach 2026</span>
+        <span class="note">Wunschmenge tippen — speichert automatisch. Unbekannte Positionen werden neu angelegt.</span>
+      </div>
+      <div class="kasten"><div class="tablewrap">
+      <table class="mtable">
+        <thead>
+          <tr><th rowspan="2">Material</th><th rowspan="2">Gebinde</th><th colspan="2" class="over src">— 2025 (Referenz) —</th><th colspan="2" class="over">— 2026 —</th></tr>
+          <tr><th class="num src">Bestellt</th><th class="num src">Verbraucht</th><th class="num">Wunschmenge</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr class="grphead"><td colspan="6">Ausschank</td></tr>
+          <tr><td><b>Bier „Wieselburger"</b></td><td>Fass 50 l</td><td class="num src">16</td><td class="num src">16</td><td class="num"><input class="wish" value="18"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+          <tr><td><b>Almdudler</b></td><td>Kiste 24×0,33</td><td class="num src">14</td><td class="num src">10</td><td class="num"><input class="wish" value="12"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+          <tr><td><b>Spritzwein-Weiß</b> <span class="sub">gab es 2026 noch nicht</span></td><td>Ktn. 6×1 l</td><td class="num src">8</td><td class="num src">8</td><td class="num"><input class="wish" placeholder="—"></td><td><span class="stamp new">WIRD NEU ANGELEGT</span></td></tr>
+          <tr class="grphead"><td colspan="6">Grill</td></tr>
+          <tr><td><b>Brathendl</b></td><td>Stk.</td><td class="num src">420</td><td class="num src">436</td><td class="num"><input class="wish" value="450"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+          <tr><td><b>Bratwürstel</b></td><td>kg</td><td class="num src">55</td><td class="num src">51</td><td class="num"><input class="wish" value="60"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+          <tr><td><b>Kotelett</b> <span class="sub">2025 kaum gebraucht</span></td><td>kg</td><td class="num src">25</td><td class="num src">9</td><td class="num"><input class="wish" placeholder="—"></td><td><span class="stamp skip">NICHT ÜBERNEHMEN</span></td></tr>
+          <tr class="grphead"><td colspan="6">Weinlaube</td></tr>
+          <tr><td><b>Grüner Veltliner</b></td><td>Ktn. 6×0,75</td><td class="num src">22</td><td class="num src">22</td><td class="num"><input class="wish" value="24"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+          <tr><td><b>Zweigelt</b></td><td>Ktn. 6×0,75</td><td class="num src">10</td><td class="num src">9</td><td class="num"><input class="wish" value="12"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+        </tbody>
+      </table>
+      </div></div>
+      <div class="matfoot">
+        <span><b>42 Positionen</b> mit Wunschmenge übernommen</span>
+        <span><b>1</b> wird neu angelegt</span>
+        <span>2 ausgelassen</span>
+        <span style="margin-left:auto">Quelle: Bestellmenge ◉ / Tatsächliche Menge ○</span>
+      </div>
+    </div>
+  </section>
+  <!-- ============ ABLAUFPLAN — ABGENOMMEN (C „Schreibtisch") ============ -->
+  <section class="panel" data-p="ablaufplan">
+    <div class="planbar">
+      <div class="kpi"><b>Aufgaben</b><span class="val" id="abKpi">–</span><div class="ruler"><i id="abFill"></i><em id="abMark"></em></div><span class="miss" id="abMiss"></span></div>
+      <button class="btn primary">+ AUFGABE</button>
+      <button class="btn">+ PROGRAMMPUNKT</button>
+      <button class="btn quiet">Export</button>
+    </div>
+
+    <div class="desk">
+      <div class="work">
+        <div class="whead">
+          <h3>Aufgaben-Werkliste</h3>
+          <div class="seg" id="abSeg"><button data-f="alle" class="on">Alle</button><button data-f="offen">Offen</button><button data-f="erledigt">Erledigt</button></div>
+          <select class="fsel" id="abResp"><option value="">Verantwortlich: alle</option></select>
+        </div>
+        <div id="abList"></div>
+        <div class="wfoot" id="abFoot"></div>
+      </div>
+
+      <aside class="zettel">
+        <div class="zhead"><div class="fm">MUSIKFEST STEINBACH 2026</div><h3>Programm</h3></div>
+        <div class="zday">Freitag 24.</div>
+        <div class="zrow"><time>18:00</time><span><b>Eröffnung + Fassanstich</b><span class="sub">mit Bürgermeister</span></span></div>
+        <div class="zrow"><time>19:30</time><span><b>„Die Steinbacher"</b></span></div>
+        <div class="zrow"><time>23:00</time><span><b>Barbetrieb bis 02:00</b></span></div>
+        <div class="zday">Samstag 25.</div>
+        <div class="zrow"><time>11:00</time><span><b>Frühschoppen — MV Steinbach</b><span class="sub">Bühne · Ton: P. Gruber</span></span></div>
+        <div class="zrow"><time>15:00</time><span><b>Gastkapelle Purgstall</b><span class="sub">Einmarsch Hauptstraße</span></span></div>
+        <div class="zrow"><time>19:30</time><span><b>„Die Lauser"</b><span class="sub">Einlass 18:30</span></span></div>
+        <div class="zday">Sonntag 26.</div>
+        <div class="zrow"><time>09:30</time><span><b>Feldmesse</b></span></div>
+        <div class="zrow"><time>10:30</time><span><b>Frühschoppen — MV Purgstall</b></span></div>
+        <div class="zrow"><time>16:00</time><span><b>Tombola-Verlosung</b></span></div>
+        <div class="zfoot"><span>Druckt als Aushang / teilt per WhatsApp</span><span>♪ = öffentlich</span></div>
+      </aside>
+    </div>
+  </section>
+  <!-- ============ SPONSORING — ABGENOMMEN (C „Paket-Matrix" + Sachleistungen) ============ -->
+  <section class="panel" data-p="sponsoring">
+    <div class="planbar">
+      <div class="kpi"><b>Sponsoring</b><span class="val ok" id="spKpi">–</span><div class="ruler"><i id="spFill"></i><em id="spMark"></em></div><span style="font-size:12px;color:var(--ink-soft)" id="spNote"></span></div>
+      <input class="search" id="spSearch" placeholder="Firma suchen …" style="width:170px">
+      <button class="btn primary">+ SPONSOR</button>
+      <button class="btn">+ KATEGORIE</button>
+      <button class="btn quiet">PDF-Export</button>
+    </div>
+
+    <h2>Wer hat was gewählt <span style="text-transform:none;letter-spacing:.02em;font-weight:600;color:var(--ink-soft)">· Klick in eine leere Zelle weist die Kategorie zu, Klick auf eine volle entfernt sie</span></h2>
+    <div class="kasten" style="margin-top:0"><div class="tablewrap" id="spTable"></div></div>
+  </section>
+</div>
+
+<script>
+  /* ---------- Tab-Umschaltung (+ Ebenen-Wechsel Festliste ⇄ Fest) ---------- */
+  function gotoTab(key) {
+    const feste = key === 'feste', kopier = key === 'kopierwerk';
+    document.getElementById('mastFeste').style.display = feste ? '' : 'none';
+    document.getElementById('mastKopier').style.display = kopier ? '' : 'none';
+    document.getElementById('mastFest').style.display = (feste || kopier) ? 'none' : '';
+    document.getElementById('tabs').style.display = (feste || kopier) ? 'none' : '';
+    document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.p === key));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.dataset.p === key));
+    window.scrollTo(0, 0);
+  }
+  document.getElementById('tabs').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (b) gotoTab(b.dataset.p);
+  });
+  /* Dashboard-Absprünge (BESETZEN →, Zahlen-Pfeile) springen in den Bereich */
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-goto]'); if (g) gotoTab(g.dataset.goto);
+  });
+
+  /* ---------- Datenmodell Schichtplan (Beispieldaten Samstag) ---------- */
+  const STATIONS = [
+    { key: 'ausschank', name: 'Ausschank', ort: 'Zelt Nord', resp: 'Franz Hochauer', stationMembers: ['Roman Aigner'], shifts: [
+      { time: 'SA 11–15', nm: 'Frühschoppen', req: 4, ass: ['Franz Hochauer', 'Maria Leitner', 'Peter Gruber', 'Karin Fuchs'] },
+      { time: 'SA 15–19', nm: '', req: 4, ass: ['Josef Brandstetter', 'Elisabeth Auer', 'Monika Wagner'] },
+      { time: 'SA 19–23', nm: '', req: 4, ass: ['Franz Hochauer', 'Gerhard Eder', 'Maria Leitner'] },
+      { time: 'SA 23–02', nm: 'Barbetrieb', req: 2, ass: ['Andreas Pöchhacker'] },
+    ]},
+    { key: 'grill', name: 'Grill', ort: 'Küchenzeile', resp: 'Herbert Zeller', stationMembers: [], shifts: [
+      { time: 'SA 11–15', nm: 'Mittag', req: 3, ass: ['Herbert Zeller', 'Monika Wagner'] },
+      { time: 'SA 15–19', nm: 'Nachmittag', req: 3, ass: ['Gerhard Eder', 'Herbert Zeller'] },
+    ]},
+    { key: 'kassa', name: 'Kassa', ort: 'Eingang', resp: 'Elisabeth Auer', stationMembers: [], shifts: [
+      { time: 'SA 10–14', nm: '', req: 2, ass: ['Elisabeth Auer', 'Christine Weber'] },
+      { time: 'SA 14–19', nm: '', req: 2, ass: ['Julia Ebner', 'Stefan Prinz'] },
+      { time: 'SA 19–24', nm: 'Abendkassa', req: 3, ass: ['Christine Weber', 'Elisabeth Auer'] },
+    ]},
+    { key: 'weinlaube', name: 'Weinlaube', ort: '', resp: 'Maria Leitner', stationMembers: [], shifts: [
+      { time: 'SA 16–20', nm: '', req: 2, ass: ['Anna Schweighofer'] },
+      { time: 'SA 20–24', nm: '', req: 2, ass: ['Theresa Mayr'] },
+    ]},
+  ];
+  /* Freie Helfer + Präferenzen (aus festival_member_preferences) */
+  const MEMBERS = [
+    { name: 'Lukas Hofstätter', pref: 'ausschank' },
+    { name: 'Paul Grabner', pref: 'ausschank' },
+    { name: 'Johann Steiner', pref: 'grill' },
+    { name: 'Florian Haas', pref: 'grill' },
+    { name: 'Katharina Moser', pref: 'kassa' },
+    { name: 'Susanne Bichler', pref: 'weinlaube' },
+    { name: 'Martin Kalteis', pref: null },
+    { name: 'Roman Aigner', pref: 'ausschank' },
+    { name: 'Bernhard Wieser', pref: null },
+    /* bereits eingeteilte Mitglieder (für Filter „Alle"/„Zugeteilt") */
+    { name: 'Franz Hochauer', pref: 'ausschank' }, { name: 'Maria Leitner', pref: 'weinlaube' },
+    { name: 'Peter Gruber', pref: null }, { name: 'Karin Fuchs', pref: null },
+    { name: 'Josef Brandstetter', pref: null }, { name: 'Elisabeth Auer', pref: 'kassa' },
+    { name: 'Monika Wagner', pref: 'grill' }, { name: 'Gerhard Eder', pref: null },
+    { name: 'Andreas Pöchhacker', pref: 'ausschank' }, { name: 'Herbert Zeller', pref: 'grill' },
+    { name: 'Christine Weber', pref: 'kassa' }, { name: 'Julia Ebner', pref: null },
+    { name: 'Stefan Prinz', pref: null }, { name: 'Anna Schweighofer', pref: 'weinlaube' },
+    { name: 'Theresa Mayr', pref: 'weinlaube' },
+  ];
+
+  let focusKey = 'ausschank';
+  let crewFilter = 'frei';
+  let crewQuery = '';
+  let picked = null;      /* für Tap-Zuweisung */
+  let dragName = null;    /* für Drag & Drop */
+
+  const byKey = k => STATIONS.find(s => s.key === k);
+  const assignedNames = () => new Set(STATIONS.flatMap(s => s.shifts.flatMap(sh => sh.ass)));
+  const shiftCount = name => STATIONS.reduce((n, s) => n + s.shifts.filter(sh => sh.ass.includes(name)).length, 0);
+  const stTotals = s => ({ ass: s.shifts.reduce((n, sh) => n + sh.ass.length, 0), req: s.shifts.reduce((n, sh) => n + sh.req, 0) });
+  const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+  function render() {
+    const done = assignedNames();
+
+    /* KPI-Maßband */
+    let ass = 0, req = 0;
+    STATIONS.forEach(s => { const t = stTotals(s); ass += t.ass; req += t.req; });
+    const pct = Math.round(ass / req * 100);
+    document.getElementById('kpiVal').textContent = ass + '/' + req;
+    document.getElementById('kpiVal').className = 'val' + (ass >= req ? ' ok' : '');
+    document.getElementById('kpiFill').style.width = pct + '%';
+    document.getElementById('kpiMark').style.left = pct + '%';
+    document.getElementById('kpiMiss').textContent = ass >= req ? 'voll besetzt' : (req - ass) + ' fehlen noch';
+
+    /* Stations-Reiter: Soll/Ist + fehlt je Station */
+    document.getElementById('strip').innerHTML = STATIONS.map(s => {
+      const t = stTotals(s);
+      const missing = t.req - t.ass;
+      const anyEmpty = s.shifts.some(sh => sh.ass.length === 0);
+      const cls = missing === 0 ? 'full' : anyEmpty ? 'crit' : 'part';
+      return `<button class="stab ${cls}${s.key === focusKey ? ' on' : ''}" data-st="${s.key}">
+        <h3>${s.name} <span class="q">${t.ass}/${t.req}</span></h3>
+        <div class="miss${missing === 0 ? ' ok' : ''}">${missing === 0 ? '✓ VOLL BESETZT' : missing + ' FEHLEN'}</div>
+        <div class="mini"><i style="width:${Math.round(t.ass / t.req * 100)}%"></i></div>
+      </button>`;
+    }).join('');
+
+    /* Fokus-Station */
+    const s = byKey(focusKey);
+    const t = stTotals(s);
+    const missing = t.req - t.ass;
+    document.getElementById('focus').innerHTML = `
+      <div class="fhead">
+        <h3>${s.name}</h3>
+        <span class="meta">${s.ort ? s.ort + ' · ' : ''}<span class="crown">♛</span> ${s.resp} · ${t.req} Plätze gesamt · <b>${missing === 0 ? 'voll besetzt' : missing + ' offen'}</b></span>
+        <button class="auto" id="autoFill">NUR DIESE STATION AUTO-FÜLLEN</button>
+      </div>
+      ${s.shifts.map((sh, i) => {
+        const open = sh.req - sh.ass.length;
+        return `<div class="shiftrow" data-shift="${i}">
+          <div class="t"><time>${sh.time}</time><span class="nm">${sh.nm ? sh.nm + ' · ' : ''}${sh.req} Plätze</span>
+            <span class="st ${open === 0 ? 'ok' : 'warn'}"><span class="frac">${sh.ass.length}/${sh.req}</span> · ${open === 0 ? 'VOLL' : open + ' OFFEN'}</span></div>
+          <div class="bigslots">
+            ${sh.ass.map((n, p) => `<span class="bslot"><span class="p">${p + 1}</span>${esc(n)}<span class="x" data-un="${i}|${esc(n)}">×</span></span>`).join('')}
+            ${Array.from({ length: open }, (_, k) => `<span class="bslot free" data-free="${i}"><span class="p">${sh.ass.length + k + 1}</span>+ HELFER HIERHER ZIEHEN</span>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+      <div class="stmemrow"><b>Stationsmitglieder ohne Schicht:</b>${s.stationMembers.map(n => `<span class="mchip">${esc(n)}</span>`).join('') || '<span style="color:var(--ink-soft)">keine</span>'}<button class="btn quiet" style="padding:3px 8px;font-size:11px">+ hinzufügen</button></div>`;
+
+    /* Helferliste */
+    document.getElementById('crewHead').textContent = 'Helfer für ' + s.name;
+    const match = m => m.name.toLowerCase().includes(crewQuery);
+    const pool = MEMBERS.filter(m =>
+      crewFilter === 'alle' ? true : crewFilter === 'frei' ? !done.has(m.name) : done.has(m.name)
+    ).filter(match);
+    const wish = pool.filter(m => m.pref === focusKey);
+    const rest = pool.filter(m => m.pref !== focusKey);
+    const chip = m => `<span class="mchip${picked === m.name ? ' picked' : ''}" draggable="true" data-m="${esc(m.name)}">${esc(m.name)}${done.has(m.name) ? ` <span class="n">${shiftCount(m.name)}×</span>` : ''}<span class="x" data-rm="${esc(m.name)}">×</span></span>`;
+    document.getElementById('crewLists').innerHTML = `
+      <div class="grp">Wünschen sich diese Station (${wish.length})</div>
+      <div class="list">${wish.map(chip).join('') || '<span style="font-size:11.5px;color:var(--ink-soft)">niemand</span>'}</div>
+      <div class="grp rest">Weitere (${rest.length})</div>
+      <div class="list">${rest.map(chip).join('')}</div>`;
+
+    /* Filter-Zähler */
+    const freeN = MEMBERS.filter(m => !done.has(m.name)).length;
+    const seg = document.getElementById('crewSeg');
+    seg.querySelector('[data-f="alle"]').textContent = `Alle (${MEMBERS.length})`;
+    seg.querySelector('[data-f="frei"]').textContent = `Frei (${freeN})`;
+    seg.querySelector('[data-f="zugeteilt"]').textContent = `Zugeteilt (${MEMBERS.length - freeN})`;
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.f === crewFilter));
+
+    wire();
+  }
+
+  /* ---------- Zuweisung (echte App-Regeln: voll lehnt ab, keine Doppelzuweisung) ---------- */
+  function assign(name, shiftIdx) {
+    const sh = byKey(focusKey).shifts[shiftIdx];
+    const row = document.querySelector(`.shiftrow[data-shift="${shiftIdx}"]`);
+    if (sh.ass.length >= sh.req || sh.ass.includes(name)) {
+      row.classList.remove('reject'); void row.offsetWidth; row.classList.add('reject');
+      return;
+    }
+    sh.ass.push(name);
+    picked = null;
+    render();
+  }
+
+  function wire() {
+    document.querySelectorAll('.stab').forEach(b => b.addEventListener('click', () => { focusKey = b.dataset.st; picked = null; render(); }));
+    document.getElementById('autoFill')?.addEventListener('click', () => {
+      const s = byKey(focusKey); const done = assignedNames();
+      const free = MEMBERS.filter(m => !done.has(m.name)).sort((a, b) => (b.pref === focusKey) - (a.pref === focusKey));
+      s.shifts.forEach(sh => { while (sh.ass.length < sh.req && free.length) { const m = free.find(x => !sh.ass.includes(x.name)); if (!m) break; sh.ass.push(m.name); free.splice(free.indexOf(m), 1); } });
+      render();
+    });
+    document.querySelectorAll('#crewLists .mchip').forEach(ch => {
+      ch.addEventListener('dragstart', () => { dragName = ch.dataset.m; });
+      ch.addEventListener('click', e => {
+        if (e.target.matches('.x')) {
+          /* Helfer aus dem Fest entfernen: aus allen Schichten + Stations-Listen lösen */
+          const name = e.target.dataset.rm;
+          STATIONS.forEach(s => { s.shifts.forEach(sh => sh.ass = sh.ass.filter(n => n !== name)); s.stationMembers = s.stationMembers.filter(n => n !== name); });
+          MEMBERS.splice(MEMBERS.findIndex(m => m.name === name), 1);
+          if (picked === name) picked = null;
+          render();
+          return;
+        }
+        picked = picked === ch.dataset.m ? null : ch.dataset.m; render();
+      });
+    });
+    document.querySelectorAll('.shiftrow').forEach(row => {
+      row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('dragover'); });
+      row.addEventListener('dragleave', () => row.classList.remove('dragover'));
+      row.addEventListener('drop', e => { e.preventDefault(); row.classList.remove('dragover'); if (dragName) assign(dragName, +row.dataset.shift); dragName = null; });
+    });
+    document.querySelectorAll('.bslot.free').forEach(sl => sl.addEventListener('click', () => { if (picked) assign(picked, +sl.dataset.free); }));
+    document.querySelectorAll('.bslot .x').forEach(x => x.addEventListener('click', () => {
+      const [i, name] = x.dataset.un.split('|');
+      const sh = byKey(focusKey).shifts[+i];
+      sh.ass = sh.ass.filter(n => n !== name);
+      render();
+    }));
+  }
+
+  document.getElementById('crewSearch').addEventListener('input', e => { crewQuery = e.target.value.toLowerCase(); render(); });
+  document.getElementById('crewSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { crewFilter = b.dataset.f; render(); } });
+  /* Helfer pro Fest anlegen (keine Stammdaten — Entscheidung Nutzer) */
+  function addHelper() {
+    const inp = document.getElementById('crewNew');
+    const name = inp.value.trim();
+    if (!name || MEMBERS.some(m => m.name === name)) return;
+    MEMBERS.push({ name, pref: null });
+    inp.value = '';
+    render();
+  }
+  document.getElementById('crewAdd').addEventListener('click', addHelper);
+  document.getElementById('crewNew').addEventListener('keydown', e => { if (e.key === 'Enter') addHelper(); });
+
+  render();
+
+  /* ================= MATERIAL (B „Stationskästen" + Übernahme-Modus) ================= */
+  const MAT = [
+    { key: 'ausschank', name: 'Ausschank', ort: 'Zelt Nord', resp: 'Franz Hochauer', rows: [
+      { n: 'Bier „Wieselburger"', cat: 'Getränke', lief: 'Brauerei Wieselburger', geb: 'Fass 50 l', soll: 18, ist: 16, netto: 98.00, mwst: 20 },
+      { n: 'Almdudler', cat: 'Getränke', lief: 'Brauerei Wieselburger', geb: 'Kiste 24×0,33', soll: 12, ist: 10, netto: 14.50, mwst: 20 },
+      { n: 'Mineralwasser Römerquelle', cat: 'Getränke', lief: 'Brauerei Wieselburger', geb: 'Kiste 12×1 l', soll: 10, ist: 8, netto: 9.80, mwst: 20 },
+      { n: 'Soda-Zitron Sirup', cat: 'Getränke', lief: 'Metro', geb: 'Kanister 5 l', soll: 3, ist: 2, netto: 15.00, mwst: 20 },
+      { n: 'Bierbecher 0,5 l', cat: 'Geschirr/Besteck', lief: 'Metro', geb: 'Karton 500', soll: 4, ist: null, netto: 38.00, mwst: 20 },
+      { n: 'Kühlwagen-Verlängerung', cat: 'Technik', lief: null, geb: 'Stk.', soll: 2, ist: null, netto: null, mwst: null },
+    ]},
+    { key: 'grill', name: 'Grill', ort: 'Küchenzeile', resp: 'Herbert Zeller', rows: [
+      { n: 'Brathendl', cat: 'Lebensmittel', lief: 'Fleischerei Berger', geb: 'Stk.', soll: 450, ist: 512, netto: 4.20, mwst: 10 },
+      { n: 'Bratwürstel', cat: 'Lebensmittel', lief: 'Fleischerei Berger', geb: 'kg', soll: 60, ist: 55, netto: 8.90, mwst: 10 },
+      { n: 'Semmeln', cat: 'Lebensmittel', lief: 'Bäckerei Leitner', geb: 'Stk.', soll: 600, ist: 640, netto: 0.45, mwst: 10 },
+      { n: 'Grillkohle', cat: 'Sonstiges', lief: 'Metro', geb: 'Sack 10 kg', soll: 8, ist: 8, netto: 12.00, mwst: 20 },
+      { n: 'Pappteller', cat: 'Geschirr/Besteck', lief: 'Metro', geb: 'Pkg. 100', soll: 15, ist: 12, netto: 6.50, mwst: 20 },
+    ]},
+    { key: 'weinlaube', name: 'Weinlaube', ort: '', resp: 'Maria Leitner', rows: [
+      { n: 'Grüner Veltliner', cat: 'Getränke', lief: 'Winzerhof Schmid', geb: 'Ktn. 6×0,75', soll: 24, ist: 22, netto: 39.00, mwst: 20 },
+      { n: 'Zweigelt', cat: 'Getränke', lief: 'Winzerhof Schmid', geb: 'Ktn. 6×0,75', soll: 12, ist: 9, netto: 42.00, mwst: 20 },
+      { n: 'Weingläser Mehrweg', cat: 'Geschirr/Besteck', lief: 'Metro', geb: 'Kiste 48', soll: 6, ist: null, netto: 22.00, mwst: 20 },
+    ]},
+    { key: 'kassa', name: 'Kassa', ort: 'Eingang', resp: 'Elisabeth Auer', rows: [
+      { n: 'Kassenrollen', cat: 'Technik', lief: null, geb: 'Pkg. 10', soll: 3, ist: 1, netto: null, mwst: null },
+      { n: 'Eintrittsbänder', cat: 'Sonstiges', lief: 'Metro', geb: 'Rolle 500', soll: 5, ist: 4, netto: 11.90, mwst: 20 },
+    ]},
+    { key: 'ohne', name: 'Ohne Station', ort: '', resp: null, rows: [
+      { n: 'Verlängerungskabel 25 m', cat: 'Technik', lief: null, geb: 'Stk.', soll: 4, ist: null, netto: null, mwst: null },
+      { n: 'Servietten', cat: 'Geschirr/Besteck', lief: 'Metro', geb: 'Pkg. 250', soll: 30, ist: null, netto: 4.10, mwst: 20 },
+      { n: 'Müllsäcke 120 l', cat: 'Sonstiges', lief: 'Metro', geb: 'Rolle 25', soll: 10, ist: 7, netto: 6.80, mwst: 20 },
+    ]},
+  ];
+  let matStation = 'ausschank';
+  let matCat = null;
+  let matQuery = '';
+  const eur = v => v.toLocaleString('de-AT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const brutto = r => r.netto == null ? null : r.netto * r.soll * (1 + r.mwst / 100);
+  const stSum = s => s.rows.reduce((a, r) => a + (brutto(r) || 0), 0);
+  const noPrice = s => s.rows.filter(r => r.netto == null).length;
+  const matchRow = r => !matQuery || (r.n + ' ' + (r.lief || '') + ' ' + r.cat).toLowerCase().includes(matQuery);
+
+  function renderMat() {
+    document.getElementById('matRegister').innerHTML = MAT.map(s => {
+      const hits = s.rows.filter(matchRow).length;
+      return `<button class="reg${s.key === matStation ? ' on' : ''}" data-st="${s.key}">
+        <h3>${s.name} <span class="n">${matQuery ? hits + '/' + s.rows.length : s.rows.length}</span></h3>
+        <div class="meta"><span>€ ${Math.round(stSum(s)).toLocaleString('de-AT')}</span>${noPrice(s) ? `<span class="warn">${noPrice(s)} ohne Preis</span>` : ''}</div>
+      </button>`;
+    }).join('');
+
+    const s = MAT.find(x => x.key === matStation);
+    const cats = [...new Set(s.rows.map(r => r.cat))];
+    const rows = s.rows.filter(r => (!matCat || r.cat === matCat)).filter(matchRow);
+    const sum = rows.reduce((a, r) => a + (brutto(r) || 0), 0);
+    document.getElementById('matKasten').innerHTML = `
+      <div class="khead">
+        <h3>${s.name}</h3>
+        <span class="meta">${s.ort ? s.ort + ' · ' : ''}${s.rows.length} Positionen · <b>€ ${eur(stSum(s))}</b>${s.resp ? ' · Verantwortlich: ' + s.resp : ''}</span>
+        <button class="btn">+ POSITION FÜR ${s.name.toUpperCase()}</button>
+      </div>
+      <div class="cats">
+        <span class="lbl">Kategorie:</span>
+        <button class="cat${!matCat ? ' on' : ''}" data-c="">Alle (${s.rows.length})</button>
+        ${cats.map(c => `<button class="cat${matCat === c ? ' on' : ''}" data-c="${c}">${c} (${s.rows.filter(r => r.cat === c).length})</button>`).join('')}
+      </div>
+      <div class="tablewrap">
+      <table class="mtable">
+        <thead><tr><th>Material</th><th>Lieferant</th><th>Gebinde</th><th class="num">Bestellt</th><th class="num">Verbraucht</th><th class="num">Δ</th><th class="num">Netto</th><th class="num">Gesamt</th></tr></thead>
+        <tbody>${rows.map(r => {
+          const d = r.ist == null ? null : r.ist - r.soll;
+          return `<tr>
+            <td><b>${r.n}</b><span class="sub">${r.cat}${r.mwst ? ' · ' + r.mwst + ' % MwSt' : ''}</span></td>
+            <td>${r.lief || '—'}</td><td>${r.geb}</td>
+            <td class="num">${r.soll}</td>
+            <td class="num${r.ist == null ? ' none' : ''}">${r.ist == null ? '—' : r.ist}</td>
+            <td class="num ${d == null ? 'none' : d > 0 ? 'pos' : d < 0 ? 'neg' : ''}">${d == null ? '—' : d > 0 ? '+' + d : d === 0 ? '±0' : d}</td>
+            <td class="num${r.netto == null ? ' warncell' : ''}">${r.netto == null ? 'Preis fehlt' : eur(r.netto)}</td>
+            <td class="num${r.netto == null ? ' none' : ''}">${r.netto == null ? '—' : eur(brutto(r))}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="8" style="color:var(--ink-soft)">Keine Treffer in dieser Station.</td></tr>'}</tbody>
+        <tfoot><tr><td colspan="7">Zwischensumme ${s.name}${matCat || matQuery ? ' (gefiltert)' : ''}</td><td class="num">€ ${eur(sum)}</td></tr></tfoot>
+      </table>
+      </div>`;
+
+    document.querySelectorAll('#matRegister .reg').forEach(b => b.addEventListener('click', () => { matStation = b.dataset.st; matCat = null; renderMat(); }));
+    document.querySelectorAll('#matKasten .cat').forEach(b => b.addEventListener('click', () => { matCat = b.dataset.c || null; renderMat(); }));
+  }
+  document.getElementById('matSearch').addEventListener('input', e => { matQuery = e.target.value.toLowerCase(); renderMat(); });
+  document.getElementById('matMode').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    document.querySelectorAll('#matMode button').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('matArbeit').style.display = b.dataset.m === 'arbeit' ? '' : 'none';
+    document.getElementById('matUebernahme').style.display = b.dataset.m === 'uebernahme' ? '' : 'none';
+  });
+  renderMat();
+
+  /* ================= ABLAUFPLAN (C „Schreibtisch") ================= */
+  const TASKS = [
+    { grp: 'pre', day: 'Fr 18.', time: '', title: 'Tombola-Preise abholen', sub: 'Sponsoren-Sachpreise, siehe Sponsoring', resp: 'Schriftführer', done: true },
+    { grp: 'pre', day: 'Sa 19.', time: '', title: 'Wechselgeld besorgen', sub: '2× Kassa-Set à € 300', resp: 'E. Auer', done: true },
+    { grp: 'pre', day: 'Mi 22.', time: '', title: 'Musikeranmeldung AKM', sub: 'Frist: Mi 22. Juli!', resp: 'Obmann', done: false },
+    { grp: 'pre', day: 'Do 23.', time: '08:00', title: 'Zelt Nord aufstellen', sub: '12 Helfer eingeteilt → Schichtplan', resp: 'F. Hochauer', done: true },
+    { grp: 'pre', day: 'Do 23.', time: '13:00', title: 'Bierbänke + Garnituren', sub: '', resp: 'J. Brandstetter', done: true },
+    { grp: 'pre', day: 'Do 23.', time: '15:00', title: 'Kühlwagen-Anlieferung', sub: 'Zufahrt über Sportplatz freihalten', resp: 'F. Hochauer', done: false },
+    { grp: 'pre', day: 'Do 23.', time: '16:00', title: 'Strom + Beleuchtung verlegen', sub: '', resp: 'P. Gruber', done: false },
+    { grp: 'fest', day: 'Fr 24.', time: '10:00', title: 'Feuerwehr-Abnahme', sub: '', resp: 'Obmann', done: false },
+    { grp: 'fest', day: 'Sa 25.', time: '14:30', title: 'Empfang Gastkapelle vorbereiten', sub: 'Marschordnung + Getränke im Probelokal', resp: 'Obmann', done: false },
+    { grp: 'fest', day: 'Sa 25.', time: '19:00', title: 'Kassa verstärken (+2)', sub: 'Einlass ab 18:30 — Stoßzeit', resp: 'E. Auer', done: false },
+    { grp: 'fest', day: 'Sa 25.', time: '23:00', title: 'Sperrstunde-Rundgang + Bar-Übergabe', sub: '', resp: 'Festleitung', done: false },
+    { grp: 'fest', day: 'So 26.', time: '20:00', title: 'Ausschank abbauen', sub: '', resp: 'F. Hochauer', done: false },
+    { grp: 'post', day: 'Mo 27.', time: '08:00', title: 'Zeltabbau', sub: 'alle verfügbaren Helfer, Treffpunkt 08:00', resp: 'Festleitung', done: false },
+    { grp: 'post', day: 'Mo 27.', time: '10:00', title: 'Leergut-Rückgabe Brauerei', sub: '', resp: 'H. Zeller', done: false },
+    { grp: 'post', day: 'Mo 27.', time: '', title: 'Material-Inventur + Verbrauch eintragen', sub: '→ Materialliste: Ist-Mengen', resp: 'Schriftführer', done: false },
+    { grp: 'post', day: 'Mo 27.', time: '18:00', title: 'Kassa-Abrechnung', sub: '', resp: 'E. Auer', done: false },
+  ];
+  const AB_GROUPS = [
+    { key: 'pre', label: 'Vorbereitung · bis Do 23. (Aufbau)' },
+    { key: 'fest', label: 'Festtage · Fr–So' },
+    { key: 'post', label: 'Nachbereitung · ab Mo 27.' },
+  ];
+  let abFilter = 'alle';
+  let abRespFilter = '';
+
+  const respSel = document.getElementById('abResp');
+  [...new Set(TASKS.map(t => t.resp))].sort().forEach(r => {
+    const o = document.createElement('option'); o.value = r; o.textContent = r; respSel.appendChild(o);
+  });
+
+  function renderAb() {
+    const open = TASKS.filter(t => !t.done).length;
+    const pct = Math.round((TASKS.length - open) / TASKS.length * 100);
+    document.getElementById('abKpi').textContent = (TASKS.length - open) + '/' + TASKS.length;
+    document.getElementById('abKpi').className = 'val' + (open === 0 ? ' ok' : '');
+    document.getElementById('abFill').style.width = pct + '%';
+    document.getElementById('abMark').style.left = pct + '%';
+    document.getElementById('abMiss').textContent = open === 0 ? 'alles erledigt' : open + ' offen';
+
+    const seg = document.getElementById('abSeg');
+    seg.querySelector('[data-f="alle"]').textContent = `Alle (${TASKS.length})`;
+    seg.querySelector('[data-f="offen"]').textContent = `Offen (${open})`;
+    seg.querySelector('[data-f="erledigt"]').textContent = `Erledigt (${TASKS.length - open})`;
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.f === abFilter));
+
+    const visible = t =>
+      (abFilter === 'alle' || (abFilter === 'offen' ? !t.done : t.done)) &&
+      (!abRespFilter || t.resp === abRespFilter);
+
+    document.getElementById('abList').innerHTML = AB_GROUPS.map(g => {
+      const rows = TASKS.map((t, i) => ({ t, i })).filter(x => x.t.grp === g.key && visible(x.t));
+      const openN = TASKS.filter(t => t.grp === g.key && !t.done).length;
+      if (!rows.length) return '';
+      return `<div class="gh"><span>${g.label}</span>${openN ? `<span class="go">${openN} offen</span>` : '<span>✓</span>'}</div>` +
+        rows.map(({ t, i }) => `<div class="trow${t.done ? ' done' : ''}">
+          <span class="cb" data-i="${i}"></span>
+          <span class="ttime">${t.time || '—'}<small>${t.day}</small></span>
+          <span class="ti"><b>${t.title}</b>${t.sub ? `<span class="sub">${t.sub}</span>` : ''}</span>
+          <span class="resp">${t.resp}</span>
+        </div>`).join('');
+    }).join('') || '<div class="trow" style="color:var(--ink-soft)">Keine Aufgaben für diesen Filter.</div>';
+
+    const preOpen = TASKS.filter(t => t.grp !== 'post' && !t.done).length;
+    const postOpen = TASKS.filter(t => t.grp === 'post' && !t.done).length;
+    document.getElementById('abFoot').innerHTML =
+      `<span><b>${preOpen} offen</b> bis zum Festende</span><span>${postOpen} in der Nachbereitung</span><span>${TASKS.length - open} von ${TASKS.length} erledigt</span>`;
+
+    document.querySelectorAll('#abList .cb').forEach(cb => cb.addEventListener('click', () => {
+      TASKS[+cb.dataset.i].done = !TASKS[+cb.dataset.i].done;
+      renderAb();
+    }));
+  }
+  document.getElementById('abSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { abFilter = b.dataset.f; renderAb(); } });
+  respSel.addEventListener('change', () => { abRespFilter = respSel.value; renderAb(); });
+  renderAb();
+
+  /* ================= SPONSORING (C „Paket-Matrix" + Sachleistungen) ================= */
+  const KATS = [
+    { key: 'transparent', name: 'Transparent', val: 300 },
+    { key: 'plakat', name: 'Plakat', val: 200 },
+    { key: 'speisekarte', name: 'Speisekarte', val: 150 },
+    { key: 'social', name: 'Social', val: 100 },
+  ];
+  /* cells: Kategorie → gewählter Wert (weicht er vom Standardwert ab → rot markiert).
+     frei: Freibetrag €. sach: Sachleistung (z. B. Tombolapreis) mit Schätzwert — zählt NICHT zur Geldsumme. */
+  const SPONS = [
+    { name: 'Brauerei Wieselburger', cells: { transparent: 300, plakat: 350 }, frei: 200, sach: null },
+    { name: 'Raiffeisenbank Scheibbs', cells: { transparent: 300, speisekarte: 150 }, frei: null, sach: null },
+    { name: 'Lagerhaus Steinbach', cells: { plakat: 200, social: 100 }, frei: 100, sach: null },
+    { name: 'Fleischerei Berger', cells: { speisekarte: 150 }, frei: 250, sach: { t: 'Geschenkkorb Tombola', v: 80 } },
+    { name: 'Winzerhof Schmid', cells: { speisekarte: 150 }, frei: 150, sach: { t: '6 Fl. Wein Tombola', v: 60 } },
+    { name: 'Elektro Pöchhacker', cells: { plakat: 200 }, frei: null, sach: null },
+    { name: 'Gasthaus Zur Linde', cells: {}, frei: 150, sach: { t: '3 Warengutscheine', v: 90 } },
+    { name: 'Autohaus Steiner', cells: { plakat: 200, social: 100 }, frei: 100, sach: null },
+    { name: 'Sparkasse Purgstall', cells: { transparent: 300 }, frei: 200, sach: null },
+    { name: 'Bäckerei Leitner', cells: { speisekarte: 150 }, frei: 50, sach: { t: 'Brotkorb Tombola', v: 40 } },
+    { name: 'Tischlerei Auer', cells: { plakat: 200 }, frei: null, sach: null },
+    { name: 'Apotheke Steinbach', cells: { speisekarte: 150, social: 100 }, frei: 100, sach: null },
+    { name: 'Friseur Haarmonie', cells: { social: 100 }, frei: 200, sach: null },
+    { name: 'Taxi Brandl', cells: {}, frei: 150, sach: null },
+  ];
+  let spQuery = '';
+  const eurI = v => '€ ' + v.toLocaleString('de-AT');
+  const spTotal = s => KATS.reduce((a, k) => a + (s.cells[k.key] || 0), 0) + (s.frei || 0);
+
+  function renderSp() {
+    const rows = SPONS.filter(s => s.name.toLowerCase().includes(spQuery));
+    const sum = SPONS.reduce((a, s) => a + spTotal(s), 0);
+    const sachSum = SPONS.reduce((a, s) => a + (s.sach ? s.sach.v : 0), 0);
+    const pct = Math.min(100, Math.round(sum / 5000 * 100));
+    document.getElementById('spKpi').textContent = eurI(sum);
+    document.getElementById('spFill').style.width = pct + '%';
+    document.getElementById('spMark').style.left = pct + '%';
+    document.getElementById('spNote').textContent = SPONS.length + ' Sponsoren · Ziel € 5.000 · Sachleistungen ' + eurI(sachSum);
+
+    document.getElementById('spTable').innerHTML = `<table class="stable">
+      <thead><tr>
+        <th>Firma</th>
+        ${KATS.map(k => `<th style="text-align:center">${k.name}<span class="kw">€ ${k.val}</span></th>`).join('')}
+        <th class="num">Freibetrag</th>
+        <th>Sachleistung</th>
+        <th class="num">Gesamt</th>
+      </tr></thead>
+      <tbody>${rows.map(s => {
+        const i = SPONS.indexOf(s);
+        return `<tr>
+          <td><b>${s.name}</b></td>
+          ${KATS.map(k => {
+            const v = s.cells[k.key];
+            return `<td class="c">${v != null
+              ? `<span class="mcell on${v !== k.val ? ' ovr' : ''}" data-sp="${i}" data-k="${k.key}">${v}</span>`
+              : `<span class="mcell off" data-sp="${i}" data-k="${k.key}">+</span>`}</td>`;
+          }).join('')}
+          <td class="num">${s.frei != null ? s.frei : '—'}</td>
+          <td>${s.sach ? `<span class="sach">${s.sach.t} <span class="w">(€ ${s.sach.v})</span></span>` : `<span class="mcell off" style="min-width:32px">+</span>`}</td>
+          <td class="num"><b>${eurI(spTotal(s))}</b></td>
+        </tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr>
+        <td>Σ je Kategorie</td>
+        ${KATS.map(k => `<td class="c">${eurI(SPONS.reduce((a, s) => a + (s.cells[k.key] || 0), 0))}</td>`).join('')}
+        <td class="num">${eurI(SPONS.reduce((a, s) => a + (s.frei || 0), 0))}</td>
+        <td>+ ${eurI(sachSum)} Sachwert</td>
+        <td class="num total">${eurI(sum)}</td>
+      </tr></tfoot>
+    </table>`;
+
+    document.querySelectorAll('#spTable .mcell[data-k]').forEach(c => c.addEventListener('click', () => {
+      const s = SPONS[+c.dataset.sp];
+      const k = KATS.find(x => x.key === c.dataset.k);
+      if (s.cells[k.key] != null) delete s.cells[k.key];
+      else s.cells[k.key] = k.val;
+      renderSp();
+    }));
+  }
+  document.getElementById('spSearch').addEventListener('input', e => { spQuery = e.target.value.toLowerCase(); renderSp(); });
+  renderSp();
+
+  /* ================= FEST-EINSTIEG (A „Plakatwand" + C „Kopierwerk") ================= */
+  function openKopier(quelle) {
+    document.getElementById('kopierQuelle').textContent = quelle;
+    document.getElementById('kopierQuelleMast').textContent = quelle;
+    gotoTab('kopierwerk');
+  }
+  document.querySelectorAll('.vorlage').forEach(b => b.addEventListener('click', () => openKopier(b.dataset.q)));
+  document.getElementById('btnNeuesFest').addEventListener('click', () => openKopier('Musikfest Steinbach 2026'));
+  /* Kopierwerk: Stationen auf-/zuklappen, Checkboxen */
+  document.querySelectorAll('.kstrow .fold').forEach(f => f.addEventListener('click', () => {
+    const sh = document.getElementById(f.dataset.fold);
+    const open = sh.style.display !== 'none';
+    sh.style.display = open ? 'none' : '';
+    f.textContent = open ? 'AUFKLAPPEN ▾' : 'ZUKLAPPEN ▴';
+  }));
+  document.addEventListener('click', e => {
+    if (e.target.matches('.kwork .cbx')) e.target.classList.toggle('on');
+  });
+</script>
+</body>
+</html>

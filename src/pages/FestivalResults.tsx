@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import PageHeader from '@/components/PageHeader';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
 import ScheduleView from '@/components/schedule/ScheduleView';
 import SponsoringView from '@/components/sponsoring/SponsoringView';
 import FestivalOverviewView from '@/components/festival-overview/FestivalOverviewView';
 import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
+import FestivalShellHeader from '@/components/festival/FestivalShellHeader';
 import FestivalTabBar, { isFestivalTab, type FestivalTab } from '@/components/festival/FestivalTabBar';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Package, CalendarClock, Pencil, LayoutDashboard, HandCoins, LogOut } from 'lucide-react';
+import { Pencil, LayoutDashboard, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/AuthProvider';
@@ -119,27 +118,36 @@ export default function FestivalResults() {
 			? ` – ${new Date(festival.end_date).toLocaleDateString('de-AT')}`
 			: '');
 
-	const subtitleParts = [dateString];
-	if (festival.location) subtitleParts.push(festival.location);
-	const subtitleString = subtitleParts.join(' \u00b7 ');
-
 	return (
 		<div className="min-h-screen">
-			<PageHeader
-				title={festival.name || 'Fest'}
-				subtitle={subtitleString}
-				onBack={() => navigate('/dashboard')}
+			{/* Layout-Rahmen der Vision: max-width 1180px, zentriert */}
+			<div
+				className={
+					isMobile
+						? 'mx-auto max-w-[1180px] px-3 pt-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))]'
+						: 'mx-auto max-w-[1180px] px-[22px] pt-[18px] pb-20'
+				}>
+			<FestivalShellHeader
+				festivalName={festival.name || 'Fest'}
+				startDate={festival.start_date}
+				endDate={festival.end_date}
+				activeTab={activeTab}
+				onTabChange={handleTabChange}
 				actions={
 					<>
 						<Button
 							variant="ghost"
 							size="icon"
-							className="h-8 w-8"
+							className="h-8 w-8 text-white hover:bg-white/15 hover:text-white"
 							aria-label="Fest bearbeiten"
 							onClick={() => setEditDialogOpen(true)}>
 							<Pencil className="h-4 w-4" />
 						</Button>
-						<Button variant="outline" size="sm" onClick={handleSignOut}>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="h-8 text-white hover:bg-white/15 hover:text-white"
+							onClick={handleSignOut}>
 							Abmelden
 						</Button>
 					</>
@@ -151,7 +159,7 @@ export default function FestivalResults() {
 						onClick: () => setEditDialogOpen(true)
 					},
 					{
-						label: 'Dashboard',
+						label: 'Zur Festliste',
 						icon: <LayoutDashboard className="h-4 w-4" />,
 						onClick: () => navigate('/dashboard')
 					},
@@ -162,76 +170,41 @@ export default function FestivalResults() {
 					}
 				]}
 			/>
-			<div>
-				<Tabs
-					value={activeTab}
-					onValueChange={(v) => handleTabChange(v as FestivalTab)}
-					className="w-full flex flex-col">
-					{/* Desktop: tabs at top */}
-					<div className="px-3 sm:px-6 pt-3 sm:pt-4">
-						{!isMobile && (
-							<TabsList className="w-auto mb-4">
-								<TabsTrigger value="overview" className="gap-2">
-									<LayoutDashboard className="h-4 w-4" />
-									Übersicht
-								</TabsTrigger>
-								<TabsTrigger value="shifts" className="gap-2">
-									<CalendarDays className="h-4 w-4" />
-									Schichtplan
-								</TabsTrigger>
-								<TabsTrigger value="materials" className="gap-2">
-									<Package className="h-4 w-4" />
-									Materialliste
-								</TabsTrigger>
-								<TabsTrigger value="schedule" className="gap-2">
-									<CalendarClock className="h-4 w-4" />
-									Ablaufplan
-								</TabsTrigger>
-								<TabsTrigger value="sponsoring" className="gap-2">
-									<HandCoins className="h-4 w-4" />
-									Sponsoring
-								</TabsTrigger>
-							</TabsList>
-						)}
-					</div>
-
-					{/* Content */}
-					<div className={isMobile ? 'px-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))]' : 'px-6'}>
-						<TabsContent value="overview" className={isMobile ? 'mt-0' : 'mt-0'}>
-							<FestivalOverviewView
-								festivalId={festivalId}
-								festival={festival}
-								onEditFestival={() => setEditDialogOpen(true)}
-							/>
-						</TabsContent>
-						<TabsContent value="shifts" className={isMobile ? 'mt-0' : 'mt-0'}>
-							<ShiftPlanningView
-								festivalId={festivalId}
-								festivalName={festival.name}
-								festivalDate={dateString}
-							/>
-						</TabsContent>
-						<TabsContent value="materials" className={isMobile ? 'mt-0' : 'mt-0'}>
-							<MaterialListView festivalId={festivalId} festivalName={festival.name} />
-						</TabsContent>
-						<TabsContent value="schedule" className={isMobile ? 'mt-0' : 'mt-0'}>
-							<ScheduleView
-								festivalId={festivalId}
-								festivalName={festival.name}
-								festivalStartDate={festival.start_date}
-								festivalEndDate={festival.end_date}
-							/>
-						</TabsContent>
-						<TabsContent value="sponsoring" className={isMobile ? 'mt-0' : 'mt-0'}>
-							<SponsoringView festivalId={festivalId} festivalName={festival.name} />
-						</TabsContent>
-					</div>
-
-				</Tabs>
-
-				{/* Mobile: bottom tab bar — immer sichtbar innerhalb des Festes */}
-				{isMobile && <FestivalTabBar active={activeTab} onSelect={handleTabChange} />}
+			{/* Content */}
+			<div className="pt-4 sm:pt-5">
+				{activeTab === 'overview' && (
+					<FestivalOverviewView
+						festivalId={festivalId}
+						festival={festival}
+						onEditFestival={() => setEditDialogOpen(true)}
+					/>
+				)}
+				{activeTab === 'shifts' && (
+					<ShiftPlanningView
+						festivalId={festivalId}
+						festivalName={festival.name}
+						festivalDate={dateString}
+					/>
+				)}
+				{activeTab === 'materials' && (
+					<MaterialListView festivalId={festivalId} festivalName={festival.name} />
+				)}
+				{activeTab === 'schedule' && (
+					<ScheduleView
+						festivalId={festivalId}
+						festivalName={festival.name}
+						festivalStartDate={festival.start_date}
+						festivalEndDate={festival.end_date}
+					/>
+				)}
+				{activeTab === 'sponsoring' && (
+					<SponsoringView festivalId={festivalId} festivalName={festival.name} />
+				)}
 			</div>
+			</div>
+
+			{/* Mobile: bottom tab bar — immer sichtbar innerhalb des Festes */}
+			{isMobile && <FestivalTabBar active={activeTab} onSelect={handleTabChange} />}
 
 			<FestivalEditDialog
 				open={editDialogOpen}

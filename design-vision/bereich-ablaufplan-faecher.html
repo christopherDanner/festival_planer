@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Bereichs-Fächer ABLAUFPLAN: 5 Umsetzungen innerhalb der
+     Gesamtrichtung F „Werkzeug-Plakat". Nutzer-Vorgabe: der Ablaufplan ist BEIDES —
+     Vorbereitung + Nachbereitung (Aufgaben) UND Programmablauf (live am Festtag).
+     Echte App-Struktur: Tage → frei benennbare Phasen → Einträge (Aufgabe abhakbar
+     mit Verantwortlichem | Programmpunkt), Zeiten optional. ?variant=a|b|c|d|e -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Bereichs-Fächer Ablaufplan (5 Umsetzungen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.active { display: block; }
+  button { font: inherit; cursor: pointer; }
+
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  .variant { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 120px; }
+
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .when b { color: var(--yellow); }
+  nav.tabs { display: flex; border: 2.5px solid var(--ink); border-top: 0; background: #fff; overflow-x: auto; }
+  nav.tabs a { color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 14px; padding: 11px 18px; white-space: nowrap; border-right: 1px solid var(--line); }
+  nav.tabs a:hover { color: var(--ink); background: oklch(0.955 0.01 100); }
+  nav.tabs a.on { color: var(--ink); background: var(--yellow); box-shadow: inset 0 -3px 0 var(--ink); }
+  .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 220px; flex: 1; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .02em; color: var(--green); white-space: nowrap; }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 90px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+
+  .variant h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+  .variant h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.primary { background: var(--yellow); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.quiet:hover { color: var(--ink); background: oklch(0.94 0.015 110); }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; max-width: 100%; overflow-x: auto; }
+  .seg button { border: 0; background: none; font-weight: 600; font-size: 12px; padding: 7px 12px; color: var(--ink-soft); border-right: 1px solid var(--line); white-space: nowrap; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+  .search { border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+
+  /* Bausteine Ablaufplan */
+  .cb { display: inline-flex; width: 17px; height: 17px; border: 2px solid var(--ink); background: #fff; flex: none; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; cursor: pointer; }
+  .cb.done { background: var(--green); border-color: var(--green); }
+  .cb.done::after { content: "✓"; }
+  .prog { display: inline-flex; width: 17px; height: 17px; flex: none; align-items: center; justify-content: center; font-size: 11px; background: var(--yellow); border: 2px solid var(--ink); font-weight: 800; }
+  .resp { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+  .resp::before { content: ""; width: 5px; height: 5px; border-radius: 50%; border: 1.5px solid var(--ink-soft); }
+  .typestamp { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; padding: 1.5px 6px; white-space: nowrap; }
+  .typestamp.task { border: 1.5px solid var(--ink-soft); color: var(--ink-soft); }
+  .typestamp.prg { background: var(--yellow); border: 1.5px solid var(--ink); color: var(--ink); }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 210px; text-align: center; letter-spacing: .01em; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ################################################################
+     VARIANTE A — „Wochenplan"
+     Kern: die ganze Festwoche als Spaltenbrett — Aufbautag bis
+     Nachbereitung nebeneinander. Phasen als Blöcke in der Spalte,
+     Einträge kompakt. Das Planungswerkzeug: Lücken und Ballungen
+     sieht man über die Woche hinweg.
+     ################################################################ -->
+<section class="variant" data-v="a">
+<style>
+  [data-v="a"] .week { display: grid; grid-auto-flow: column; grid-auto-columns: 250px; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-top: 24px; }
+  [data-v="a"] .day { border: 2px solid var(--ink); background: #fff; }
+  [data-v="a"] .day .dhead { padding: 9px 12px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: baseline; gap: 8px; }
+  [data-v="a"] .day.pre .dhead, [data-v="a"] .day.post .dhead { background: var(--ink); }
+  [data-v="a"] .day .dhead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="a"] .day .dhead .d { font-size: 11px; color: oklch(0.92 0.02 110); }
+  [data-v="a"] .day .dhead .open { margin-left: auto; font-size: 10.5px; font-weight: 800; background: var(--red); color: #fff; padding: 2px 7px; }
+  [data-v="a"] .day .dhead .open.ok { background: var(--yellow); color: var(--ink); }
+  [data-v="a"] .phase { border-bottom: 1px solid var(--line); }
+  [data-v="a"] .phase:last-child { border-bottom: 0; }
+  [data-v="a"] .phase .pname { padding: 7px 12px 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); display: flex; align-items: center; gap: 8px; }
+  [data-v="a"] .phase .pname::after { content: ""; flex: 1; height: 5px; background-image: radial-gradient(oklch(0.8 0.02 120) 0.9px, transparent 1.1px); background-size: 6px 6px; }
+  [data-v="a"] .e { display: flex; align-items: flex-start; gap: 8px; padding: 6px 12px; font-size: 12px; }
+  [data-v="a"] .e time { font-weight: 700; width: 40px; flex: none; font-variant-numeric: tabular-nums; }
+  [data-v="a"] .e .ti { flex: 1; min-width: 0; }
+  [data-v="a"] .e .ti b { font-weight: 600; display: block; }
+  [data-v="a"] .e .ti .resp { margin-top: 1px; }
+  [data-v="a"] .e.done .ti b { color: var(--ink-soft); text-decoration: line-through; }
+  @media (max-width: 900px) {
+    [data-v="a"] .frame { padding: 12px 12px 120px; }
+    [data-v="a"] .week { grid-auto-flow: row; grid-auto-columns: unset; grid-template-columns: 1fr; overflow: visible; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a class="on" href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Aufgaben</b><span class="val">22/31</span><div class="ruler"><i style="width:71%"></i><em style="left:71%"></em></div></div>
+    <button class="btn primary">+ EINTRAG</button>
+    <button class="btn">+ PHASE</button>
+    <button class="btn">+ TAG</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <h2>Festwoche · Do 23. – Mo 27. Juli</h2>
+  <div class="week">
+    <div class="day pre">
+      <div class="dhead"><h3>Aufbau</h3><span class="d">Do 23.</span><span class="open">2 OFFEN</span></div>
+      <div class="phase"><div class="pname">Aufbau</div>
+        <div class="e done"><span class="cb done"></span><time>08:00</time><span class="ti"><b>Zelt Nord aufstellen</b><span class="resp">12 Helfer · F. Hochauer</span></span></div>
+        <div class="e done"><span class="cb done"></span><time>13:00</time><span class="ti"><b>Bierbänke + Garnituren</b><span class="resp">J. Brandstetter</span></span></div>
+        <div class="e"><span class="cb"></span><time>15:00</time><span class="ti"><b>Kühlwagen-Anlieferung</b><span class="resp">F. Hochauer</span></span></div>
+        <div class="e"><span class="cb"></span><time>16:00</time><span class="ti"><b>Strom + Beleuchtung verlegen</b><span class="resp">P. Gruber</span></span></div>
+      </div>
+    </div>
+    <div class="day">
+      <div class="dhead"><h3>Freitag</h3><span class="d">24. Juli</span><span class="open">1 OFFEN</span></div>
+      <div class="phase"><div class="pname">Vorbereitung</div>
+        <div class="e"><span class="cb"></span><time>10:00</time><span class="ti"><b>Feuerwehr-Abnahme</b><span class="resp">Obmann</span></span></div>
+      </div>
+      <div class="phase"><div class="pname">Abendprogramm</div>
+        <div class="e"><span class="prog">♪</span><time>18:00</time><span class="ti"><b>Eröffnung + Fassanstich</b><span class="resp">Bürgermeister</span></span></div>
+        <div class="e"><span class="prog">♪</span><time>19:30</time><span class="ti"><b>„Die Steinbacher"</b><span class="resp">Ton: P. Gruber</span></span></div>
+        <div class="e"><span class="prog">♪</span><time>23:00</time><span class="ti"><b>Barbetrieb bis 02:00</b></span></div>
+      </div>
+    </div>
+    <div class="day">
+      <div class="dhead"><h3>Samstag</h3><span class="d">25. Juli</span><span class="open">2 OFFEN</span></div>
+      <div class="phase"><div class="pname">Frühschoppen</div>
+        <div class="e"><span class="prog">♪</span><time>11:00</time><span class="ti"><b>MV Steinbach</b><span class="resp">Bühne · Ton: P. Gruber</span></span></div>
+      </div>
+      <div class="phase"><div class="pname">Nachmittag</div>
+        <div class="e"><span class="cb"></span><time>14:30</time><span class="ti"><b>Empfang Gastkapelle</b><span class="resp">Obmann</span></span></div>
+        <div class="e"><span class="prog">♪</span><time>15:00</time><span class="ti"><b>Gastkapelle Purgstall</b></span></div>
+      </div>
+      <div class="phase"><div class="pname">Abendprogramm</div>
+        <div class="e"><span class="cb"></span><time>19:00</time><span class="ti"><b>Kassa verstärken (+2)</b><span class="resp">E. Auer</span></span></div>
+        <div class="e"><span class="prog">♪</span><time>19:30</time><span class="ti"><b>„Die Lauser"</b><span class="resp">Einlass: 18:30</span></span></div>
+      </div>
+    </div>
+    <div class="day">
+      <div class="dhead"><h3>Sonntag</h3><span class="d">26. Juli</span><span class="open">1 OFFEN</span></div>
+      <div class="phase"><div class="pname">Vormittag</div>
+        <div class="e"><span class="prog">♪</span><time>09:30</time><span class="ti"><b>Feldmesse</b><span class="resp">Pfarrer Huber</span></span></div>
+        <div class="e"><span class="prog">♪</span><time>10:30</time><span class="ti"><b>Frühschoppen — MV Purgstall</b></span></div>
+      </div>
+      <div class="phase"><div class="pname">Ausklang</div>
+        <div class="e"><span class="prog">♪</span><time>16:00</time><span class="ti"><b>Tombola-Verlosung</b><span class="resp">Schriftführer</span></span></div>
+        <div class="e"><span class="cb"></span><time>20:00</time><span class="ti"><b>Ausschank abbauen</b><span class="resp">F. Hochauer</span></span></div>
+      </div>
+    </div>
+    <div class="day post">
+      <div class="dhead"><h3>Nachbereitung</h3><span class="d">Mo 27.</span><span class="open">4 OFFEN</span></div>
+      <div class="phase"><div class="pname">Abbau + Abrechnung</div>
+        <div class="e"><span class="cb"></span><time>08:00</time><span class="ti"><b>Zeltabbau</b><span class="resp">alle verfügbaren Helfer</span></span></div>
+        <div class="e"><span class="cb"></span><time>10:00</time><span class="ti"><b>Leergut-Rückgabe Brauerei</b><span class="resp">H. Zeller</span></span></div>
+        <div class="e"><span class="cb"></span><time></time><span class="ti"><b>Material-Inventur + Verbrauch eintragen</b><span class="resp">Schriftführer</span></span></div>
+        <div class="e"><span class="cb"></span><time>18:00</time><span class="ti"><b>Kassa-Abrechnung</b><span class="resp">E. Auer</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE B — „Tagesordnung"
+     Kern: ein Tag liegt am Tisch — wie eine gedruckte Tagesordnung.
+     Tag-Reiter oben (mit Offen-Zählern), darunter EIN Tag in voller
+     Breite: Phasen als Abschnitte, Zeiten groß in Anton, Aufgaben
+     abhakbar, Programmpunkte gelb markiert. Reihenfolge = Zeit.
+     ################################################################ -->
+<section class="variant" data-v="b">
+<style>
+  [data-v="b"] .daytabs { display: flex; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+  [data-v="b"] .dt { border: 2px solid var(--ink); background: #fff; padding: 8px 14px; text-align: left; min-width: 118px; }
+  [data-v="b"] .dt h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="b"] .dt .m { font-size: 10.5px; color: var(--ink-soft); margin-top: 1px; display: flex; gap: 8px; }
+  [data-v="b"] .dt .m .o { color: var(--red); font-weight: 800; }
+  [data-v="b"] .dt.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+  [data-v="b"] .dt:hover:not(.on) { background: oklch(0.955 0.01 100); }
+  [data-v="b"] .sheet { border: 2.5px solid var(--ink); background: #fff; margin-top: 14px; }
+  [data-v="b"] .sheet .shead { padding: 12px 18px; border-bottom: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  [data-v="b"] .sheet .shead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .02em; text-transform: uppercase; }
+  [data-v="b"] .sheet .shead .meta { font-size: 12.5px; color: oklch(0.92 0.02 110); }
+  [data-v="b"] .sheet .shead .meta b { color: var(--yellow); }
+  [data-v="b"] .sheet .shead .btn { margin-left: auto; border: 0; background: var(--yellow); }
+  [data-v="b"] .ph { padding: 4px 18px 2px; }
+  [data-v="b"] .ph .pn { display: flex; align-items: center; gap: 10px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); margin: 12px 0 4px; }
+  [data-v="b"] .ph .pn::after { content: ""; flex: 1; height: 6px; background-image: radial-gradient(oklch(0.78 0.02 120) 1px, transparent 1.2px); background-size: 7px 7px; }
+  [data-v="b"] .ph .pn .grip { cursor: grab; color: oklch(0.8 0.02 120); letter-spacing: 0; }
+  [data-v="b"] .row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  [data-v="b"] .ph .row:last-child { border-bottom: 0; }
+  [data-v="b"] .row time { font-family: "Anton", sans-serif; font-size: 17px; letter-spacing: .02em; width: 88px; flex: none; font-weight: 400; }
+  [data-v="b"] .row time small { font-size: 11px; font-family: "Public Sans", sans-serif; color: var(--ink-soft); font-weight: 600; }
+  [data-v="b"] .row .ti { flex: 1; min-width: 0; }
+  [data-v="b"] .row .ti b { font-weight: 700; font-size: 14px; }
+  [data-v="b"] .row .ti .sub { display: block; font-size: 12px; color: var(--ink-soft); }
+  [data-v="b"] .row.done .ti b { color: var(--ink-soft); text-decoration: line-through; }
+  [data-v="b"] .row.prg { background: oklch(0.975 0.04 92); box-shadow: inset 3.5px 0 0 var(--yellow); padding-left: 10px; }
+  [data-v="b"] .row .right { display: flex; align-items: center; gap: 10px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+  @media (max-width: 900px) {
+    [data-v="b"] .frame { padding: 12px 12px 120px; }
+    [data-v="b"] .sheet .shead .btn { margin-left: 0; }
+    [data-v="b"] .row { flex-wrap: wrap; }
+    [data-v="b"] .row .right { width: 100%; justify-content: flex-start; padding-left: 29px; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a class="on" href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Aufgaben</b><span class="val">22/31</span><div class="ruler"><i style="width:71%"></i><em style="left:71%"></em></div></div>
+    <button class="btn primary">+ EINTRAG</button>
+    <button class="btn">+ PHASE</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <div class="daytabs">
+    <button class="dt"><h3>Do · Aufbau</h3><div class="m"><span>4 Einträge</span><span class="o">2 offen</span></div></button>
+    <button class="dt"><h3>Fr 24.</h3><div class="m"><span>4 Einträge</span><span class="o">1 offen</span></div></button>
+    <button class="dt on"><h3>Sa 25.</h3><div class="m"><span>6 Einträge</span><span class="o">2 offen</span></div></button>
+    <button class="dt"><h3>So 26.</h3><div class="m"><span>4 Einträge</span><span class="o">1 offen</span></div></button>
+    <button class="dt"><h3>Mo · Nachber.</h3><div class="m"><span>4 Einträge</span><span class="o">4 offen</span></div></button>
+  </div>
+
+  <div class="sheet">
+    <div class="shead">
+      <h3>Samstag, 25. Juli</h3>
+      <span class="meta">6 Einträge · <b>2 Aufgaben offen</b> · 4 Programmpunkte</span>
+      <button class="btn">+ EINTRAG FÜR SAMSTAG</button>
+    </div>
+    <div class="ph">
+      <div class="pn"><span class="grip">⋮⋮</span> Frühschoppen</div>
+      <div class="row prg"><span class="prog">♪</span><time>11:00 <small>– 14:00</small></time><span class="ti"><b>Frühschoppen — MV Steinbach</b><span class="sub">Bühne · Ton: P. Gruber</span></span><span class="right"><span class="typestamp prg">PROGRAMM</span></span></div>
+    </div>
+    <div class="ph">
+      <div class="pn"><span class="grip">⋮⋮</span> Nachmittag</div>
+      <div class="row done"><span class="cb done"></span><time>14:30</time><span class="ti"><b>Empfang Gastkapelle vorbereiten</b><span class="sub">Marschordnung + Getränke im Probelokal</span></span><span class="right"><span class="resp">Obmann</span><span class="typestamp task">AUFGABE</span></span></div>
+      <div class="row prg"><span class="prog">♪</span><time>15:00 <small>– 17:30</small></time><span class="ti"><b>Gastkapelle Purgstall</b><span class="sub">Einmarsch über Hauptstraße</span></span><span class="right"><span class="typestamp prg">PROGRAMM</span></span></div>
+    </div>
+    <div class="ph">
+      <div class="pn"><span class="grip">⋮⋮</span> Abendprogramm</div>
+      <div class="row"><span class="cb"></span><time>19:00</time><span class="ti"><b>Kassa verstärken (+2 Personen)</b><span class="sub">Einlass ab 18:30 — Stoßzeit</span></span><span class="right"><span class="resp">E. Auer</span><span class="typestamp task">AUFGABE</span></span></div>
+      <div class="row prg"><span class="prog">♪</span><time>19:30 <small>– 23:00</small></time><span class="ti"><b>„Die Lauser"</b><span class="sub">Soundcheck 17:45 · Bühne frei ab 18:30</span></span><span class="right"><span class="typestamp prg">PROGRAMM</span></span></div>
+      <div class="row"><span class="cb"></span><time>23:00</time><span class="ti"><b>Sperrstunde-Rundgang + Bar-Übergabe</b></span><span class="right"><span class="resp">Festleitung</span><span class="typestamp task">AUFGABE</span></span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE C — „Schreibtisch"
+     Kern: Aufgaben und Programm sind zwei verschiedene Papiere.
+     Links die Aufgaben-Werkliste über ALLE Tage (filterbar nach
+     offen/erledigt/Verantwortlichem — Vorbereitung + Nachbereitung
+     leben hier), rechts der gedruckte Programmzettel als Plakat.
+     ################################################################ -->
+<section class="variant" data-v="c">
+<style>
+  [data-v="c"] .desk { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 24px; }
+  [data-v="c"] .work { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="c"] .work .whead { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  [data-v="c"] .work .whead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; margin-right: auto; }
+  [data-v="c"] .grp .gh { padding: 8px 14px 5px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); background: oklch(0.965 0.01 100); border-bottom: 1px solid var(--line); }
+  [data-v="c"] .t { display: flex; align-items: center; gap: 11px; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  [data-v="c"] .t .ti { flex: 1; min-width: 0; }
+  [data-v="c"] .t .ti b { font-weight: 700; }
+  [data-v="c"] .t .ti .sub { display: block; font-size: 11.5px; color: var(--ink-soft); }
+  [data-v="c"] .t.done .ti b { color: var(--ink-soft); text-decoration: line-through; }
+  [data-v="c"] .t time { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; flex: none; }
+  [data-v="c"] .t .resp { flex: none; }
+  [data-v="c"] .wfoot { padding: 9px 14px; font-size: 12px; color: var(--ink-soft); display: flex; gap: 16px; flex-wrap: wrap; }
+  [data-v="c"] .wfoot b { color: var(--red); }
+  /* Programmzettel */
+  [data-v="c"] .zettel { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="c"] .zettel .zhead { text-align: center; padding: 16px 14px 12px; border-bottom: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  [data-v="c"] .zettel .zhead .fm { font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .1em; color: var(--yellow); }
+  [data-v="c"] .zettel .zhead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 21px; letter-spacing: .03em; text-transform: uppercase; margin-top: 3px; }
+  [data-v="c"] .zettel .zday { padding: 10px 16px 4px; font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--green); display: flex; align-items: center; gap: 10px; }
+  [data-v="c"] .zettel .zday::after { content: ""; flex: 1; height: 5px; background-image: radial-gradient(oklch(0.8 0.02 120) 0.9px, transparent 1.1px); background-size: 6px 6px; }
+  [data-v="c"] .zettel .zrow { display: flex; gap: 12px; padding: 6px 16px; font-size: 13px; align-items: baseline; }
+  [data-v="c"] .zettel .zrow time { font-family: "Anton", sans-serif; font-size: 14px; width: 52px; flex: none; }
+  [data-v="c"] .zettel .zrow b { font-weight: 700; }
+  [data-v="c"] .zettel .zrow .sub { display: block; font-size: 11px; color: var(--ink-soft); }
+  [data-v="c"] .zettel .zfoot { margin-top: 10px; border-top: 2px solid var(--ink); padding: 9px 16px; font-size: 11px; color: var(--ink-soft); display: flex; justify-content: space-between; gap: 10px; }
+  @media (max-width: 900px) {
+    [data-v="c"] .frame { padding: 12px 12px 120px; }
+    [data-v="c"] .desk { grid-template-columns: 1fr; }
+    [data-v="c"] .zettel { position: static; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a class="on" href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Aufgaben</b><span class="val">22/31</span><div class="ruler"><i style="width:71%"></i><em style="left:71%"></em></div></div>
+    <button class="btn primary">+ AUFGABE</button>
+    <button class="btn">+ PROGRAMMPUNKT</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <div class="desk">
+    <div class="work">
+      <div class="whead">
+        <h3>Aufgaben-Werkliste</h3>
+        <div class="seg"><button class="on">Alle (31)</button><button>Offen (9)</button><button>Erledigt (22)</button></div>
+        <select class="fsel" style="border:2px solid var(--ink);background:#fff;font:600 12px 'Public Sans',sans-serif;padding:6px 8px"><option>Verantwortlich: alle</option><option>E. Auer</option><option>F. Hochauer</option><option>Obmann</option></select>
+      </div>
+      <div class="grp">
+        <div class="gh">Vorbereitung · Do 23. (Aufbau)</div>
+        <div class="t"><span class="cb"></span><span class="ti"><b>Kühlwagen-Anlieferung</b><span class="sub">Zufahrt über Sportplatz freihalten</span></span><time>Do 15:00</time><span class="resp">F. Hochauer</span></div>
+        <div class="t"><span class="cb"></span><span class="ti"><b>Strom + Beleuchtung verlegen</b></span><time>Do 16:00</time><span class="resp">P. Gruber</span></div>
+      </div>
+      <div class="grp">
+        <div class="gh">Festtage · Fr–So</div>
+        <div class="t"><span class="cb"></span><span class="ti"><b>Feuerwehr-Abnahme</b></span><time>Fr 10:00</time><span class="resp">Obmann</span></div>
+        <div class="t done"><span class="cb done"></span><span class="ti"><b>Empfang Gastkapelle vorbereiten</b></span><time>Sa 14:30</time><span class="resp">Obmann</span></div>
+        <div class="t done"><span class="cb done"></span><span class="ti"><b>Kassa verstärken (+2)</b></span><time>Sa 19:00</time><span class="resp">E. Auer</span></div>
+      </div>
+      <div class="grp">
+        <div class="gh">Nachbereitung · ab Mo 27.</div>
+        <div class="t"><span class="cb"></span><span class="ti"><b>Zeltabbau</b><span class="sub">alle verfügbaren Helfer, Treffpunkt 08:00</span></span><time>Mo 08:00</time><span class="resp">Festleitung</span></div>
+        <div class="t"><span class="cb"></span><span class="ti"><b>Leergut-Rückgabe Brauerei</b></span><time>Mo 10:00</time><span class="resp">H. Zeller</span></div>
+        <div class="t"><span class="cb"></span><span class="ti"><b>Material-Inventur + Verbrauch eintragen</b><span class="sub">→ Materialliste: Ist-Mengen</span></span><time>Mo</time><span class="resp">Schriftführer</span></div>
+        <div class="t"><span class="cb"></span><span class="ti"><b>Kassa-Abrechnung</b></span><time>Mo 18:00</time><span class="resp">E. Auer</span></div>
+      </div>
+      <div class="wfoot"><span><b>3 offen</b> vor dem Fest</span><span>4 in der Nachbereitung</span><span>22 von 31 erledigt</span></div>
+    </div>
+
+    <aside class="zettel">
+      <div class="zhead"><div class="fm">MUSIKFEST STEINBACH 2026</div><h3>Programm</h3></div>
+      <div class="zday">Freitag 24.</div>
+      <div class="zrow"><time>18:00</time><span><b>Eröffnung + Fassanstich</b><span class="sub">mit Bürgermeister</span></span></div>
+      <div class="zrow"><time>19:30</time><span><b>„Die Steinbacher"</b></span></div>
+      <div class="zrow"><time>23:00</time><span><b>Barbetrieb bis 02:00</b></span></div>
+      <div class="zday">Samstag 25.</div>
+      <div class="zrow"><time>11:00</time><span><b>Frühschoppen — MV Steinbach</b></span></div>
+      <div class="zrow"><time>15:00</time><span><b>Gastkapelle Purgstall</b><span class="sub">Einmarsch Hauptstraße</span></span></div>
+      <div class="zrow"><time>19:30</time><span><b>„Die Lauser"</b><span class="sub">Einlass 18:30</span></span></div>
+      <div class="zday">Sonntag 26.</div>
+      <div class="zrow"><time>09:30</time><span><b>Feldmesse</b></span></div>
+      <div class="zrow"><time>10:30</time><span><b>Frühschoppen — MV Purgstall</b></span></div>
+      <div class="zrow"><time>16:00</time><span><b>Tombola-Verlosung</b></span></div>
+      <div class="zfoot"><span>Druckt als Aushang / teilt per WhatsApp</span><span>♪ = öffentlich</span></div>
+    </aside>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE D — „Regieplan"
+     Kern: der Festtag LIVE. Eine Zeitleiste mit JETZT-Marker,
+     Erledigtes wird abgestempelt, der laufende Punkt liegt gelb
+     hervorgehoben, als Nächstes kommt groß oben. Große Touch-Ziele
+     — gebaut für das Handy in der Hand am Festgelände.
+     ################################################################ -->
+<section class="variant" data-v="d">
+<style>
+  [data-v="d"] .nextbar { border: 2.5px solid var(--ink); border-top: 0; background: var(--yellow); padding: 10px 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  [data-v="d"] .nextbar .l { font-size: 11px; font-weight: 800; letter-spacing: .07em; }
+  [data-v="d"] .nextbar b { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; letter-spacing: .02em; }
+  [data-v="d"] .nextbar .in { margin-left: auto; font-size: 12.5px; font-weight: 700; }
+  [data-v="d"] .rail { position: relative; margin-top: 24px; padding-left: 96px; }
+  [data-v="d"] .rail::before { content: ""; position: absolute; left: 78px; top: 0; bottom: 0; width: 2.5px; background: var(--ink); }
+  [data-v="d"] .ev { position: relative; margin-bottom: 12px; }
+  [data-v="d"] .ev time { position: absolute; left: -96px; top: 10px; width: 62px; text-align: right; font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .02em; }
+  [data-v="d"] .ev::before { content: ""; position: absolute; left: -23px; top: 16px; width: 11px; height: 11px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 50%; }
+  [data-v="d"] .ev.done::before { background: var(--green); border-color: var(--green); }
+  [data-v="d"] .ev .card { border: 2px solid var(--ink); background: #fff; padding: 11px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  [data-v="d"] .ev.done .card { background: oklch(0.96 0.01 110); }
+  [data-v="d"] .ev.done .card b { color: var(--ink-soft); text-decoration: line-through; }
+  [data-v="d"] .ev.live .card { background: var(--yellow); box-shadow: 5px 5px 0 var(--ink); }
+  [data-v="d"] .ev .card .ti { flex: 1; min-width: 160px; }
+  [data-v="d"] .ev .card .ti b { font-weight: 700; font-size: 14.5px; }
+  [data-v="d"] .ev .card .ti .sub { display: block; font-size: 12px; color: var(--ink-soft); }
+  [data-v="d"] .ev.live .card .ti .sub { color: var(--ink); }
+  [data-v="d"] .stampdone { border: 2px solid var(--green); color: var(--green); font-family: "Anton", sans-serif; font-size: 11px; letter-spacing: .08em; padding: 3px 8px; transform: rotate(-2deg); }
+  [data-v="d"] .stamplive { border: 2px solid var(--ink); background: #fff; font-family: "Anton", sans-serif; font-size: 11px; letter-spacing: .08em; padding: 3px 8px; }
+  [data-v="d"] .checkbtn { border: 2px solid var(--ink); background: #fff; font-weight: 800; font-size: 12px; padding: 8px 14px; }
+  [data-v="d"] .checkbtn:hover { background: var(--green); color: #fff; }
+  [data-v="d"] .now { position: relative; margin: 18px 0; height: 0; border-top: 2.5px dashed var(--red); }
+  [data-v="d"] .now .tag { position: absolute; left: -96px; top: -13px; background: var(--red); color: #fff; font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .05em; padding: 3px 9px; }
+  @media (max-width: 900px) {
+    [data-v="d"] .frame { padding: 12px 12px 120px; }
+    [data-v="d"] .rail { padding-left: 70px; }
+    [data-v="d"] .rail::before { left: 56px; }
+    [data-v="d"] .ev time { left: -70px; width: 44px; font-size: 13px; }
+    [data-v="d"] .ev::before { left: -19px; }
+    [data-v="d"] .now .tag { left: -70px; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Samstag 25. Juli · <b>Fest läuft</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a class="on" href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="nextbar">
+    <span class="l">ALS NÄCHSTES:</span>
+    <b>15:00 — GASTKAPELLE PURGSTALL</b>
+    <span>Empfang: Obmann · Einmarsch Hauptstraße</span>
+    <span class="in">in 28 Minuten</span>
+  </div>
+
+  <div class="planbar">
+    <div class="kpi"><b>Samstag</b><span class="val">3/6 durch</span><div class="ruler"><i style="width:50%"></i><em style="left:50%"></em></div></div>
+    <div class="seg"><button>Fr</button><button class="on">Sa</button><button>So</button><button>Mo</button></div>
+    <button class="btn quiet">Ganzer Plan</button>
+  </div>
+
+  <div class="rail">
+    <div class="ev done">
+      <time>11:00</time>
+      <div class="card"><span class="ti"><b>Frühschoppen — MV Steinbach</b><span class="sub">Bühne · Ton: P. Gruber</span></span><span class="stampdone">ERLEDIGT 14:02</span></div>
+    </div>
+    <div class="ev done">
+      <time>14:30</time>
+      <div class="card"><span class="ti"><b>Empfang Gastkapelle vorbereiten</b><span class="sub">Obmann · Marschordnung + Getränke</span></span><span class="stampdone">ERLEDIGT 14:21</span></div>
+    </div>
+
+    <div class="now"><span class="tag">JETZT 14:32</span></div>
+
+    <div class="ev live">
+      <time>15:00</time>
+      <div class="card"><span class="ti"><b>Gastkapelle Purgstall</b><span class="sub">Einmarsch über Hauptstraße · bis 17:30</span></span><span class="stamplive">STEHT AN</span></div>
+    </div>
+    <div class="ev">
+      <time>19:00</time>
+      <div class="card"><span class="ti"><b>Kassa verstärken (+2 Personen)</b><span class="sub">E. Auer · Einlass ab 18:30</span></span><button class="checkbtn">✓ ERLEDIGT</button></div>
+    </div>
+    <div class="ev">
+      <time>19:30</time>
+      <div class="card"><span class="ti"><b>„Die Lauser"</b><span class="sub">Soundcheck 17:45 · Bühne frei ab 18:30</span></span></div>
+    </div>
+    <div class="ev">
+      <time>23:00</time>
+      <div class="card"><span class="ti"><b>Sperrstunde-Rundgang + Bar-Übergabe</b><span class="sub">Festleitung</span></span><button class="checkbtn">✓ ERLEDIGT</button></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE E — „Drei Hefte"
+     Kern: der Lebenszyklus ist die Navigation — VORBEREITUNG,
+     FESTTAGE, NACHBEREITUNG als drei Hefte mit eigenem Fortschritts-
+     Maßband. Vorbereitung/Nachbereitung sind Aufgaben-Checklisten
+     (ohne Uhrzeit-Zwang), die Festtage tragen das Programm.
+     ################################################################ -->
+<section class="variant" data-v="e">
+<style>
+  [data-v="e"] .hefte { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; }
+  [data-v="e"] .heft { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 12px 14px 11px; }
+  [data-v="e"] .heft h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; letter-spacing: .03em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  [data-v="e"] .heft h3 .q { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  [data-v="e"] .heft .sub { font-size: 11px; color: var(--ink-soft); margin: 2px 0 8px; }
+  [data-v="e"] .heft .mini { position: relative; height: 11px; border: 1.5px solid var(--ink); background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0.85 0.01 100) 8px 9px); background-size: 100% 45%; background-repeat: repeat-x; background-position: bottom; }
+  [data-v="e"] .heft .mini i { position: absolute; inset: 0 auto 0 0; background: var(--green); }
+  [data-v="e"] .heft.warn .mini i { background: var(--red); }
+  [data-v="e"] .heft.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+  [data-v="e"] .heft:hover:not(.on) { background: oklch(0.955 0.01 100); }
+  [data-v="e"] .book { border: 2.5px solid var(--ink); background: #fff; margin-top: 14px; }
+  [data-v="e"] .bhead { padding: 12px 18px; border-bottom: 2.5px solid var(--ink); background: var(--ink); color: #fff; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  [data-v="e"] .bhead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 20px; letter-spacing: .03em; text-transform: uppercase; color: var(--yellow); }
+  [data-v="e"] .bhead .meta { font-size: 12.5px; color: oklch(0.88 0.01 110); }
+  [data-v="e"] .bhead .btn { margin-left: auto; border: 0; background: var(--yellow); }
+  [data-v="e"] .sect .sh { padding: 9px 18px 5px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); display: flex; align-items: center; gap: 10px; }
+  [data-v="e"] .sect .sh::after { content: ""; flex: 1; height: 6px; background-image: radial-gradient(oklch(0.78 0.02 120) 1px, transparent 1.2px); background-size: 7px 7px; }
+  [data-v="e"] .sect .sh .when { color: var(--green); letter-spacing: .02em; text-transform: none; font-size: 11.5px; }
+  [data-v="e"] .task { display: flex; align-items: center; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  [data-v="e"] .task:last-child { border-bottom: 0; }
+  [data-v="e"] .task .ti { flex: 1; min-width: 0; }
+  [data-v="e"] .task .ti b { font-weight: 700; }
+  [data-v="e"] .task .ti .sub { display: block; font-size: 11.5px; color: var(--ink-soft); }
+  [data-v="e"] .task.done .ti b { color: var(--ink-soft); text-decoration: line-through; }
+  [data-v="e"] .task time { font-size: 12px; font-weight: 700; color: var(--ink-soft); flex: none; font-variant-numeric: tabular-nums; }
+  @media (max-width: 900px) {
+    [data-v="e"] .frame { padding: 12px 12px 120px; }
+    [data-v="e"] .hefte { grid-template-columns: 1fr; }
+    [data-v="e"] .bhead .btn { margin-left: 0; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a class="on" href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Aufgaben gesamt</b><span class="val">22/31</span><div class="ruler"><i style="width:71%"></i><em style="left:71%"></em></div></div>
+    <button class="btn primary">+ EINTRAG</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <div class="hefte">
+    <button class="heft warn on"><h3>Vorbereitung <span class="q">9/12</span></h3><div class="sub">bis Do 23. Juli · Aufbau</div><div class="mini"><i style="width:75%"></i></div></button>
+    <button class="heft"><h3>Festtage <span class="q">14 Punkte</span></h3><div class="sub">Fr 24. – So 26. · Programm + Aufgaben</div><div class="mini"><i style="width:33%"></i></div></button>
+    <button class="heft warn"><h3>Nachbereitung <span class="q">0/5</span></h3><div class="sub">ab Mo 27. Juli</div><div class="mini"><i style="width:0%"></i></div></button>
+  </div>
+
+  <div class="book">
+    <div class="bhead">
+      <h3>Vorbereitung</h3>
+      <span class="meta">12 Aufgaben · 3 offen · Aufbautag Do 23. Juli</span>
+      <button class="btn">+ AUFGABE</button>
+    </div>
+    <div class="sect">
+      <div class="sh">Festwoche <span class="when">· bis Mi 22.</span></div>
+      <div class="task done"><span class="cb done"></span><span class="ti"><b>Tombola-Preise abholen</b><span class="sub">Sponsoren-Sachpreise, siehe Sponsoring</span></span><time>erl. 18.07.</time><span class="resp">Schriftführer</span></div>
+      <div class="task done"><span class="cb done"></span><span class="ti"><b>Wechselgeld besorgen</b><span class="sub">2× Kassa-Set à € 300</span></span><time>erl. 19.07.</time><span class="resp">E. Auer</span></div>
+      <div class="task"><span class="cb"></span><span class="ti"><b>Musikeranmeldung AKM</b><span class="sub">Frist: Mi 22. Juli!</span></span><time>bis Mi</time><span class="resp">Obmann</span></div>
+    </div>
+    <div class="sect">
+      <div class="sh">Aufbautag <span class="when">· Do 23. Juli</span></div>
+      <div class="task done"><span class="cb done"></span><span class="ti"><b>Zelt Nord aufstellen</b><span class="sub">12 Helfer eingeteilt → Schichtplan</span></span><time>08:00</time><span class="resp">F. Hochauer</span></div>
+      <div class="task done"><span class="cb done"></span><span class="ti"><b>Bierbänke + Garnituren</b></span><time>13:00</time><span class="resp">J. Brandstetter</span></div>
+      <div class="task"><span class="cb"></span><span class="ti"><b>Kühlwagen-Anlieferung</b><span class="sub">Zufahrt über Sportplatz freihalten</span></span><time>15:00</time><span class="resp">F. Hochauer</span></div>
+      <div class="task"><span class="cb"></span><span class="ti"><b>Strom + Beleuchtung verlegen</b></span><time>16:00</time><span class="resp">P. Gruber</span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<div id="switcher">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <div class="lbl"><span id="lblMain">A — Wochenplan</span><small id="lblSub">Die ganze Festwoche als Spaltenbrett</small></div>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</div>
+
+<script>
+  const VARIANTS = [
+    ["a", "Wochenplan", "Die ganze Festwoche als Spaltenbrett"],
+    ["b", "Tagesordnung", "Ein Tag im Fokus, Phasen als Abschnitte, Zeit regiert"],
+    ["c", "Schreibtisch", "Aufgaben-Werkliste links, Programmzettel rechts"],
+    ["d", "Regieplan", "Festtag live: JETZT-Marker, Stempel, große Touch-Ziele"],
+    ["e", "Drei Hefte", "Vorbereitung / Festtage / Nachbereitung als Navigation"]
+  ];
+  function currentKey() {
+    const v = new URLSearchParams(location.search).get("variant");
+    return VARIANTS.some(x => x[0] === v) ? v : "a";
+  }
+  function show(key) {
+    document.querySelectorAll(".variant").forEach(s => s.classList.toggle("active", s.dataset.v === key));
+    const v = VARIANTS.find(x => x[0] === key);
+    document.getElementById("lblMain").textContent = key.toUpperCase() + " — " + v[1];
+    document.getElementById("lblSub").textContent = v[2];
+    try { history.replaceState(null, "", "?variant=" + key); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function cycle(dir) {
+    const i = VARIANTS.findIndex(x => x[0] === currentKey());
+    show(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0]);
+  }
+  document.getElementById("prev").addEventListener("click", () => cycle(-1));
+  document.getElementById("next").addEventListener("click", () => cycle(1));
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") cycle(-1);
+    if (e.key === "ArrowRight") cycle(1);
+  });
+  show(currentKey());
+
+  /* Abhaken überall erlebbar */
+  document.addEventListener("click", e => {
+    if (e.target.matches(".cb")) e.target.classList.toggle("done");
+  });
+</script>
+</body>
+</html>

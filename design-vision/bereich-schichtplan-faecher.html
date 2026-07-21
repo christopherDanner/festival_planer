@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Bereichs-Fächer SCHICHTPLAN: 5 Umsetzungen innerhalb der abgenommenen
+     Gesamtrichtung F „Werkzeug-Plakat". Umschaltbar via ?variant=a|b|c|d|e, Pfeiltasten, Floating Bar. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Bereichs-Fächer Schichtplan (5 Umsetzungen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.active { display: block; }
+  img { max-width: 100%; }
+  button { font: inherit; cursor: pointer; }
+
+  /* ============ Verbindliche F-Handschrift (aus Gesamt-Fächer) ============ */
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  .variant { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 120px; }
+
+  /* Kompakter Druck-Header (fix aus F) */
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .when b { color: var(--yellow); }
+  nav.tabs { display: flex; border: 2.5px solid var(--ink); border-top: 0; background: #fff; overflow-x: auto; }
+  nav.tabs a { color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 14px; padding: 11px 18px; white-space: nowrap; border-right: 1px solid var(--line); }
+  nav.tabs a:hover { color: var(--ink); background: oklch(0.955 0.01 100); }
+  nav.tabs a.on { color: var(--ink); background: var(--yellow); box-shadow: inset 0 -3px 0 var(--ink); }
+
+  /* Werkzeugleiste des Bereichs: KPI-Maßband + Aktionen */
+  .planbar { display: flex; align-items: center; gap: 14px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 250px; flex: 1; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .02em; color: var(--red); white-space: nowrap; }
+  .planbar .kpi .val.ok { color: var(--green); }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 90px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.primary { background: var(--yellow); }
+  .btn.primary:hover { background: oklch(0.9 0.14 92); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.quiet:hover { color: var(--ink); background: oklch(0.94 0.015 110); }
+
+  /* Sektionsüberschrift mit Punktraster-Linie (fix aus F) */
+  .variant h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+  .variant h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+
+  /* Namens-Marke (Mitglied) + freier Slot */
+  .mchip { display: inline-flex; align-items: center; gap: 7px; background: oklch(0.94 0.015 110); padding: 4px 10px 4px 7px; font-weight: 500; font-size: 12.5px; }
+  .mchip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--paper); flex: none; }
+  .mchip .x { color: var(--ink-soft); font-weight: 700; margin-left: 2px; cursor: pointer; }
+  .mchip .x:hover { color: var(--red); }
+  .slot-free { display: inline-flex; align-items: center; padding: 4px 10px; outline: 1.5px dashed var(--red); outline-offset: -1.5px; color: var(--red); font-weight: 700; font-size: 12px; letter-spacing: .03em; background: transparent; }
+  .crown { color: var(--yellow); text-shadow: 0 0 0 var(--ink); font-size: 13px; }
+
+  /* Ampel-Status (echte App-Regel: leer / teilbesetzt / voll) */
+  .st-empty { border-left: 4px solid var(--red) !important; }
+  .st-part  { border-left: 4px solid var(--yellow) !important; }
+  .st-full  { border-left: 4px solid var(--green) !important; }
+
+  /* Segment-Filter (Alle/Frei/Zugeteilt — echte App-Filter) */
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { flex: 1; border: 0; background: none; font-weight: 600; font-size: 12px; padding: 6px 4px; color: var(--ink-soft); border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+  .search { width: 100%; border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+  .search::placeholder { color: var(--ink-soft); }
+  select.fsel { border: 2px solid var(--ink); background: #fff; font: 600 12.5px "Public Sans", sans-serif; padding: 6px 8px; color: var(--ink); width: 100%; }
+
+  /* ============ Floating Switcher (nicht Teil des Designs) ============ */
+  #switcher {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; display: flex; align-items: center; gap: 4px;
+    background: #16161a; color: #fff; border-radius: 999px;
+    padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    font: 600 13px/1 "Public Sans", system-ui, sans-serif;
+  }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 200px; text-align: center; letter-spacing: .01em; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ################################################################
+     VARIANTE A — „Steckbrett"
+     Kern: die Spalten-Matrix der echten App, übersetzt ins Werkzeug-
+     Plakat. Stationen = Plakat-Spalten, Mitglieder = Namensmarken
+     mit Stanzloch, leere Plätze = gestanzte OFFEN-Slots. Rechts der
+     Markenkasten (Sidebar) mit den echten Filtern. Drag & Drop.
+     ################################################################ -->
+<section class="variant" data-v="a">
+<style>
+  [data-v="a"] .work { display: grid; grid-template-columns: minmax(0, 1fr) 264px; gap: 22px; align-items: start; margin-top: 26px; }
+  [data-v="a"] .cols { display: grid; grid-auto-flow: column; grid-auto-columns: 272px; gap: 14px; overflow-x: auto; padding-bottom: 10px; }
+  [data-v="a"] .stcol { border: 2px solid var(--ink); background: #fff; }
+  [data-v="a"] .stcol .head { padding: 10px 12px 9px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  [data-v="a"] .stcol .head h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; letter-spacing: .03em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+  [data-v="a"] .stcol .head h3 .badge { margin-left: auto; font-family: "Public Sans", sans-serif; font-size: 11px; font-weight: 700; background: var(--yellow); color: var(--ink); padding: 2px 7px; }
+  [data-v="a"] .stcol .head .sub { font-size: 11.5px; color: oklch(0.92 0.02 110); margin-top: 3px; }
+  [data-v="a"] .stcol .head .sub b { color: var(--yellow); font-weight: 700; }
+  [data-v="a"] .shift { padding: 9px 12px 11px; border-bottom: 1px solid var(--line); }
+  [data-v="a"] .shift:last-child { border-bottom: 0; }
+  [data-v="a"] .shift .t { display: flex; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+  [data-v="a"] .shift .t time { font-family: "Anton", sans-serif; font-size: 14px; letter-spacing: .02em; }
+  [data-v="a"] .shift .t .nm { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
+  [data-v="a"] .shift .t .fill { margin-left: auto; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  [data-v="a"] .slots { display: flex; flex-wrap: wrap; gap: 5px; }
+  [data-v="a"] .shift.dragover { background: oklch(0.95 0.06 92); }
+  [data-v="a"] .stmem { padding: 8px 12px; background: oklch(0.955 0.01 100); border-top: 2px solid var(--ink); font-size: 11.5px; color: var(--ink-soft); }
+  [data-v="a"] .stmem b { font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: .05em; font-size: 10.5px; display: block; margin-bottom: 4px; }
+  /* Markenkasten */
+  [data-v="a"] .kasten { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="a"] .kasten .khead { padding: 9px 12px; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; display: flex; justify-content: space-between; align-items: center; background: oklch(0.93 0.02 105); }
+  [data-v="a"] .kasten .khead span { font-family: "Anton", sans-serif; font-size: 14px; color: var(--green); }
+  [data-v="a"] .kasten .kbody { padding: 10px 12px; display: grid; gap: 8px; }
+  [data-v="a"] .pool { display: flex; flex-wrap: wrap; gap: 5px; max-height: 380px; overflow-y: auto; padding-top: 2px; }
+  [data-v="a"] .pool .mchip { cursor: grab; }
+  [data-v="a"] .pool .mchip:active { cursor: grabbing; }
+  [data-v="a"] .pool .mchip.assigned { opacity: .45; }
+  [data-v="a"] .pool .mchip .n { font-size: 10.5px; color: var(--ink-soft); font-weight: 700; }
+  [data-v="a"] .khint { font-size: 11px; color: var(--ink-soft); border-top: 1px solid var(--line); padding: 8px 12px; }
+  @media (max-width: 900px) {
+    [data-v="a"] .frame { padding: 12px 12px 120px; }
+    [data-v="a"] .work { grid-template-columns: 1fr; }
+    [data-v="a"] .cols { grid-auto-flow: row; grid-auto-columns: unset; grid-template-columns: 1fr; overflow: visible; }
+    [data-v="a"] .kasten { position: static; order: -1; }
+    [data-v="a"] .pool { max-height: 150px; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoren</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button>
+    <button class="btn">AUTO-ZUTEILUNG</button>
+    <button class="btn quiet">Präferenzen</button>
+    <button class="btn quiet">Teilen / Export</button>
+  </div>
+
+  <div class="work">
+    <div>
+      <h2>Stationen · Samstag 25. Juli</h2>
+      <div class="cols">
+        <div class="stcol">
+          <div class="head">
+            <h3>Ausschank <span class="badge">3 OFFEN</span></h3>
+            <div class="sub">Zelt Nord · <span class="crown">♛</span> <b>Franz Hochauer</b> · 4 Schichten</div>
+          </div>
+          <div class="shift st-full" data-drop>
+            <div class="t"><time>11–15</time><span class="nm">Frühschoppen</span><span class="fill">4/4</span></div>
+            <div class="slots"><span class="mchip">Franz Hochauer<span class="x">×</span></span><span class="mchip">Maria Leitner<span class="x">×</span></span><span class="mchip">Peter Gruber<span class="x">×</span></span><span class="mchip">Karin Fuchs<span class="x">×</span></span></div>
+          </div>
+          <div class="shift st-part" data-drop>
+            <div class="t"><time>15–19</time><span class="nm">Nachmittag</span><span class="fill">3/4</span></div>
+            <div class="slots"><span class="mchip">Josef Brandstetter<span class="x">×</span></span><span class="mchip">Elisabeth Auer<span class="x">×</span></span><span class="mchip">Monika Wagner<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+          <div class="shift st-part" data-drop>
+            <div class="t"><time>19–23</time><span class="nm">Abend</span><span class="fill">3/4</span></div>
+            <div class="slots"><span class="mchip">Franz Hochauer<span class="x">×</span></span><span class="mchip">Gerhard Eder<span class="x">×</span></span><span class="mchip">Maria Leitner<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+          <div class="shift st-empty" data-drop>
+            <div class="t"><time>23–02</time><span class="nm">Barbetrieb</span><span class="fill">1/2</span></div>
+            <div class="slots"><span class="mchip">Andreas Pöchhacker<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+          <div class="stmem"><b>Stationsmitglieder (ohne Schicht)</b>Roman Aigner · springt ein, wo es brennt</div>
+        </div>
+
+        <div class="stcol">
+          <div class="head">
+            <h3>Grill <span class="badge">2 OFFEN</span></h3>
+            <div class="sub">Küchenzeile · <span class="crown">♛</span> <b>Herbert Zeller</b> · 2 Schichten</div>
+          </div>
+          <div class="shift st-part" data-drop>
+            <div class="t"><time>11–15</time><span class="nm">Mittag</span><span class="fill">2/3</span></div>
+            <div class="slots"><span class="mchip">Herbert Zeller<span class="x">×</span></span><span class="mchip">Monika Wagner<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+          <div class="shift st-part" data-drop>
+            <div class="t"><time>15–19</time><span class="nm">Nachmittag</span><span class="fill">2/3</span></div>
+            <div class="slots"><span class="mchip">Gerhard Eder<span class="x">×</span></span><span class="mchip">Herbert Zeller<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+        </div>
+
+        <div class="stcol">
+          <div class="head">
+            <h3>Kassa <span class="badge">1 OFFEN</span></h3>
+            <div class="sub">Eingang · <span class="crown">♛</span> <b>Elisabeth Auer</b> · 3 Schichten</div>
+          </div>
+          <div class="shift st-full" data-drop>
+            <div class="t"><time>10–14</time><span class="fill">2/2</span></div>
+            <div class="slots"><span class="mchip">Elisabeth Auer<span class="x">×</span></span><span class="mchip">Christine Weber<span class="x">×</span></span></div>
+          </div>
+          <div class="shift st-full" data-drop>
+            <div class="t"><time>14–19</time><span class="fill">2/2</span></div>
+            <div class="slots"><span class="mchip">Julia Ebner<span class="x">×</span></span><span class="mchip">Stefan Prinz<span class="x">×</span></span></div>
+          </div>
+          <div class="shift st-part" data-drop>
+            <div class="t"><time>19–24</time><span class="nm">Abendkassa</span><span class="fill">2/3</span></div>
+            <div class="slots"><span class="mchip">Christine Weber<span class="x">×</span></span><span class="mchip">Elisabeth Auer<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+        </div>
+
+        <div class="stcol">
+          <div class="head">
+            <h3>Weinlaube <span class="badge">2 OFFEN</span></h3>
+            <div class="sub"><span class="crown">♛</span> <b>Maria Leitner</b> · 2 Schichten</div>
+          </div>
+          <div class="shift st-part" data-drop>
+            <div class="t"><time>16–20</time><span class="fill">1/2</span></div>
+            <div class="slots"><span class="mchip">Anna Schweighofer<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+          <div class="shift st-part" data-drop>
+            <div class="t"><time>20–24</time><span class="fill">1/2</span></div>
+            <div class="slots"><span class="mchip">Theresa Mayr<span class="x">×</span></span><span class="slot-free">+1 OFFEN</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="kasten">
+      <div class="khead">Markenkasten <span>24</span></div>
+      <div class="kbody">
+        <input class="search" placeholder="Name suchen …">
+        <div class="seg">
+          <button>Alle (24)</button><button class="on">Frei (9)</button><button>Zugeteilt (15)</button>
+        </div>
+        <select class="fsel"><option>Präferenz: alle Stationen</option><option>Ausschank</option><option>Grill</option><option>Kassa</option><option>Weinlaube</option></select>
+        <div class="pool" id="poolA">
+          <span class="mchip" draggable="true">Johann Steiner</span>
+          <span class="mchip" draggable="true">Lukas Hofstätter</span>
+          <span class="mchip" draggable="true">Martin Kalteis</span>
+          <span class="mchip" draggable="true">Katharina Moser</span>
+          <span class="mchip" draggable="true">Florian Haas</span>
+          <span class="mchip" draggable="true">Susanne Bichler</span>
+          <span class="mchip" draggable="true">Paul Grabner</span>
+          <span class="mchip" draggable="true">Roman Aigner</span>
+          <span class="mchip" draggable="true">Bernhard Wieser</span>
+        </div>
+      </div>
+      <div class="khint">Marke auf eine Schicht ziehen — volle Schichten lehnen ab („bereits vollständig besetzt").</div>
+    </aside>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE B — „Maßband-Plan"
+     Kern: die Zeit selbst wird zum Maßband (F-Signature). Tage als
+     Register, Stationen als Zeilen, Schichten als Druckblöcke auf
+     der Zeitachse mit Füllstand. Klick auf Block = Besetzungs-
+     Panel rechts. Überblick über den ganzen Tag auf einen Blick.
+     ################################################################ -->
+<section class="variant" data-v="b">
+<style>
+  [data-v="b"] .days { display: flex; gap: 0; margin-top: 26px; border: 2px solid var(--ink); border-bottom: 0; width: max-content; background: #fff; }
+  [data-v="b"] .days button { border: 0; border-right: 1px solid var(--line); background: none; padding: 8px 18px; font-weight: 700; font-size: 13px; color: var(--ink-soft); }
+  [data-v="b"] .days button.on { background: var(--yellow); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+  [data-v="b"] .board { display: grid; grid-template-columns: minmax(0, 1fr) 292px; gap: 20px; align-items: start; }
+  [data-v="b"] .grid { border: 2.5px solid var(--ink); background: #fff; overflow-x: auto; }
+  [data-v="b"] .gridin { min-width: 760px; }
+  [data-v="b"] .axis { display: grid; grid-template-columns: 128px 1fr; border-bottom: 2px solid var(--ink); }
+  [data-v="b"] .axis .corner { padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); border-right: 2px solid var(--ink); align-self: end; }
+  [data-v="b"] .scale { position: relative; height: 40px; background:
+      repeating-linear-gradient(90deg, transparent 0 calc(100%/68 - 1px), oklch(0.85 0.01 100) calc(100%/68 - 1px) calc(100%/68)),
+      repeating-linear-gradient(90deg, transparent 0 calc(100%/17 - 1.5px), var(--ink) calc(100%/17 - 1.5px) calc(100%/17));
+    background-size: 100% 30%, 100% 55%; background-repeat: repeat-x; background-position: bottom; }
+  [data-v="b"] .scale span { position: absolute; bottom: 22px; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  [data-v="b"] .row { display: grid; grid-template-columns: 128px 1fr; border-bottom: 1px solid var(--line); }
+  [data-v="b"] .row:last-child { border-bottom: 0; }
+  [data-v="b"] .row .stn { padding: 12px; border-right: 2px solid var(--ink); }
+  [data-v="b"] .row .stn h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="b"] .row .stn .sub { font-size: 10.5px; color: var(--ink-soft); margin-top: 2px; }
+  [data-v="b"] .track { position: relative; height: 62px; background-image: repeating-linear-gradient(90deg, transparent 0 calc(100%/17 - 1px), oklch(0.93 0.01 100) calc(100%/17 - 1px) calc(100%/17)); }
+  [data-v="b"] .blk { position: absolute; top: 9px; bottom: 9px; border: 2px solid var(--ink); background: #fff; padding: 4px 8px; font-size: 11px; overflow: hidden; text-align: left; }
+  [data-v="b"] .blk:hover { background: oklch(0.95 0.06 92); }
+  [data-v="b"] .blk.sel { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+  [data-v="b"] .blk b { display: block; font-family: "Anton", sans-serif; font-weight: 400; font-size: 12.5px; letter-spacing: .02em; }
+  [data-v="b"] .blk .f { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  [data-v="b"] .blk .f .bar { flex: 1; height: 6px; border: 1px solid var(--ink); position: relative; }
+  [data-v="b"] .blk .f .bar i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); }
+  [data-v="b"] .blk.full .f .bar i { background: var(--green); }
+  [data-v="b"] .blk.warn .f { color: var(--red); }
+  [data-v="b"] .blk.warn .f .bar i { background: var(--red); }
+  /* Besetzungs-Panel */
+  [data-v="b"] .panel { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="b"] .panel .phead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 10px 14px; border-bottom: 2px solid var(--ink); }
+  [data-v="b"] .panel .phead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; text-transform: uppercase; letter-spacing: .03em; }
+  [data-v="b"] .panel .phead .sub { font-size: 11.5px; color: oklch(0.92 0.02 110); margin-top: 2px; }
+  [data-v="b"] .panel .proster { padding: 10px 14px; display: grid; gap: 6px; }
+  [data-v="b"] .panel .prow { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  [data-v="b"] .panel .prow:last-child { border-bottom: 0; }
+  [data-v="b"] .panel .prow .pos { font-family: "Anton", sans-serif; font-size: 12px; width: 18px; color: var(--ink-soft); }
+  [data-v="b"] .panel .prow.free { color: var(--red); font-weight: 700; }
+  [data-v="b"] .panel .prow.free .add { margin-left: auto; border: 1.5px dashed var(--red); background: none; color: var(--red); font-size: 11px; font-weight: 700; padding: 3px 8px; }
+  [data-v="b"] .panel .prow.free .add:hover { background: oklch(0.97 0.02 30); }
+  [data-v="b"] .panel .pfoot { border-top: 2px solid var(--ink); padding: 9px 14px; display: flex; gap: 8px; }
+  [data-v="b"] .legend { display: flex; gap: 16px; font-size: 11.5px; color: var(--ink-soft); margin-top: 10px; flex-wrap: wrap; }
+  [data-v="b"] .legend i { display: inline-block; width: 10px; height: 10px; border: 1.5px solid var(--ink); vertical-align: -1px; margin-right: 5px; }
+  [data-v="b"] .legend .lg i { background: var(--green); } [data-v="b"] .legend .lr i { background: var(--red); } [data-v="b"] .legend .ly i { background: var(--yellow); }
+  @media (max-width: 900px) {
+    [data-v="b"] .frame { padding: 12px 12px 120px; }
+    [data-v="b"] .board { grid-template-columns: minmax(0, 1fr); }
+    [data-v="b"] .panel { position: static; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoren</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button>
+    <button class="btn">AUTO-ZUTEILUNG</button>
+    <button class="btn quiet">Präferenzen</button>
+    <button class="btn quiet">Teilen / Export</button>
+  </div>
+
+  <div class="days">
+    <button>Fr 24.</button><button class="on">Sa 25.</button><button>So 26.</button>
+  </div>
+  <div class="board">
+    <div>
+      <div class="grid"><div class="gridin">
+        <div class="axis">
+          <div class="corner">Station</div>
+          <div class="scale">
+            <span style="left:5.88%">10</span><span style="left:17.6%">12</span><span style="left:29.4%">14</span><span style="left:41.2%">16</span><span style="left:52.9%">18</span><span style="left:64.7%">20</span><span style="left:76.5%">22</span><span style="left:88.2%">24</span><span style="left:98%">02</span>
+          </div>
+        </div>
+        <div class="row">
+          <div class="stn"><h3>Ausschank</h3><div class="sub"><span class="crown">♛</span> F. Hochauer · 11/14</div></div>
+          <div class="track">
+            <button class="blk full" style="left:11.8%;width:23.5%"><b>11–15</b><span class="f">4/4<span class="bar"><i style="width:100%"></i></span></span></button>
+            <button class="blk" style="left:35.3%;width:23.5%"><b>15–19</b><span class="f">3/4<span class="bar"><i style="width:75%"></i></span></span></button>
+            <button class="blk" style="left:58.8%;width:23.5%"><b>19–23</b><span class="f">3/4<span class="bar"><i style="width:75%"></i></span></span></button>
+            <button class="blk warn sel" style="left:82.3%;width:17.7%"><b>23–02</b><span class="f">1/2<span class="bar"><i style="width:50%"></i></span></span></button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="stn"><h3>Grill</h3><div class="sub"><span class="crown">♛</span> H. Zeller · 4/6</div></div>
+          <div class="track">
+            <button class="blk" style="left:11.8%;width:23.5%"><b>11–15</b><span class="f">2/3<span class="bar"><i style="width:66%"></i></span></span></button>
+            <button class="blk" style="left:35.3%;width:23.5%"><b>15–19</b><span class="f">2/3<span class="bar"><i style="width:66%"></i></span></span></button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="stn"><h3>Kassa</h3><div class="sub"><span class="crown">♛</span> E. Auer · 6/7</div></div>
+          <div class="track">
+            <button class="blk full" style="left:5.88%;width:23.5%"><b>10–14</b><span class="f">2/2<span class="bar"><i style="width:100%"></i></span></span></button>
+            <button class="blk full" style="left:29.4%;width:29.4%"><b>14–19</b><span class="f">2/2<span class="bar"><i style="width:100%"></i></span></span></button>
+            <button class="blk" style="left:58.8%;width:29.4%"><b>19–24</b><span class="f">2/3<span class="bar"><i style="width:66%"></i></span></span></button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="stn"><h3>Weinlaube</h3><div class="sub"><span class="crown">♛</span> M. Leitner · 2/4</div></div>
+          <div class="track">
+            <button class="blk" style="left:41.2%;width:23.5%"><b>16–20</b><span class="f">1/2<span class="bar"><i style="width:50%"></i></span></span></button>
+            <button class="blk" style="left:64.7%;width:23.5%"><b>20–24</b><span class="f">1/2<span class="bar"><i style="width:50%"></i></span></span></button>
+          </div>
+        </div>
+      </div></div>
+      <div class="legend">
+        <span class="lg"><i></i>voll besetzt</span>
+        <span class="ly"><i></i>teilbesetzt</span>
+        <span class="lr"><i></i>kritisch / leer</span>
+        <span>Klick auf einen Block öffnet die Besetzung.</span>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="phead">
+        <h3>Ausschank · Sa 23–02</h3>
+        <div class="sub">Barbetrieb · 2 Plätze · <b style="color:var(--yellow)">1 offen</b></div>
+      </div>
+      <div class="proster">
+        <div class="prow"><span class="pos">1</span><span class="mchip">Andreas Pöchhacker<span class="x">×</span></span></div>
+        <div class="prow free"><span class="pos">2</span>OFFEN<button class="add">+ ZUTEILEN</button></div>
+      </div>
+      <div class="pfoot">
+        <button class="btn primary" style="flex:1">PASSENDE VORSCHLAGEN</button>
+        <button class="btn quiet">Schicht ändern</button>
+      </div>
+    </aside>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE C — „Einsatzkartei"
+     Kern: umgekehrte Perspektive. Nicht die Station, der MENSCH ist
+     die Zeile — eine Kartei aller Mitglieder mit ihren Einsätzen
+     als Stempel. Der echte App-Filter „wer ist noch nirgends?"
+     wird zum Hauptwerkzeug. Rechts die offenen Posten je Station.
+     ################################################################ -->
+<section class="variant" data-v="c">
+<style>
+  [data-v="c"] .board { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 26px; }
+  [data-v="c"] .fbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  [data-v="c"] .fbar .search { width: 200px; flex: 0 1 auto; min-width: 120px; }
+  [data-v="c"] .fbar .seg { flex: 0 1 auto; max-width: 100%; }
+  [data-v="c"] .fbar .seg button { padding: 6px 12px; }
+  [data-v="c"] .kartei { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="c"] .krow { display: grid; grid-template-columns: 172px 1fr 84px; border-bottom: 1px solid var(--line); align-items: center; }
+  [data-v="c"] .krow:last-child { border-bottom: 0; }
+  [data-v="c"] .krow.head { background: oklch(0.93 0.02 105); border-bottom: 2px solid var(--ink); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  [data-v="c"] .krow.head > div { padding: 8px 12px; }
+  [data-v="c"] .krow .who { padding: 10px 12px; border-right: 1px solid var(--line); }
+  [data-v="c"] .krow .who b { font-weight: 700; font-size: 13px; display: block; }
+  [data-v="c"] .krow .who .pref { font-size: 10.5px; color: var(--ink-soft); }
+  [data-v="c"] .krow .stamps { padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 4px; }
+  [data-v="c"] .stamp { border: 1.5px solid var(--green); color: var(--green); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; padding: 2px 7px; transform: rotate(-.6deg); background: #fff; }
+  [data-v="c"] .stamp:nth-child(2n) { transform: rotate(.5deg); }
+  [data-v="c"] .stamp.none { border-color: var(--red); color: var(--red); border-style: dashed; transform: none; }
+  [data-v="c"] .krow .cnt { padding: 8px 12px; text-align: right; font-family: "Anton", sans-serif; font-size: 14px; letter-spacing: .02em; }
+  [data-v="c"] .krow .cnt small { display: block; font-family: "Public Sans", sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; color: var(--ink-soft); text-transform: uppercase; }
+  [data-v="c"] .krow.zero { background: oklch(0.975 0.012 60); }
+  [data-v="c"] .krow.zero .cnt { color: var(--red); }
+  [data-v="c"] .krow.sel { background: oklch(0.95 0.06 92); box-shadow: inset 3px 0 0 var(--ink); }
+  /* Offene Posten */
+  [data-v="c"] .posten { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="c"] .posten .phead { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: var(--red); color: #fff; display: flex; justify-content: space-between; align-items: baseline; }
+  [data-v="c"] .posten .phead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; }
+  [data-v="c"] .posten .phead .n { font-family: "Anton", sans-serif; font-size: 17px; }
+  [data-v="c"] .posten .grp { border-bottom: 1px solid var(--line); }
+  [data-v="c"] .posten .grp:last-child { border-bottom: 0; }
+  [data-v="c"] .posten .gh { padding: 8px 14px 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  [data-v="c"] .posten .op { display: flex; align-items: center; gap: 10px; padding: 7px 14px; font-size: 12.5px; }
+  [data-v="c"] .posten .op time { font-family: "Anton", sans-serif; font-size: 13px; width: 64px; flex: none; }
+  [data-v="c"] .posten .op .miss { color: var(--red); font-weight: 700; }
+  [data-v="c"] .posten .op .give { margin-left: auto; border: 1.5px dashed var(--red); background: none; color: var(--red); font-size: 10.5px; font-weight: 700; padding: 3px 8px; white-space: nowrap; }
+  [data-v="c"] .posten .op .give:hover, [data-v="c"] .posten .op .give.hot { background: var(--red); color: #fff; border-style: solid; }
+  [data-v="c"] .phint { padding: 9px 14px; border-top: 2px solid var(--ink); font-size: 11px; color: var(--ink-soft); background: oklch(0.955 0.01 100); }
+  @media (max-width: 900px) {
+    [data-v="c"] .frame { padding: 12px 12px 120px; }
+    [data-v="c"] .board { grid-template-columns: 1fr; }
+    [data-v="c"] .posten { position: static; }
+    [data-v="c"] .krow { grid-template-columns: minmax(0, 1fr) 88px; }
+    [data-v="c"] .krow .stamps { grid-column: 1 / -1; padding-top: 0; }
+    [data-v="c"] .krow.head .stamps { display: none; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoren</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button>
+    <button class="btn">AUTO-ZUTEILUNG</button>
+    <button class="btn quiet">Präferenzen</button>
+    <button class="btn quiet">Teilen / Export</button>
+  </div>
+
+  <div class="board">
+    <div>
+      <h2>Einsatzkartei · 24 Mitglieder</h2>
+      <div class="fbar">
+        <input class="search" placeholder="Name suchen …">
+        <div class="seg">
+          <button class="on">Alle (24)</button><button>Noch nirgends (9)</button><button>Eingeteilt (15)</button>
+        </div>
+        <select class="fsel" style="width:auto"><option>Präferenz: alle</option><option>Ausschank</option><option>Grill</option><option>Kassa</option><option>Weinlaube</option></select>
+      </div>
+      <div class="kartei">
+        <div class="krow head"><div>Mitglied</div><div class="stamps">Einsätze</div><div style="text-align:right;padding:8px 12px">Schichten</div></div>
+        <div class="krow zero sel">
+          <div class="who"><b>Johann Steiner</b><span class="pref">wünscht: Grill</span></div>
+          <div class="stamps"><span class="stamp none">NOCH KEIN EINSATZ</span></div>
+          <div class="cnt">0<small>Schichten</small></div>
+        </div>
+        <div class="krow zero">
+          <div class="who"><b>Lukas Hofstätter</b><span class="pref">wünscht: Ausschank, Bar</span></div>
+          <div class="stamps"><span class="stamp none">NOCH KEIN EINSATZ</span></div>
+          <div class="cnt">0<small>Schichten</small></div>
+        </div>
+        <div class="krow zero">
+          <div class="who"><b>Martin Kalteis</b><span class="pref">keine Präferenz</span></div>
+          <div class="stamps"><span class="stamp none">NOCH KEIN EINSATZ</span></div>
+          <div class="cnt">0<small>Schichten</small></div>
+        </div>
+        <div class="krow zero">
+          <div class="who"><b>Roman Aigner</b><span class="pref">Stationsmitglied Ausschank</span></div>
+          <div class="stamps"><span class="stamp none">NOCH KEIN EINSATZ</span></div>
+          <div class="cnt">0<small>Schichten</small></div>
+        </div>
+        <div class="krow">
+          <div class="who"><b>Franz Hochauer</b><span class="pref"><span class="crown">♛</span> Ausschank</span></div>
+          <div class="stamps"><span class="stamp">AUSSCHANK SA 11–15</span><span class="stamp">AUSSCHANK SA 19–23</span></div>
+          <div class="cnt">2<small>Schichten</small></div>
+        </div>
+        <div class="krow">
+          <div class="who"><b>Maria Leitner</b><span class="pref"><span class="crown">♛</span> Weinlaube</span></div>
+          <div class="stamps"><span class="stamp">AUSSCHANK SA 11–15</span><span class="stamp">AUSSCHANK SA 19–23</span></div>
+          <div class="cnt">2<small>Schichten</small></div>
+        </div>
+        <div class="krow">
+          <div class="who"><b>Elisabeth Auer</b><span class="pref"><span class="crown">♛</span> Kassa</span></div>
+          <div class="stamps"><span class="stamp">KASSA SA 10–14</span><span class="stamp">KASSA SA 19–24</span><span class="stamp">AUSSCHANK SA 15–19</span></div>
+          <div class="cnt">3<small>Schichten</small></div>
+        </div>
+        <div class="krow">
+          <div class="who"><b>Herbert Zeller</b><span class="pref"><span class="crown">♛</span> Grill</span></div>
+          <div class="stamps"><span class="stamp">GRILL SA 11–15</span><span class="stamp">GRILL SA 15–19</span></div>
+          <div class="cnt">2<small>Schichten</small></div>
+        </div>
+        <div class="krow">
+          <div class="who"><b>Andreas Pöchhacker</b><span class="pref">wünscht: Bar</span></div>
+          <div class="stamps"><span class="stamp">AUSSCHANK SA 23–02</span></div>
+          <div class="cnt">1<small>Schicht</small></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="posten">
+      <div class="phead"><h3>Offene Posten</h3><span class="n">11</span></div>
+      <div class="grp">
+        <div class="gh">Ausschank · Zelt Nord</div>
+        <div class="op"><time>Sa 15–19</time><span class="miss">+1 fehlt</span><button class="give">STEINER EINTEILEN</button></div>
+        <div class="op"><time>Sa 19–23</time><span class="miss">+1 fehlt</span><button class="give">STEINER EINTEILEN</button></div>
+        <div class="op"><time>Sa 23–02</time><span class="miss">+1 fehlt</span><button class="give">STEINER EINTEILEN</button></div>
+      </div>
+      <div class="grp">
+        <div class="gh">Grill · Küchenzeile</div>
+        <div class="op"><time>Sa 11–15</time><span class="miss">+1 fehlt</span><button class="give hot">STEINER EINTEILEN ♥</button></div>
+        <div class="op"><time>Sa 15–19</time><span class="miss">+1 fehlt</span><button class="give hot">STEINER EINTEILEN ♥</button></div>
+      </div>
+      <div class="grp">
+        <div class="gh">Kassa · Eingang</div>
+        <div class="op"><time>Sa 19–24</time><span class="miss">+1 fehlt</span><button class="give">STEINER EINTEILEN</button></div>
+      </div>
+      <div class="grp">
+        <div class="gh">Weinlaube</div>
+        <div class="op"><time>Sa 16–20</time><span class="miss">+1 fehlt</span><button class="give">STEINER EINTEILEN</button></div>
+        <div class="op"><time>Sa 20–24</time><span class="miss">+1 fehlt</span><button class="give">STEINER EINTEILEN</button></div>
+      </div>
+      <div class="phint">Johann Steiner ist gewählt — ♥ markiert Schichten, die zu seinen Wünschen passen (Grill). Klick teilt zu.</div>
+    </aside>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE D — „Druckbogen"
+     Kern: der ganze Plan als EIN gedrucktes Formular, maximale
+     Dichte. Je Station eine Formular-Sektion, je Schicht eine
+     Zeile, Positionen als nummerierte Schreibfelder. Oben der
+     Setzkasten der freien Helfer. Klick in ein leeres Feld
+     „beschriftet" es mit der gewählten Marke.
+     ################################################################ -->
+<section class="variant" data-v="d">
+<style>
+  [data-v="d"] .case { border: 2.5px solid var(--ink); background: #fff; margin-top: 26px; display: flex; align-items: center; gap: 10px; padding: 9px 14px; flex-wrap: wrap; }
+  [data-v="d"] .case .clabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); flex: 0 1 auto; min-width: 0; }
+  [data-v="d"] .case .mchip { cursor: pointer; }
+  [data-v="d"] .case .mchip.picked { background: var(--yellow); outline: 2px solid var(--ink); }
+  [data-v="d"] .sheet { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  [data-v="d"] .sheet .sect { border-bottom: 2px solid var(--ink); }
+  [data-v="d"] .sheet .sect:last-child { border-bottom: 0; }
+  [data-v="d"] .sect .shead { display: flex; align-items: baseline; gap: 12px; padding: 9px 14px; background: oklch(0.93 0.02 105); border-bottom: 1.5px solid var(--ink); }
+  [data-v="d"] .sect .shead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="d"] .sect .shead .meta { font-size: 11.5px; color: var(--ink-soft); }
+  [data-v="d"] .sect .shead .open { margin-left: auto; background: var(--red); color: #fff; font-weight: 700; font-size: 11px; padding: 2px 9px; }
+  [data-v="d"] .sect .shead .open.none { background: var(--green); }
+  [data-v="d"] .frow { display: grid; grid-template-columns: 108px repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+  [data-v="d"] .frow:last-child { border-bottom: 0; }
+  [data-v="d"] .frow time { padding: 9px 12px; font-weight: 700; font-size: 12.5px; font-variant-numeric: tabular-nums; border-right: 1.5px solid var(--ink); display: flex; flex-direction: column; justify-content: center; }
+  [data-v="d"] .frow time small { font-weight: 600; font-size: 10px; color: var(--ink-soft); }
+  [data-v="d"] .cell { padding: 7px 10px; border-right: 1px solid var(--line); font-size: 12px; display: flex; align-items: center; gap: 6px; min-height: 40px; }
+  [data-v="d"] .cell:last-child { border-right: 0; }
+  [data-v="d"] .cell .p { font-family: "Anton", sans-serif; font-size: 10.5px; color: oklch(0.75 0.02 120); flex: none; }
+  [data-v="d"] .cell .name { font-weight: 600; border-bottom: 1.5px solid var(--line); flex: 1; padding-bottom: 2px; }
+  [data-v="d"] .cell.empty { cursor: pointer; }
+  [data-v="d"] .cell.empty .name { border-bottom: 1.5px dashed var(--red); color: var(--red); font-weight: 700; font-size: 10.5px; letter-spacing: .04em; }
+  [data-v="d"] .cell.empty:hover { background: oklch(0.95 0.06 92); }
+  [data-v="d"] .cell.blocked { background: repeating-linear-gradient(-45deg, transparent 0 5px, oklch(0.94 0.012 100) 5px 9px); }
+  [data-v="d"] .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-top: 2px solid var(--ink); background: oklch(0.955 0.01 100); font-size: 11.5px; color: var(--ink-soft); flex-wrap: wrap; }
+  @media (max-width: 900px) {
+    [data-v="d"] .frame { padding: 12px 12px 120px; }
+    [data-v="d"] .sheetwrap { overflow-x: auto; border: 2.5px solid var(--ink); border-top: 0; }
+    [data-v="d"] .sheet { border: 0; min-width: 640px; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoren</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button>
+    <button class="btn">AUTO-ZUTEILUNG</button>
+    <button class="btn quiet">Präferenzen</button>
+    <button class="btn quiet">Teilen / Export</button>
+  </div>
+
+  <div class="case">
+    <span class="clabel">Freie Helfer (9) — Marke wählen, dann Feld anklicken:</span>
+    <span class="mchip picked">Johann Steiner</span>
+    <span class="mchip">Lukas Hofstätter</span>
+    <span class="mchip">Martin Kalteis</span>
+    <span class="mchip">Katharina Moser</span>
+    <span class="mchip">Florian Haas</span>
+    <span class="mchip">Susanne Bichler</span>
+    <span class="mchip">Paul Grabner</span>
+    <span class="mchip">Roman Aigner</span>
+    <span class="mchip">Bernhard Wieser</span>
+  </div>
+
+  <div class="sheetwrap"><div class="sheet">
+    <div class="sect">
+      <div class="shead"><h3>Ausschank</h3><span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer</span><span class="open">3 OFFEN</span></div>
+      <div class="frow">
+        <time>Sa 11–15<small>Frühschoppen</small></time>
+        <div class="cell"><span class="p">1</span><span class="name">F. Hochauer</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">M. Leitner</span></div>
+        <div class="cell"><span class="p">3</span><span class="name">P. Gruber</span></div>
+        <div class="cell"><span class="p">4</span><span class="name">K. Fuchs</span></div>
+      </div>
+      <div class="frow">
+        <time>Sa 15–19</time>
+        <div class="cell"><span class="p">1</span><span class="name">J. Brandstetter</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">E. Auer</span></div>
+        <div class="cell"><span class="p">3</span><span class="name">M. Wagner</span></div>
+        <div class="cell empty"><span class="p">4</span><span class="name">HIER EINTRAGEN</span></div>
+      </div>
+      <div class="frow">
+        <time>Sa 19–23</time>
+        <div class="cell"><span class="p">1</span><span class="name">F. Hochauer</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">G. Eder</span></div>
+        <div class="cell"><span class="p">3</span><span class="name">M. Leitner</span></div>
+        <div class="cell empty"><span class="p">4</span><span class="name">HIER EINTRAGEN</span></div>
+      </div>
+      <div class="frow">
+        <time>Sa 23–02<small>Barbetrieb</small></time>
+        <div class="cell"><span class="p">1</span><span class="name">A. Pöchhacker</span></div>
+        <div class="cell empty"><span class="p">2</span><span class="name">HIER EINTRAGEN</span></div>
+        <div class="cell blocked"></div>
+        <div class="cell blocked"></div>
+      </div>
+    </div>
+    <div class="sect">
+      <div class="shead"><h3>Grill</h3><span class="meta">Küchenzeile · <span class="crown">♛</span> Herbert Zeller</span><span class="open">2 OFFEN</span></div>
+      <div class="frow">
+        <time>Sa 11–15</time>
+        <div class="cell"><span class="p">1</span><span class="name">H. Zeller</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">M. Wagner</span></div>
+        <div class="cell empty"><span class="p">3</span><span class="name">HIER EINTRAGEN</span></div>
+        <div class="cell blocked"></div>
+      </div>
+      <div class="frow">
+        <time>Sa 15–19</time>
+        <div class="cell"><span class="p">1</span><span class="name">G. Eder</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">H. Zeller</span></div>
+        <div class="cell empty"><span class="p">3</span><span class="name">HIER EINTRAGEN</span></div>
+        <div class="cell blocked"></div>
+      </div>
+    </div>
+    <div class="sect">
+      <div class="shead"><h3>Kassa</h3><span class="meta">Eingang · <span class="crown">♛</span> Elisabeth Auer</span><span class="open">1 OFFEN</span></div>
+      <div class="frow">
+        <time>Sa 10–14</time>
+        <div class="cell"><span class="p">1</span><span class="name">E. Auer</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">C. Weber</span></div>
+        <div class="cell blocked"></div>
+        <div class="cell blocked"></div>
+      </div>
+      <div class="frow">
+        <time>Sa 14–19</time>
+        <div class="cell"><span class="p">1</span><span class="name">J. Ebner</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">S. Prinz</span></div>
+        <div class="cell blocked"></div>
+        <div class="cell blocked"></div>
+      </div>
+      <div class="frow">
+        <time>Sa 19–24<small>Abendkassa</small></time>
+        <div class="cell"><span class="p">1</span><span class="name">C. Weber</span></div>
+        <div class="cell"><span class="p">2</span><span class="name">E. Auer</span></div>
+        <div class="cell empty"><span class="p">3</span><span class="name">HIER EINTRAGEN</span></div>
+        <div class="cell blocked"></div>
+      </div>
+    </div>
+    <div class="sect">
+      <div class="shead"><h3>Weinlaube</h3><span class="meta"><span class="crown">♛</span> Maria Leitner</span><span class="open">2 OFFEN</span></div>
+      <div class="frow">
+        <time>Sa 16–20</time>
+        <div class="cell"><span class="p">1</span><span class="name">A. Schweighofer</span></div>
+        <div class="cell empty"><span class="p">2</span><span class="name">HIER EINTRAGEN</span></div>
+        <div class="cell blocked"></div>
+        <div class="cell blocked"></div>
+      </div>
+      <div class="frow">
+        <time>Sa 20–24</time>
+        <div class="cell"><span class="p">1</span><span class="name">T. Mayr</span></div>
+        <div class="cell empty"><span class="p">2</span><span class="name">HIER EINTRAGEN</span></div>
+        <div class="cell blocked"></div>
+        <div class="cell blocked"></div>
+      </div>
+    </div>
+    <div class="foot">
+      <span>Schraffierte Felder: Schicht braucht dort niemanden. Marke oben wählen, leeres Feld anklicken — fertig.</span>
+      <span><b style="color:var(--red)">11 Felder offen</b> · Fr und So auf eigenen Bögen</span>
+    </div>
+  </div></div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE E — „Fokus-Werkbank"
+     Kern: eine Station liegt auf der Werkbank, alle anderen hängen
+     als Ampel-Reiter darüber. Konzentriertes Arbeiten Station für
+     Station statt Alles-auf-einmal. Rechts die Helferliste, nach
+     Präferenz-Passung zur fokussierten Station sortiert.
+     ################################################################ -->
+<section class="variant" data-v="e">
+<style>
+  [data-v="e"] .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 26px; }
+  [data-v="e"] .stab { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 10px 12px 9px; }
+  [data-v="e"] .stab h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; }
+  [data-v="e"] .stab h3 .q { font-size: 12px; font-variant-numeric: tabular-nums; }
+  [data-v="e"] .stab .mini { position: relative; height: 10px; border: 1.5px solid var(--ink); margin-top: 7px; background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0.85 0.01 100) 8px 9px); background-size: 100% 45%; background-repeat: repeat-x; background-position: bottom; }
+  [data-v="e"] .stab .mini i { position: absolute; inset: 0 auto 0 0; }
+  [data-v="e"] .stab.full .mini i { background: var(--green); }
+  [data-v="e"] .stab.part .mini i { background: var(--yellow); }
+  [data-v="e"] .stab.crit .mini i { background: var(--red); }
+  [data-v="e"] .stab.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+  [data-v="e"] .stab:hover:not(.on) { background: oklch(0.955 0.01 100); }
+  [data-v="e"] .bench { display: grid; grid-template-columns: minmax(0, 1fr) 264px; gap: 22px; align-items: start; margin-top: 18px; }
+  [data-v="e"] .focus { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="e"] .focus .fhead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 14px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  [data-v="e"] .focus .fhead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 24px; letter-spacing: .02em; text-transform: uppercase; }
+  [data-v="e"] .focus .fhead .meta { font-size: 12.5px; color: oklch(0.92 0.02 110); }
+  [data-v="e"] .focus .fhead .meta b { color: var(--yellow); }
+  [data-v="e"] .focus .fhead .auto { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0; padding: 8px 13px; font-weight: 700; font-size: 12px; }
+  [data-v="e"] .focus .srow { padding: 13px 18px; border-bottom: 1px solid var(--line); }
+  [data-v="e"] .focus .srow:last-of-type { border-bottom: 0; }
+  [data-v="e"] .focus .srow .t { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; }
+  [data-v="e"] .focus .srow .t time { font-family: "Anton", sans-serif; font-size: 18px; letter-spacing: .02em; }
+  [data-v="e"] .focus .srow .t .nm { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  [data-v="e"] .focus .srow .t .st { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
+  [data-v="e"] .focus .srow .t .st.ok { color: var(--green); } [data-v="e"] .focus .srow .t .st.warn { color: var(--red); }
+  [data-v="e"] .bigslots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+  [data-v="e"] .bslot { border: 1.5px solid var(--ink); padding: 7px 10px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; background: oklch(0.97 0.008 95); }
+  [data-v="e"] .bslot .p { font-family: "Anton", sans-serif; font-size: 11px; color: var(--ink-soft); }
+  [data-v="e"] .bslot.free { border-style: dashed; border-color: var(--red); color: var(--red); font-weight: 700; font-size: 11.5px; letter-spacing: .03em; background: #fff; cursor: pointer; }
+  [data-v="e"] .bslot.free:hover { background: oklch(0.97 0.02 30); }
+  [data-v="e"] .focus .stmemrow { padding: 10px 18px; border-top: 2px solid var(--ink); background: oklch(0.955 0.01 100); font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  [data-v="e"] .focus .stmemrow b { text-transform: uppercase; letter-spacing: .05em; font-size: 10.5px; color: var(--ink-soft); }
+  /* Helfer rechts */
+  [data-v="e"] .crew { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="e"] .crew .chead { padding: 9px 12px; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; background: oklch(0.93 0.02 105); }
+  [data-v="e"] .crew .cbody { padding: 10px 12px; display: grid; gap: 8px; }
+  [data-v="e"] .crew .grp { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--green); margin-top: 4px; }
+  [data-v="e"] .crew .grp.rest { color: var(--ink-soft); }
+  [data-v="e"] .crew .list { display: flex; flex-wrap: wrap; gap: 5px; }
+  [data-v="e"] .crew .mchip { cursor: grab; }
+  @media (max-width: 900px) {
+    [data-v="e"] .frame { padding: 12px 12px 120px; }
+    [data-v="e"] .strip { grid-template-columns: 1fr 1fr; }
+    [data-v="e"] .bench { grid-template-columns: 1fr; }
+    [data-v="e"] .crew { position: static; }
+    [data-v="e"] .focus .fhead .auto { margin-left: 0; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoren</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button>
+    <button class="btn">AUTO-ZUTEILUNG</button>
+    <button class="btn quiet">Präferenzen</button>
+    <button class="btn quiet">Teilen / Export</button>
+  </div>
+
+  <div class="strip">
+    <button class="stab crit on"><h3>Ausschank <span class="q">11/14</span></h3><div class="mini"><i style="width:79%"></i></div></button>
+    <button class="stab part"><h3>Grill <span class="q">4/6</span></h3><div class="mini"><i style="width:66%"></i></div></button>
+    <button class="stab part"><h3>Kassa <span class="q">6/7</span></h3><div class="mini"><i style="width:86%"></i></div></button>
+    <button class="stab part"><h3>Weinlaube <span class="q">2/4</span></h3><div class="mini"><i style="width:50%"></i></div></button>
+  </div>
+
+  <div class="bench">
+    <div class="focus">
+      <div class="fhead">
+        <h3>Ausschank</h3>
+        <span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer · <b>3 Plätze offen</b></span>
+        <button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button>
+      </div>
+      <div class="srow">
+        <div class="t"><time>SA 11–15</time><span class="nm">Frühschoppen · 4 Plätze</span><span class="st ok">VOLL</span></div>
+        <div class="bigslots">
+          <span class="bslot"><span class="p">1</span>Franz Hochauer</span>
+          <span class="bslot"><span class="p">2</span>Maria Leitner</span>
+          <span class="bslot"><span class="p">3</span>Peter Gruber</span>
+          <span class="bslot"><span class="p">4</span>Karin Fuchs</span>
+        </div>
+      </div>
+      <div class="srow">
+        <div class="t"><time>SA 15–19</time><span class="nm">4 Plätze</span><span class="st warn">1 OFFEN</span></div>
+        <div class="bigslots">
+          <span class="bslot"><span class="p">1</span>Josef Brandstetter</span>
+          <span class="bslot"><span class="p">2</span>Elisabeth Auer</span>
+          <span class="bslot"><span class="p">3</span>Monika Wagner</span>
+          <span class="bslot free"><span class="p">4</span>+ HELFER HIERHER ZIEHEN</span>
+        </div>
+      </div>
+      <div class="srow">
+        <div class="t"><time>SA 19–23</time><span class="nm">4 Plätze</span><span class="st warn">1 OFFEN</span></div>
+        <div class="bigslots">
+          <span class="bslot"><span class="p">1</span>Franz Hochauer</span>
+          <span class="bslot"><span class="p">2</span>Gerhard Eder</span>
+          <span class="bslot"><span class="p">3</span>Maria Leitner</span>
+          <span class="bslot free"><span class="p">4</span>+ HELFER HIERHER ZIEHEN</span>
+        </div>
+      </div>
+      <div class="srow">
+        <div class="t"><time>SA 23–02</time><span class="nm">Barbetrieb · 2 Plätze</span><span class="st warn">1 OFFEN</span></div>
+        <div class="bigslots">
+          <span class="bslot"><span class="p">1</span>Andreas Pöchhacker</span>
+          <span class="bslot free"><span class="p">2</span>+ HELFER HIERHER ZIEHEN</span>
+        </div>
+      </div>
+      <div class="stmemrow"><b>Stationsmitglieder ohne Schicht:</b><span class="mchip">Roman Aigner<span class="x">×</span></span><button class="btn quiet" style="padding:3px 8px;font-size:11px">+ hinzufügen</button></div>
+    </div>
+
+    <aside class="crew">
+      <div class="chead">Helfer für Ausschank</div>
+      <div class="cbody">
+        <input class="search" placeholder="Name suchen …">
+        <div class="seg"><button>Alle (24)</button><button class="on">Frei (9)</button><button>Zugeteilt (15)</button></div>
+        <div class="grp">Wünschen sich diese Station (2)</div>
+        <div class="list">
+          <span class="mchip" draggable="true">Lukas Hofstätter</span>
+          <span class="mchip" draggable="true">Paul Grabner</span>
+        </div>
+        <div class="grp rest">Weitere freie Helfer (7)</div>
+        <div class="list">
+          <span class="mchip" draggable="true">Johann Steiner</span>
+          <span class="mchip" draggable="true">Martin Kalteis</span>
+          <span class="mchip" draggable="true">Katharina Moser</span>
+          <span class="mchip" draggable="true">Florian Haas</span>
+          <span class="mchip" draggable="true">Susanne Bichler</span>
+          <span class="mchip" draggable="true">Roman Aigner</span>
+          <span class="mchip" draggable="true">Bernhard Wieser</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</section>
+
+<div id="switcher">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <div class="lbl"><span id="lblMain">A — Steckbrett</span><small id="lblSub">Stations-Spalten + Markenkasten, Drag & Drop</small></div>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</div>
+
+<script>
+  const VARIANTS = [
+    ["a", "Steckbrett", "Stations-Spalten + Markenkasten, Drag & Drop"],
+    ["b", "Maßband-Plan", "Zeitachse als Maßband, Blöcke, Besetzungs-Panel"],
+    ["c", "Einsatzkartei", "Menschen zuerst: wer ist noch nirgends?"],
+    ["d", "Druckbogen", "Ein Formular, maximale Dichte, Felder füllen"],
+    ["e", "Fokus-Werkbank", "Eine Station im Fokus, Ampel-Reiter oben"]
+  ];
+  function currentKey() {
+    const v = new URLSearchParams(location.search).get("variant");
+    return VARIANTS.some(x => x[0] === v) ? v : "a";
+  }
+  function show(key) {
+    document.querySelectorAll(".variant").forEach(s => s.classList.toggle("active", s.dataset.v === key));
+    const v = VARIANTS.find(x => x[0] === key);
+    document.getElementById("lblMain").textContent = key.toUpperCase() + " — " + v[1];
+    document.getElementById("lblSub").textContent = v[2];
+    try { history.replaceState(null, "", "?variant=" + key); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function cycle(dir) {
+    const i = VARIANTS.findIndex(x => x[0] === currentKey());
+    show(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0]);
+  }
+  document.getElementById("prev").addEventListener("click", () => cycle(-1));
+  document.getElementById("next").addEventListener("click", () => cycle(1));
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") cycle(-1);
+    if (e.key === "ArrowRight") cycle(1);
+  });
+  show(currentKey());
+
+  /* ---- Variante A: Drag & Drop Marken → Schichten (echte App-Regel: volle Schicht lehnt ab) ---- */
+  let dragName = null;
+  document.querySelectorAll('#poolA .mchip').forEach(ch => {
+    ch.addEventListener('dragstart', () => { dragName = ch.firstChild.textContent.trim(); });
+  });
+  document.querySelectorAll('[data-v="a"] [data-drop]').forEach(sh => {
+    sh.addEventListener('dragover', e => { e.preventDefault(); sh.classList.add('dragover'); });
+    sh.addEventListener('dragleave', () => sh.classList.remove('dragover'));
+    sh.addEventListener('drop', e => {
+      e.preventDefault(); sh.classList.remove('dragover');
+      if (!dragName) return;
+      const freeSlot = sh.querySelector('.slot-free');
+      if (!freeSlot) { sh.style.outline = '2px solid var(--red)'; setTimeout(() => sh.style.outline = '', 600); return; }
+      const chip = document.createElement('span');
+      chip.className = 'mchip'; chip.innerHTML = dragName + '<span class="x">×</span>';
+      freeSlot.replaceWith(chip);
+      recount(sh);
+      dragName = null;
+    });
+  });
+  function recount(sh) {
+    const fill = sh.querySelector('.fill');
+    const chips = sh.querySelectorAll('.mchip').length;
+    const total = parseInt(fill.textContent.split('/')[1], 10);
+    fill.textContent = chips + '/' + total;
+    sh.classList.remove('st-empty', 'st-part', 'st-full');
+    sh.classList.add(chips === 0 ? 'st-empty' : chips < total ? 'st-part' : 'st-full');
+  }
+  /* Marken abnehmen (überall) */
+  document.addEventListener('click', e => {
+    if (!e.target.matches('.mchip .x')) return;
+    const chip = e.target.closest('.mchip');
+    const shift = chip.closest('[data-drop]');
+    if (shift) {
+      const free = document.createElement('span');
+      free.className = 'slot-free'; free.textContent = '+1 OFFEN';
+      chip.replaceWith(free);
+      recount(shift);
+    } else { chip.remove(); }
+  });
+  /* ---- Variante D: Marke wählen → Feld füllen ---- */
+  document.querySelectorAll('[data-v="d"] .case .mchip').forEach(ch => {
+    ch.addEventListener('click', () => {
+      document.querySelectorAll('[data-v="d"] .case .mchip').forEach(c => c.classList.remove('picked'));
+      ch.classList.add('picked');
+    });
+  });
+  document.querySelectorAll('[data-v="d"] .cell.empty').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const picked = document.querySelector('[data-v="d"] .case .mchip.picked');
+      if (!picked) return;
+      const parts = picked.textContent.trim().split(' ');
+      cell.querySelector('.name').textContent = parts[0][0] + '. ' + parts.slice(1).join(' ');
+      cell.classList.remove('empty');
+      picked.remove();
+    });
+  });
+</script>
+</body>
+</html>
