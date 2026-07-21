@@ -1,6 +1,7 @@
 import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768;
+// Ein Breakpoint für die ganze App (DESIGN-VISION.md §6): <900px = mobil.
+const MOBILE_BREAKPOINT = 900;
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);

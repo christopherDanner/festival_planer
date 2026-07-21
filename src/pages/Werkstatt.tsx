@@ -1,5 +1,8 @@
 import * as React from 'react';
 
+import FestivalTabBar, { type FestivalTab } from '@/components/festival/FestivalTabBar';
+import FestivalTabRail from '@/components/festival/FestivalTabRail';
+import { Mast } from '@/components/toolkit/Mast';
 import { ModeToggle } from '@/components/toolkit/ModeToggle';
 import { NameChip } from '@/components/toolkit/NameChip';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
@@ -52,6 +55,52 @@ function ModeToggleProbe({ ariaLabel, options }: SchalterProbeProps) {
 	return <ModeToggle aria-label={ariaLabel} options={options} value={value} onValueChange={setValue} />;
 }
 
+/** App-Shell-Probe (Issue #76): Mast + Tab-Leiste + Bottom-Bar mit Beispieldaten
+des Master-Prototyps — Vergleichsfläche für die Headless-Screenshots. */
+function AppShellProbe() {
+	const [tab, setTab] = React.useState<FestivalTab>('overview');
+	const [bottomBar, setBottomBar] = React.useState(false);
+	return (
+		<div className="grid gap-4">
+			<Probe label="Mast + angedockte Tab-Leiste (≥900px) · Tabs interaktiv">
+				<Mast
+					title="Musikfest Steinbach 2026"
+					when={
+						<>
+							Fr 24. – So 26. Juli · <b className="font-semibold text-gelb">noch 4 Tage</b>
+						</>
+					}
+					onWordmarkClick={() => {}}
+				/>
+				<FestivalTabRail active={tab} onSelect={setTab} />
+			</Probe>
+			<Probe label="Kompakt-Mast (<900px, mitscrollend)">
+				<Mast
+					compact
+					title="Musikfest Steinbach 2026"
+					when={
+						<>
+							Fr 24. – So 26. Juli · <b className="font-semibold text-gelb">noch 4 Tage</b>
+						</>
+					}
+					onWordmarkClick={() => {}}
+				/>
+			</Probe>
+			<Probe label="Bottom-Tab-Bar (<900px, fixed) · einblendbar">
+				<label className="flex items-center gap-2 text-sm font-semibold">
+					<input
+						type="checkbox"
+						checked={bottomBar}
+						onChange={(e) => setBottomBar(e.target.checked)}
+					/>
+					Bottom-Bar am Viewport-Rand einblenden
+				</label>
+				{bottomBar && <FestivalTabBar active={tab} onSelect={setTab} />}
+			</Probe>
+		</div>
+	);
+}
+
 /** Dev-only Schaukasten: lebendes Inventar der Toolkit-Bausteine,
 Vergleichsfläche gegen design-vision/design-vision-prototyp.html (Issue #74). */
 const Werkstatt = () => (
@@ -62,6 +111,10 @@ const Werkstatt = () => (
 				Nur im Dev-Build. Referenz: design-vision/design-vision-prototyp.html + DESIGN-VISION.md §4.
 			</p>
 		</header>
+
+		<Abschnitt title="App-Shell — Mast, Tab-Leiste, Bottom-Bar">
+			<AppShellProbe />
+		</Abschnitt>
 
 		<Abschnitt title="Ruler — Maßband">
 			<div className="grid gap-4 md:grid-cols-2">

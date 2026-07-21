@@ -3,10 +3,11 @@ import { cn } from '@/lib/utils';
 
 export type FestivalTab = 'overview' | 'shifts' | 'materials' | 'schedule' | 'sponsoring';
 
+// Labels lt. Master-Prototyp; die values bleiben stabil (URL-Parameter, Deep-Links).
 export const FESTIVAL_TABS: { value: FestivalTab; label: string; icon: LucideIcon }[] = [
-	{ value: 'overview', label: 'Übersicht', icon: LayoutDashboard },
+	{ value: 'overview', label: 'Dashboard', icon: LayoutDashboard },
 	{ value: 'shifts', label: 'Schichtplan', icon: CalendarDays },
-	{ value: 'materials', label: 'Materialliste', icon: Package },
+	{ value: 'materials', label: 'Material', icon: Package },
 	{ value: 'schedule', label: 'Ablaufplan', icon: CalendarClock },
 	{ value: 'sponsoring', label: 'Sponsoring', icon: HandCoins }
 ];
@@ -26,7 +27,7 @@ interface FestivalTabBarProps {
  */
 export default function FestivalTabBar({ active, onSelect }: FestivalTabBarProps) {
 	return (
-		<div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
+		<div className="fixed bottom-0 left-0 right-0 z-50 border-t-2 border-tinte bg-papier pb-[env(safe-area-inset-bottom)]">
 			<div className="flex h-14">
 				{FESTIVAL_TABS.map(({ value, label, icon: Icon }) => (
 					<button
@@ -34,8 +35,8 @@ export default function FestivalTabBar({ active, onSelect }: FestivalTabBarProps
 						type="button"
 						onClick={() => onSelect(value)}
 						className={cn(
-							'flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
-							active === value ? 'text-primary' : 'text-muted-foreground'
+							'flex-1 flex flex-col items-center justify-center gap-1 min-w-0 text-[11px] font-semibold',
+							active === value ? 'bg-gelb text-tinte' : 'text-tinte-soft'
 						)}>
 						<Icon className="h-5 w-5" />
 						<span className="truncate max-w-full px-0.5">{label}</span>

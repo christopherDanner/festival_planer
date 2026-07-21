@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Search, X, ChevronDown, ChevronRight, Check, AlertCircle, Plus, Trash2, LayoutDashboard, LogOut } from 'lucide-react';
-import PageHeader from '@/components/PageHeader';
+import { Loader2, Search, X, ChevronDown, ChevronRight, Check, AlertCircle, Plus, Trash2, ArrowLeft, LayoutDashboard, LogOut } from 'lucide-react';
+import FestivalShellHeader from '@/components/festival/FestivalShellHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -298,22 +298,34 @@ export default function MaterialUebernahme() {
 		navigate('/');
 	};
 
-	const pageHeader = (
-		<PageHeader
-			title="Material-Übernahme"
-			onBack={handleBack}
+	const targetFestival = sortedFestivals.find((f) => f.id === targetId) ?? null;
+
+	// Fest-Unterseite: gleicher Shell-Kopf wie der Fest-Arbeitsbereich; die
+	// Tab-Leiste (Material aktiv) führt zurück in die Fest-Tabs.
+	const shellHeader = targetFestival && (
+		<FestivalShellHeader
+			festivalName={targetFestival.name || 'Fest'}
+			startDate={targetFestival.start_date}
+			endDate={targetFestival.end_date}
+			activeTab="materials"
+			onTabChange={(tab) => navigate(`/festival-results?id=${targetFestival.id}&tab=${tab}`)}
 			actions={
 				<>
 					<Button
 						size="sm"
-						className="gap-1"
+						className="h-8 gap-1"
 						disabled={!targetId || targetStationsQuery.isLoading}
 						onClick={() => setCreateDialogOpen(true)}
 					>
 						<Plus className="h-4 w-4" />
 						Neue Position
 					</Button>
-					<Button variant="outline" size="sm" onClick={handleSignOut}>
+					<Button
+						variant="ghost"
+						size="sm"
+						className="h-8 text-white hover:bg-white/15 hover:text-white"
+						onClick={handleSignOut}
+					>
 						Abmelden
 					</Button>
 				</>
@@ -326,7 +338,7 @@ export default function MaterialUebernahme() {
 					disabled: !targetId || targetStationsQuery.isLoading
 				},
 				{
-					label: 'Dashboard',
+					label: 'Zur Festliste',
 					icon: <LayoutDashboard className="h-4 w-4" />,
 					onClick: () => navigate('/dashboard')
 				},
@@ -342,7 +354,6 @@ export default function MaterialUebernahme() {
 	if (authLoading) {
 		return (
 			<div className="min-h-screen bg-background">
-				{pageHeader}
 				<div className="pt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
 					<Loader2 className="h-4 w-4 animate-spin" />
 					Lade…
@@ -355,8 +366,24 @@ export default function MaterialUebernahme() {
 
 	return (
 		<div className="min-h-screen bg-background">
-			{pageHeader}
-			<div className="pt-4 px-3 sm:px-6 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-6 max-w-[1400px] mx-auto">
+			<div
+				className={
+					isMobile
+						? 'mx-auto max-w-[1180px] px-3 pt-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))]'
+						: 'mx-auto max-w-[1180px] px-[22px] pt-[18px] pb-20'
+				}>
+				{shellHeader}
+				<div className="flex items-center gap-1.5 pt-4 pb-3">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-8 w-8 shrink-0"
+						onClick={handleBack}
+						aria-label="Zurück zur Materialliste">
+						<ArrowLeft className="h-4 w-4" />
+					</Button>
+					<h1 className="text-sm font-bold uppercase tracking-[.08em]">Material-Übernahme</h1>
+				</div>
 				{festivalsQuery.isLoading ? (
 					<div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
 						<Loader2 className="h-4 w-4 animate-spin" />
@@ -407,7 +434,7 @@ export default function MaterialUebernahme() {
 						</div>
 
 						{/* Filter bar sticky */}
-						<div className="sticky top-[53px] z-20 bg-background/95 backdrop-blur-sm border-b py-2 -mx-3 sm:-mx-6 px-3 sm:px-6">
+						<div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b py-2">
 							<div className="flex flex-wrap items-center gap-2">
 								<div className="relative flex-1 min-w-[180px]">
 									<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
