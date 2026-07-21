@@ -68,7 +68,7 @@ const Festplakat: React.FC<FestplakatProps> = ({ festival, scheduleDays, onOpenS
 				</div>
 			) : (
 				<div className="mt-4 border-2 border-dashed border-white/60 bg-white/5 px-4 py-6 text-center">
-					<Stamp tone="ink" size="md" tilt="right" className="border-white text-white">
+					<Stamp tone="red" size="md" tilt="right">
 						Noch kein Programm
 					</Stamp>
 					<p className="mt-3 text-[12.5px] text-[oklch(0.92_0.02_110)]">
