@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* @import statt @tailwind-Direktiven, damit toolkit.css als eigene Datei
+im components-Layer landet (postcss-import inlined vor Tailwind). */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import './toolkit.css';
+@import 'tailwindcss/utilities';
 
 /* Definition of the design system (design-vision/DESIGN-VISION.md §4, verbindlich).
 Alle Farb-Tokens sind OKLCH-Kanaltripel (L C H); das Theme mappt via
