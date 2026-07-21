@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Bereichs-Fächer SPONSORING: 5 Umsetzungen innerhalb der
+     Gesamtrichtung F „Werkzeug-Plakat". Nutzer-Vorgabe: Kategorien anlegen + erfassen,
+     welcher Sponsor welche Kategorie/welchen Betrag gewählt hat — als Jahresgedächtnis.
+     Sponsorings wandern beim Fest-Kopieren mit (Bereich 7). KEIN Übernahme-Modus.
+     Bewusst kein Status/Pipeline (wie echte App). ?variant=a|b|c|d|e -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Bereichs-Fächer Sponsoring (5 Umsetzungen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.active { display: block; }
+  button { font: inherit; cursor: pointer; }
+
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  .variant { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 120px; }
+
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .when b { color: var(--yellow); }
+  nav.tabs { display: flex; border: 2.5px solid var(--ink); border-top: 0; background: #fff; overflow-x: auto; }
+  nav.tabs a { color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 14px; padding: 11px 18px; white-space: nowrap; border-right: 1px solid var(--line); }
+  nav.tabs a:hover { color: var(--ink); background: oklch(0.955 0.01 100); }
+  nav.tabs a.on { color: var(--ink); background: var(--yellow); box-shadow: inset 0 -3px 0 var(--ink); }
+  .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 220px; flex: 1; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .02em; color: var(--green); white-space: nowrap; }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 90px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+
+  .variant h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+  .variant h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.primary { background: var(--yellow); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.quiet:hover { color: var(--ink); background: oklch(0.94 0.015 110); }
+  .search { border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+
+  /* Kategorie-Marke: gedruckte Wertmarke mit Lochung */
+  .kat { display: inline-flex; align-items: baseline; gap: 6px; border: 1.5px solid var(--green); color: var(--green); background: #fff; font-size: 11.5px; font-weight: 700; padding: 3px 9px; white-space: nowrap; }
+  .kat .w { font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .02em; }
+  .kat.frei { border-color: var(--ink-soft); color: var(--ink-soft); border-style: dashed; }
+  .kat.ovr .w { color: var(--red); }
+
+  .stable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .stable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .stable td { padding: 9px 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: top; }
+  .stable tr:hover td { background: oklch(0.965 0.012 100); }
+  .stable th.num, .stable td.num { text-align: right; }
+  .stable td b { font-weight: 700; }
+  .stable .sub { font-size: 11px; color: var(--ink-soft); display: block; }
+  .stable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .stable .total { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .02em; font-weight: 400; }
+  .tablewrap { border: 2.5px solid var(--ink); background: #fff; overflow-x: auto; }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 210px; text-align: center; letter-spacing: .01em; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ################################################################
+     VARIANTE A — „Kassabuch"
+     Kern: ein Buchungsjournal. Kategorien als Wertmarken-Leiste
+     oben (anlegbar), darunter die Sponsorentabelle: Firma →
+     gewählte Leistungen als Marken → Freibetrag → Gesamt.
+     Gesamtsumme als Buchabschluss. Am nächsten an der echten App.
+     ################################################################ -->
+<section class="variant" data-v="a">
+<style>
+  [data-v="a"] .katbar { display: flex; align-items: center; gap: 8px; border: 2.5px solid var(--ink); border-top: 0; background: oklch(0.955 0.01 100); padding: 9px 16px; flex-wrap: wrap; }
+  [data-v="a"] .katbar .lbl { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); }
+  [data-v="a"] .katbar .kat { background: #fff; }
+  [data-v="a"] .katbar .add { border: 1.5px dashed var(--ink-soft); background: none; color: var(--ink-soft); font-size: 11.5px; font-weight: 700; padding: 3px 9px; }
+  [data-v="a"] .katbar .add:hover { color: var(--green); border-color: var(--green); }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a class="on" href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val">€ 4.850</span><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><span style="font-size:12px;color:var(--ink-soft)">14 Sponsoren · Ziel € 5.000</span></div>
+    <input class="search" placeholder="Firma suchen …" style="width:180px">
+    <button class="btn primary">+ SPONSORING</button>
+    <button class="btn quiet">PDF-Export</button>
+  </div>
+  <div class="katbar">
+    <span class="lbl">Kategorien:</span>
+    <span class="kat">Werbeplakat <span class="w">€ 200</span></span>
+    <span class="kat">Logo Speisekarte <span class="w">€ 150</span></span>
+    <span class="kat">Social-Media-Beitrag <span class="w">€ 100</span></span>
+    <span class="kat">Transparent Bühne <span class="w">€ 300</span></span>
+    <button class="add">+ KATEGORIE ANLEGEN</button>
+  </div>
+
+  <h2>Sponsoring-Übersicht · 14 Firmen</h2>
+  <div class="tablewrap">
+  <table class="stable">
+    <thead><tr><th>Firma</th><th>Leistungen</th><th class="num">Freibetrag</th><th class="num">Gesamt</th></tr></thead>
+    <tbody>
+      <tr><td><b>Brauerei Wieselburger</b><span class="sub">Hr. Kalteis · seit 2019 dabei</span></td><td><span class="kat">Transparent Bühne <span class="w">€ 300</span></span> <span class="kat ovr">Werbeplakat <span class="w">€ 350</span></span></td><td class="num">€ 200</td><td class="num"><b>€ 850</b></td></tr>
+      <tr><td><b>Raiffeisenbank Scheibbs</b><span class="sub">Fr. Holzer</span></td><td><span class="kat">Transparent Bühne <span class="w">€ 300</span></span> <span class="kat">Logo Speisekarte <span class="w">€ 150</span></span></td><td class="num">—</td><td class="num"><b>€ 450</b></td></tr>
+      <tr><td><b>Lagerhaus Steinbach</b></td><td><span class="kat">Werbeplakat <span class="w">€ 200</span></span> <span class="kat">Social-Media-Beitrag <span class="w">€ 100</span></span></td><td class="num">€ 100</td><td class="num"><b>€ 400</b></td></tr>
+      <tr><td><b>Fleischerei Berger</b><span class="sub">liefert auch Grill-Material</span></td><td><span class="kat">Logo Speisekarte <span class="w">€ 150</span></span></td><td class="num">€ 250</td><td class="num"><b>€ 400</b></td></tr>
+      <tr><td><b>Winzerhof Schmid</b></td><td><span class="kat">Logo Speisekarte <span class="w">€ 150</span></span></td><td class="num">€ 150</td><td class="num"><b>€ 300</b></td></tr>
+      <tr><td><b>Elektro Pöchhacker</b></td><td><span class="kat">Werbeplakat <span class="w">€ 200</span></span></td><td class="num">—</td><td class="num"><b>€ 200</b></td></tr>
+      <tr><td><b>Gasthaus Zur Linde</b><span class="sub">nur Freibetrag — keine Kategorie</span></td><td><span class="kat frei">ohne Kategorie</span></td><td class="num">€ 150</td><td class="num"><b>€ 150</b></td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="3">Gesamtsumme · 14 Sponsoren (7 weitere ↓)</td><td class="num total">€ 4.850</td></tr></tfoot>
+  </table>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE B — „Zwei Kästen"
+     Kern: Kategorien sind ein eigenes Werkzeug, nicht nur eine
+     Leiste. Links der Kategorien-Setzkasten (Standardwert, wie oft
+     gewählt, Summe je Kategorie — anlegen/ändern), rechts die
+     Sponsorenliste kompakt. Man sieht, welche Pakete ziehen.
+     ################################################################ -->
+<section class="variant" data-v="b">
+<style>
+  [data-v="b"] .board { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 24px; }
+  [data-v="b"] .kbox { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="b"] .kbox .kh { padding: 9px 13px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; }
+  [data-v="b"] .kcard { padding: 10px 13px; border-bottom: 1px solid var(--line); }
+  [data-v="b"] .kcard .t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  [data-v="b"] .kcard .t b { font-weight: 700; font-size: 13px; }
+  [data-v="b"] .kcard .t .w { font-family: "Anton", sans-serif; font-size: 15px; color: var(--green); }
+  [data-v="b"] .kcard .s { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; display: flex; justify-content: space-between; }
+  [data-v="b"] .kcard .s b { color: var(--ink); }
+  [data-v="b"] .kbox .kadd { display: block; width: calc(100% - 26px); margin: 10px 13px; border: 1.5px dashed var(--ink-soft); background: none; color: var(--ink-soft); font-size: 12px; font-weight: 700; padding: 8px; }
+  [data-v="b"] .kbox .kadd:hover { color: var(--green); border-color: var(--green); }
+  @media (max-width: 900px) { [data-v="b"] .board { grid-template-columns: 1fr; } [data-v="b"] .kbox { position: static; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a class="on" href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val">€ 4.850</span><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><span style="font-size:12px;color:var(--ink-soft)">14 Sponsoren</span></div>
+    <input class="search" placeholder="Firma suchen …" style="width:180px">
+    <button class="btn primary">+ SPONSORING</button>
+    <button class="btn quiet">PDF-Export</button>
+  </div>
+
+  <div class="board">
+    <aside class="kbox">
+      <div class="kh">Kategorien — was wir anbieten</div>
+      <div class="kcard">
+        <div class="t"><b>Transparent Bühne</b><span class="w">€ 300</span></div>
+        <div class="s"><span><b>2×</b> gewählt</span><span>Σ € 600</span></div>
+      </div>
+      <div class="kcard">
+        <div class="t"><b>Werbeplakat</b><span class="w">€ 200</span></div>
+        <div class="s"><span><b>5×</b> gewählt · 1× € 350</span><span>Σ € 1.150</span></div>
+      </div>
+      <div class="kcard">
+        <div class="t"><b>Logo Speisekarte</b><span class="w">€ 150</span></div>
+        <div class="s"><span><b>6×</b> gewählt</span><span>Σ € 900</span></div>
+      </div>
+      <div class="kcard">
+        <div class="t"><b>Social-Media-Beitrag</b><span class="w">€ 100</span></div>
+        <div class="s"><span><b>4×</b> gewählt</span><span>Σ € 400</span></div>
+      </div>
+      <div class="kcard">
+        <div class="t"><b>Freibeträge</b><span class="w" style="color:var(--ink-soft)">frei</span></div>
+        <div class="s"><span><b>9×</b> vergeben</span><span>Σ € 1.800</span></div>
+      </div>
+      <button class="kadd">+ KATEGORIE ANLEGEN</button>
+    </aside>
+
+    <div>
+      <h2>Sponsoren · 14 Firmen</h2>
+      <div class="tablewrap">
+      <table class="stable">
+        <thead><tr><th>Firma</th><th>Leistungen</th><th class="num">Gesamt</th></tr></thead>
+        <tbody>
+          <tr><td><b>Brauerei Wieselburger</b></td><td><span class="kat">Transparent <span class="w">300</span></span> <span class="kat ovr">Plakat <span class="w">350</span></span> <span class="kat frei">frei <span class="w">200</span></span></td><td class="num"><b>€ 850</b></td></tr>
+          <tr><td><b>Raiffeisenbank Scheibbs</b></td><td><span class="kat">Transparent <span class="w">300</span></span> <span class="kat">Speisekarte <span class="w">150</span></span></td><td class="num"><b>€ 450</b></td></tr>
+          <tr><td><b>Lagerhaus Steinbach</b></td><td><span class="kat">Plakat <span class="w">200</span></span> <span class="kat">Social <span class="w">100</span></span> <span class="kat frei">frei <span class="w">100</span></span></td><td class="num"><b>€ 400</b></td></tr>
+          <tr><td><b>Fleischerei Berger</b></td><td><span class="kat">Speisekarte <span class="w">150</span></span> <span class="kat frei">frei <span class="w">250</span></span></td><td class="num"><b>€ 400</b></td></tr>
+          <tr><td><b>Winzerhof Schmid</b></td><td><span class="kat">Speisekarte <span class="w">150</span></span> <span class="kat frei">frei <span class="w">150</span></span></td><td class="num"><b>€ 300</b></td></tr>
+          <tr><td><b>Elektro Pöchhacker</b></td><td><span class="kat">Plakat <span class="w">200</span></span></td><td class="num"><b>€ 200</b></td></tr>
+          <tr><td><b>Gasthaus Zur Linde</b></td><td><span class="kat frei">frei <span class="w">150</span></span></td><td class="num"><b>€ 150</b></td></tr>
+        </tbody>
+        <tfoot><tr><td colspan="2">Gesamtsumme · 14 Sponsoren (7 weitere ↓)</td><td class="num total">€ 4.850</td></tr></tfoot>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE C — „Paket-Matrix"
+     Kern: Sponsoren × Kategorien als Kreuzerl-Matrix. Jede Zelle:
+     gewählt (Wert) oder leer (Klick = zuweisen). Man SIEHT sofort,
+     wer was hat und wo Lücken sind. Erfassen ohne Dialog.
+     ################################################################ -->
+<section class="variant" data-v="c">
+<style>
+  [data-v="c"] .stable td.c { text-align: center; }
+  [data-v="c"] .cell { display: inline-block; min-width: 58px; padding: 3px 7px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
+  [data-v="c"] .cell.on { background: oklch(0.94 0.03 160); color: var(--green); border: 1.5px solid var(--green); }
+  [data-v="c"] .cell.on.ovr { color: var(--red); border-color: var(--red); background: oklch(0.97 0.02 30); }
+  [data-v="c"] .cell.off { border: 1.5px dashed oklch(0.8 0.02 120); color: oklch(0.8 0.02 120); cursor: pointer; }
+  [data-v="c"] .cell.off:hover { border-color: var(--green); color: var(--green); }
+  [data-v="c"] .stable th .kw { display: block; font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .02em; color: var(--green); text-transform: none; }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a class="on" href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val">€ 4.850</span><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><span style="font-size:12px;color:var(--ink-soft)">14 Sponsoren · Ziel € 5.000</span></div>
+    <input class="search" placeholder="Firma suchen …" style="width:180px">
+    <button class="btn primary">+ SPONSOR</button>
+    <button class="btn">+ KATEGORIE</button>
+    <button class="btn quiet">PDF-Export</button>
+  </div>
+
+  <h2>Wer hat was gewählt · Klick in eine leere Zelle weist zu</h2>
+  <div class="tablewrap">
+  <table class="stable">
+    <thead><tr>
+      <th>Firma</th>
+      <th style="text-align:center">Transparent<span class="kw">€ 300</span></th>
+      <th style="text-align:center">Plakat<span class="kw">€ 200</span></th>
+      <th style="text-align:center">Speisekarte<span class="kw">€ 150</span></th>
+      <th style="text-align:center">Social<span class="kw">€ 100</span></th>
+      <th class="num">Freibetrag</th>
+      <th class="num">Gesamt</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b>Brauerei Wieselburger</b></td><td class="c"><span class="cell on">300</span></td><td class="c"><span class="cell on ovr">350</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell off">+</span></td><td class="num">200</td><td class="num"><b>€ 850</b></td></tr>
+      <tr><td><b>Raiffeisenbank Scheibbs</b></td><td class="c"><span class="cell on">300</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell on">150</span></td><td class="c"><span class="cell off">+</span></td><td class="num">—</td><td class="num"><b>€ 450</b></td></tr>
+      <tr><td><b>Lagerhaus Steinbach</b></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell on">200</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell on">100</span></td><td class="num">100</td><td class="num"><b>€ 400</b></td></tr>
+      <tr><td><b>Fleischerei Berger</b></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell on">150</span></td><td class="c"><span class="cell off">+</span></td><td class="num">250</td><td class="num"><b>€ 400</b></td></tr>
+      <tr><td><b>Winzerhof Schmid</b></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell on">150</span></td><td class="c"><span class="cell off">+</span></td><td class="num">150</td><td class="num"><b>€ 300</b></td></tr>
+      <tr><td><b>Elektro Pöchhacker</b></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell on">200</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell off">+</span></td><td class="num">—</td><td class="num"><b>€ 200</b></td></tr>
+      <tr><td><b>Gasthaus Zur Linde</b></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell off">+</span></td><td class="c"><span class="cell off">+</span></td><td class="num">150</td><td class="num"><b>€ 150</b></td></tr>
+    </tbody>
+    <tfoot><tr><td>Σ je Kategorie</td><td class="c">€ 600</td><td class="c">€ 1.150</td><td class="c">€ 900</td><td class="c">€ 400</td><td class="num">€ 1.800</td><td class="num total">€ 4.850</td></tr></tfoot>
+  </table>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE D — „Dankestafel"
+     Kern: die Sponsoren als gedruckte Ehrentafel — so wie sie am
+     Fest aushängen könnte. Kacheln nach Beitragsgröße gestaffelt,
+     Leistungen als Stempel. Verwaltung UND Wertschätzung in einem;
+     der PDF-Export ist quasi schon das Plakat.
+     ################################################################ -->
+<section class="variant" data-v="d">
+<style>
+  [data-v="d"] .tafel { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); padding: 22px; margin-top: 24px; }
+  [data-v="d"] .tafel .th { text-align: center; color: #fff; margin-bottom: 18px; }
+  [data-v="d"] .tafel .th .fm { font-family: "Anton", sans-serif; font-size: 12px; letter-spacing: .12em; color: var(--yellow); }
+  [data-v="d"] .tafel .th h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 24px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="d"] .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  [data-v="d"] .sp { background: #fff; border: 2px solid var(--ink); padding: 12px 14px; }
+  [data-v="d"] .sp.big { grid-column: span 3; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--yellow); }
+  [data-v="d"] .sp h4 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; letter-spacing: .02em; text-transform: uppercase; }
+  [data-v="d"] .sp.big h4 { font-size: 22px; }
+  [data-v="d"] .sp .kats { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+  [data-v="d"] .sp.big .kats { margin: 0 0 0 auto; }
+  [data-v="d"] .sp .sum { font-family: "Anton", sans-serif; font-size: 14px; color: var(--green); margin-top: 7px; }
+  [data-v="d"] .sp.big .sum { margin: 0; font-size: 18px; color: var(--ink); }
+  [data-v="d"] .foot { display: flex; gap: 16px; justify-content: space-between; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; font-size: 12.5px; flex-wrap: wrap; }
+  [data-v="d"] .foot b { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; }
+  @media (max-width: 900px) { [data-v="d"] .grid { grid-template-columns: 1fr; } [data-v="d"] .sp.big { grid-column: span 1; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a class="on" href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val">€ 4.850</span><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><span style="font-size:12px;color:var(--ink-soft)">14 Sponsoren</span></div>
+    <button class="btn primary">+ SPONSORING</button>
+    <button class="btn">+ KATEGORIE</button>
+    <button class="btn quiet">Als Dankestafel drucken</button>
+  </div>
+
+  <div class="tafel">
+    <div class="th">
+      <div class="fm">WIR DANKEN UNSEREN UNTERSTÜTZERN</div>
+      <h3>Sponsoren des Musikfests 2026</h3>
+    </div>
+    <div class="grid">
+      <div class="sp big">
+        <h4>Brauerei Wieselburger</h4>
+        <div class="kats"><span class="kat">Transparent <span class="w">300</span></span> <span class="kat ovr">Plakat <span class="w">350</span></span> <span class="kat frei">frei <span class="w">200</span></span></div>
+        <div class="sum">€ 850</div>
+      </div>
+      <div class="sp"><h4>Raiffeisenbank Scheibbs</h4><div class="kats"><span class="kat">Transparent <span class="w">300</span></span> <span class="kat">Speisekarte <span class="w">150</span></span></div><div class="sum">€ 450</div></div>
+      <div class="sp"><h4>Lagerhaus Steinbach</h4><div class="kats"><span class="kat">Plakat <span class="w">200</span></span> <span class="kat">Social <span class="w">100</span></span> <span class="kat frei">frei <span class="w">100</span></span></div><div class="sum">€ 400</div></div>
+      <div class="sp"><h4>Fleischerei Berger</h4><div class="kats"><span class="kat">Speisekarte <span class="w">150</span></span> <span class="kat frei">frei <span class="w">250</span></span></div><div class="sum">€ 400</div></div>
+      <div class="sp"><h4>Winzerhof Schmid</h4><div class="kats"><span class="kat">Speisekarte <span class="w">150</span></span> <span class="kat frei">frei <span class="w">150</span></span></div><div class="sum">€ 300</div></div>
+      <div class="sp"><h4>Elektro Pöchhacker</h4><div class="kats"><span class="kat">Plakat <span class="w">200</span></span></div><div class="sum">€ 200</div></div>
+      <div class="sp"><h4>Gasthaus Zur Linde</h4><div class="kats"><span class="kat frei">frei <span class="w">150</span></span></div><div class="sum">€ 150</div></div>
+    </div>
+  </div>
+  <div class="foot">
+    <span><b>€ 4.850</b> von 14 Sponsoren · Ziel € 5.000</span>
+    <span>Reihung nach Beitrag · Kacheln = Druckvorlage für die Ehrentafel am Fest</span>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE E — „Erfass-Werkbank"
+     Kern: das Erfassen ist kein Dialog, sondern liegt dauerhaft
+     rechts — Firma wählen/anlegen, Kategorien ankreuzen (Wert
+     überschreibbar), Freibetrag, fertig. Links die Liste, die
+     sofort mitwächst. Für den Abend, an dem man 14 Zusagen eintippt.
+     ################################################################ -->
+<section class="variant" data-v="e">
+<style>
+  [data-v="e"] .board { display: grid; grid-template-columns: minmax(0, 1.5fr) 300px; gap: 22px; align-items: start; margin-top: 24px; }
+  [data-v="e"] .form { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="e"] .form .fh { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="e"] .form .fb { padding: 12px 14px; display: grid; gap: 10px; }
+  [data-v="e"] .form label { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+  [data-v="e"] .form .search { width: 100%; }
+  [data-v="e"] .krow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  [data-v="e"] .krow:last-child { border-bottom: 0; }
+  [data-v="e"] .krow .cbx { width: 15px; height: 15px; border: 2px solid var(--ink); background: #fff; flex: none; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 800; }
+  [data-v="e"] .krow.on .cbx { background: var(--green); border-color: var(--green); }
+  [data-v="e"] .krow.on .cbx::after { content: "✓"; }
+  [data-v="e"] .krow .kn { flex: 1; font-size: 12.5px; font-weight: 600; }
+  [data-v="e"] .krow input { width: 64px; border: 1.5px solid var(--ink); padding: 3px 6px; font: 700 12px "Public Sans", sans-serif; text-align: right; }
+  [data-v="e"] .krow.off input { border-color: var(--line); color: var(--ink-soft); }
+  [data-v="e"] .form .ffoot { border-top: 2px solid var(--ink); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  [data-v="e"] .form .ffoot .sum { font-family: "Anton", sans-serif; font-size: 17px; }
+  @media (max-width: 900px) { [data-v="e"] .board { grid-template-columns: 1fr; } [data-v="e"] .form { position: static; order: -1; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a class="on" href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val">€ 4.850</span><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><span style="font-size:12px;color:var(--ink-soft)">14 Sponsoren · Ziel € 5.000</span></div>
+    <input class="search" placeholder="Firma suchen …" style="width:180px">
+    <button class="btn">+ KATEGORIE</button>
+    <button class="btn quiet">PDF-Export</button>
+  </div>
+
+  <div class="board">
+    <div>
+      <h2>Sponsoren · 14 Firmen</h2>
+      <div class="tablewrap">
+      <table class="stable">
+        <thead><tr><th>Firma</th><th>Leistungen</th><th class="num">Gesamt</th></tr></thead>
+        <tbody>
+          <tr><td><b>Brauerei Wieselburger</b></td><td><span class="kat">Transparent <span class="w">300</span></span> <span class="kat ovr">Plakat <span class="w">350</span></span> <span class="kat frei">frei <span class="w">200</span></span></td><td class="num"><b>€ 850</b></td></tr>
+          <tr><td><b>Raiffeisenbank Scheibbs</b></td><td><span class="kat">Transparent <span class="w">300</span></span> <span class="kat">Speisekarte <span class="w">150</span></span></td><td class="num"><b>€ 450</b></td></tr>
+          <tr><td><b>Lagerhaus Steinbach</b></td><td><span class="kat">Plakat <span class="w">200</span></span> <span class="kat">Social <span class="w">100</span></span> <span class="kat frei">frei <span class="w">100</span></span></td><td class="num"><b>€ 400</b></td></tr>
+          <tr><td><b>Fleischerei Berger</b></td><td><span class="kat">Speisekarte <span class="w">150</span></span> <span class="kat frei">frei <span class="w">250</span></span></td><td class="num"><b>€ 400</b></td></tr>
+          <tr><td><b>Winzerhof Schmid</b></td><td><span class="kat">Speisekarte <span class="w">150</span></span> <span class="kat frei">frei <span class="w">150</span></span></td><td class="num"><b>€ 300</b></td></tr>
+          <tr><td><b>Elektro Pöchhacker</b></td><td><span class="kat">Plakat <span class="w">200</span></span></td><td class="num"><b>€ 200</b></td></tr>
+        </tbody>
+        <tfoot><tr><td colspan="2">Gesamtsumme · 14 Sponsoren</td><td class="num total">€ 4.850</td></tr></tfoot>
+      </table>
+      </div>
+    </div>
+
+    <aside class="form">
+      <div class="fh">Sponsoring erfassen</div>
+      <div class="fb">
+        <div>
+          <label>Firma</label>
+          <input class="search" value="Gasthaus Zur Linde" placeholder="Firma wählen oder neu …">
+        </div>
+        <div>
+          <label>Kategorien</label>
+          <div class="krow on"><span class="cbx"></span><span class="kn">Werbeplakat</span><input value="200"></div>
+          <div class="krow off"><span class="cbx"></span><span class="kn">Transparent Bühne</span><input placeholder="300"></div>
+          <div class="krow off"><span class="cbx"></span><span class="kn">Logo Speisekarte</span><input placeholder="150"></div>
+          <div class="krow off"><span class="cbx"></span><span class="kn">Social-Media-Beitrag</span><input placeholder="100"></div>
+        </div>
+        <div>
+          <label>Freibetrag (€)</label>
+          <input class="search" value="150" style="width:110px">
+        </div>
+        <div>
+          <label>Notiz</label>
+          <input class="search" placeholder="z. B. Ansprechpartner, Zusage vom …">
+        </div>
+      </div>
+      <div class="ffoot">
+        <span class="sum">€ 350</span>
+        <button class="btn primary">EINTRAGEN</button>
+      </div>
+    </aside>
+  </div>
+</div>
+</section>
+
+<div id="switcher">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <div class="lbl"><span id="lblMain">A — Kassabuch</span><small id="lblSub">Journal: Firma → Wertmarken → Gesamt</small></div>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</div>
+
+<script>
+  const VARIANTS = [
+    ["a", "Kassabuch", "Journal: Firma → Wertmarken → Gesamt"],
+    ["b", "Zwei Kästen", "Kategorien-Setzkasten links, Sponsoren rechts"],
+    ["c", "Paket-Matrix", "Sponsoren × Kategorien als Kreuzerl-Matrix"],
+    ["d", "Dankestafel", "Ehrentafel-Kacheln — Verwaltung + Wertschätzung"],
+    ["e", "Erfass-Werkbank", "Formular liegt dauerhaft rechts, Liste wächst mit"]
+  ];
+  function currentKey() {
+    const v = new URLSearchParams(location.search).get("variant");
+    return VARIANTS.some(x => x[0] === v) ? v : "a";
+  }
+  function show(key) {
+    document.querySelectorAll(".variant").forEach(s => s.classList.toggle("active", s.dataset.v === key));
+    const v = VARIANTS.find(x => x[0] === key);
+    document.getElementById("lblMain").textContent = key.toUpperCase() + " — " + v[1];
+    document.getElementById("lblSub").textContent = v[2];
+    try { history.replaceState(null, "", "?variant=" + key); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function cycle(dir) {
+    const i = VARIANTS.findIndex(x => x[0] === currentKey());
+    show(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0]);
+  }
+  document.getElementById("prev").addEventListener("click", () => cycle(-1));
+  document.getElementById("next").addEventListener("click", () => cycle(1));
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") cycle(-1);
+    if (e.key === "ArrowRight") cycle(1);
+  });
+  show(currentKey());
+
+  /* Variante E: Kategorien an/abwählen erlebbar */
+  document.querySelectorAll('[data-v="e"] .krow .cbx').forEach(c => c.addEventListener('click', () => {
+    const r = c.closest('.krow');
+    r.classList.toggle('on'); r.classList.toggle('off');
+  }));
+</script>
+</body>
+</html>

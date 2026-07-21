@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Bereichs-Fächer MATERIALLISTE: 5 Umsetzungen innerhalb der
+     Gesamtrichtung F „Werkzeug-Plakat". Vorgabe des Nutzers: Tabelle mit Positionsdetails =
+     Hauptansicht, Übernahme Fest→Fest = zweite Hauptfunktion, starkes Filtern/Suchen.
+     Import/Abgleich/Export bleiben Dialoge. Umschaltbar via ?variant=a|b|c|d|e. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Bereichs-Fächer Materialliste (5 Umsetzungen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.active { display: block; }
+  button { font: inherit; cursor: pointer; }
+
+  /* ============ Verbindliche F-Handschrift ============ */
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  .variant { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 120px; }
+
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .when b { color: var(--yellow); }
+  nav.tabs { display: flex; border: 2.5px solid var(--ink); border-top: 0; background: #fff; overflow-x: auto; }
+  nav.tabs a { color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 14px; padding: 11px 18px; white-space: nowrap; border-right: 1px solid var(--line); }
+  nav.tabs a:hover { color: var(--ink); background: oklch(0.955 0.01 100); }
+  nav.tabs a.on { color: var(--ink); background: var(--yellow); box-shadow: inset 0 -3px 0 var(--ink); }
+
+  .variant h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+  .variant h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.primary { background: var(--yellow); }
+  .btn.primary:hover { background: oklch(0.9 0.14 92); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.quiet:hover { color: var(--ink); background: oklch(0.94 0.015 110); }
+  .search { border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+  .search::placeholder { color: var(--ink-soft); }
+  select.fsel { border: 2px solid var(--ink); background: #fff; font: 600 12.5px "Public Sans", sans-serif; padding: 7px 8px; color: var(--ink); }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; max-width: 100%; overflow-x: auto; }
+  .seg button { border: 0; background: none; font-weight: 600; font-size: 12px; padding: 7px 12px; color: var(--ink-soft); border-right: 1px solid var(--line); white-space: nowrap; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+
+  /* Drucktabelle (aus F) */
+  .mtable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .mtable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .mtable td { padding: 8px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .mtable tr:hover td { background: oklch(0.965 0.012 100); }
+  .mtable th.num, .mtable td.num { text-align: right; }
+  .mtable td b { font-weight: 700; }
+  .mtable .sub { font-size: 11px; color: var(--ink-soft); display: block; }
+  .mtable .pos { color: var(--red); font-weight: 700; } .mtable .neg { color: var(--green); font-weight: 700; }
+  .mtable .none { color: var(--ink-soft); }
+  .mtable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .mtable .warncell { outline: 1.5px dashed var(--red); outline-offset: -1.5px; color: var(--red); font-weight: 700; }
+  .tablewrap { border: 2.5px solid var(--ink); background: #fff; overflow-x: auto; }
+  .editcell { background: var(--yellow); outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700; }
+  .catbadge { font-size: 10.5px; font-weight: 700; letter-spacing: .03em; padding: 2px 7px; background: oklch(0.94 0.015 110); white-space: nowrap; }
+
+  /* Filter-Chips (aktive Filter als Stempel) */
+  .fchip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--green); color: var(--green); font-size: 11.5px; font-weight: 700; padding: 3px 9px; background: #fff; }
+  .fchip .x { cursor: pointer; color: var(--green); } .fchip .x:hover { color: var(--red); }
+
+  /* ============ Floating Switcher ============ */
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 210px; text-align: center; letter-spacing: .01em; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ################################################################
+     VARIANTE A — „Inventurbogen"
+     Kern: EIN flacher gedruckter Bogen mit allem. Volle Spaltentiefe
+     (Gebinde, Soll/Ist/Δ, MwSt, Netto, Gesamt), Inline-Editing direkt
+     in der Zelle, Filterleiste als Werkzeugzeile darüber. Übernahme,
+     Import, Abgleich als Knöpfe rechts. Am nächsten an der echten App.
+     ################################################################ -->
+<section class="variant" data-v="a">
+<style>
+  [data-v="a"] .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  [data-v="a"] .planbar .search { flex: 1; min-width: 160px; }
+  [data-v="a"] .sumline { display: flex; gap: 22px; margin: 22px 0 10px; font-size: 12.5px; color: var(--ink-soft); flex-wrap: wrap; align-items: baseline; }
+  [data-v="a"] .sumline b { font-family: "Anton", sans-serif; font-size: 17px; letter-spacing: .02em; color: var(--ink); font-weight: 400; }
+  [data-v="a"] .sumline .warn b { color: var(--red); }
+  [data-v="a"] .sumline .hint { margin-left: auto; font-size: 11.5px; }
+  @media (max-width: 900px) {
+    [data-v="a"] .frame { padding: 12px 12px 120px; }
+    [data-v="a"] .sumline .hint { margin-left: 0; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a class="on" href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <input class="search" placeholder="Material, Lieferant oder Kategorie suchen …">
+    <select class="fsel"><option>Station: alle</option><option>Ausschank</option><option>Grill</option><option>Kassa</option><option>Weinlaube</option><option>Ohne Station</option></select>
+    <select class="fsel"><option>Kategorie: alle</option><option>Getränke</option><option>Lebensmittel</option><option>Geschirr/Besteck</option><option>Technik</option><option>Sonstiges</option></select>
+    <select class="fsel"><option>Lieferant: alle</option><option>Brauerei Wieselburger</option><option>Metro</option><option>Fleischerei Berger</option><option>Winzerhof Schmid</option></select>
+    <button class="btn primary">+ NEU</button>
+    <button class="btn">ÜBERNAHME</button>
+    <button class="btn quiet">Import</button>
+    <button class="btn quiet">Abgleich</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <div class="sumline">
+    <span><b>86</b> Positionen</span>
+    <span><b>7</b> Kategorien</span>
+    <span class="warn"><b>12</b> ohne Preis</span>
+    <span>Gesch. Kosten <b>€ 7.431</b></span>
+    <span class="hint">Klick in eine Zelle editiert direkt — Enter speichert.</span>
+  </div>
+
+  <div class="tablewrap">
+  <table class="mtable">
+    <thead><tr>
+      <th>Material</th><th>Kategorie</th><th>Station</th><th>Lieferant</th><th>Gebinde</th>
+      <th class="num">Bestellt</th><th class="num">Verbraucht</th><th class="num">Δ</th><th class="num">MwSt</th><th class="num">Netto</th><th class="num">Gesamt</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b>Bier „Wieselburger"</b></td><td><span class="catbadge">Getränke</span></td><td>Ausschank</td><td>Brauerei Wieselburger</td><td>Fass 50 l</td><td class="num editcell">18</td><td class="num">16</td><td class="num neg">−2</td><td class="num">20 %</td><td class="num">98,00</td><td class="num">2.116,80</td></tr>
+      <tr><td><b>Almdudler</b></td><td><span class="catbadge">Getränke</span></td><td>Ausschank</td><td>Brauerei Wieselburger</td><td>Kiste 24×0,33</td><td class="num">12</td><td class="num">10</td><td class="num neg">−2</td><td class="num">20 %</td><td class="num">14,50</td><td class="num">208,80</td></tr>
+      <tr><td><b>Mineralwasser Römerquelle</b></td><td><span class="catbadge">Getränke</span></td><td>Ausschank</td><td>Brauerei Wieselburger</td><td>Kiste 12×1 l</td><td class="num">10</td><td class="num">8</td><td class="num neg">−2</td><td class="num">20 %</td><td class="num">9,80</td><td class="num">117,60</td></tr>
+      <tr><td><b>Grüner Veltliner</b></td><td><span class="catbadge">Getränke</span></td><td>Weinlaube</td><td>Winzerhof Schmid</td><td>Ktn. 6×0,75</td><td class="num">24</td><td class="num">22</td><td class="num neg">−2</td><td class="num">20 %</td><td class="num">39,00</td><td class="num">1.123,20</td></tr>
+      <tr><td><b>Zweigelt</b></td><td><span class="catbadge">Getränke</span></td><td>Weinlaube</td><td>Winzerhof Schmid</td><td>Ktn. 6×0,75</td><td class="num">12</td><td class="num">9</td><td class="num neg">−3</td><td class="num">20 %</td><td class="num">42,00</td><td class="num">604,80</td></tr>
+      <tr><td><b>Brathendl</b></td><td><span class="catbadge">Lebensmittel</span></td><td>Grill</td><td>Fleischerei Berger</td><td>Stk.</td><td class="num">450</td><td class="num">512</td><td class="num pos">+62</td><td class="num">10 %</td><td class="num">4,20</td><td class="num">2.079,00</td></tr>
+      <tr><td><b>Bratwürstel</b></td><td><span class="catbadge">Lebensmittel</span></td><td>Grill</td><td>Fleischerei Berger</td><td>kg</td><td class="num">60</td><td class="num">55</td><td class="num neg">−5</td><td class="num">10 %</td><td class="num">8,90</td><td class="num">587,40</td></tr>
+      <tr><td><b>Semmeln</b></td><td><span class="catbadge">Lebensmittel</span></td><td>Grill</td><td>Bäckerei Leitner</td><td>Stk.</td><td class="num">600</td><td class="num">640</td><td class="num pos">+40</td><td class="num">10 %</td><td class="num">0,45</td><td class="num">297,00</td></tr>
+      <tr><td><b>Grillkohle</b></td><td><span class="catbadge">Sonstiges</span></td><td>Grill</td><td>Metro</td><td>Sack 10 kg</td><td class="num">8</td><td class="num">8</td><td class="num">±0</td><td class="num">20 %</td><td class="num">12,00</td><td class="num">115,20</td></tr>
+      <tr><td><b>Bierbecher 0,5 l</b></td><td><span class="catbadge">Geschirr/Besteck</span></td><td>Ausschank</td><td>Metro</td><td>Karton 500</td><td class="num">4</td><td class="num none">—</td><td class="num none">—</td><td class="num">20 %</td><td class="num">38,00</td><td class="num">182,40</td></tr>
+      <tr><td><b>Servietten</b></td><td><span class="catbadge">Geschirr/Besteck</span></td><td>Alle</td><td>Metro</td><td>Pkg. 250</td><td class="num">30</td><td class="num none">—</td><td class="num none">—</td><td class="num">20 %</td><td class="num">4,10</td><td class="num">147,60</td></tr>
+      <tr><td><b>Verlängerungskabel 25 m</b><span class="sub">Bühne + Kühlwagen</span></td><td><span class="catbadge">Technik</span></td><td>Ohne Station</td><td>—</td><td>Stk.</td><td class="num">4</td><td class="num none">—</td><td class="num none">—</td><td class="num none">—</td><td class="num warncell">Preis fehlt</td><td class="num none">—</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="9">Gesamtkosten (alle 86 Positionen)</td><td class="num" colspan="2">€ 7.431,10</td></tr></tfoot>
+  </table>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE B — „Stationskästen"
+     Kern: das Material wohnt bei seiner Station. Karteireiter je
+     Station (mit Positionszahl + Kosten), darunter die Tabelle nur
+     dieser Station. Der Stations-Filter IST die Navigation.
+     Kategorie-Chips filtern innerhalb des Kastens.
+     ################################################################ -->
+<section class="variant" data-v="b">
+<style>
+  [data-v="b"] .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  [data-v="b"] .planbar .search { flex: 1; min-width: 160px; }
+  [data-v="b"] .register { display: flex; gap: 8px; margin-top: 26px; flex-wrap: wrap; }
+  [data-v="b"] .reg { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 9px 14px 8px; min-width: 150px; }
+  [data-v="b"] .reg h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  [data-v="b"] .reg h3 .n { font-size: 12px; }
+  [data-v="b"] .reg .meta { font-size: 11px; color: var(--ink-soft); margin-top: 2px; display: flex; justify-content: space-between; gap: 8px; }
+  [data-v="b"] .reg .meta .warn { color: var(--red); font-weight: 700; }
+  [data-v="b"] .reg.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+  [data-v="b"] .reg:hover:not(.on) { background: oklch(0.955 0.01 100); }
+  [data-v="b"] .kasten { border: 2.5px solid var(--ink); background: #fff; margin-top: 14px; }
+  [data-v="b"] .khead { display: flex; align-items: center; gap: 14px; padding: 11px 16px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; flex-wrap: wrap; }
+  [data-v="b"] .khead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 18px; letter-spacing: .02em; text-transform: uppercase; }
+  [data-v="b"] .khead .meta { font-size: 12px; color: oklch(0.92 0.02 110); }
+  [data-v="b"] .khead .meta b { color: var(--yellow); }
+  [data-v="b"] .khead .btn { margin-left: auto; border: 0; background: var(--yellow); }
+  [data-v="b"] .cats { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
+  [data-v="b"] .cats .lbl { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-right: 4px; }
+  [data-v="b"] .cats .cat { border: 1.5px solid var(--ink); background: #fff; font-size: 11.5px; font-weight: 700; padding: 3px 10px; }
+  [data-v="b"] .cats .cat.on { background: var(--ink); color: #fff; }
+  [data-v="b"] .tablewrap { border: 0; }
+  @media (max-width: 900px) { [data-v="b"] .frame { padding: 12px 12px 120px; } [data-v="b"] .khead .btn { margin-left: 0; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a class="on" href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <input class="search" placeholder="Über alle Stationen suchen …">
+    <button class="btn primary">+ NEU</button>
+    <button class="btn">ÜBERNAHME</button>
+    <button class="btn quiet">Import</button>
+    <button class="btn quiet">Abgleich</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <div class="register">
+    <button class="reg on"><h3>Ausschank <span class="n">24</span></h3><div class="meta"><span>€ 2.625</span><span class="warn">2 ohne Preis</span></div></button>
+    <button class="reg"><h3>Grill <span class="n">18</span></h3><div class="meta"><span>€ 3.078</span></div></button>
+    <button class="reg"><h3>Weinlaube <span class="n">11</span></h3><div class="meta"><span>€ 1.728</span></div></button>
+    <button class="reg"><h3>Kassa <span class="n">6</span></h3><div class="meta"><span>€ 214</span><span class="warn">3 ohne Preis</span></div></button>
+    <button class="reg"><h3>Ohne Station <span class="n">27</span></h3><div class="meta"><span>€ 1.786</span><span class="warn">7 ohne Preis</span></div></button>
+  </div>
+
+  <div class="kasten">
+    <div class="khead">
+      <h3>Ausschank</h3>
+      <span class="meta">Zelt Nord · 24 Positionen · <b>€ 2.625,60</b> · Verantwortlich: Franz Hochauer</span>
+      <button class="btn">+ POSITION FÜR AUSSCHANK</button>
+    </div>
+    <div class="cats">
+      <span class="lbl">Kategorie:</span>
+      <button class="cat on">Alle (24)</button>
+      <button class="cat">Getränke (14)</button>
+      <button class="cat">Geschirr/Besteck (6)</button>
+      <button class="cat">Technik (2)</button>
+      <button class="cat">Sonstiges (2)</button>
+    </div>
+    <div class="tablewrap">
+    <table class="mtable">
+      <thead><tr>
+        <th>Material</th><th>Lieferant</th><th>Gebinde</th>
+        <th class="num">Bestellt</th><th class="num">Verbraucht</th><th class="num">Δ</th><th class="num">Netto</th><th class="num">Gesamt</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><b>Bier „Wieselburger"</b><span class="sub">Getränke · 20 % MwSt</span></td><td>Brauerei Wieselburger</td><td>Fass 50 l</td><td class="num">18</td><td class="num">16</td><td class="num neg">−2</td><td class="num">98,00</td><td class="num">2.116,80</td></tr>
+        <tr><td><b>Almdudler</b><span class="sub">Getränke · 20 %</span></td><td>Brauerei Wieselburger</td><td>Kiste 24×0,33</td><td class="num">12</td><td class="num">10</td><td class="num neg">−2</td><td class="num">14,50</td><td class="num">208,80</td></tr>
+        <tr><td><b>Mineralwasser Römerquelle</b><span class="sub">Getränke · 20 %</span></td><td>Brauerei Wieselburger</td><td>Kiste 12×1 l</td><td class="num">10</td><td class="num">8</td><td class="num neg">−2</td><td class="num">9,80</td><td class="num">117,60</td></tr>
+        <tr><td><b>Bierbecher 0,5 l</b><span class="sub">Geschirr/Besteck · 20 %</span></td><td>Metro</td><td>Karton 500</td><td class="num">4</td><td class="num none">—</td><td class="num none">—</td><td class="num">38,00</td><td class="num">182,40</td></tr>
+        <tr><td><b>Kühlwagen-Verlängerung</b><span class="sub">Technik</span></td><td>—</td><td>Stk.</td><td class="num">2</td><td class="num none">—</td><td class="num none">—</td><td class="num warncell">Preis fehlt</td><td class="num none">—</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="7">Zwischensumme Ausschank</td><td class="num">€ 2.625,60</td></tr></tfoot>
+    </table>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE C — „Zwei Feste"
+     Kern: die Übernahme ist kein Dialog, sondern der ZWEITE MODUS
+     der Hauptansicht. Umschalter Arbeitsliste ⇄ Übernahme. Im
+     Übernahme-Modus: Vorjahr (Bestellt + Verbraucht, read-only)
+     links, Wunschmenge fürs neue Fest rechts, Zeile für Zeile,
+     Auto-Save mit Status-Stempel. Match/NEU-Logik der echten App.
+     ################################################################ -->
+<section class="variant" data-v="c">
+<style>
+  [data-v="c"] .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  [data-v="c"] .modeseg { display: flex; border: 2px solid var(--ink); }
+  [data-v="c"] .modeseg button { border: 0; background: #fff; font-weight: 700; font-size: 12.5px; padding: 8px 16px; color: var(--ink-soft); border-right: 1px solid var(--line); }
+  [data-v="c"] .modeseg button:last-child { border-right: 0; }
+  [data-v="c"] .modeseg button.on { background: var(--ink); color: var(--yellow); }
+  [data-v="c"] .planbar .search { flex: 1; min-width: 140px; }
+  [data-v="c"] .pair { display: flex; align-items: center; gap: 10px; margin: 22px 0 12px; flex-wrap: wrap; }
+  [data-v="c"] .pair .fest { border: 2px solid var(--ink); background: #fff; padding: 8px 14px; font-weight: 700; font-size: 13px; }
+  [data-v="c"] .pair .fest small { display: block; font-weight: 600; font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+  [data-v="c"] .pair .arrow { font-family: "Anton", sans-serif; font-size: 20px; color: var(--green); }
+  [data-v="c"] .pair .note { font-size: 12px; color: var(--ink-soft); margin-left: auto; }
+  [data-v="c"] .grphead td { background: oklch(0.93 0.02 105) !important; border-bottom: 1.5px solid var(--ink); font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; padding: 7px 10px; }
+  [data-v="c"] .mtable th.src, [data-v="c"] .mtable td.src { background: oklch(0.955 0.012 100); }
+  [data-v="c"] .mtable thead .over { border-bottom: 1.5px solid var(--ink); font-size: 10px; text-align: center; background: oklch(0.93 0.02 105); }
+  [data-v="c"] .wish { width: 74px; border: 2px solid var(--ink); padding: 4px 6px; font: 700 13px "Public Sans", sans-serif; text-align: right; background: #fff; }
+  [data-v="c"] .wish:focus { background: var(--yellow); outline: 0; }
+  [data-v="c"] .stamp { font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 2px 7px; white-space: nowrap; }
+  [data-v="c"] .stamp.saved { color: var(--green); border: 1.5px solid var(--green); }
+  [data-v="c"] .stamp.new { color: #fff; background: var(--green); }
+  [data-v="c"] .stamp.skip { color: var(--ink-soft); border: 1.5px dashed var(--ink-soft); }
+  [data-v="c"] .foot { display: flex; gap: 18px; padding: 10px 14px; border: 2.5px solid var(--ink); border-top: 0; background: oklch(0.955 0.01 100); font-size: 12.5px; flex-wrap: wrap; }
+  [data-v="c"] .foot b { color: var(--green); }
+  @media (max-width: 900px) { [data-v="c"] .frame { padding: 12px 12px 120px; } [data-v="c"] .pair .note { margin-left: 0; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a class="on" href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <div class="modeseg"><button>ARBEITSLISTE</button><button class="on">ÜBERNAHME</button></div>
+    <input class="search" placeholder="Position suchen …">
+    <select class="fsel"><option>Station: alle</option><option>Ausschank</option><option>Grill</option><option>Weinlaube</option></select>
+    <button class="btn quiet">Import</button>
+    <button class="btn quiet">Abgleich</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <div class="pair">
+    <span class="fest"><small>Quellfest</small>Musikfest Steinbach 2025 ▾</span>
+    <span class="arrow">→</span>
+    <span class="fest"><small>Zielfest</small>Musikfest Steinbach 2026</span>
+    <span class="note">Wunschmenge tippen — speichert automatisch. Positionen, die es 2026 noch nicht gibt, werden angelegt.</span>
+  </div>
+
+  <div class="tablewrap">
+  <table class="mtable">
+    <thead>
+      <tr><th rowspan="2">Material</th><th rowspan="2">Gebinde</th><th colspan="2" class="over src">— 2025 (Referenz) —</th><th colspan="2" class="over">— 2026 —</th></tr>
+      <tr><th class="num src">Bestellt</th><th class="num src">Verbraucht</th><th class="num">Wunschmenge</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr class="grphead"><td colspan="6">Ausschank</td></tr>
+      <tr><td><b>Bier „Wieselburger"</b></td><td>Fass 50 l</td><td class="num src">16</td><td class="num src">16</td><td class="num"><input class="wish" value="18"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+      <tr><td><b>Almdudler</b></td><td>Kiste 24×0,33</td><td class="num src">14</td><td class="num src">10</td><td class="num"><input class="wish" value="12"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+      <tr><td><b>Spritzwein-Weiß</b> <span class="sub">gab es 2026 noch nicht</span></td><td>Ktn. 6×1 l</td><td class="num src">8</td><td class="num src">8</td><td class="num"><input class="wish" placeholder="—"></td><td><span class="stamp new">WIRD NEU ANGELEGT</span></td></tr>
+      <tr class="grphead"><td colspan="6">Grill</td></tr>
+      <tr><td><b>Brathendl</b></td><td>Stk.</td><td class="num src">420</td><td class="num src">436</td><td class="num"><input class="wish" value="450"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+      <tr><td><b>Bratwürstel</b></td><td>kg</td><td class="num src">55</td><td class="num src">51</td><td class="num"><input class="wish" value="60"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+      <tr><td><b>Kotelett</b> <span class="sub">2025 kaum gebraucht</span></td><td>kg</td><td class="num src">25</td><td class="num src">9</td><td class="num"><input class="wish" placeholder="—"></td><td><span class="stamp skip">NICHT ÜBERNEHMEN</span></td></tr>
+      <tr class="grphead"><td colspan="6">Weinlaube</td></tr>
+      <tr><td><b>Grüner Veltliner</b></td><td>Ktn. 6×0,75</td><td class="num src">22</td><td class="num src">22</td><td class="num"><input class="wish" value="24"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+      <tr><td><b>Zweigelt</b></td><td>Ktn. 6×0,75</td><td class="num src">10</td><td class="num src">9</td><td class="num"><input class="wish" value="12"></td><td><span class="stamp saved">✓ GESPEICHERT</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="foot">
+    <span><b>42 Positionen</b> mit Wunschmenge übernommen</span>
+    <span><b>1</b> wird neu angelegt</span>
+    <span>2 ausgelassen</span>
+    <span style="margin-left:auto">Quelle: Bestellmenge ◉ / Tatsächliche Menge ○</span>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE D — „Filter-Pult"
+     Kern: Finden ist das Werkzeug. Links ein Setzkasten mit allen
+     Filtern gleichzeitig sichtbar (Station, Kategorie, Lieferant —
+     mit Zählern), aktive Filter als Stempel über der Tabelle,
+     Treffer-Zähler. Rechts die Tabelle, schlanker.
+     ################################################################ -->
+<section class="variant" data-v="d">
+<style>
+  [data-v="d"] .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  [data-v="d"] .planbar .search { flex: 1; min-width: 160px; }
+  [data-v="d"] .board { display: grid; grid-template-columns: 218px minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 24px; }
+  [data-v="d"] .pult { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="d"] .pult .ph { padding: 8px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); font-weight: 800; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; display: flex; justify-content: space-between; }
+  [data-v="d"] .pult .ph button { border: 0; background: none; font-size: 11px; font-weight: 700; color: var(--green); }
+  [data-v="d"] .pult .grp { border-bottom: 1px solid var(--line); padding: 8px 12px 10px; }
+  [data-v="d"] .pult .grp:last-child { border-bottom: 0; }
+  [data-v="d"] .pult .grp .gl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); margin-bottom: 6px; }
+  [data-v="d"] .pult label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; padding: 3px 0; cursor: pointer; }
+  [data-v="d"] .pult label .n { margin-left: auto; font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  [data-v="d"] .pult input[type="checkbox"] { appearance: none; width: 14px; height: 14px; border: 2px solid var(--ink); background: #fff; flex: none; }
+  [data-v="d"] .pult input[type="checkbox"]:checked { background: var(--yellow); box-shadow: inset 0 0 0 2px #fff; }
+  [data-v="d"] .active { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  [data-v="d"] .active .cnt { font-size: 12.5px; color: var(--ink-soft); }
+  [data-v="d"] .active .cnt b { font-family: "Anton", sans-serif; font-size: 16px; color: var(--ink); font-weight: 400; }
+  @media (max-width: 900px) {
+    [data-v="d"] .frame { padding: 12px 12px 120px; }
+    [data-v="d"] .board { grid-template-columns: minmax(0, 1fr); }
+    [data-v="d"] .pult { position: static; }
+    [data-v="d"] .pult .grp { display: inline-block; width: 49%; vertical-align: top; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a class="on" href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <input class="search" placeholder="Material, Lieferant, Notiz suchen …">
+    <button class="btn primary">+ NEU</button>
+    <button class="btn">ÜBERNAHME</button>
+    <button class="btn quiet">Import</button>
+    <button class="btn quiet">Abgleich</button>
+    <button class="btn quiet">Export</button>
+  </div>
+
+  <div class="board">
+    <aside class="pult">
+      <div class="ph">Filter <button>zurücksetzen</button></div>
+      <div class="grp">
+        <div class="gl">Station</div>
+        <label><input type="checkbox" checked> Ausschank <span class="n">24</span></label>
+        <label><input type="checkbox"> Grill <span class="n">18</span></label>
+        <label><input type="checkbox"> Weinlaube <span class="n">11</span></label>
+        <label><input type="checkbox"> Kassa <span class="n">6</span></label>
+        <label><input type="checkbox"> Ohne Station <span class="n">27</span></label>
+      </div>
+      <div class="grp">
+        <div class="gl">Kategorie</div>
+        <label><input type="checkbox" checked> Getränke <span class="n">21</span></label>
+        <label><input type="checkbox"> Lebensmittel <span class="n">17</span></label>
+        <label><input type="checkbox"> Geschirr/Besteck <span class="n">14</span></label>
+        <label><input type="checkbox"> Technik <span class="n">9</span></label>
+        <label><input type="checkbox"> Sonstiges <span class="n">25</span></label>
+      </div>
+      <div class="grp">
+        <div class="gl">Lieferant</div>
+        <label><input type="checkbox"> Brauerei Wieselburger <span class="n">9</span></label>
+        <label><input type="checkbox"> Metro <span class="n">22</span></label>
+        <label><input type="checkbox"> Fleischerei Berger <span class="n">7</span></label>
+        <label><input type="checkbox"> Winzerhof Schmid <span class="n">5</span></label>
+      </div>
+      <div class="grp">
+        <div class="gl">Zustand</div>
+        <label><input type="checkbox"> Ohne Preis <span class="n">12</span></label>
+        <label><input type="checkbox"> Ohne Verbrauch <span class="n">31</span></label>
+      </div>
+    </aside>
+
+    <div>
+      <div class="active">
+        <span class="cnt"><b>14</b> von 86 Positionen</span>
+        <span class="fchip">Station: Ausschank <span class="x">×</span></span>
+        <span class="fchip">Kategorie: Getränke <span class="x">×</span></span>
+      </div>
+      <div class="tablewrap">
+      <table class="mtable">
+        <thead><tr>
+          <th>Material</th><th>Lieferant</th><th>Gebinde</th>
+          <th class="num">Bestellt</th><th class="num">Verbraucht</th><th class="num">Δ</th><th class="num">Gesamt</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><b>Bier „Wieselburger"</b><span class="sub">Getränke · Ausschank</span></td><td>Brauerei Wieselburger</td><td>Fass 50 l</td><td class="num">18</td><td class="num">16</td><td class="num neg">−2</td><td class="num">2.116,80</td></tr>
+          <tr><td><b>Almdudler</b><span class="sub">Getränke · Ausschank</span></td><td>Brauerei Wieselburger</td><td>Kiste 24×0,33</td><td class="num">12</td><td class="num">10</td><td class="num neg">−2</td><td class="num">208,80</td></tr>
+          <tr><td><b>Mineralwasser Römerquelle</b><span class="sub">Getränke · Ausschank</span></td><td>Brauerei Wieselburger</td><td>Kiste 12×1 l</td><td class="num">10</td><td class="num">8</td><td class="num neg">−2</td><td class="num">117,60</td></tr>
+          <tr><td><b>Weißer Spritzer fertig</b><span class="sub">Getränke · Ausschank</span></td><td>Winzerhof Schmid</td><td>Ktn. 6×1 l</td><td class="num">8</td><td class="num">7</td><td class="num neg">−1</td><td class="num">302,40</td></tr>
+          <tr><td><b>Soda-Zitron Sirup</b><span class="sub">Getränke · Ausschank</span></td><td>Metro</td><td>Kanister 5 l</td><td class="num">3</td><td class="num">2</td><td class="num neg">−1</td><td class="num">54,00</td></tr>
+        </tbody>
+        <tfoot><tr><td colspan="6">Zwischensumme (gefiltert)</td><td class="num">€ 2.799,60</td></tr></tfoot>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE E — „Bestell-Cockpit"
+     Kern: die Liste zeigt, wo gehandelt werden muss. Maßband-KPIs
+     oben, je Zeile ein Soll/Ist-Balken, Handlungsbedarf-Filter
+     (ohne Preis, ohne Sollmenge, Δ-Ausreißer) als Segmente,
+     Vorjahreswert als Geist-Referenz direkt unter „Bestellt".
+     ################################################################ -->
+<section class="variant" data-v="e">
+<style>
+  [data-v="e"] .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  [data-v="e"] .planbar .search { flex: 1; min-width: 150px; }
+  [data-v="e"] .gauges { display: grid; grid-template-columns: repeat(3, 1fr); border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  [data-v="e"] .gauge { padding: 13px 16px 11px; border-right: 1px solid var(--line); }
+  [data-v="e"] .gauge:last-child { border-right: 0; }
+  [data-v="e"] .gauge .gl { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  [data-v="e"] .gauge .gl b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+  [data-v="e"] .gauge .gl .v { font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .02em; }
+  [data-v="e"] .gauge .gl .v.warn { color: var(--red); } [data-v="e"] .gauge .gl .v.ok { color: var(--green); }
+  [data-v="e"] .ruler { position: relative; height: 16px; border: 1.5px solid var(--ink); background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  [data-v="e"] .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  [data-v="e"] .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+  [data-v="e"] .gauge .gn { font-size: 11px; color: var(--ink-soft); margin-top: 6px; }
+  [data-v="e"] .fbar2 { display: flex; gap: 10px; margin: 22px 0 10px; flex-wrap: wrap; align-items: center; }
+  [data-v="e"] .bar { display: flex; align-items: center; gap: 5px; width: 120px; }
+  [data-v="e"] .bar .track { flex: 1; height: 9px; border: 1.5px solid var(--ink); position: relative; background: #fff; }
+  [data-v="e"] .bar .track i { position: absolute; inset: 0 auto 0 0; background: var(--green); }
+  [data-v="e"] .bar .track i.over { background: var(--red); }
+  [data-v="e"] .bar .track em { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
+  [data-v="e"] .ghost { display: block; font-size: 10.5px; color: var(--ink-soft); }
+  [data-v="e"] .rowwarn td:first-child { box-shadow: inset 3.5px 0 0 var(--red); }
+  @media (max-width: 900px) {
+    [data-v="e"] .frame { padding: 12px 12px 120px; }
+    [data-v="e"] .gauges { grid-template-columns: 1fr; }
+    [data-v="e"] .gauge { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs">
+    <a href="#">Dashboard</a><a href="#">Schichtplan</a><a class="on" href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoring</a>
+  </nav>
+  <div class="planbar">
+    <input class="search" placeholder="Material suchen …">
+    <div class="seg">
+      <button class="on">Alle (86)</button><button>Handlungsbedarf (17)</button><button>Ohne Preis (12)</button><button>Δ-Ausreißer (4)</button>
+    </div>
+    <button class="btn primary">+ NEU</button>
+    <button class="btn">ÜBERNAHME</button>
+    <button class="btn quiet">Import · Abgleich · Export</button>
+  </div>
+  <div class="gauges">
+    <div class="gauge"><div class="gl"><b>Positionen komplett</b><span class="v warn">74/86</span></div><div class="ruler"><i style="width:86%"></i><em style="left:86%"></em></div><div class="gn">12 ohne Preis — Kostenschätzung unvollständig</div></div>
+    <div class="gauge"><div class="gl"><b>Gesch. Kosten</b><span class="v">€ 7.431</span></div><div class="ruler"><i style="width:83%"></i><em style="left:83%"></em></div><div class="gn">Budgetrahmen € 9.000 · 83 % verplant</div></div>
+    <div class="gauge"><div class="gl"><b>Verbrauch erfasst</b><span class="v ok">55/86</span></div><div class="ruler"><i style="width:64%"></i><em style="left:64%"></em></div><div class="gn">31 Positionen noch ohne Ist-Menge</div></div>
+  </div>
+
+  <div class="fbar2"><h2 style="margin:0;flex:1">Handlungsbedarf zuerst</h2><span style="font-size:11.5px;color:var(--ink-soft)">Balken: Verbrauch am Maßstab der Bestellmenge · Vorjahr als Referenz unter „Bestellt"</span></div>
+
+  <div class="tablewrap">
+  <table class="mtable">
+    <thead><tr>
+      <th>Material</th><th>Station</th><th>Gebinde</th>
+      <th class="num">Bestellt</th><th class="num">Verbraucht</th><th>Soll/Ist</th><th class="num">Δ</th><th class="num">Gesamt</th>
+    </tr></thead>
+    <tbody>
+      <tr class="rowwarn"><td><b>Verlängerungskabel 25 m</b><span class="sub">Technik · Preis fehlt</span></td><td>Ohne Station</td><td>Stk.</td><td class="num">4<span class="ghost">Vorjahr: 3</span></td><td class="num none">—</td><td><span class="bar"><span class="track"></span></span></td><td class="num none">—</td><td class="num warncell">Preis fehlt</td></tr>
+      <tr class="rowwarn"><td><b>Kassenrollen</b><span class="sub">Technik · ohne Sollmenge</span></td><td>Kassa</td><td>Pkg. 10</td><td class="num warncell">?<span class="ghost">Vorjahr: 3</span></td><td class="num none">—</td><td><span class="bar"><span class="track"></span></span></td><td class="num none">—</td><td class="num none">—</td></tr>
+      <tr><td><b>Brathendl</b><span class="sub">Lebensmittel · Δ-Ausreißer</span></td><td>Grill</td><td>Stk.</td><td class="num">450<span class="ghost">Vorjahr: 420</span></td><td class="num">512</td><td><span class="bar"><span class="track"><i class="over" style="width:100%"></i><em style="left:88%"></em></span></span></td><td class="num pos">+62</td><td class="num">2.079,00</td></tr>
+      <tr><td><b>Semmeln</b><span class="sub">Lebensmittel · Δ-Ausreißer</span></td><td>Grill</td><td>Stk.</td><td class="num">600<span class="ghost">Vorjahr: 580</span></td><td class="num">640</td><td><span class="bar"><span class="track"><i class="over" style="width:100%"></i><em style="left:94%"></em></span></span></td><td class="num pos">+40</td><td class="num">297,00</td></tr>
+      <tr><td><b>Bier „Wieselburger"</b><span class="sub">Getränke</span></td><td>Ausschank</td><td>Fass 50 l</td><td class="num">18<span class="ghost">Vorjahr: 16</span></td><td class="num">16</td><td><span class="bar"><span class="track"><i style="width:89%"></i><em style="left:100%"></em></span></span></td><td class="num neg">−2</td><td class="num">2.116,80</td></tr>
+      <tr><td><b>Grüner Veltliner</b><span class="sub">Getränke</span></td><td>Weinlaube</td><td>Ktn. 6×0,75</td><td class="num">24<span class="ghost">Vorjahr: 22</span></td><td class="num">22</td><td><span class="bar"><span class="track"><i style="width:92%"></i><em style="left:100%"></em></span></span></td><td class="num neg">−2</td><td class="num">1.123,20</td></tr>
+      <tr><td><b>Bratwürstel</b><span class="sub">Lebensmittel</span></td><td>Grill</td><td>kg</td><td class="num">60<span class="ghost">Vorjahr: 55</span></td><td class="num">55</td><td><span class="bar"><span class="track"><i style="width:92%"></i><em style="left:100%"></em></span></span></td><td class="num neg">−5</td><td class="num">587,40</td></tr>
+      <tr><td><b>Grillkohle</b><span class="sub">Sonstiges</span></td><td>Grill</td><td>Sack 10 kg</td><td class="num">8<span class="ghost">Vorjahr: 8</span></td><td class="num">8</td><td><span class="bar"><span class="track"><i style="width:100%"></i><em style="left:100%"></em></span></span></td><td class="num">±0</td><td class="num">115,20</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="7">Gesamtkosten (alle 86 Positionen)</td><td class="num">€ 7.431,10</td></tr></tfoot>
+  </table>
+  </div>
+</div>
+</section>
+
+<div id="switcher">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <div class="lbl"><span id="lblMain">A — Inventurbogen</span><small id="lblSub">Ein flacher Bogen, volle Spaltentiefe, Inline-Editing</small></div>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</div>
+
+<script>
+  const VARIANTS = [
+    ["a", "Inventurbogen", "Ein flacher Bogen, volle Spaltentiefe, Inline-Editing"],
+    ["b", "Stationskästen", "Karteireiter je Station — der Filter ist die Navigation"],
+    ["c", "Zwei Feste", "Übernahme als zweiter Modus: Vorjahr → Wunschmenge"],
+    ["d", "Filter-Pult", "Alle Filter links sichtbar, Stempel-Chips, Trefferzähler"],
+    ["e", "Bestell-Cockpit", "Soll/Ist-Balken je Zeile, Handlungsbedarf zuerst"]
+  ];
+  function currentKey() {
+    const v = new URLSearchParams(location.search).get("variant");
+    return VARIANTS.some(x => x[0] === v) ? v : "a";
+  }
+  function show(key) {
+    document.querySelectorAll(".variant").forEach(s => s.classList.toggle("active", s.dataset.v === key));
+    const v = VARIANTS.find(x => x[0] === key);
+    document.getElementById("lblMain").textContent = key.toUpperCase() + " — " + v[1];
+    document.getElementById("lblSub").textContent = v[2];
+    try { history.replaceState(null, "", "?variant=" + key); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function cycle(dir) {
+    const i = VARIANTS.findIndex(x => x[0] === currentKey());
+    show(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0]);
+  }
+  document.getElementById("prev").addEventListener("click", () => cycle(-1));
+  document.getElementById("next").addEventListener("click", () => cycle(1));
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") cycle(-1);
+    if (e.key === "ArrowRight") cycle(1);
+  });
+  show(currentKey());
+</script>
+</body>
+</html>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Bereichs-Fächer FEST-EINSTIEG: 5 Umsetzungen innerhalb der
+     Gesamtrichtung F „Werkzeug-Plakat". Funktionalität fix = wie echte App (Nutzer-Vorgabe):
+     Festliste (nächstes Fest, vergangene) + 2-Schritt-Wizard mit optionaler Vorlage:
+     Stationen einzeln wählbar, „Zuweisungen übernehmen", Material-Quelle Bestellt/Ist mit
+     Gruppen-Toggles, automatischer Datums-Offset — NEU: Sponsorings (+ Kategorien) mitkopieren.
+     ?variant=a|b|c|d|e -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Bereichs-Fächer Fest-Einstieg (5 Umsetzungen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.active { display: block; }
+  button { font: inherit; cursor: pointer; }
+
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  .variant { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 120px; }
+
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .sub { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .newbtn { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0; padding: 9px 15px; font-weight: 700; font-size: 12.5px; }
+
+  .variant h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+  .variant h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.primary { background: var(--yellow); }
+  .btn.big { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .04em; padding: 11px 22px; }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.quiet:hover { color: var(--ink); background: oklch(0.94 0.015 110); }
+  .finput { border: 2px solid var(--ink); padding: 8px 10px; font: 600 13.5px "Public Sans", sans-serif; background: #fff; color: var(--ink); width: 100%; }
+  .flabel { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+
+  /* Bausteine des Wizards (Funktionalität = echte App) */
+  .cbx { width: 16px; height: 16px; border: 2px solid var(--ink); background: #fff; flex: none; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 10.5px; font-weight: 800; cursor: pointer; }
+  .cbx.on { background: var(--green); border-color: var(--green); }
+  .cbx.on::after { content: "✓"; }
+  .rad { width: 15px; height: 15px; border: 2px solid var(--ink); border-radius: 50%; background: #fff; flex: none; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .rad.on::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .offhint { font-size: 11.5px; color: var(--ink-soft); background: oklch(0.955 0.01 100); border: 1.5px dashed var(--ink-soft); padding: 6px 10px; }
+  .offhint b { color: var(--green); }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 215px; text-align: center; letter-spacing: .01em; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ################################################################
+     VARIANTE A — „Plakatwand"
+     Kern: die Feste hängen als Plakate an der Wand. Das nächste
+     groß mit Countdown, die vergangenen kleiner mit ERLEDIGT-
+     Stempel. „Aus Vorjahr übernehmen" liegt als Wizard-Karte
+     (Schritt 2 von 2) über der Wand — kompakt, alle Optionen.
+     ################################################################ -->
+<section class="variant" data-v="a">
+<style>
+  [data-v="a"] .wall { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; margin-top: 24px; align-items: start; }
+  [data-v="a"] .plakat { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; text-align: center; padding: 24px 18px 18px; }
+  [data-v="a"] .plakat .fm { font-family: "Anton", sans-serif; font-size: 11px; letter-spacing: .1em; color: var(--yellow); }
+  [data-v="a"] .plakat h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 24px; letter-spacing: .02em; text-transform: uppercase; margin: 5px 0 2px; }
+  [data-v="a"] .plakat .date { font-family: "Anton", sans-serif; font-size: 14px; color: var(--yellow); letter-spacing: .04em; }
+  [data-v="a"] .plakat .cd { display: inline-block; background: var(--yellow); color: var(--ink); font-family: "Anton", sans-serif; font-size: 13px; letter-spacing: .05em; padding: 4px 12px; margin-top: 10px; }
+  [data-v="a"] .plakat .stats { display: flex; justify-content: center; gap: 16px; margin-top: 12px; font-size: 11.5px; color: oklch(0.92 0.02 110); flex-wrap: wrap; }
+  [data-v="a"] .plakat .open { display: block; margin-top: 12px; background: #fff; color: var(--ink); border: 0; padding: 9px; font-weight: 700; font-size: 12.5px; width: 100%; }
+  [data-v="a"] .plakat.past { background: oklch(0.93 0.015 100); color: var(--ink); border-color: var(--ink-soft); position: relative; padding: 18px 14px 14px; }
+  [data-v="a"] .plakat.past .fm, [data-v="a"] .plakat.past .date { color: var(--ink-soft); }
+  [data-v="a"] .plakat.past h3 { font-size: 17px; }
+  [data-v="a"] .plakat.past .stamp { position: absolute; top: 10px; right: -8px; border: 2px solid var(--green); color: var(--green); font-family: "Anton", sans-serif; font-size: 10.5px; letter-spacing: .08em; padding: 2px 8px; transform: rotate(6deg); background: #fff; }
+  [data-v="a"] .plakat.past .stats { color: var(--ink-soft); font-size: 11px; }
+  [data-v="a"] .plakat.past .row2 { display: flex; gap: 6px; margin-top: 10px; }
+  [data-v="a"] .plakat.past .row2 .btn { flex: 1; padding: 6px; font-size: 11px; }
+  /* Wizard-Karte */
+  [data-v="a"] .wiz { border: 2.5px solid var(--ink); background: #fff; box-shadow: 8px 8px 0 oklch(0.24 0.02 145 / .18); margin-top: 26px; }
+  [data-v="a"] .wiz .wh { display: flex; align-items: baseline; gap: 12px; padding: 11px 16px; border-bottom: 2.5px solid var(--ink); background: var(--yellow); }
+  [data-v="a"] .wiz .wh h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="a"] .wiz .wh .step { margin-left: auto; font-size: 11.5px; font-weight: 800; }
+  [data-v="a"] .wiz .wb { padding: 14px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  [data-v="a"] .wiz .blk { border: 1.5px solid var(--line); padding: 10px 12px; }
+  [data-v="a"] .wiz .blk .bt { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
+  [data-v="a"] .wiz .row { display: flex; align-items: center; gap: 9px; padding: 4px 0; font-size: 12.5px; }
+  [data-v="a"] .wiz .row .m { margin-left: auto; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+  [data-v="a"] .wiz .wf { border-top: 2px solid var(--ink); padding: 11px 16px; display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+  @media (max-width: 900px) {
+    [data-v="a"] .frame { padding: 12px 12px 120px; }
+    [data-v="a"] .wall { grid-template-columns: 1fr; }
+    [data-v="a"] .wiz .wb { grid-template-columns: 1fr; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Meine Feste</h1>
+    <span class="sub">Musikverein Steinbach</span>
+    <button class="newbtn">+ NEUES FEST</button>
+  </header>
+
+  <div class="wall">
+    <div class="plakat">
+      <div class="fm">NÄCHSTES FEST</div>
+      <h3>Musikfest Steinbach 2026</h3>
+      <div class="date">FR 24. – SO 26. JULI</div>
+      <span class="cd">NOCH 4 TAGE</span>
+      <div class="stats"><span>41/52 Schichten</span><span>86 Materialien</span><span>€ 4.850 Sponsoring</span></div>
+      <button class="open">FEST ÖFFNEN →</button>
+    </div>
+    <div class="plakat past">
+      <span class="stamp">ERLEDIGT</span>
+      <div class="fm">2025</div>
+      <h3>Musikfest Steinbach</h3>
+      <div class="date">25.–27. JULI 2025</div>
+      <div class="stats"><span>52 Schichten</span><span>€ 6.890 Umsatz Material</span></div>
+      <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+    </div>
+    <div class="plakat past">
+      <span class="stamp">ERLEDIGT</span>
+      <div class="fm">2025</div>
+      <h3>Stadlfest</h3>
+      <div class="date">5.–6. SEPT. 2025</div>
+      <div class="stats"><span>18 Schichten</span><span>34 Materialien</span></div>
+      <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+    </div>
+  </div>
+
+  <div class="wiz">
+    <div class="wh"><h3>Neues Fest — Musikfest Steinbach 2027</h3><span class="step">SCHRITT 2 VON 2 · VORLAGE: MUSIKFEST 2026</span></div>
+    <div class="wb">
+      <div class="blk">
+        <div class="bt">Stationen & Schichten <span style="color:var(--ink-soft)">4 von 4 gewählt</span></div>
+        <div class="row"><span class="cbx on"></span><b>Ausschank</b><span class="m">14 Pers. · 4 Schichten</span></div>
+        <div class="row"><span class="cbx on"></span><b>Grill</b><span class="m">6 Pers. · 2 Schichten</span></div>
+        <div class="row"><span class="cbx on"></span><b>Kassa</b><span class="m">7 Pers. · 3 Schichten</span></div>
+        <div class="row"><span class="cbx on"></span><b>Weinlaube</b><span class="m">4 Pers. · 2 Schichten</span></div>
+        <div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span class="cbx"></span>Zuweisungen übernehmen<span class="m">Helfer + Verantwortliche</span></div>
+        <div class="offhint" style="margin-top:8px">Schichten wandern automatisch mit: <b>Fr 23. – So 25. Juli 2027</b> — gleicher Wochentags-Abstand.</div>
+      </div>
+      <div>
+        <div class="blk">
+          <div class="bt">Material <span style="color:var(--ink-soft)">86 von 86</span></div>
+          <div class="row"><span class="rad on"></span>Bestellmenge 2026 als neue Bestellmenge</div>
+          <div class="row"><span class="rad"></span>Tatsächliche Menge 2026 als neue Bestellmenge</div>
+        </div>
+        <div class="blk" style="margin-top:12px">
+          <div class="bt">Sponsoring <span style="color:var(--ink-soft)">NEU</span></div>
+          <div class="row"><span class="cbx on"></span>Kategorien übernehmen<span class="m">4 Kategorien</span></div>
+          <div class="row"><span class="cbx on"></span>Sponsorings übernehmen<span class="m">14 Firmen · € 4.850</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="wf">
+      <button class="btn quiet">← Zurück zu Name & Datum</button>
+      <button class="btn primary big">FEST ANLEGEN</button>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE B — „Chronik"
+     Kern: die Feste als Vereins-Chronik — Jahre als Zeitstrahl,
+     jedes Fest eine Zeile mit seinen Kennzahlen. Die Chronik IST
+     das Archiv („wer hat 2025 gesponsert?" ist einen Klick weit).
+     „Als Vorlage" sitzt an jeder Zeile.
+     ################################################################ -->
+<section class="variant" data-v="b">
+<style>
+  [data-v="b"] .chron { border: 2.5px solid var(--ink); background: #fff; margin-top: 24px; }
+  [data-v="b"] .crow { display: flex; align-items: center; gap: 16px; padding: 13px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  [data-v="b"] .crow:last-child { border-bottom: 0; }
+  [data-v="b"] .crow .yr { font-family: "Anton", sans-serif; font-size: 24px; letter-spacing: .02em; width: 74px; flex: none; color: var(--ink-soft); }
+  [data-v="b"] .crow.next .yr { color: var(--green); }
+  [data-v="b"] .crow .ti { flex: 1; min-width: 200px; }
+  [data-v="b"] .crow .ti b { font-weight: 700; font-size: 15px; }
+  [data-v="b"] .crow .ti .d { font-size: 12px; color: var(--ink-soft); }
+  [data-v="b"] .crow .kz { display: flex; gap: 14px; font-size: 11.5px; color: var(--ink-soft); flex-wrap: wrap; }
+  [data-v="b"] .crow .kz b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  [data-v="b"] .crow.next { background: oklch(0.975 0.04 92); box-shadow: inset 4px 0 0 var(--yellow); }
+  [data-v="b"] .crow .cd { font-family: "Anton", sans-serif; font-size: 12px; background: var(--yellow); padding: 3px 10px; letter-spacing: .04em; }
+  [data-v="b"] .crow .acts { display: flex; gap: 6px; }
+  [data-v="b"] .planwiz { border: 2.5px solid var(--ink); background: #fff; margin-top: 26px; }
+  [data-v="b"] .planwiz .ph { display: flex; gap: 0; border-bottom: 2.5px solid var(--ink); }
+  [data-v="b"] .planwiz .ph .st { flex: 1; padding: 9px 14px; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; color: var(--ink-soft); border-right: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+  [data-v="b"] .planwiz .ph .st:last-child { border-right: 0; }
+  [data-v="b"] .planwiz .ph .st.done { color: var(--green); }
+  [data-v="b"] .planwiz .ph .st.on { background: var(--yellow); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+  [data-v="b"] .planwiz .ph .st .n { font-family: "Anton", sans-serif; font-size: 14px; }
+  [data-v="b"] .planwiz .body { padding: 14px 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  [data-v="b"] .grp { border: 1.5px solid var(--line); padding: 10px 12px; }
+  [data-v="b"] .grp .gt { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+  [data-v="b"] .row { display: flex; align-items: center; gap: 9px; padding: 4px 0; font-size: 12.5px; }
+  [data-v="b"] .row .m { margin-left: auto; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+  [data-v="b"] .planwiz .wf { border-top: 2px solid var(--ink); padding: 11px 18px; display: flex; justify-content: flex-end; gap: 10px; }
+  @media (max-width: 900px) { [data-v="b"] .frame { padding: 12px 12px 120px; } [data-v="b"] .planwiz .body { grid-template-columns: 1fr; } [data-v="b"] .planwiz .ph { flex-wrap: wrap; } }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Vereins-Chronik</h1>
+    <span class="sub">Musikverein Steinbach · 4 Feste</span>
+    <button class="newbtn">+ NEUES FEST</button>
+  </header>
+
+  <div class="chron">
+    <div class="crow next">
+      <span class="yr">2026</span>
+      <span class="ti"><b>Musikfest Steinbach</b><span class="d"> · Fr 24. – So 26. Juli · Festgelände</span></span>
+      <span class="cd">NOCH 4 TAGE</span>
+      <span class="kz"><span><b>41/52</b> Schichten</span><span><b>€ 7.431</b> Material</span><span><b>€ 4.850</b> Sponsoring</span></span>
+      <span class="acts"><button class="btn primary">ÖFFNEN →</button></span>
+    </div>
+    <div class="crow">
+      <span class="yr">2025</span>
+      <span class="ti"><b>Stadlfest</b><span class="d"> · 5.–6. September</span></span>
+      <span class="kz"><span><b>18</b> Schichten</span><span><b>34</b> Materialien</span><span><b>€ 1.200</b> Sponsoring</span></span>
+      <span class="acts"><button class="btn quiet">Öffnen</button><button class="btn">ALS VORLAGE</button></span>
+    </div>
+    <div class="crow">
+      <span class="yr">2025</span>
+      <span class="ti"><b>Musikfest Steinbach</b><span class="d"> · 25.–27. Juli</span></span>
+      <span class="kz"><span><b>52</b> Schichten</span><span><b>82</b> Materialien</span><span><b>€ 4.400</b> Sponsoring</span></span>
+      <span class="acts"><button class="btn quiet">Öffnen</button><button class="btn">ALS VORLAGE</button></span>
+    </div>
+    <div class="crow">
+      <span class="yr">2024</span>
+      <span class="ti"><b>Musikfest Steinbach</b><span class="d"> · 26.–28. Juli</span></span>
+      <span class="kz"><span><b>48</b> Schichten</span><span><b>79</b> Materialien</span><span><b>€ 3.900</b> Sponsoring</span></span>
+      <span class="acts"><button class="btn quiet">Öffnen</button><button class="btn">ALS VORLAGE</button></span>
+    </div>
+  </div>
+
+  <h2>Neues Fest aus Vorlage „Musikfest Steinbach 2026"</h2>
+  <div class="planwiz">
+    <div class="ph">
+      <span class="st done"><span class="n">✓</span> NAME & DATUM</span>
+      <span class="st on"><span class="n">2</span> WAS KOMMT MIT?</span>
+      <span class="st"><span class="n">3</span> ANLEGEN</span>
+    </div>
+    <div class="body">
+      <div class="grp">
+        <div class="gt">Stationen & Schichten · 4/4</div>
+        <div class="row"><span class="cbx on"></span>Ausschank<span class="m">14 P. · 4 Schichten</span></div>
+        <div class="row"><span class="cbx on"></span>Grill<span class="m">6 P. · 2</span></div>
+        <div class="row"><span class="cbx on"></span>Kassa<span class="m">7 P. · 3</span></div>
+        <div class="row"><span class="cbx on"></span>Weinlaube<span class="m">4 P. · 2</span></div>
+        <div class="row"><span class="cbx"></span>Zuweisungen übernehmen</div>
+      </div>
+      <div>
+        <div class="grp">
+          <div class="gt">Material · 86/86 · Mengenquelle</div>
+          <div class="row"><span class="rad on"></span>Bestellmenge 2026</div>
+          <div class="row"><span class="rad"></span>Tatsächliche Menge 2026</div>
+        </div>
+        <div class="grp" style="margin-top:12px">
+          <div class="gt">Sponsoring</div>
+          <div class="row"><span class="cbx on"></span>Kategorien + Sponsorings<span class="m">14 Firmen · € 4.850</span></div>
+        </div>
+        <div class="offhint" style="margin-top:12px">Neues Datum <b>Fr 23. – So 25. Juli 2027</b> — Schichten werden automatisch verschoben.</div>
+      </div>
+    </div>
+    <div class="wf"><button class="btn quiet">← Zurück</button><button class="btn primary big">FEST ANLEGEN</button></div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE C — „Kopierwerk"
+     Kern: der jährliche Zeitspar-Moment bekommt eine eigene
+     Werkbank-Seite. Links die Stempelkarte (4 Schritte, Fortschritt),
+     rechts der aktuelle Schritt in voller Breite und Tiefe —
+     hier Schritt 2 mit aufgeklappten Schichten einer Station.
+     ################################################################ -->
+<section class="variant" data-v="c">
+<style>
+  [data-v="c"] .board { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 24px; }
+  [data-v="c"] .card { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="c"] .card .ch { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  [data-v="c"] .card .ch h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="c"] .card .ch .s { font-size: 11px; color: oklch(0.92 0.02 110); margin-top: 2px; }
+  [data-v="c"] .step { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 700; }
+  [data-v="c"] .step:last-of-type { border-bottom: 0; }
+  [data-v="c"] .step .n { width: 24px; height: 24px; border: 2px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; font-family: "Anton", sans-serif; font-size: 12px; flex: none; }
+  [data-v="c"] .step.done { color: var(--green); }
+  [data-v="c"] .step.done .n { background: var(--green); border-color: var(--green); color: #fff; }
+  [data-v="c"] .step.on { background: var(--yellow); box-shadow: inset 4px 0 0 var(--ink); }
+  [data-v="c"] .step .s { display: block; font-size: 10.5px; font-weight: 600; color: var(--ink-soft); }
+  [data-v="c"] .work { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="c"] .work .wh { padding: 12px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  [data-v="c"] .work .wh h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 19px; letter-spacing: .02em; text-transform: uppercase; }
+  [data-v="c"] .work .wh .m { font-size: 12px; color: var(--ink-soft); }
+  [data-v="c"] .strow { border-bottom: 1px solid var(--line); }
+  [data-v="c"] .strow .t { display: flex; align-items: center; gap: 11px; padding: 11px 18px; font-size: 13.5px; }
+  [data-v="c"] .strow .t b { font-weight: 700; }
+  [data-v="c"] .strow .t .m { margin-left: auto; font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
+  [data-v="c"] .strow .t .fold { border: 0; background: none; font-weight: 800; color: var(--green); font-size: 11px; }
+  [data-v="c"] .shifts { padding: 0 18px 10px 47px; display: grid; gap: 4px; }
+  [data-v="c"] .shifts .sh { display: flex; gap: 10px; font-size: 12px; color: var(--ink-soft); align-items: baseline; }
+  [data-v="c"] .shifts .sh time { font-weight: 700; color: var(--ink); width: 118px; font-variant-numeric: tabular-nums; }
+  [data-v="c"] .shifts .sh .arrow { color: var(--green); font-weight: 800; }
+  [data-v="c"] .work .opts { padding: 11px 18px; display: flex; gap: 20px; flex-wrap: wrap; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  [data-v="c"] .work .opts .o { display: flex; align-items: center; gap: 8px; }
+  [data-v="c"] .work .wf { padding: 12px 18px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  @media (max-width: 900px) {
+    [data-v="c"] .frame { padding: 12px 12px 120px; }
+    [data-v="c"] .board { grid-template-columns: minmax(0, 1fr); }
+    [data-v="c"] .card { position: static; }
+    [data-v="c"] .shifts { padding-left: 18px; }
+    [data-v="c"] .shifts .sh { flex-wrap: wrap; }
+    [data-v="c"] .strow .t { flex-wrap: wrap; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Neues Fest anlegen</h1>
+    <span class="sub">Vorlage: Musikfest Steinbach 2026</span>
+    <button class="newbtn">ABBRECHEN ×</button>
+  </header>
+
+  <div class="board">
+    <aside class="card">
+      <div class="ch"><h3>Musikfest 2027</h3><div class="s">Fr 23. – So 25. Juli 2027 · aus Vorlage 2026</div></div>
+      <div class="step done"><span class="n">✓</span><span>Name & Datum<span class="s">Musikfest Steinbach 2027</span></span></div>
+      <div class="step on"><span class="n">2</span><span>Stationen & Schichten<span class="s">4 Stationen · 11 Schichten</span></span></div>
+      <div class="step"><span class="n">3</span><span>Material<span class="s">86 Positionen · Mengenquelle</span></span></div>
+      <div class="step"><span class="n">4</span><span>Sponsoring<span class="s">4 Kategorien · 14 Firmen</span></span></div>
+    </aside>
+
+    <div class="work">
+      <div class="wh"><h3>Stationen & Schichten</h3><span class="m">Alles Gewählte wird ins neue Fest kopiert — Schichten rücken automatisch auf die neuen Tage.</span></div>
+      <div class="strow">
+        <div class="t"><span class="cbx on"></span><b>Ausschank</b><span class="m">Zelt Nord · 14 Pers. · 4 Schichten</span><button class="fold">ZUKLAPPEN ▴</button></div>
+        <div class="shifts">
+          <span class="sh"><time>Sa 11–15</time><span>Frühschoppen · 4 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+          <span class="sh"><time>Sa 15–19</time><span>4 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+          <span class="sh"><time>Sa 19–23</time><span>4 Plätze</span><span class="arrow">→ Sa 24.07.2027</span></span>
+          <span class="sh"><time>Sa 23–02</time><span>Barbetrieb · 2 Plätze</span><span class="arrow">→ Sa/So 2027</span></span>
+        </div>
+      </div>
+      <div class="strow"><div class="t"><span class="cbx on"></span><b>Grill</b><span class="m">Küchenzeile · 6 Pers. · 2 Schichten</span><button class="fold">AUFKLAPPEN ▾</button></div></div>
+      <div class="strow"><div class="t"><span class="cbx on"></span><b>Kassa</b><span class="m">Eingang · 7 Pers. · 3 Schichten</span><button class="fold">AUFKLAPPEN ▾</button></div></div>
+      <div class="strow"><div class="t"><span class="cbx on"></span><b>Weinlaube</b><span class="m">4 Pers. · 2 Schichten</span><button class="fold">AUFKLAPPEN ▾</button></div></div>
+      <div class="opts">
+        <span class="o"><span class="cbx"></span>Zuweisungen übernehmen (Helfer + Verantwortliche)</span>
+        <span class="o offhint" style="border:0;background:none;padding:0">Helfer bleiben sonst leer — Präferenzen kommen mit.</span>
+      </div>
+      <div class="wf">
+        <button class="btn quiet">← Name & Datum</button>
+        <button class="btn primary">WEITER: MATERIAL →</button>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE D — „Frachtbrief"
+     Kern: das Kopieren als EIN Manifest — kein Stepper. Links die
+     Festliste, rechts der Frachtbrief: jede Zeile ein Baustein
+     (Stationen, Schichten, Zuweisungen, Material + Quelle,
+     Sponsoring) mit Menge und An/Aus. Unten der große Hebel.
+     ################################################################ -->
+<section class="variant" data-v="d">
+<style>
+  [data-v="d"] .board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 22px; align-items: start; margin-top: 24px; }
+  [data-v="d"] .liste { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="d"] .liste .lh { padding: 9px 14px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; }
+  [data-v="d"] .fest { padding: 11px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+  [data-v="d"] .fest:last-child { border-bottom: 0; }
+  [data-v="d"] .fest .ti { flex: 1; }
+  [data-v="d"] .fest .ti b { font-weight: 700; font-size: 13.5px; }
+  [data-v="d"] .fest .ti .d { display: block; font-size: 11.5px; color: var(--ink-soft); }
+  [data-v="d"] .fest.next { background: oklch(0.975 0.04 92); box-shadow: inset 4px 0 0 var(--yellow); }
+  [data-v="d"] .fest .cd { font-family: "Anton", sans-serif; font-size: 11px; background: var(--yellow); padding: 2px 8px; }
+  [data-v="d"] .fest.src { background: oklch(0.95 0.03 160); box-shadow: inset 4px 0 0 var(--green); }
+  [data-v="d"] .fest .srcmark { font-family: "Anton", sans-serif; font-size: 10.5px; color: #fff; background: var(--green); padding: 2px 8px; letter-spacing: .05em; }
+  [data-v="d"] .brief { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="d"] .brief .bh { padding: 12px 16px; border-bottom: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  [data-v="d"] .brief .bh h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 17px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="d"] .brief .bh .s { font-size: 11.5px; color: oklch(0.92 0.02 110); margin-top: 2px; }
+  [data-v="d"] .brief .bh .s b { color: var(--yellow); }
+  [data-v="d"] .frach { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  [data-v="d"] .frach .anz { font-family: "Anton", sans-serif; font-size: 16px; width: 40px; text-align: right; flex: none; }
+  [data-v="d"] .frach .ti { flex: 1; min-width: 0; }
+  [data-v="d"] .frach .ti b { font-weight: 700; }
+  [data-v="d"] .frach .ti .s { display: block; font-size: 11.5px; color: var(--ink-soft); }
+  [data-v="d"] .frach .detail { border: 0; background: none; font-weight: 800; color: var(--green); font-size: 10.5px; white-space: nowrap; }
+  [data-v="d"] .frach.off { opacity: .45; }
+  [data-v="d"] .frach .subopt { display: flex; gap: 14px; margin-top: 5px; font-size: 12px; }
+  [data-v="d"] .frach .subopt .o { display: flex; align-items: center; gap: 6px; }
+  [data-v="d"] .brief .bf { padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-top: 2px solid var(--ink); background: oklch(0.955 0.01 100); }
+  [data-v="d"] .brief .bf .sum { font-size: 12px; color: var(--ink-soft); }
+  @media (max-width: 900px) {
+    [data-v="d"] .frame { padding: 12px 12px 120px; }
+    [data-v="d"] .board { grid-template-columns: minmax(0, 1fr); }
+    [data-v="d"] .frach { flex-wrap: wrap; }
+    [data-v="d"] .frach .subopt { flex-wrap: wrap; }
+    [data-v="d"] .fest { flex-wrap: wrap; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Meine Feste</h1>
+    <span class="sub">Musikverein Steinbach</span>
+    <button class="newbtn">+ NEUES FEST</button>
+  </header>
+
+  <div class="board">
+    <div class="liste">
+      <div class="lh">Feste</div>
+      <div class="fest next">
+        <span class="ti"><b>Musikfest Steinbach 2026</b><span class="d">Fr 24. – So 26. Juli · 41/52 Schichten</span></span>
+        <span class="cd">IN 4 TAGEN</span>
+        <button class="btn">ÖFFNEN</button>
+      </div>
+      <div class="fest src">
+        <span class="ti"><b>Musikfest Steinbach 2025</b><span class="d">25.–27. Juli · abgeschlossen</span></span>
+        <span class="srcmark">VORLAGE</span>
+      </div>
+      <div class="fest">
+        <span class="ti"><b>Stadlfest 2025</b><span class="d">5.–6. September · abgeschlossen</span></span>
+        <button class="btn quiet">Als Vorlage</button>
+      </div>
+      <div class="fest">
+        <span class="ti"><b>Musikfest Steinbach 2024</b><span class="d">26.–28. Juli · abgeschlossen</span></span>
+        <button class="btn quiet">Als Vorlage</button>
+      </div>
+    </div>
+
+    <div class="brief">
+      <div class="bh">
+        <h3>Frachtbrief — was kommt mit?</h3>
+        <div class="s">Musikfest Steinbach 2025 → <b>Musikfest Steinbach 2027 · Fr 23.–So 25. Juli</b></div>
+      </div>
+      <div class="frach"><span class="cbx on"></span><span class="anz">4</span><span class="ti"><b>Stationen</b><span class="s">Ausschank, Grill, Kassa, Weinlaube</span></span><button class="detail">EINZELN WÄHLEN ▾</button></div>
+      <div class="frach"><span class="cbx on"></span><span class="anz">11</span><span class="ti"><b>Schichten</b><span class="s">rücken automatisch auf die neuen Tage (gleicher Wochentags-Abstand)</span></span></div>
+      <div class="frach off"><span class="cbx"></span><span class="anz">15</span><span class="ti"><b>Zuweisungen</b><span class="s">Helfer + Verantwortliche — aus, Helfer werden neu eingeteilt</span></span></div>
+      <div class="frach"><span class="cbx on"></span><span class="anz">82</span><span class="ti"><b>Material</b><span class="s">als neue Bestellmenge nehmen:</span>
+        <span class="subopt"><span class="o"><span class="rad"></span>Bestellmenge 2025</span><span class="o"><span class="rad on"></span>Tatsächliche Menge 2025 (empfohlen nach dem Fest)</span></span>
+      </span><button class="detail">EINZELN WÄHLEN ▾</button></div>
+      <div class="frach"><span class="cbx on"></span><span class="anz">14</span><span class="ti"><b>Sponsorings + 4 Kategorien</b><span class="s">€ 4.400 aus 2025 — fürs Anfragen im neuen Jahr</span></span><button class="detail">EINZELN WÄHLEN ▾</button></div>
+      <div class="bf">
+        <span class="sum">Es entsteht: <b>Musikfest Steinbach 2027</b> mit 4 Stationen, 11 Schichten, 82 Materialien, 14 Sponsorings — Helfer leer.</span>
+        <button class="btn primary big">FEST ANLEGEN</button>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE E — „Ein Bogen"
+     Kern: kein Wizard, keine Schritte — EIN Anmeldebogen wie vom
+     Amt. Name/Datum oben, Vorlage wählen, alle Optionen unter-
+     einander, rechts entsteht live die Zusammenfassung. Wer alles
+     lässt wie es ist, füllt zwei Felder aus und drückt den Knopf.
+     ################################################################ -->
+<section class="variant" data-v="e">
+<style>
+  [data-v="e"] .duo { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 24px; }
+  [data-v="e"] .bogen { border: 2.5px solid var(--ink); background: #fff; }
+  [data-v="e"] .bogen .bh { padding: 12px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  [data-v="e"] .bogen .bh h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 18px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="e"] .bogen .bh .nr { font-size: 11px; color: var(--ink-soft); font-weight: 700; }
+  [data-v="e"] .sect { padding: 13px 18px; border-bottom: 1px solid var(--line); }
+  [data-v="e"] .sect .st { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); margin-bottom: 9px; display: flex; align-items: center; gap: 10px; }
+  [data-v="e"] .sect .st::after { content: ""; flex: 1; height: 5px; background-image: radial-gradient(oklch(0.8 0.02 120) 0.9px, transparent 1.1px); background-size: 6px 6px; }
+  [data-v="e"] .frow2 { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 12px; }
+  [data-v="e"] .row { display: flex; align-items: center; gap: 9px; padding: 4px 0; font-size: 13px; }
+  [data-v="e"] .row .m { margin-left: auto; font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
+  [data-v="e"] .bogen .bf { padding: 13px 18px; display: flex; justify-content: flex-end; }
+  [data-v="e"] .summ { border: 2.5px solid var(--ink); background: #fff; position: sticky; top: 12px; }
+  [data-v="e"] .summ .sh { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: var(--yellow); font-family: "Anton", sans-serif; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; }
+  [data-v="e"] .summ ul { list-style: none; padding: 10px 14px; display: grid; gap: 7px; font-size: 12.5px; }
+  [data-v="e"] .summ li { display: flex; gap: 9px; align-items: baseline; }
+  [data-v="e"] .summ li .n { font-family: "Anton", sans-serif; font-size: 14px; width: 30px; text-align: right; flex: none; color: var(--green); }
+  [data-v="e"] .summ li.off { color: var(--ink-soft); }
+  [data-v="e"] .summ li.off .n { color: var(--ink-soft); }
+  [data-v="e"] .summ .sf { border-top: 1.5px solid var(--line); padding: 9px 14px; font-size: 11px; color: var(--ink-soft); }
+  @media (max-width: 900px) {
+    [data-v="e"] .frame { padding: 12px 12px 120px; }
+    [data-v="e"] .duo { grid-template-columns: minmax(0, 1fr); }
+    [data-v="e"] .summ { position: static; }
+    [data-v="e"] .frow2 { grid-template-columns: 1fr; }
+    [data-v="e"] .row { flex-wrap: wrap; }
+    [data-v="e"] .row .m { white-space: normal; margin-left: 25px; width: 100%; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Neues Fest anlegen</h1>
+    <span class="sub">2 Pflichtfelder — der Rest ist vorausgefüllt</span>
+    <button class="newbtn">ABBRECHEN ×</button>
+  </header>
+
+  <div class="duo">
+    <div class="bogen">
+      <div class="bh"><h3>Anmeldebogen</h3><span class="nr">Formblatt F-2027/01</span></div>
+      <div class="sect">
+        <div class="st">1 · Das Fest</div>
+        <div class="frow2">
+          <div><span class="flabel">Name des Fests *</span><input class="finput" value="Musikfest Steinbach 2027"></div>
+          <div><span class="flabel">Beginn *</span><input class="finput" value="Fr 23.07.2027"></div>
+          <div><span class="flabel">Ende</span><input class="finput" value="So 25.07.2027"></div>
+        </div>
+      </div>
+      <div class="sect">
+        <div class="st">2 · Vorlage (optional)</div>
+        <div class="row"><span class="rad on"></span><b>Musikfest Steinbach 2026</b><span class="m">das letzte Musikfest</span></div>
+        <div class="row"><span class="rad"></span>Stadlfest 2025</div>
+        <div class="row"><span class="rad"></span>Ohne Vorlage — leeres Fest</div>
+      </div>
+      <div class="sect">
+        <div class="st">3 · Was übernommen wird</div>
+        <div class="row"><span class="cbx on"></span>Stationen & Schichten<span class="m">4 Stationen · 11 Schichten · Datum rückt automatisch</span></div>
+        <div class="row" style="padding-left:25px"><span class="cbx"></span>… samt Zuweisungen<span class="m">Helfer + Verantwortliche</span></div>
+        <div class="row"><span class="cbx on"></span>Material<span class="m">86 Positionen</span></div>
+        <div class="row" style="padding-left:25px"><span class="rad on"></span>Bestellmenge 2026 <span style="margin:0 8px;color:var(--ink-soft)">oder</span> <span class="rad"></span> tatsächliche Menge</div>
+        <div class="row"><span class="cbx on"></span>Sponsoring-Kategorien + Sponsorings<span class="m">4 Kategorien · 14 Firmen</span></div>
+      </div>
+      <div class="bf"><button class="btn primary big">FEST ANLEGEN</button></div>
+    </div>
+
+    <aside class="summ">
+      <div class="sh">Das entsteht</div>
+      <ul>
+        <li><span class="n">1</span><span><b>Musikfest Steinbach 2027</b> · Fr 23. – So 25. Juli</span></li>
+        <li><span class="n">4</span><span>Stationen mit <b>11 Schichten</b> auf den neuen Tagen</span></li>
+        <li class="off"><span class="n">0</span><span>Zuweisungen — Helfer werden neu eingeteilt</span></li>
+        <li><span class="n">86</span><span>Materialien mit Bestellmengen 2026</span></li>
+        <li><span class="n">14</span><span>Sponsorings (€ 4.850) + 4 Kategorien</span></li>
+      </ul>
+      <div class="sf">Nichts davon ist endgültig — alles lässt sich im neuen Fest ändern.</div>
+    </aside>
+  </div>
+</div>
+</section>
+
+<div id="switcher">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <div class="lbl"><span id="lblMain">A — Plakatwand</span><small id="lblSub">Feste als Plakate, Wizard-Karte darüber</small></div>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</div>
+
+<script>
+  const VARIANTS = [
+    ["a", "Plakatwand", "Feste als Plakate, Wizard-Karte darüber"],
+    ["b", "Chronik", "Zeitstrahl der Vereinsjahre, Vorlage je Zeile"],
+    ["c", "Kopierwerk", "Eigene Werkbank-Seite mit Stempelkarten-Stepper"],
+    ["d", "Frachtbrief", "Ein Manifest: Bausteine an/aus, ein Hebel"],
+    ["e", "Ein Bogen", "Kein Wizard — ein Anmeldebogen + Live-Zusammenfassung"]
+  ];
+  function currentKey() {
+    const v = new URLSearchParams(location.search).get("variant");
+    return VARIANTS.some(x => x[0] === v) ? v : "a";
+  }
+  function show(key) {
+    document.querySelectorAll(".variant").forEach(s => s.classList.toggle("active", s.dataset.v === key));
+    const v = VARIANTS.find(x => x[0] === key);
+    document.getElementById("lblMain").textContent = key.toUpperCase() + " — " + v[1];
+    document.getElementById("lblSub").textContent = v[2];
+    try { history.replaceState(null, "", "?variant=" + key); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function cycle(dir) {
+    const i = VARIANTS.findIndex(x => x[0] === currentKey());
+    show(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0]);
+  }
+  document.getElementById("prev").addEventListener("click", () => cycle(-1));
+  document.getElementById("next").addEventListener("click", () => cycle(1));
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") cycle(-1);
+    if (e.key === "ArrowRight") cycle(1);
+  });
+  show(currentKey());
+
+  /* Checkboxen/Radios erlebbar */
+  document.addEventListener("click", e => {
+    if (e.target.matches(".cbx")) e.target.classList.toggle("on");
+    if (e.target.matches(".rad")) {
+      const scope = e.target.closest(".sect, .blk, .grp, .frach, .row")?.parentElement || document;
+      scope.querySelectorAll(".rad").forEach(r => r.classList.remove("on"));
+      e.target.classList.add("on");
+    }
+  });
+</script>
+</body>
+</html>

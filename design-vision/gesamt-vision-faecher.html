@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Gesamt-Fächer Festmeister: 5 Design-Visionen, umschaltbar via ?variant=a|b|c|d|e -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Gesamt-Fächer (5 Visionen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Anton&family=Public+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.active { display: block; }
+  img { max-width: 100%; }
+  button { font: inherit; cursor: pointer; }
+
+  /* ============ Floating Switcher (nicht Teil des Designs) ============ */
+  #switcher {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; display: flex; align-items: center; gap: 4px;
+    background: #16161a; color: #fff; border-radius: 999px;
+    padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    font: 600 13px/1 "Inter", system-ui, sans-serif;
+  }
+  #switcher button {
+    background: none; border: 0; color: #fff; width: 34px; height: 34px;
+    border-radius: 999px; font-size: 16px;
+  }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 190px; text-align: center; letter-spacing: .01em; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ################################################################
+     VARIANTE A — „Planungstafel"
+     Signature: die Fest-Organisation als große Werkstatt-Tafel.
+     Stationen sind Klemmbretter, Mitglieder sind Anhänger-Karten,
+     Status sind Magnete. Sidebar = dunkle Holz-Werkzeugleiste.
+     ################################################################ -->
+<section class="variant" data-v="a">
+<style>
+  [data-v="a"] {
+    --a-wall: oklch(0.94 0.012 85);
+    --a-wall-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.30 0 0 0 0 0.22 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    --a-wood: oklch(0.32 0.045 55);
+    --a-wood-2: oklch(0.27 0.04 50);
+    --a-paper: oklch(0.985 0.008 90);
+    --a-ink: oklch(0.26 0.02 60);
+    --a-ink-soft: oklch(0.42 0.02 60);
+    --a-green: oklch(0.42 0.09 155);
+    --a-green-soft: oklch(0.93 0.03 155);
+    --a-amber: oklch(0.55 0.13 65);
+    --a-amber-soft: oklch(0.95 0.04 85);
+    --a-red: oklch(0.5 0.16 30);
+    --a-line: oklch(0.86 0.015 80);
+    font-family: "Archivo", system-ui, sans-serif;
+    color: var(--a-ink);
+    background: var(--a-wall);
+    background-image: var(--a-wall-grain);
+  }
+  [data-v="a"] .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+
+  /* Werkzeugleiste */
+  [data-v="a"] .rail {
+    background: linear-gradient(178deg, var(--a-wood), var(--a-wood-2));
+    color: oklch(0.93 0.015 85); padding: 20px 14px; display: flex; flex-direction: column; gap: 4px;
+  }
+  [data-v="a"] .rail .brand { font-weight: 800; font-size: 19px; letter-spacing: -0.01em; padding: 2px 10px 16px; display: flex; align-items: center; gap: 9px; }
+  [data-v="a"] .rail .brand .bmark { width: 26px; height: 26px; border-radius: 6px; background: var(--a-green); display: grid; place-items: center; font-size: 14px; color: #fff; }
+  [data-v="a"] .rail .fest {
+    background: oklch(0.24 0.035 50); border: 1px solid oklch(0.38 0.04 55); border-radius: 9px;
+    padding: 10px 12px; margin: 0 0 16px; font-size: 13px;
+  }
+  [data-v="a"] .rail .fest b { display: block; font-size: 13.5px; }
+  [data-v="a"] .rail .fest span { color: oklch(0.75 0.02 70); font-size: 12px; }
+  [data-v="a"] .rail nav a {
+    display: flex; align-items: center; gap: 10px; color: oklch(0.88 0.015 80); text-decoration: none;
+    padding: 9px 10px; border-radius: 8px; font-weight: 500; font-size: 14px;
+  }
+  [data-v="a"] .rail nav a svg { width: 17px; height: 17px; opacity: .85; }
+  [data-v="a"] .rail nav a:hover { background: oklch(0.37 0.04 55); }
+  [data-v="a"] .rail nav a.on { background: var(--a-green); color: #fff; font-weight: 600; }
+  [data-v="a"] .rail .foot { margin-top: auto; font-size: 12px; color: oklch(0.68 0.02 65); padding: 10px; }
+
+  [data-v="a"] main { padding: 28px 34px 90px; max-width: 1240px; }
+  [data-v="a"] .head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  [data-v="a"] h1 { font-size: 27px; font-weight: 800; letter-spacing: -0.015em; }
+  [data-v="a"] .head .when { color: var(--a-ink-soft); font-size: 14px; }
+  [data-v="a"] .head .cta { margin-left: auto; background: var(--a-green); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; font-size: 13.5px; }
+  [data-v="a"] .head .cta:hover { background: oklch(0.38 0.09 155); }
+  [data-v="a"] .sub { color: var(--a-ink-soft); font-size: 14px; margin-bottom: 24px; }
+  [data-v="a"] .sub b { color: var(--a-ink); }
+
+  /* Status-Magnete */
+  [data-v="a"] .magnets { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 14px; margin-bottom: 30px; }
+  [data-v="a"] .magnet {
+    background: var(--a-paper); border: 1px solid var(--a-line); border-radius: 11px; padding: 15px 16px 14px;
+    box-shadow: 0 1px 2px rgba(60,45,20,.08), 0 3px 9px rgba(60,45,20,.05);
+    position: relative;
+  }
+  [data-v="a"] .magnet .dot { position: absolute; top: 13px; right: 13px; width: 13px; height: 13px; border-radius: 50%;
+    box-shadow: inset 0 -2px 3px rgba(0,0,0,.25), 0 1px 1px rgba(0,0,0,.15); }
+  [data-v="a"] .magnet .dot.g { background: var(--a-green); } [data-v="a"] .magnet .dot.y { background: var(--a-amber); } [data-v="a"] .magnet .dot.r { background: var(--a-red); }
+  [data-v="a"] .magnet h3 { font-size: 13px; font-weight: 600; color: var(--a-ink-soft); margin-bottom: 7px; }
+  [data-v="a"] .magnet .big { font-size: 23px; font-weight: 800; letter-spacing: -0.01em; }
+  [data-v="a"] .magnet .big small { font-size: 14px; font-weight: 500; color: var(--a-ink-soft); }
+  [data-v="a"] .magnet .bar { height: 7px; background: oklch(0.9 0.012 85); border-radius: 4px; margin-top: 11px; overflow: hidden; }
+  [data-v="a"] .magnet .bar i { display: block; height: 100%; border-radius: 4px; background: var(--a-green); }
+  [data-v="a"] .magnet .note { font-size: 12.5px; color: var(--a-ink-soft); margin-top: 9px; }
+
+  [data-v="a"] .cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 26px; align-items: start; }
+  [data-v="a"] h2 { font-size: 16px; font-weight: 700; margin-bottom: 13px; display: flex; align-items: center; gap: 10px; }
+  [data-v="a"] h2 .more { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--a-green); text-decoration: none; }
+
+  /* Klemmbrett */
+  [data-v="a"] .board {
+    background: var(--a-paper); border: 1px solid var(--a-line); border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(60,45,20,.09), 0 8px 22px rgba(60,45,20,.06);
+    position: relative; padding: 24px 20px 16px; margin-bottom: 18px;
+  }
+  [data-v="a"] .board::before {
+    content: ""; position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+    width: 74px; height: 16px; border-radius: 5px 5px 3px 3px;
+    background: linear-gradient(180deg, oklch(0.72 0.015 80), oklch(0.58 0.02 75));
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.5), 0 2px 3px rgba(0,0,0,.22);
+  }
+  [data-v="a"] .board .bhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  [data-v="a"] .board .bhead h3 { font-size: 15px; font-weight: 700; }
+  [data-v="a"] .board .bhead .cnt { font-size: 12.5px; color: var(--a-ink-soft); }
+  [data-v="a"] .board .bhead .warn { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--a-amber); background: var(--a-amber-soft); padding: 3px 9px; border-radius: 999px; }
+  [data-v="a"] .shift { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-top: 1px dashed var(--a-line); flex-wrap: wrap; }
+  [data-v="a"] .shift time { font-size: 13px; font-weight: 600; width: 122px; color: var(--a-ink); font-variant-numeric: tabular-nums; }
+  [data-v="a"] .tag {
+    display: inline-flex; align-items: center; gap: 7px; background: oklch(0.97 0.01 90);
+    border: 1px solid var(--a-line); border-radius: 6px; padding: 4px 10px 4px 7px;
+    font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 1px rgba(60,45,20,.08);
+  }
+  [data-v="a"] .tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: oklch(0.82 0.015 80); box-shadow: inset 0 0 0 1.5px var(--a-paper), 0 0 0 1px oklch(0.72 0.02 75); }
+  [data-v="a"] .tag.free { border-style: dashed; color: var(--a-amber); font-weight: 600; background: transparent; box-shadow: none; }
+  [data-v="a"] .tag.free::before { display: none; }
+
+  /* Materialliste als Tafel-Tabelle */
+  [data-v="a"] table { width: 100%; border-collapse: collapse; background: var(--a-paper); border: 1px solid var(--a-line); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 4px rgba(60,45,20,.09); font-size: 13px; }
+  [data-v="a"] thead th { text-align: left; font-size: 12px; font-weight: 700; color: var(--a-ink-soft); padding: 10px 12px; background: oklch(0.955 0.012 88); border-bottom: 1px solid var(--a-line); }
+  [data-v="a"] tbody td { padding: 9px 12px; border-bottom: 1px solid oklch(0.93 0.01 85); font-variant-numeric: tabular-nums; }
+  [data-v="a"] tbody tr:last-child td { border-bottom: 0; }
+  [data-v="a"] td.num, [data-v="a"] th.num { text-align: right; }
+  [data-v="a"] .ist-ok { color: var(--a-green); font-weight: 600; }
+  [data-v="a"] .ist-diff { color: var(--a-red); font-weight: 600; }
+
+  /* Aufgaben-Zettel */
+  [data-v="a"] .todo { background: var(--a-paper); border: 1px solid var(--a-line); border-radius: 12px; box-shadow: 0 2px 4px rgba(60,45,20,.09); padding: 6px 16px; }
+  [data-v="a"] .todo li { list-style: none; display: flex; gap: 11px; align-items: flex-start; padding: 11px 0; border-bottom: 1px dashed var(--a-line); font-size: 13.5px; }
+  [data-v="a"] .todo li:last-child { border-bottom: 0; }
+  [data-v="a"] .todo .box { width: 16px; height: 16px; border: 1.5px solid oklch(0.6 0.02 70); border-radius: 4px; margin-top: 1px; flex: none; }
+  [data-v="a"] .todo li.done .box { background: var(--a-green); border-color: var(--a-green); position: relative; }
+  [data-v="a"] .todo li.done .box::after { content: "✓"; color: #fff; font-size: 11px; position: absolute; inset: 0; display: grid; place-items: center; }
+  [data-v="a"] .todo li.done span { color: var(--a-ink-soft); text-decoration: line-through; }
+  [data-v="a"] .todo li b { font-weight: 600; }
+  [data-v="a"] .todo .meta { display: block; font-size: 12px; color: var(--a-ink-soft); margin-top: 2px; font-weight: 400; }
+
+  @media (max-width: 900px) {
+    [data-v="a"] .app { grid-template-columns: 1fr; }
+    [data-v="a"] .rail { flex-direction: row; align-items: center; overflow-x: auto; padding: 10px 14px; gap: 8px; }
+    [data-v="a"] .rail .brand { padding: 0 8px 0 0; font-size: 16px; }
+    [data-v="a"] .rail .fest, [data-v="a"] .rail .foot { display: none; }
+    [data-v="a"] .rail nav { display: flex; gap: 2px; }
+    [data-v="a"] .rail nav a { white-space: nowrap; padding: 7px 10px; font-size: 13px; }
+    [data-v="a"] main { padding: 20px 16px 100px; }
+    [data-v="a"] .cols { grid-template-columns: 1fr; }
+    [data-v="a"] .shift time { width: 100%; }
+    [data-v="a"] .tablewrap { overflow-x: auto; }
+  }
+</style>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><span class="bmark">F</span> Festmeister</div>
+    <div class="fest"><b>Musikfest Steinbach</b><span>24.–26. Juli 2026 · noch 4 Tage</span></div>
+    <nav>
+      <a class="on" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg> Dashboard</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> Schichtplan</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg> Material</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg> Ablaufplan</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M15.5 14.6c2.8.2 4.9 1.8 5.6 4.4"/></svg> Mitglieder</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 16.4 6.7 19.1l1-5.8L3.5 9.2l5.9-.9L12 3z"/></svg> Sponsoren</a>
+    </nav>
+    <div class="foot">Musikverein Steinbach<br>Christian D. · Festleitung</div>
+  </aside>
+  <main>
+    <div class="head">
+      <h1>Musikfest Steinbach 2026</h1>
+      <span class="when">Fr 24. – So 26. Juli · Festgelände Steinbach</span>
+      <button class="cta">+ Aus Vorjahr übernehmen</button>
+    </div>
+    <p class="sub">Guten Morgen, Christian — <b>11 Schichten sind noch unbesetzt</b> und 12 Materialpositionen ohne Bestellmenge.</p>
+
+    <div class="magnets">
+      <div class="magnet"><span class="dot y"></span><h3>Schichtplan</h3><div class="big">41<small> / 52 besetzt</small></div><div class="bar"><i style="width:79%"></i></div><div class="note">Ausschank Sa-Abend braucht noch 3 Leute</div></div>
+      <div class="magnet"><span class="dot y"></span><h3>Material</h3><div class="big">74<small> / 86 bestellt</small></div><div class="bar"><i style="width:86%"></i></div><div class="note">12 Positionen ohne Sollmenge</div></div>
+      <div class="magnet"><span class="dot g"></span><h3>Ablaufplan</h3><div class="big">28<small> / 31 erledigt</small></div><div class="bar"><i style="width:90%"></i></div><div class="note">Aufbau startet Fr 08:00</div></div>
+      <div class="magnet"><span class="dot g"></span><h3>Sponsoren</h3><div class="big">€ 4.850<small> · 14 Zusagen</small></div><div class="bar"><i style="width:97%"></i></div><div class="note">2 Rechnungen offen</div></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h2>Schichtplan · kritische Stationen <a class="more" href="#">Alle Stationen →</a></h2>
+        <div class="board">
+          <div class="bhead"><h3>Ausschank</h3><span class="cnt">Zelt Nord · 12 Schichten</span><span class="warn">3 offen</span></div>
+          <div class="shift"><time>Sa 18:00–22:00</time><span class="tag">Franz Hochauer</span><span class="tag">Maria Leitner</span><span class="tag">Peter Gruber</span><span class="tag free">+ 1 offen</span></div>
+          <div class="shift"><time>Sa 22:00–02:00</time><span class="tag">Andreas Pöchhacker</span><span class="tag free">+ 2 offen</span></div>
+          <div class="shift"><time>So 10:00–14:00</time><span class="tag">Elisabeth Auer</span><span class="tag">Josef Brandstetter</span><span class="tag">Karin Fuchs</span></div>
+        </div>
+        <div class="board">
+          <div class="bhead"><h3>Grill</h3><span class="cnt">Küchenzeile · 8 Schichten</span><span class="warn">2 offen</span></div>
+          <div class="shift"><time>Sa 11:00–15:00</time><span class="tag">Herbert Zeller</span><span class="tag">Monika Wagner</span><span class="tag free">+ 1 offen</span></div>
+          <div class="shift"><time>Sa 15:00–19:00</time><span class="tag">Gerhard Eder</span><span class="tag free">+ 1 offen</span></div>
+        </div>
+
+        <h2 style="margin-top:26px">Material · zuletzt geändert <a class="more" href="#">Ganze Liste →</a></h2>
+        <div class="tablewrap">
+        <table>
+          <thead><tr><th>Material</th><th>Kategorie</th><th>Station</th><th>Gebinde</th><th class="num">Soll</th><th class="num">Ist</th><th class="num">Preis</th></tr></thead>
+          <tbody>
+            <tr><td><b>Bier „Wieselburger"</b></td><td>Getränke</td><td>Ausschank</td><td>Fass 50 l</td><td class="num">18</td><td class="num ist-ok">16</td><td class="num">€ 132,00</td></tr>
+            <tr><td><b>Brathendl</b></td><td>Speisen</td><td>Grill</td><td>Stk.</td><td class="num">450</td><td class="num ist-diff">512</td><td class="num">€ 4,10</td></tr>
+            <tr><td><b>Weißwein Grüner Veltliner</b></td><td>Getränke</td><td>Weinlaube</td><td>Karton 6 × 0,75 l</td><td class="num">24</td><td class="num ist-ok">22</td><td class="num">€ 41,40</td></tr>
+            <tr><td><b>Servietten</b></td><td>Ausstattung</td><td>Alle</td><td>Pkg. 250 Stk.</td><td class="num">30</td><td class="num">—</td><td class="num">€ 3,90</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <div>
+        <h2>Nächste Aufgaben <a class="more" href="#">Ablaufplan →</a></h2>
+        <ul class="todo">
+          <li class="done"><span class="box"></span><span><b>Schankanlage reservieren</b><span class="meta">Getränke Hofmann · erledigt Di</span></span></li>
+          <li><span class="box"></span><span><b>Kühlwagen bestätigen</b><span class="meta">bis Mi · Herbert Z.</span></span></li>
+          <li><span class="box"></span><span><b>Bühnenplan an die Kapelle</b><span class="meta">bis Do · Christian D.</span></span></li>
+          <li><span class="box"></span><span><b>Wechselgeld holen</b><span class="meta">Fr 09:00 · Raiffeisenbank</span></span></li>
+          <li><span class="box"></span><span><b>Aufbau Zelt Nord</b><span class="meta">Fr 08:00 · 12 Helfer eingeteilt</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE B — „Festbuch"
+     Signature: das Fest als geführtes Kassabuch des Schriftführers.
+     Register-Tabs am Buchrand, Ledger-Linien mit roter Marginale,
+     Status als Stempel, Summenzeilen mit doppelter Unterstreichung.
+     ################################################################ -->
+<section class="variant" data-v="b">
+<style>
+  [data-v="b"] {
+    --b-desk: oklch(0.32 0.03 45);
+    --b-page: oklch(0.965 0.012 92);
+    --b-page-2: oklch(0.945 0.014 90);
+    --b-ink: oklch(0.28 0.025 50);
+    --b-ink-soft: oklch(0.45 0.02 50);
+    --b-ox: oklch(0.42 0.13 25);
+    --b-ox-soft: oklch(0.93 0.03 30);
+    --b-rule: oklch(0.85 0.02 80);
+    --b-green: oklch(0.45 0.09 150);
+    font-family: "Inter", system-ui, sans-serif;
+    color: var(--b-ink);
+    background: var(--b-desk);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    min-height: 100vh;
+  }
+  [data-v="b"] .topline { display: flex; align-items: center; gap: 14px; max-width: 1150px; margin: 0 auto; padding: 16px 20px 12px; color: oklch(0.9 0.015 85); }
+  [data-v="b"] .topline .wordmark { font-family: "Source Serif 4", serif; font-weight: 700; font-size: 19px; letter-spacing: .01em; }
+  [data-v="b"] .topline .sep { opacity: .45; }
+  [data-v="b"] .topline .festsel { font-size: 13.5px; background: oklch(0.38 0.03 45); border: 1px solid oklch(0.48 0.03 50); color: inherit; border-radius: 7px; padding: 7px 12px; }
+  [data-v="b"] .topline .user { margin-left: auto; font-size: 13px; color: oklch(0.78 0.02 70); }
+
+  [data-v="b"] .book { max-width: 1150px; margin: 0 auto 110px; display: grid; grid-template-columns: 46px 1fr; align-items: start; padding: 0 20px; }
+  [data-v="b"] .tabs { display: flex; flex-direction: column; gap: 7px; padding-top: 46px; }
+  [data-v="b"] .tabs a {
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    text-decoration: none; color: oklch(0.94 0.01 85); background: oklch(0.5 0.04 50);
+    padding: 14px 0; width: 40px; text-align: center; font-size: 12.5px; font-weight: 600; letter-spacing: .03em;
+    border-radius: 0 8px 8px 0; box-shadow: inset 2px 0 3px rgba(0,0,0,.18);
+  }
+  [data-v="b"] .tabs a:hover { background: oklch(0.56 0.045 50); }
+  [data-v="b"] .tabs a.on { background: var(--b-ox); width: 46px; font-weight: 700; box-shadow: inset 2px 0 3px rgba(0,0,0,.25); }
+
+  [data-v="b"] .page {
+    background: var(--b-page); border-radius: 3px 10px 10px 3px; min-height: 92vh;
+    box-shadow: 0 1px 0 oklch(0.88 0.015 88) inset, 6px 0 0 -3px oklch(0.9 0.015 90), 10px 0 0 -6px oklch(0.82 0.02 85), 0 18px 45px rgba(0,0,0,.4);
+    padding: 40px 48px 48px 56px; position: relative;
+  }
+  [data-v="b"] .page::before { content: ""; position: absolute; top: 0; bottom: 0; left: 40px; width: 1px; background: oklch(0.75 0.09 25 / .5); }
+
+  [data-v="b"] .phead { border-bottom: 3px double var(--b-ink); padding-bottom: 16px; margin-bottom: 26px; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+  [data-v="b"] .phead h1 { font-family: "Source Serif 4", serif; font-size: 30px; font-weight: 700; letter-spacing: 0; }
+  [data-v="b"] .phead .jahr { font-family: "Source Serif 4", serif; font-size: 15px; color: var(--b-ink-soft); font-style: italic; }
+  [data-v="b"] .phead .dupe { margin-left: auto; background: transparent; border: 1.5px solid var(--b-ox); color: var(--b-ox); border-radius: 7px; padding: 8px 15px; font-weight: 600; font-size: 13px; }
+  [data-v="b"] .phead .dupe:hover { background: var(--b-ox-soft); }
+
+  [data-v="b"] h2 { font-family: "Source Serif 4", serif; font-size: 19px; font-weight: 600; margin: 30px 0 4px; display: flex; align-items: baseline; gap: 12px; }
+  [data-v="b"] h2 .folio { margin-left: auto; font-size: 12px; color: var(--b-ink-soft); font-family: "Inter", sans-serif; font-weight: 500; }
+  [data-v="b"] .rule { border: 0; border-top: 1px solid var(--b-ink); margin-bottom: 14px; }
+
+  /* Kontoübersicht — Ledger-Zeilen */
+  [data-v="b"] .konto { width: 100%; border-collapse: collapse; font-size: 14px; }
+  [data-v="b"] .konto td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--b-rule); font-variant-numeric: tabular-nums; }
+  [data-v="b"] .konto td:first-child { font-weight: 600; width: 34%; }
+  [data-v="b"] .konto td.val { text-align: right; font-weight: 600; width: 130px; white-space: nowrap; }
+  [data-v="b"] .konto td.note { color: var(--b-ink-soft); font-size: 13px; }
+  [data-v="b"] .stamp {
+    display: inline-block; border: 2px solid; border-radius: 4px; padding: 2px 8px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+    transform: rotate(-3deg); opacity: .9;
+  }
+  [data-v="b"] .stamp.ok { color: var(--b-green); border-color: var(--b-green); }
+  [data-v="b"] .stamp.warn { color: var(--b-ox); border-color: var(--b-ox); }
+
+  [data-v="b"] .duo { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; align-items: start; }
+
+  /* Schichten-Ledger */
+  [data-v="b"] .ledger { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  [data-v="b"] .ledger th { font-family: "Source Serif 4", serif; font-style: italic; font-weight: 600; text-align: left; font-size: 13px; color: var(--b-ink-soft); padding: 7px 10px 7px 0; border-bottom: 1px solid var(--b-ink); }
+  [data-v="b"] .ledger td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--b-rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+  [data-v="b"] .ledger .station { font-weight: 600; }
+  [data-v="b"] .ledger .who { color: var(--b-ink); }
+  [data-v="b"] .ledger .who i { font-style: normal; color: var(--b-ox); font-weight: 600; }
+  [data-v="b"] th.num, [data-v="b"] td.num { text-align: right; }
+  [data-v="b"] .sum td { border-top: 1.5px solid var(--b-ink); border-bottom: 3px double var(--b-ink); font-weight: 700; }
+  [data-v="b"] .diff-plus { color: var(--b-ox); font-weight: 600; }
+  [data-v="b"] .diff-ok { color: var(--b-green); font-weight: 600; }
+
+  /* Notizen / Aufgaben in Buchform */
+  [data-v="b"] .notes { font-size: 14px; }
+  [data-v="b"] .notes li { list-style: none; padding: 9px 0; border-bottom: 1px solid var(--b-rule); display: flex; gap: 10px; }
+  [data-v="b"] .notes .tick { font-family: "Source Serif 4", serif; color: var(--b-green); font-weight: 700; width: 18px; flex: none; }
+  [data-v="b"] .notes .open { color: var(--b-ox); font-weight: 700; width: 18px; flex: none; }
+  [data-v="b"] .notes .meta { display: block; font-size: 12.5px; color: var(--b-ink-soft); margin-top: 1px; }
+  [data-v="b"] .notes li.done span.txt { color: var(--b-ink-soft); }
+
+  @media (max-width: 900px) {
+    [data-v="b"] .book { grid-template-columns: 1fr; padding: 0 10px; }
+    [data-v="b"] .tabs { flex-direction: row; padding: 0 0 8px; overflow-x: auto; }
+    [data-v="b"] .tabs a { writing-mode: horizontal-tb; transform: none; width: auto; padding: 9px 14px; border-radius: 8px 8px 0 0; box-shadow: none; }
+    [data-v="b"] .tabs a.on { width: auto; }
+    [data-v="b"] .page { padding: 24px 18px 32px 30px; border-radius: 0 0 10px 10px; }
+    [data-v="b"] .page::before { left: 18px; }
+    [data-v="b"] .duo { grid-template-columns: 1fr; gap: 10px; }
+    [data-v="b"] .tablewrap { overflow-x: auto; }
+  }
+</style>
+<div class="topline">
+  <span class="wordmark">Festmeister</span><span class="sep">·</span>
+  <select class="festsel"><option>Musikfest Steinbach 2026</option><option>Musikfest Steinbach 2025</option><option>Frühjahrskonzert 2026</option></select>
+  <span class="user">Christian D. · Festleitung</span>
+</div>
+<div class="book">
+  <nav class="tabs">
+    <a class="on" href="#">Übersicht</a>
+    <a href="#">Schichten</a>
+    <a href="#">Material</a>
+    <a href="#">Ablauf</a>
+    <a href="#">Mitglieder</a>
+    <a href="#">Sponsoren</a>
+  </nav>
+  <div class="page">
+    <div class="phead">
+      <h1>Musikfest Steinbach</h1>
+      <span class="jahr">Jahrgang 2026 · Fr 24. – So 26. Juli · noch 4 Tage</span>
+      <button class="dupe">Aus Jahrgang 2025 übernehmen</button>
+    </div>
+
+    <h2>Stand der Vorbereitung <span class="folio">Seite 1 · Stand 20. Juli 2026</span></h2>
+    <hr class="rule">
+    <table class="konto">
+      <tr><td>Schichtplan</td><td class="note">52 Schichten an 6 Stationen — Ausschank Sa-Abend fehlen 3 Leute</td><td class="val">41 / 52</td><td class="val"><span class="stamp warn">11 offen</span></td></tr>
+      <tr><td>Material</td><td class="note">86 Positionen — 12 ohne Sollmenge, Bestellung Getränke läuft</td><td class="val">74 / 86</td><td class="val"><span class="stamp warn">offen</span></td></tr>
+      <tr><td>Ablaufplan</td><td class="note">Aufbau beginnt Freitag 08:00 — 3 Punkte unerledigt</td><td class="val">28 / 31</td><td class="val"><span class="stamp ok">im Plan</span></td></tr>
+      <tr><td>Sponsoren</td><td class="note">14 Zusagen — 2 Rechnungen noch nicht gestellt</td><td class="val">€ 4.850</td><td class="val"><span class="stamp ok">gedeckt</span></td></tr>
+    </table>
+
+    <div class="duo">
+      <div>
+        <h2>Schichten · offene Posten <span class="folio">Auszug</span></h2>
+        <hr class="rule">
+        <div class="tablewrap">
+        <table class="ledger">
+          <thead><tr><th>Station</th><th>Schicht</th><th>Eingeteilt</th><th class="num">Fehlt</th></tr></thead>
+          <tbody>
+            <tr><td class="station">Ausschank</td><td>Sa 18–22</td><td class="who">F. Hochauer, M. Leitner, P. Gruber</td><td class="num diff-plus">1</td></tr>
+            <tr><td class="station">Ausschank</td><td>Sa 22–02</td><td class="who">A. Pöchhacker</td><td class="num diff-plus">2</td></tr>
+            <tr><td class="station">Grill</td><td>Sa 11–15</td><td class="who">H. Zeller, M. Wagner</td><td class="num diff-plus">1</td></tr>
+            <tr><td class="station">Kassa</td><td>Fr 17–21</td><td class="who">E. Auer, J. Brandstetter</td><td class="num diff-ok">—</td></tr>
+            <tr class="sum"><td colspan="3">Unbesetzt gesamt</td><td class="num">11</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h2>Material · Soll und Ist <span class="folio">Auszug Getränke</span></h2>
+        <hr class="rule">
+        <div class="tablewrap">
+        <table class="ledger">
+          <thead><tr><th>Position</th><th>Gebinde</th><th class="num">Soll</th><th class="num">Ist</th><th class="num">à Preis</th><th class="num">Summe</th></tr></thead>
+          <tbody>
+            <tr><td>Bier „Wieselburger"</td><td>Fass 50 l</td><td class="num">18</td><td class="num">16</td><td class="num">132,00</td><td class="num">2.112,00</td></tr>
+            <tr><td>Grüner Veltliner</td><td>Ktn. 6 × 0,75</td><td class="num">24</td><td class="num">22</td><td class="num">41,40</td><td class="num">910,80</td></tr>
+            <tr><td>Mineralwasser</td><td>Kiste 12 × 1 l</td><td class="num">40</td><td class="num">35</td><td class="num">9,60</td><td class="num">336,00</td></tr>
+            <tr><td>Almdudler</td><td>Kiste 24 × 0,35</td><td class="num">15</td><td class="num">15</td><td class="num">21,10</td><td class="num">316,50</td></tr>
+            <tr class="sum"><td colspan="5">Getränke gesamt (Ist)</td><td class="num">€ 3.675,30</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <div>
+        <h2>Vermerke <span class="folio">diese Woche</span></h2>
+        <hr class="rule">
+        <ul class="notes">
+          <li class="done"><span class="tick">✓</span><span class="txt">Schankanlage reserviert<span class="meta">Getränke Hofmann · Di 15. Juli</span></span></li>
+          <li><span class="open">□</span><span class="txt"><b>Kühlwagen bestätigen</b><span class="meta">bis Mittwoch · Herbert Z.</span></span></li>
+          <li><span class="open">□</span><span class="txt"><b>Bühnenplan an die Kapelle</b><span class="meta">bis Donnerstag · Christian D.</span></span></li>
+          <li><span class="open">□</span><span class="txt"><b>Wechselgeld holen</b><span class="meta">Freitag 09:00 · Raiffeisenbank</span></span></li>
+          <li class="done"><span class="tick">✓</span><span class="txt">Sponsortafeln gedruckt<span class="meta">Druckerei Kalteis · Mo 14. Juli</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- INSERT:B -->
+<!-- ################################################################
+     VARIANTE C — „Bauplan"
+     Signature: das Fest als technische Zeichnung. Millimeterraster,
+     Plankopf (Schriftfeld) als Kopfzeile, Blätter als Navigation,
+     Fortschritt als Maßband mit Ticks, Mono-Ziffern, Signalorange.
+     ################################################################ -->
+<section class="variant" data-v="c">
+<style>
+  [data-v="c"] {
+    --c-bg: oklch(0.965 0.006 95);
+    --c-grid-s: oklch(0.93 0.01 95);
+    --c-grid-l: oklch(0.885 0.012 95);
+    --c-ink: oklch(0.25 0.015 260);
+    --c-ink-soft: oklch(0.45 0.015 260);
+    --c-line: oklch(0.35 0.015 260);
+    --c-orange: oklch(0.62 0.17 45);
+    --c-orange-soft: oklch(0.95 0.035 55);
+    --c-green: oklch(0.5 0.1 150);
+    --c-panel: oklch(0.985 0.004 95);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    color: var(--c-ink);
+    background: var(--c-bg);
+    background-image:
+      linear-gradient(var(--c-grid-l) 1px, transparent 1px),
+      linear-gradient(90deg, var(--c-grid-l) 1px, transparent 1px),
+      linear-gradient(var(--c-grid-s) 1px, transparent 1px),
+      linear-gradient(90deg, var(--c-grid-s) 1px, transparent 1px);
+    background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+    min-height: 100vh;
+  }
+  [data-v="c"] .sheet { max-width: 1220px; margin: 26px auto 110px; padding: 0 22px; }
+
+  /* Plankopf */
+  [data-v="c"] .plankopf {
+    display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr 1fr;
+    border: 1.5px solid var(--c-line); background: var(--c-panel);
+  }
+  [data-v="c"] .plankopf > div { padding: 10px 14px 9px; border-right: 1px solid var(--c-line); }
+  [data-v="c"] .plankopf > div:last-child { border-right: 0; }
+  [data-v="c"] .plankopf label { display: block; font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--c-ink-soft); margin-bottom: 3px; font-family: "IBM Plex Mono", monospace; }
+  [data-v="c"] .plankopf b { font-size: 15px; font-weight: 600; }
+  [data-v="c"] .plankopf .proj b { font-size: 18px; font-weight: 700; }
+  [data-v="c"] .plankopf .mono { font-family: "IBM Plex Mono", monospace; font-size: 14px; font-weight: 500; }
+
+  /* Blätter */
+  [data-v="c"] .blaetter { display: flex; border: 1.5px solid var(--c-line); border-top: 0; background: var(--c-panel); overflow-x: auto; }
+  [data-v="c"] .blaetter a { text-decoration: none; color: var(--c-ink-soft); font-size: 13px; font-weight: 500; padding: 10px 18px; border-right: 1px solid oklch(0.85 0.01 95); white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+  [data-v="c"] .blaetter a .code { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--c-ink-soft); }
+  [data-v="c"] .blaetter a:hover { background: oklch(0.955 0.006 95); }
+  [data-v="c"] .blaetter a.on { color: var(--c-ink); font-weight: 600; box-shadow: inset 0 -3px 0 var(--c-orange); }
+  [data-v="c"] .blaetter .aktion { margin-left: auto; border: 0; background: var(--c-ink); color: #fff; font-weight: 600; font-size: 13px; padding: 0 18px; white-space: nowrap; }
+  [data-v="c"] .blaetter .aktion:hover { background: oklch(0.35 0.02 260); }
+
+  [data-v="c"] .content { margin-top: 30px; }
+  [data-v="c"] h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  [data-v="c"] .meta { color: var(--c-ink-soft); font-size: 13.5px; font-family: "IBM Plex Mono", monospace; margin-bottom: 28px; }
+
+  /* Maßband-Fortschritt */
+  [data-v="c"] .gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1.5px solid var(--c-line); background: var(--c-panel); margin-bottom: 32px; }
+  [data-v="c"] .gauge { padding: 16px 18px 14px; border-right: 1px solid oklch(0.85 0.01 95); }
+  [data-v="c"] .gauge:last-child { border-right: 0; }
+  [data-v="c"] .gauge .glabel { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  [data-v="c"] .gauge .glabel b { font-size: 13.5px; font-weight: 600; }
+  [data-v="c"] .gauge .glabel .val { font-family: "IBM Plex Mono", monospace; font-size: 14px; font-weight: 600; }
+  [data-v="c"] .gauge .val.warn { color: var(--c-orange); }
+  [data-v="c"] .gauge .val.ok { color: var(--c-green); }
+  [data-v="c"] .ruler { position: relative; height: 22px; border: 1px solid var(--c-line); background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.8 0.01 95) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--c-line) 49px 50px);
+    background-size: 100% 40%, 100% 70%; background-repeat: repeat-x; background-position: bottom; }
+  [data-v="c"] .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--c-orange); opacity: .28; }
+  [data-v="c"] .ruler em { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--c-orange); }
+  [data-v="c"] .gauge .gnote { font-size: 12px; color: var(--c-ink-soft); margin-top: 9px; }
+
+  [data-v="c"] .split { display: grid; grid-template-columns: 1.55fr 1fr; gap: 28px; align-items: start; }
+  [data-v="c"] .detail { border: 1.5px solid var(--c-line); background: var(--c-panel); margin-bottom: 24px; }
+  [data-v="c"] .detail .dhead { display: flex; align-items: baseline; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--c-line); }
+  [data-v="c"] .detail .dhead h3 { font-size: 13px; font-weight: 700; letter-spacing: .05em; }
+  [data-v="c"] .detail .dhead .code { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--c-ink-soft); }
+  [data-v="c"] .detail .dhead .flag { margin-left: auto; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600; color: var(--c-orange); background: var(--c-orange-soft); padding: 2px 8px; }
+  [data-v="c"] .detail .dbody { padding: 8px 16px 12px; }
+
+  [data-v="c"] .srow { display: grid; grid-template-columns: 120px 1fr 70px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px dashed oklch(0.85 0.01 95); font-size: 13px; }
+  [data-v="c"] .srow:last-child { border-bottom: 0; }
+  [data-v="c"] .srow time { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 12.5px; }
+  [data-v="c"] .srow .names span { display: inline-block; border: 1px solid oklch(0.82 0.012 95); padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 12px; background: var(--c-bg); }
+  [data-v="c"] .srow .stat { text-align: right; font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600; }
+  [data-v="c"] .srow .stat.warn { color: var(--c-orange); } [data-v="c"] .srow .stat.ok { color: var(--c-green); }
+
+  [data-v="c"] table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  [data-v="c"] th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-family: "IBM Plex Mono", monospace; color: var(--c-ink-soft); padding: 8px 10px; border-bottom: 1px solid var(--c-line); }
+  [data-v="c"] td { padding: 8px 10px; border-bottom: 1px solid oklch(0.9 0.008 95); font-variant-numeric: tabular-nums; }
+  [data-v="c"] td.mono { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+  [data-v="c"] th.num, [data-v="c"] td.num { text-align: right; }
+  [data-v="c"] .delta-warn { color: var(--c-orange); font-weight: 600; } [data-v="c"] .delta-ok { color: var(--c-green); font-weight: 600; }
+
+  [data-v="c"] .tasks { border: 1.5px solid var(--c-line); background: var(--c-panel); }
+  [data-v="c"] .tasks .dhead { padding: 10px 16px; border-bottom: 1px solid var(--c-line); font-size: 13px; font-weight: 700; letter-spacing: .05em; }
+  [data-v="c"] .tasks li { list-style: none; display: grid; grid-template-columns: 60px 1fr; gap: 12px; padding: 10px 16px; border-bottom: 1px dashed oklch(0.85 0.01 95); font-size: 13px; }
+  [data-v="c"] .tasks li:last-child { border-bottom: 0; }
+  [data-v="c"] .tasks .tcode { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600; color: var(--c-ink-soft); padding-top: 1px; }
+  [data-v="c"] .tasks li.done .tcode { color: var(--c-green); }
+  [data-v="c"] .tasks li.done .ttxt { color: var(--c-ink-soft); text-decoration: line-through; }
+  [data-v="c"] .tasks .tmeta { display: block; font-size: 12px; color: var(--c-ink-soft); margin-top: 1px; }
+
+  @media (max-width: 900px) {
+    [data-v="c"] .sheet { padding: 0 10px; margin-top: 12px; }
+    [data-v="c"] .plankopf { grid-template-columns: 1fr 1fr; }
+    [data-v="c"] .plankopf .proj { grid-column: 1 / -1; }
+    [data-v="c"] .plankopf > div { border-bottom: 1px solid oklch(0.85 0.01 95); }
+    [data-v="c"] .split { grid-template-columns: 1fr; }
+    [data-v="c"] .srow { grid-template-columns: 1fr 70px; }
+    [data-v="c"] .srow time { grid-column: 1 / -1; }
+    [data-v="c"] .tablewrap { overflow-x: auto; }
+  }
+</style>
+<div class="sheet">
+  <header class="plankopf">
+    <div class="proj"><label>Projekt</label><b>Musikfest Steinbach 2026</b></div>
+    <div><label>Zeitraum</label><span class="mono">24.–26.07.</span></div>
+    <div><label>Stand</label><span class="mono">20.07.2026</span></div>
+    <div><label>Blatt</label><b>Übersicht</b></div>
+    <div><label>Festleitung</label><b>C. Danner</b></div>
+  </header>
+  <nav class="blaetter">
+    <a class="on" href="#"><span class="code">B-01</span> Übersicht</a>
+    <a href="#"><span class="code">B-02</span> Schichtplan</a>
+    <a href="#"><span class="code">B-03</span> Material</a>
+    <a href="#"><span class="code">B-04</span> Ablaufplan</a>
+    <a href="#"><span class="code">B-05</span> Mitglieder</a>
+    <a href="#"><span class="code">B-06</span> Sponsoren</a>
+    <button class="aktion">Aus Vorjahr übernehmen</button>
+  </nav>
+
+  <div class="content">
+    <h1>Übersicht</h1>
+    <p class="meta">T−4 TAGE · AUFBAU FR 08:00 · 52 SCHICHTEN · 86 MATERIALPOSITIONEN</p>
+
+    <div class="gauges">
+      <div class="gauge"><div class="glabel"><b>Schichtplan</b><span class="val warn">41/52</span></div><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div><div class="gnote">11 unbesetzt — Ausschank Sa-Abend kritisch</div></div>
+      <div class="gauge"><div class="glabel"><b>Material bestellt</b><span class="val warn">74/86</span></div><div class="ruler"><i style="width:86%"></i><em style="left:86%"></em></div><div class="gnote">12 Positionen ohne Sollmenge</div></div>
+      <div class="gauge"><div class="glabel"><b>Ablaufplan</b><span class="val ok">28/31</span></div><div class="ruler"><i style="width:90%"></i><em style="left:90%"></em></div><div class="gnote">Auf-/Abbau vollständig eingeteilt</div></div>
+      <div class="gauge"><div class="glabel"><b>Sponsoren</b><span class="val ok">€ 4.850</span></div><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><div class="gnote">14 Zusagen · 2 Rechnungen offen</div></div>
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="detail">
+          <div class="dhead"><h3>DETAIL A — AUSSCHANK</h3><span class="code">ST-01 · ZELT NORD</span><span class="flag">3 OFFEN</span></div>
+          <div class="dbody">
+            <div class="srow"><time>SA 18:00–22:00</time><div class="names"><span>Hochauer F.</span><span>Leitner M.</span><span>Gruber P.</span></div><span class="stat warn">3/4</span></div>
+            <div class="srow"><time>SA 22:00–02:00</time><div class="names"><span>Pöchhacker A.</span></div><span class="stat warn">1/3</span></div>
+            <div class="srow"><time>SO 10:00–14:00</time><div class="names"><span>Auer E.</span><span>Brandstetter J.</span><span>Fuchs K.</span></div><span class="stat ok">3/3</span></div>
+          </div>
+        </div>
+        <div class="detail">
+          <div class="dhead"><h3>STÜCKLISTE — GETRÄNKE</h3><span class="code">MAT-K1 · AUSZUG</span></div>
+          <div class="dbody tablewrap">
+            <table>
+              <thead><tr><th>Pos.</th><th>Material</th><th>Gebinde</th><th class="num">Soll</th><th class="num">Ist</th><th class="num">Δ</th><th class="num">€/Einh.</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">K1-01</td><td><b>Bier „Wieselburger"</b></td><td>Fass 50 l</td><td class="num">18</td><td class="num">16</td><td class="num delta-ok">−2</td><td class="num">132,00</td></tr>
+                <tr><td class="mono">K1-02</td><td><b>Grüner Veltliner</b></td><td>Ktn. 6×0,75</td><td class="num">24</td><td class="num">22</td><td class="num delta-ok">−2</td><td class="num">41,40</td></tr>
+                <tr><td class="mono">K1-07</td><td><b>Mineralwasser</b></td><td>Kiste 12×1 l</td><td class="num">40</td><td class="num">35</td><td class="num delta-ok">−5</td><td class="num">9,60</td></tr>
+                <tr><td class="mono">K2-03</td><td><b>Brathendl</b></td><td>Stk.</td><td class="num">450</td><td class="num">512</td><td class="num delta-warn">+62</td><td class="num">4,10</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <ul class="tasks">
+        <li class="dhead" style="display:block">NÄCHSTE POSITIONEN — ABLAUFPLAN</li>
+        <li class="done"><span class="tcode">A-12 ✓</span><span class="ttxt">Schankanlage reservieren<span class="tmeta">Getränke Hofmann · Di 15.07.</span></span></li>
+        <li><span class="tcode">A-13</span><span class="ttxt"><b>Kühlwagen bestätigen</b><span class="tmeta">bis Mi 22.07. · Zeller H.</span></span></li>
+        <li><span class="tcode">A-14</span><span class="ttxt"><b>Bühnenplan an die Kapelle</b><span class="tmeta">bis Do 23.07. · Danner C.</span></span></li>
+        <li><span class="tcode">A-15</span><span class="ttxt"><b>Wechselgeld holen</b><span class="tmeta">Fr 09:00 · Raiffeisenbank</span></span></li>
+        <li><span class="tcode">A-16</span><span class="ttxt"><b>Aufbau Zelt Nord</b><span class="tmeta">Fr 08:00 · 12 Helfer</span></span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- INSERT:C -->
+<!-- ################################################################
+     VARIANTE D — „Plakatdruck"
+     Signature: jedes Fest bekommt seine Plakat-Identität. Der Kopf
+     der App IST das Festplakat (Siebdruck: satte Fläche, Raster-
+     Textur, Displayschrift). Das Werkzeug darunter bleibt ruhig.
+     ################################################################ -->
+<section class="variant" data-v="d">
+<style>
+  [data-v="d"] {
+    --d-paper: oklch(0.97 0.008 95);
+    --d-ink: oklch(0.24 0.02 145);
+    --d-ink-soft: oklch(0.44 0.02 145);
+    --d-green: oklch(0.4 0.1 160);
+    --d-green-deep: oklch(0.33 0.09 160);
+    --d-yellow: oklch(0.86 0.15 92);
+    --d-red: oklch(0.55 0.18 30);
+    --d-line: oklch(0.87 0.012 100);
+    --d-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.13'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.13'/%3E%3C/svg%3E");
+    --d-halftone-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Ccircle cx='3' cy='3' r='1' fill='%23253b2e' opacity='0.16'/%3E%3Ccircle cx='9' cy='9' r='1' fill='%23253b2e' opacity='0.16'/%3E%3C/svg%3E");
+    font-family: "Public Sans", system-ui, sans-serif;
+    color: var(--d-ink); background: var(--d-paper); min-height: 100vh;
+  }
+  [data-v="d"] .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 110px; }
+  [data-v="d"] .toprow { display: flex; align-items: center; gap: 14px; padding: 4px 2px 14px; font-size: 13.5px; }
+  [data-v="d"] .toprow .wordmark { font-family: "Anton", sans-serif; font-size: 19px; letter-spacing: .02em; color: var(--d-ink); }
+  [data-v="d"] .toprow select { font: 500 13px "Public Sans", sans-serif; border: 1.5px solid var(--d-ink); background: transparent; padding: 6px 10px; border-radius: 0; }
+  [data-v="d"] .toprow .user { margin-left: auto; color: var(--d-ink-soft); }
+
+  /* Das Plakat */
+  [data-v="d"] .poster {
+    background: var(--d-green); background-image: var(--d-halftone);
+    color: oklch(0.97 0.01 100); padding: 34px 38px 0; position: relative;
+  }
+  [data-v="d"] .poster .over { font-weight: 600; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: var(--d-yellow); }
+  [data-v="d"] .poster h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: clamp(40px, 6vw, 74px); line-height: 1.02; letter-spacing: .005em; text-transform: uppercase; margin: 6px 0 10px; }
+  [data-v="d"] .poster .sub { font-size: 15px; font-weight: 500; color: oklch(0.9 0.02 110); padding-bottom: 24px; }
+  [data-v="d"] .poster .sub b { color: var(--d-yellow); }
+  [data-v="d"] .poster .dupe { position: absolute; top: 30px; right: 34px; background: var(--d-yellow); color: var(--d-ink); border: 0; padding: 11px 18px; font-weight: 700; font-size: 13px; letter-spacing: .02em; }
+  [data-v="d"] .poster .dupe:hover { background: oklch(0.9 0.14 92); }
+  [data-v="d"] .poster nav { display: flex; gap: 0; background: var(--d-green-deep); margin: 0 -38px; padding: 0 38px; overflow-x: auto; }
+  [data-v="d"] .poster nav a { color: oklch(0.88 0.02 120); text-decoration: none; font-weight: 600; font-size: 14px; padding: 14px 18px; white-space: nowrap; }
+  [data-v="d"] .poster nav a:hover { color: #fff; }
+  [data-v="d"] .poster nav a.on { color: var(--d-ink); background: var(--d-paper); }
+
+  /* Programm-/Stats-Streifen wie Plakatfuß */
+  [data-v="d"] .stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 2.5px solid var(--d-ink); border-top: 0; }
+  [data-v="d"] .stat { padding: 18px 20px 16px; border-right: 2.5px solid var(--d-ink); position: relative; }
+  [data-v="d"] .stat:last-child { border-right: 0; }
+  [data-v="d"] .stat .num { font-family: "Anton", sans-serif; font-size: 34px; line-height: 1; letter-spacing: .01em; }
+  [data-v="d"] .stat .lab { font-size: 13px; font-weight: 600; margin-top: 6px; }
+  [data-v="d"] .stat .det { font-size: 12.5px; color: var(--d-ink-soft); margin-top: 2px; }
+  [data-v="d"] .stat.hot { background: var(--d-yellow); background-image: var(--d-halftone-ink); }
+  [data-v="d"] .stat.hot .det { color: oklch(0.38 0.03 100); }
+
+  [data-v="d"] h2 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 38px 0 14px; display: flex; align-items: center; gap: 12px; }
+  [data-v="d"] h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  [data-v="d"] h2 a { font-size: 12.5px; letter-spacing: .02em; text-transform: none; color: var(--d-green); text-decoration: none; font-weight: 700; }
+
+  [data-v="d"] .duo { display: grid; grid-template-columns: 1.55fr 1fr; gap: 30px; align-items: start; }
+
+  /* Schichtplan-Block */
+  [data-v="d"] .stationblk { border: 2px solid var(--d-ink); margin-bottom: 16px; background: #fff; }
+  [data-v="d"] .stationblk .shead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 2px solid var(--d-ink); }
+  [data-v="d"] .stationblk .shead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 17px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="d"] .stationblk .shead .cnt { font-size: 12.5px; color: var(--d-ink-soft); }
+  [data-v="d"] .stationblk .shead .open { margin-left: auto; background: var(--d-red); color: #fff; font-weight: 700; font-size: 12px; padding: 3px 10px; }
+  [data-v="d"] .srow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 14px; border-bottom: 1px solid var(--d-line); font-size: 13px; }
+  [data-v="d"] .srow:last-child { border-bottom: 0; }
+  [data-v="d"] .srow time { font-weight: 700; width: 118px; font-variant-numeric: tabular-nums; }
+  [data-v="d"] .chip { background: oklch(0.94 0.015 110); padding: 4px 10px; font-weight: 500; font-size: 12.5px; }
+  [data-v="d"] .chip.free { background: transparent; outline: 1.5px dashed var(--d-red); outline-offset: -1.5px; color: var(--d-red); font-weight: 700; }
+
+  [data-v="d"] table { width: 100%; border-collapse: collapse; border: 2px solid var(--d-ink); background: #fff; font-size: 13px; }
+  [data-v="d"] th { text-align: left; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 12px; border-bottom: 2px solid var(--d-ink); background: oklch(0.93 0.02 105); }
+  [data-v="d"] td { padding: 9px 12px; border-bottom: 1px solid var(--d-line); font-variant-numeric: tabular-nums; }
+  [data-v="d"] tr:last-child td { border-bottom: 0; }
+  [data-v="d"] th.num, [data-v="d"] td.num { text-align: right; }
+  [data-v="d"] .pos { color: var(--d-red); font-weight: 700; } [data-v="d"] .neg { color: var(--d-green); font-weight: 700; }
+
+  /* Programm wie Plakat-Lineup */
+  [data-v="d"] .lineup { border: 2px solid var(--d-ink); background: #fff; }
+  [data-v="d"] .lineup li { list-style: none; display: flex; gap: 12px; align-items: baseline; padding: 11px 14px; border-bottom: 1px solid var(--d-line); font-size: 13.5px; }
+  [data-v="d"] .lineup li:last-child { border-bottom: 0; }
+  [data-v="d"] .lineup time { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .02em; width: 74px; flex: none; }
+  [data-v="d"] .lineup .what b { font-weight: 700; }
+  [data-v="d"] .lineup .what span { display: block; font-size: 12.5px; color: var(--d-ink-soft); }
+  [data-v="d"] .lineup li.done { background: oklch(0.96 0.01 110); }
+  [data-v="d"] .lineup li.done time { color: var(--d-green); }
+  [data-v="d"] .lineup li.done .what b { color: var(--d-ink-soft); text-decoration: line-through; }
+
+  @media (max-width: 900px) {
+    [data-v="d"] .frame { padding: 12px 12px 110px; }
+    [data-v="d"] .poster { padding: 24px 20px 0; }
+    [data-v="d"] .poster nav { margin: 0 -20px; padding: 0 20px; }
+    [data-v="d"] .poster .dupe { position: static; margin-bottom: 18px; }
+    [data-v="d"] .stats { grid-template-columns: 1fr 1fr; }
+    [data-v="d"] .stat { border-bottom: 2.5px solid var(--d-ink); }
+    [data-v="d"] .stat:nth-child(2n) { border-right: 0; }
+    [data-v="d"] .stat:nth-child(n+3) { border-bottom: 0; }
+    [data-v="d"] .duo { grid-template-columns: 1fr; }
+    [data-v="d"] .srow time { width: 100%; }
+    [data-v="d"] .tablewrap { overflow-x: auto; }
+  }
+</style>
+<div class="frame">
+  <div class="toprow">
+    <span class="wordmark">FESTMEISTER</span>
+    <select><option>Musikfest Steinbach 2026</option><option>Musikfest Steinbach 2025</option></select>
+    <span class="user">Christian D. · Festleitung</span>
+  </div>
+
+  <header class="poster">
+    <button class="dupe">AUS VORJAHR ÜBERNEHMEN</button>
+    <div class="over">Musikverein Steinbach präsentiert</div>
+    <h1>Musikfest<br>Steinbach</h1>
+    <p class="sub">Fr 24. – So 26. Juli 2026 · Festgelände Steinbach · <b>noch 4 Tage</b></p>
+    <nav>
+      <a class="on" href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoren</a>
+    </nav>
+  </header>
+  <div class="stats">
+    <div class="stat hot"><div class="num">11</div><div class="lab">Schichten offen</div><div class="det">41 von 52 besetzt · Ausschank Sa kritisch</div></div>
+    <div class="stat"><div class="num">74/86</div><div class="lab">Material bestellt</div><div class="det">12 Positionen ohne Sollmenge</div></div>
+    <div class="stat"><div class="num">28/31</div><div class="lab">Ablaufplan erledigt</div><div class="det">Aufbau Fr 08:00 · voll eingeteilt</div></div>
+    <div class="stat"><div class="num">€ 4.850</div><div class="lab">Sponsoring zugesagt</div><div class="det">14 Sponsoren · 2 Rechnungen offen</div></div>
+  </div>
+
+  <div class="duo">
+    <div>
+      <h2>Kritische Stationen <a href="#">Alle →</a></h2>
+      <div class="stationblk">
+        <div class="shead"><h3>Ausschank</h3><span class="cnt">Zelt Nord · 12 Schichten</span><span class="open">3 OFFEN</span></div>
+        <div class="srow"><time>Sa 18–22</time><span class="chip">Franz Hochauer</span><span class="chip">Maria Leitner</span><span class="chip">Peter Gruber</span><span class="chip free">+1 OFFEN</span></div>
+        <div class="srow"><time>Sa 22–02</time><span class="chip">Andreas Pöchhacker</span><span class="chip free">+2 OFFEN</span></div>
+        <div class="srow"><time>So 10–14</time><span class="chip">Elisabeth Auer</span><span class="chip">Josef Brandstetter</span><span class="chip">Karin Fuchs</span></div>
+      </div>
+
+      <h2>Material · Soll / Ist <a href="#">Ganze Liste →</a></h2>
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Material</th><th>Station</th><th>Gebinde</th><th class="num">Soll</th><th class="num">Ist</th><th class="num">Δ</th></tr></thead>
+        <tbody>
+          <tr><td><b>Bier „Wieselburger"</b></td><td>Ausschank</td><td>Fass 50 l</td><td class="num">18</td><td class="num">16</td><td class="num neg">−2</td></tr>
+          <tr><td><b>Brathendl</b></td><td>Grill</td><td>Stk.</td><td class="num">450</td><td class="num">512</td><td class="num pos">+62</td></tr>
+          <tr><td><b>Grüner Veltliner</b></td><td>Weinlaube</td><td>Ktn. 6×0,75</td><td class="num">24</td><td class="num">22</td><td class="num neg">−2</td></tr>
+          <tr><td><b>Servietten</b></td><td>Alle</td><td>Pkg. 250</td><td class="num">30</td><td class="num">—</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div>
+      <h2>Programm Samstag <a href="#">Ablaufplan →</a></h2>
+      <ul class="lineup">
+        <li class="done"><time>08:00</time><span class="what"><b>Aufbau Zelt Nord</b><span>12 Helfer · erledigt geplant</span></span></li>
+        <li><time>11:00</time><span class="what"><b>Frühschoppen — MV Steinbach</b><span>Bühne · Ton: P. Gruber</span></span></li>
+        <li><time>15:00</time><span class="what"><b>Gastkapelle Purgstall</b><span>Empfang: Obmann</span></span></li>
+        <li><time>19:30</time><span class="what"><b>Abendprogramm „Die Lauser"</b><span>Einlass verstärken · Kassa +2</span></span></li>
+        <li><time>23:00</time><span class="what"><b>Barbetrieb bis 02:00</b><span>Schicht Sa 22–02: 2 offen!</span></span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- INSERT:D -->
+<!-- ################################################################
+     VARIANTE E — „Gasthaus-Moderne"
+     Signature: die getäfelte Wirtshausstube als App. Dunkelgrüne
+     Lambris-Sidebar, Leinen-Flächen, Messing-Akzente, Zahlen mit
+     Punktlinien wie in der Speisekarte, doppelt gerahmte Karten.
+     ################################################################ -->
+<section class="variant" data-v="e">
+<style>
+  [data-v="e"] {
+    --e-linen: oklch(0.955 0.012 90);
+    --e-linen-tx: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cpath d='M0 0h3v3H0zM3 3h3v3H3z' fill='%23857a5f' opacity='0.045'/%3E%3C/svg%3E");
+    --e-green: oklch(0.34 0.055 165);
+    --e-green-2: oklch(0.3 0.05 165);
+    --e-brass: oklch(0.66 0.1 80);
+    --e-brass-deep: oklch(0.52 0.09 75);
+    --e-ink: oklch(0.27 0.02 100);
+    --e-ink-soft: oklch(0.45 0.02 95);
+    --e-card: oklch(0.98 0.008 92);
+    --e-line: oklch(0.86 0.015 90);
+    --e-red: oklch(0.48 0.14 28);
+    font-family: "Work Sans", system-ui, sans-serif;
+    color: var(--e-ink);
+    background: var(--e-linen); background-image: var(--e-linen-tx);
+  }
+  [data-v="e"] .app { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+
+  /* Lambris */
+  [data-v="e"] .panel {
+    background-color: var(--e-green);
+    background-image: repeating-linear-gradient(90deg, transparent 0 55px, oklch(1 0 0 / .045) 55px 56px, oklch(0 0 0 / .12) 56px 57px, transparent 57px 58px), linear-gradient(180deg, var(--e-green), var(--e-green-2));
+    color: oklch(0.93 0.012 95); padding: 26px 18px 20px; display: flex; flex-direction: column;
+    border-right: 3px solid var(--e-brass-deep);
+  }
+  [data-v="e"] .panel .brand { font-family: "Fraunces", serif; font-weight: 600; font-size: 23px; letter-spacing: .01em; padding: 0 10px 4px; }
+  [data-v="e"] .panel .brand::after { content: ""; display: block; width: 44px; height: 2px; background: var(--e-brass); margin-top: 9px; }
+  [data-v="e"] .panel .fest { margin: 20px 0 22px; padding: 12px 14px; border: 1px solid oklch(1 0 0 / .22); border-radius: 3px; font-size: 13px; background: oklch(0 0 0 / .14); }
+  [data-v="e"] .panel .fest b { display: block; font-family: "Fraunces", serif; font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  [data-v="e"] .panel .fest span { color: oklch(0.8 0.02 95); font-size: 12.5px; }
+  [data-v="e"] .panel nav a { display: flex; align-items: center; gap: 11px; color: oklch(0.88 0.015 95); text-decoration: none; padding: 10px 12px; font-size: 14.5px; font-weight: 500; border-radius: 3px; }
+  [data-v="e"] .panel nav a:hover { background: oklch(1 0 0 / .08); }
+  [data-v="e"] .panel nav a.on { background: oklch(0 0 0 / .22); color: #fff; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .14); }
+  [data-v="e"] .panel nav a.on::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--e-brass); margin-left: -2px; }
+  [data-v="e"] .panel .foot { margin-top: auto; padding: 12px 10px 0; font-size: 12px; color: oklch(0.74 0.02 95); border-top: 1px solid oklch(1 0 0 / .15); }
+
+  [data-v="e"] main { padding: 34px 40px 100px; max-width: 1210px; }
+  [data-v="e"] .head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  [data-v="e"] h1 { font-family: "Fraunces", serif; font-size: 31px; font-weight: 600; letter-spacing: -0.005em; }
+  [data-v="e"] .head .when { color: var(--e-ink-soft); font-size: 14px; }
+  [data-v="e"] .head .cta { margin-left: auto; background: var(--e-green); color: oklch(0.96 0.01 95); border: 1px solid var(--e-green-2); border-radius: 3px; padding: 10px 18px; font-weight: 600; font-size: 13.5px; }
+  [data-v="e"] .head .cta:hover { background: var(--e-green-2); }
+  [data-v="e"] .headrule { height: 2px; background: var(--e-ink); margin: 16px 0 2px; }
+  [data-v="e"] .headrule2 { height: 1px; background: var(--e-ink); margin-bottom: 26px; opacity: .55; }
+
+  /* Speisekarten-Übersicht mit Punktlinien */
+  [data-v="e"] .karte { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 54px; margin-bottom: 34px; }
+  [data-v="e"] .karte .zeile { display: flex; align-items: baseline; gap: 10px; font-size: 15px; padding: 7px 0; }
+  [data-v="e"] .karte .zeile .name { font-weight: 600; }
+  [data-v="e"] .karte .zeile .dots { flex: 1; border-bottom: 2px dotted oklch(0.68 0.02 90); transform: translateY(-4px); }
+  [data-v="e"] .karte .zeile .wert { font-variant-numeric: tabular-nums; font-weight: 600; }
+  [data-v="e"] .karte .zeile .wert.warn { color: var(--e-red); }
+  [data-v="e"] .karte .zeile .wert.ok { color: var(--e-green); }
+  [data-v="e"] .karte .unter { grid-column: span 1; font-size: 12.5px; color: var(--e-ink-soft); margin: -6px 0 4px; }
+
+  [data-v="e"] h2 { font-family: "Fraunces", serif; font-size: 20px; font-weight: 600; margin: 0 0 14px; display: flex; align-items: baseline; gap: 14px; }
+  [data-v="e"] h2 .zier { flex: 1; height: 1px; background: var(--e-line); }
+  [data-v="e"] h2 a { font-family: "Work Sans", sans-serif; font-size: 13px; font-weight: 600; color: var(--e-brass-deep); text-decoration: none; }
+  [data-v="e"] .duo { display: grid; grid-template-columns: 1.55fr 1fr; gap: 34px; align-items: start; }
+
+  /* Doppelt gerahmte Tafeln */
+  [data-v="e"] .tafel { background: var(--e-card); border: 1px solid var(--e-ink); box-shadow: inset 0 0 0 4px var(--e-card), inset 0 0 0 5px oklch(0.6 0.03 90); padding: 18px 20px 14px; margin-bottom: 18px; }
+  [data-v="e"] .tafel .thead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  [data-v="e"] .tafel .thead h3 { font-family: "Fraunces", serif; font-size: 17px; font-weight: 600; }
+  [data-v="e"] .tafel .thead .cnt { font-size: 12.5px; color: var(--e-ink-soft); }
+  [data-v="e"] .tafel .thead .offen { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--e-red); border: 1px solid var(--e-red); border-radius: 999px; padding: 2px 10px; }
+  [data-v="e"] .srow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 0; border-top: 1px solid var(--e-line); font-size: 13.5px; }
+  [data-v="e"] .srow time { font-weight: 600; width: 118px; font-variant-numeric: tabular-nums; }
+  [data-v="e"] .gast { background: oklch(0.94 0.015 90); border: 1px solid var(--e-line); border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 500; }
+  [data-v="e"] .gast.frei { background: transparent; border: 1px dashed var(--e-red); color: var(--e-red); font-weight: 600; }
+
+  [data-v="e"] table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--e-card); border: 1px solid var(--e-ink); box-shadow: inset 0 0 0 4px var(--e-card), inset 0 0 0 5px oklch(0.6 0.03 90); }
+  [data-v="e"] th { text-align: left; font-family: "Fraunces", serif; font-weight: 600; font-size: 13.5px; padding: 12px 14px 8px; border-bottom: 1.5px solid var(--e-ink); }
+  [data-v="e"] td { padding: 9px 14px; border-bottom: 1px solid var(--e-line); font-variant-numeric: tabular-nums; }
+  [data-v="e"] tr:last-child td { border-bottom: 0; }
+  [data-v="e"] th.num, [data-v="e"] td.num { text-align: right; }
+  [data-v="e"] .mehr { color: var(--e-red); font-weight: 600; } [data-v="e"] .gut { color: var(--e-green); font-weight: 600; }
+
+  [data-v="e"] .aufg { background: var(--e-card); border: 1px solid var(--e-ink); box-shadow: inset 0 0 0 4px var(--e-card), inset 0 0 0 5px oklch(0.6 0.03 90); padding: 10px 20px; }
+  [data-v="e"] .aufg li { list-style: none; display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--e-line); font-size: 13.5px; }
+  [data-v="e"] .aufg li:last-child { border-bottom: 0; }
+  [data-v="e"] .aufg .mark { font-family: "Fraunces", serif; width: 18px; flex: none; color: var(--e-brass-deep); font-weight: 700; }
+  [data-v="e"] .aufg li.done .mark { color: var(--e-green); }
+  [data-v="e"] .aufg li.done .txt { color: var(--e-ink-soft); }
+  [data-v="e"] .aufg .meta { display: block; font-size: 12.5px; color: var(--e-ink-soft); margin-top: 1px; }
+
+  @media (max-width: 900px) {
+    [data-v="e"] .app { grid-template-columns: 1fr; }
+    [data-v="e"] .panel { flex-direction: row; align-items: center; gap: 6px; padding: 10px 14px; overflow-x: auto; border-right: 0; border-bottom: 3px solid var(--e-brass-deep); }
+    [data-v="e"] .panel .brand { font-size: 18px; padding: 0 6px 0 0; } [data-v="e"] .panel .brand::after { display: none; }
+    [data-v="e"] .panel .fest, [data-v="e"] .panel .foot { display: none; }
+    [data-v="e"] .panel nav { display: flex; }
+    [data-v="e"] .panel nav a { white-space: nowrap; padding: 8px 10px; font-size: 13px; }
+    [data-v="e"] main { padding: 22px 16px 110px; }
+    [data-v="e"] .karte { grid-template-columns: 1fr; }
+    [data-v="e"] .duo { grid-template-columns: 1fr; }
+    [data-v="e"] .srow time { width: 100%; }
+    [data-v="e"] .tablewrap { overflow-x: auto; }
+  }
+</style>
+<div class="app">
+  <aside class="panel">
+    <div class="brand">Festmeister</div>
+    <div class="fest"><b>Musikfest Steinbach</b><span>24.–26. Juli 2026 · noch 4 Tage</span></div>
+    <nav>
+      <a class="on" href="#">Übersicht</a>
+      <a href="#">Schichtplan</a>
+      <a href="#">Material</a>
+      <a href="#">Ablaufplan</a>
+      <a href="#">Mitglieder</a>
+      <a href="#">Sponsoren</a>
+    </nav>
+    <div class="foot">Musikverein Steinbach<br>Christian D. · Festleitung</div>
+  </aside>
+  <main>
+    <div class="head">
+      <h1>Musikfest Steinbach 2026</h1>
+      <span class="when">Fr 24. – So 26. Juli · Festgelände Steinbach</span>
+      <button class="cta">Aus Vorjahr übernehmen</button>
+    </div>
+    <div class="headrule"></div><div class="headrule2"></div>
+
+    <div class="karte">
+      <div>
+        <div class="zeile"><span class="name">Schichtplan</span><span class="dots"></span><span class="wert warn">41 / 52 besetzt</span></div>
+        <div class="unter">11 offen — Ausschank Samstagabend braucht noch 3 Leute</div>
+        <div class="zeile"><span class="name">Material</span><span class="dots"></span><span class="wert warn">74 / 86 bestellt</span></div>
+        <div class="unter">12 Positionen noch ohne Sollmenge</div>
+      </div>
+      <div>
+        <div class="zeile"><span class="name">Ablaufplan</span><span class="dots"></span><span class="wert ok">28 / 31 erledigt</span></div>
+        <div class="unter">Aufbau startet Freitag 08:00 — voll eingeteilt</div>
+        <div class="zeile"><span class="name">Sponsoren</span><span class="dots"></span><span class="wert ok">€ 4.850 · 14 Zusagen</span></div>
+        <div class="unter">2 Rechnungen noch offen</div>
+      </div>
+    </div>
+
+    <div class="duo">
+      <div>
+        <h2>Kritische Stationen <span class="zier"></span><a href="#">Alle Stationen →</a></h2>
+        <div class="tafel">
+          <div class="thead"><h3>Ausschank</h3><span class="cnt">Zelt Nord · 12 Schichten</span><span class="offen">3 offen</span></div>
+          <div class="srow"><time>Sa 18:00–22:00</time><span class="gast">Franz Hochauer</span><span class="gast">Maria Leitner</span><span class="gast">Peter Gruber</span><span class="gast frei">+ 1 offen</span></div>
+          <div class="srow"><time>Sa 22:00–02:00</time><span class="gast">Andreas Pöchhacker</span><span class="gast frei">+ 2 offen</span></div>
+          <div class="srow"><time>So 10:00–14:00</time><span class="gast">Elisabeth Auer</span><span class="gast">Josef Brandstetter</span><span class="gast">Karin Fuchs</span></div>
+        </div>
+
+        <h2 style="margin-top:28px">Material · Soll und Ist <span class="zier"></span><a href="#">Ganze Liste →</a></h2>
+        <div class="tablewrap">
+        <table>
+          <thead><tr><th>Material</th><th>Station</th><th>Gebinde</th><th class="num">Soll</th><th class="num">Ist</th><th class="num">à Preis</th></tr></thead>
+          <tbody>
+            <tr><td><b>Bier „Wieselburger"</b></td><td>Ausschank</td><td>Fass 50 l</td><td class="num">18</td><td class="num gut">16</td><td class="num">€ 132,00</td></tr>
+            <tr><td><b>Brathendl</b></td><td>Grill</td><td>Stk.</td><td class="num">450</td><td class="num mehr">512</td><td class="num">€ 4,10</td></tr>
+            <tr><td><b>Grüner Veltliner</b></td><td>Weinlaube</td><td>Ktn. 6 × 0,75 l</td><td class="num">24</td><td class="num gut">22</td><td class="num">€ 41,40</td></tr>
+            <tr><td><b>Servietten</b></td><td>Alle</td><td>Pkg. 250 Stk.</td><td class="num">30</td><td class="num">—</td><td class="num">€ 3,90</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <div>
+        <h2>Nächste Aufgaben <span class="zier"></span><a href="#">Ablaufplan →</a></h2>
+        <ul class="aufg">
+          <li class="done"><span class="mark">✓</span><span class="txt">Schankanlage reserviert<span class="meta">Getränke Hofmann · Di 15. Juli</span></span></li>
+          <li><span class="mark">›</span><span class="txt"><b>Kühlwagen bestätigen</b><span class="meta">bis Mittwoch · Herbert Z.</span></span></li>
+          <li><span class="mark">›</span><span class="txt"><b>Bühnenplan an die Kapelle</b><span class="meta">bis Donnerstag · Christian D.</span></span></li>
+          <li><span class="mark">›</span><span class="txt"><b>Wechselgeld holen</b><span class="meta">Freitag 09:00 · Raiffeisenbank</span></span></li>
+          <li><span class="mark">›</span><span class="txt"><b>Aufbau Zelt Nord</b><span class="meta">Freitag 08:00 · 12 Helfer eingeteilt</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>
+</section>
+
+<!-- ################################################################
+     VARIANTE F — „Werkzeug-Plakat" (Kombination aus Nutzerfeedback)
+     Basis D: Druckgrafik, harte Rahmen, Public Sans + Anton-Akzente.
+     Header kompakt statt Plakat-Bombast. KPIs als Maßband-Lineale
+     aus C, übersetzt in die Print-Sprache von D.
+     ################################################################ -->
+<section class="variant" data-v="f">
+<style>
+  [data-v="f"] {
+    --f-paper: oklch(0.97 0.008 95);
+    --f-ink: oklch(0.24 0.02 145);
+    --f-ink-soft: oklch(0.44 0.02 145);
+    --f-green: oklch(0.4 0.1 160);
+    --f-green-deep: oklch(0.33 0.09 160);
+    --f-yellow: oklch(0.86 0.15 92);
+    --f-red: oklch(0.55 0.18 30);
+    --f-line: oklch(0.87 0.012 100);
+    --f-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+    font-family: "Public Sans", system-ui, sans-serif;
+    color: var(--f-ink); background: var(--f-paper); min-height: 100vh;
+  }
+  [data-v="f"] .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 110px; }
+
+  /* Kompakter Druck-Header: eine Zeile Identität, eine Zeile Werkzeug */
+  [data-v="f"] .mast { border: 2.5px solid var(--f-ink); background: var(--f-green); background-image: var(--f-halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 14px 20px; flex-wrap: wrap; }
+  [data-v="f"] .mast .wordmark { font-family: "Anton", sans-serif; font-size: 16px; letter-spacing: .04em; color: var(--f-yellow); }
+  [data-v="f"] .mast h1 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 26px; letter-spacing: .015em; text-transform: uppercase; }
+  [data-v="f"] .mast .when { font-size: 13.5px; color: oklch(0.92 0.02 110); }
+  [data-v="f"] .mast .when b { color: var(--f-yellow); }
+  [data-v="f"] .mast .dupe { margin-left: auto; background: var(--f-yellow); color: var(--f-ink); border: 0; padding: 9px 15px; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; }
+  [data-v="f"] .mast .dupe:hover { background: oklch(0.9 0.14 92); }
+  [data-v="f"] .mast .festsel { font: 500 12.5px "Public Sans", sans-serif; background: var(--f-green-deep); color: #fff; border: 1px solid oklch(1 0 0 / .3); padding: 7px 10px; }
+  [data-v="f"] nav.tabs { display: flex; border: 2.5px solid var(--f-ink); border-top: 0; background: #fff; overflow-x: auto; }
+  [data-v="f"] nav.tabs a { color: var(--f-ink-soft); text-decoration: none; font-weight: 600; font-size: 14px; padding: 12px 18px; white-space: nowrap; border-right: 1px solid var(--f-line); }
+  [data-v="f"] nav.tabs a:hover { color: var(--f-ink); background: oklch(0.955 0.01 100); }
+  [data-v="f"] nav.tabs a.on { color: var(--f-ink); background: var(--f-yellow); box-shadow: inset 0 -3px 0 var(--f-ink); }
+
+  /* Maßband-KPIs (aus C) in Druck-Sprache */
+  [data-v="f"] .gauges { display: grid; grid-template-columns: repeat(4, 1fr); border: 2.5px solid var(--f-ink); border-top: 0; background: #fff; }
+  [data-v="f"] .gauge { padding: 15px 18px 13px; border-right: 1px solid var(--f-line); }
+  [data-v="f"] .gauge:last-child { border-right: 0; }
+  [data-v="f"] .gauge .glabel { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+  [data-v="f"] .gauge .glabel b { font-size: 13px; font-weight: 700; }
+  [data-v="f"] .gauge .glabel .val { font-family: "Anton", sans-serif; font-size: 17px; letter-spacing: .02em; }
+  [data-v="f"] .gauge .val.warn { color: var(--f-red); }
+  [data-v="f"] .gauge .val.ok { color: var(--f-green); }
+  [data-v="f"] .ruler { position: relative; height: 20px; border: 1.5px solid var(--f-ink); background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--f-ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  [data-v="f"] .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--f-yellow); opacity: .55; }
+  [data-v="f"] .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--f-ink); }
+  [data-v="f"] .gauge .gnote { font-size: 12px; color: var(--f-ink-soft); margin-top: 8px; }
+
+  [data-v="f"] h2 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 36px 0 14px; display: flex; align-items: center; gap: 12px; }
+  [data-v="f"] h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  [data-v="f"] h2 a { font-size: 12.5px; letter-spacing: .02em; text-transform: none; color: var(--f-green); text-decoration: none; font-weight: 700; }
+  [data-v="f"] .duo { display: grid; grid-template-columns: 1.55fr 1fr; gap: 30px; align-items: start; }
+
+  [data-v="f"] .stationblk { border: 2px solid var(--f-ink); margin-bottom: 16px; background: #fff; }
+  [data-v="f"] .stationblk .shead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 2px solid var(--f-ink); }
+  [data-v="f"] .stationblk .shead h3 { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; letter-spacing: .03em; text-transform: uppercase; }
+  [data-v="f"] .stationblk .shead .cnt { font-size: 12.5px; color: var(--f-ink-soft); }
+  [data-v="f"] .stationblk .shead .open { margin-left: auto; background: var(--f-red); color: #fff; font-weight: 700; font-size: 12px; padding: 3px 10px; }
+  [data-v="f"] .srow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 14px; border-bottom: 1px solid var(--f-line); font-size: 13px; }
+  [data-v="f"] .srow:last-child { border-bottom: 0; }
+  [data-v="f"] .srow time { font-weight: 700; width: 118px; font-variant-numeric: tabular-nums; }
+  [data-v="f"] .chip { background: oklch(0.94 0.015 110); padding: 4px 10px; font-weight: 500; font-size: 12.5px; }
+  [data-v="f"] .chip.free { background: transparent; outline: 1.5px dashed var(--f-red); outline-offset: -1.5px; color: var(--f-red); font-weight: 700; }
+
+  [data-v="f"] table { width: 100%; border-collapse: collapse; border: 2px solid var(--f-ink); background: #fff; font-size: 13px; }
+  [data-v="f"] th { text-align: left; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 12px; border-bottom: 2px solid var(--f-ink); background: oklch(0.93 0.02 105); }
+  [data-v="f"] td { padding: 9px 12px; border-bottom: 1px solid var(--f-line); font-variant-numeric: tabular-nums; }
+  [data-v="f"] tr:last-child td { border-bottom: 0; }
+  [data-v="f"] th.num, [data-v="f"] td.num { text-align: right; }
+  [data-v="f"] .pos { color: var(--f-red); font-weight: 700; } [data-v="f"] .neg { color: var(--f-green); font-weight: 700; }
+
+  [data-v="f"] .lineup { border: 2px solid var(--f-ink); background: #fff; }
+  [data-v="f"] .lineup li { list-style: none; display: flex; gap: 12px; align-items: baseline; padding: 11px 14px; border-bottom: 1px solid var(--f-line); font-size: 13.5px; }
+  [data-v="f"] .lineup li:last-child { border-bottom: 0; }
+  [data-v="f"] .lineup time { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: .02em; width: 74px; flex: none; }
+  [data-v="f"] .lineup .what b { font-weight: 700; }
+  [data-v="f"] .lineup .what span { display: block; font-size: 12.5px; color: var(--f-ink-soft); }
+  [data-v="f"] .lineup li.done { background: oklch(0.96 0.01 110); }
+  [data-v="f"] .lineup li.done time { color: var(--f-green); }
+  [data-v="f"] .lineup li.done .what b { color: var(--f-ink-soft); text-decoration: line-through; }
+
+  @media (max-width: 900px) {
+    [data-v="f"] .frame { padding: 12px 12px 110px; }
+    [data-v="f"] .mast { padding: 12px 14px; }
+    [data-v="f"] .mast .dupe { margin-left: 0; }
+    [data-v="f"] .gauges { grid-template-columns: 1fr 1fr; }
+    [data-v="f"] .gauge { border-bottom: 1px solid var(--f-line); }
+    [data-v="f"] .gauge:nth-child(n+3) { border-bottom: 0; }
+    [data-v="f"] .duo { grid-template-columns: 1fr; }
+    [data-v="f"] .srow time { width: 100%; }
+    [data-v="f"] .tablewrap { overflow-x: auto; }
+  }
+</style>
+<div class="frame">
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span>
+    <h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · Festgelände Steinbach · <b>noch 4 Tage</b></span>
+    <select class="festsel"><option>Musikfest Steinbach 2026</option><option>Musikfest Steinbach 2025</option></select>
+    <button class="dupe">AUS VORJAHR ÜBERNEHMEN</button>
+  </header>
+  <nav class="tabs">
+    <a class="on" href="#">Dashboard</a><a href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Mitglieder</a><a href="#">Sponsoren</a>
+  </nav>
+  <div class="gauges">
+    <div class="gauge"><div class="glabel"><b>Schichtplan</b><span class="val warn">41/52</span></div><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div><div class="gnote">11 offen — Ausschank Sa-Abend kritisch</div></div>
+    <div class="gauge"><div class="glabel"><b>Material bestellt</b><span class="val warn">74/86</span></div><div class="ruler"><i style="width:86%"></i><em style="left:86%"></em></div><div class="gnote">12 Positionen ohne Sollmenge</div></div>
+    <div class="gauge"><div class="glabel"><b>Ablaufplan</b><span class="val ok">28/31</span></div><div class="ruler"><i style="width:90%"></i><em style="left:90%"></em></div><div class="gnote">Aufbau Fr 08:00 · voll eingeteilt</div></div>
+    <div class="gauge"><div class="glabel"><b>Sponsoren</b><span class="val ok">€ 4.850</span></div><div class="ruler"><i style="width:97%"></i><em style="left:97%"></em></div><div class="gnote">14 Zusagen · 2 Rechnungen offen</div></div>
+  </div>
+
+  <div class="duo">
+    <div>
+      <h2>Kritische Stationen <a href="#">Alle →</a></h2>
+      <div class="stationblk">
+        <div class="shead"><h3>Ausschank</h3><span class="cnt">Zelt Nord · 12 Schichten</span><span class="open">3 OFFEN</span></div>
+        <div class="srow"><time>Sa 18–22</time><span class="chip">Franz Hochauer</span><span class="chip">Maria Leitner</span><span class="chip">Peter Gruber</span><span class="chip free">+1 OFFEN</span></div>
+        <div class="srow"><time>Sa 22–02</time><span class="chip">Andreas Pöchhacker</span><span class="chip free">+2 OFFEN</span></div>
+        <div class="srow"><time>So 10–14</time><span class="chip">Elisabeth Auer</span><span class="chip">Josef Brandstetter</span><span class="chip">Karin Fuchs</span></div>
+      </div>
+      <div class="stationblk">
+        <div class="shead"><h3>Grill</h3><span class="cnt">Küchenzeile · 8 Schichten</span><span class="open">2 OFFEN</span></div>
+        <div class="srow"><time>Sa 11–15</time><span class="chip">Herbert Zeller</span><span class="chip">Monika Wagner</span><span class="chip free">+1 OFFEN</span></div>
+        <div class="srow"><time>Sa 15–19</time><span class="chip">Gerhard Eder</span><span class="chip free">+1 OFFEN</span></div>
+      </div>
+
+      <h2>Material · Soll / Ist <a href="#">Ganze Liste →</a></h2>
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Material</th><th>Station</th><th>Gebinde</th><th class="num">Soll</th><th class="num">Ist</th><th class="num">Δ</th></tr></thead>
+        <tbody>
+          <tr><td><b>Bier „Wieselburger"</b></td><td>Ausschank</td><td>Fass 50 l</td><td class="num">18</td><td class="num">16</td><td class="num neg">−2</td></tr>
+          <tr><td><b>Brathendl</b></td><td>Grill</td><td>Stk.</td><td class="num">450</td><td class="num">512</td><td class="num pos">+62</td></tr>
+          <tr><td><b>Grüner Veltliner</b></td><td>Weinlaube</td><td>Ktn. 6×0,75</td><td class="num">24</td><td class="num">22</td><td class="num neg">−2</td></tr>
+          <tr><td><b>Servietten</b></td><td>Alle</td><td>Pkg. 250</td><td class="num">30</td><td class="num">—</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div>
+      <h2>Programm Samstag <a href="#">Ablaufplan →</a></h2>
+      <ul class="lineup">
+        <li class="done"><time>08:00</time><span class="what"><b>Aufbau Zelt Nord</b><span>12 Helfer · erledigt geplant</span></span></li>
+        <li><time>11:00</time><span class="what"><b>Frühschoppen — MV Steinbach</b><span>Bühne · Ton: P. Gruber</span></span></li>
+        <li><time>15:00</time><span class="what"><b>Gastkapelle Purgstall</b><span>Empfang: Obmann</span></span></li>
+        <li><time>19:30</time><span class="what"><b>Abendprogramm „Die Lauser"</b><span>Einlass verstärken · Kassa +2</span></span></li>
+        <li><time>23:00</time><span class="what"><b>Barbetrieb bis 02:00</b><span>Schicht Sa 22–02: 2 offen!</span></span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- INSERT:E -->
+
+<div id="switcher">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <div class="lbl"><span id="lblMain">A — Planungstafel</span><small id="lblSub">Werkstatt-Tafel, Klemmbretter, Magnete</small></div>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</div>
+
+<script>
+  const VARIANTS = [
+    ["a", "Planungstafel", "Werkstatt-Tafel, Klemmbretter, Magnete"],
+    ["b", "Festbuch", "Kassabuch, Register-Tabs, Stempel"],
+    ["c", "Bauplan", "Millimeterraster, Plankopf, Maßband"],
+    ["d", "Plakatdruck", "Siebdruck-Raster, satte Flächen"],
+    ["e", "Gasthaus-Moderne", "Grüne Lambris, Leinen, Punktlinien"],
+    ["f", "Werkzeug-Plakat", "D verfeinert: kompakter Header + Maßband-KPIs aus C"]
+  ];
+  function currentKey() {
+    const v = new URLSearchParams(location.search).get("variant");
+    return VARIANTS.some(x => x[0] === v) ? v : "a";
+  }
+  function show(key) {
+    document.querySelectorAll(".variant").forEach(s => s.classList.toggle("active", s.dataset.v === key));
+    const v = VARIANTS.find(x => x[0] === key);
+    document.getElementById("lblMain").textContent = key.toUpperCase() + " — " + v[1];
+    document.getElementById("lblSub").textContent = v[2];
+    history.replaceState(null, "", "?variant=" + key);
+    window.scrollTo(0, 0);
+  }
+  function cycle(dir) {
+    const i = VARIANTS.findIndex(x => x[0] === currentKey());
+    show(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0]);
+  }
+  document.getElementById("prev").addEventListener("click", () => cycle(-1));
+  document.getElementById("next").addEventListener("click", () => cycle(1));
+  document.addEventListener("keydown", e => {
+    const t = e.target;
+    if (t.matches("input, textarea, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") cycle(-1);
+    if (e.key === "ArrowRight") cycle(1);
+  });
+  show(currentKey());
+</script>
+</body>
+</html>
