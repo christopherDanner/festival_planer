@@ -1,7 +1,13 @@
+import * as React from 'react';
+
+import { ModeToggle } from '@/components/toolkit/ModeToggle';
+import { NameChip } from '@/components/toolkit/NameChip';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import { Ruler } from '@/components/toolkit/Ruler';
+import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
 import { Stamp } from '@/components/toolkit/Stamp';
 import { StatusBar } from '@/components/toolkit/StatusBar';
+import { ValueTag } from '@/components/toolkit/ValueTag';
 
 function Abschnitt({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
@@ -29,6 +35,21 @@ function Probe({ label, children }: { label: string; children: React.ReactNode }
 			{children}
 		</div>
 	);
+}
+
+interface SchalterProbeProps {
+	ariaLabel: string;
+	options: { value: string; label: string }[];
+}
+
+function SegmentedProbe({ ariaLabel, options }: SchalterProbeProps) {
+	const [value, setValue] = React.useState(options[0].value);
+	return <SegmentedControl aria-label={ariaLabel} options={options} value={value} onValueChange={setValue} />;
+}
+
+function ModeToggleProbe({ ariaLabel, options }: SchalterProbeProps) {
+	const [value, setValue] = React.useState(options[0].value);
+	return <ModeToggle aria-label={ariaLabel} options={options} value={value} onValueChange={setValue} />;
 }
 
 /** Dev-only Schaukasten: lebendes Inventar der Toolkit-Bausteine,
@@ -129,6 +150,87 @@ const Werkstatt = () => (
 					<OpenSlot>+1 offen</OpenSlot>
 					<OpenSlot>Hier eintragen</OpenSlot>
 				</div>
+			</Probe>
+		</Abschnitt>
+
+		<Abschnitt title="NameChip — Namens-Marke">
+			<div className="grid gap-4 md:grid-cols-2">
+				<Probe label="Ohne Entfernen-Aktion">
+					<div className="flex flex-wrap gap-2">
+						<NameChip>Maria Huber</NameChip>
+						<NameChip>Sepp Gruber</NameChip>
+					</div>
+				</Probe>
+				<Probe label="Mit ×-Entfernen-Aktion">
+					<div className="flex flex-wrap gap-2">
+						<NameChip onRemove={() => {}} removeLabel="Maria Huber entfernen">
+							Maria Huber
+						</NameChip>
+						<NameChip onRemove={() => {}} removeLabel="Sepp Gruber entfernen">
+							Sepp Gruber
+						</NameChip>
+					</div>
+				</Probe>
+			</div>
+		</Abschnitt>
+
+		<Abschnitt title="ValueTag — Wertmarke">
+			<div className="grid gap-4 md:grid-cols-3">
+				<Probe label="Standard (Kategoriename + Wert)">
+					<div className="flex flex-wrap gap-2">
+						<ValueTag value="€ 200">Werbeplakat</ValueTag>
+						<ValueTag value="€ 300">Transparent Bühne</ValueTag>
+					</div>
+				</Probe>
+				<Probe label="Überschriebener Wert (rot)">
+					<ValueTag value="€ 350" overridden>
+						Werbeplakat
+					</ValueTag>
+				</Probe>
+				<Probe label="Gestrichelt grau: ohne Kategorie / Sachleistung">
+					<div className="flex flex-wrap gap-2">
+						<ValueTag muted>ohne Kategorie</ValueTag>
+						<ValueTag muted value="€ 150">
+							Sachleistung
+						</ValueTag>
+					</div>
+				</Probe>
+			</div>
+		</Abschnitt>
+
+		<Abschnitt title="SegmentedControl — Segment-Schalter (gelber Aktiv-Zustand)">
+			<div className="grid gap-4 md:grid-cols-2">
+				<Probe label="Mengenquelle · interaktiv (Pfeiltasten/Tab)">
+					<SegmentedProbe
+						ariaLabel="Mengenquelle"
+						options={[
+							{ value: 'bestellt', label: 'Bestellmenge' },
+							{ value: 'tatsaechlich', label: 'Tatsächliche Menge' },
+						]}
+					/>
+				</Probe>
+				<Probe label="Drei Segmente · interaktiv">
+					<SegmentedProbe
+						ariaLabel="Tag wählen"
+						options={[
+							{ value: 'fr', label: 'Freitag' },
+							{ value: 'sa', label: 'Samstag' },
+							{ value: 'so', label: 'Sonntag' },
+						]}
+					/>
+				</Probe>
+			</div>
+		</Abschnitt>
+
+		<Abschnitt title="ModeToggle — Modus-Umschalter (invertiert)">
+			<Probe label="ARBEITSLISTE ⇄ ÜBERNAHME · interaktiv (Pfeiltasten/Tab)">
+				<ModeToggleProbe
+					ariaLabel="Material-Modus"
+					options={[
+						{ value: 'arbeitsliste', label: 'ARBEITSLISTE' },
+						{ value: 'uebernahme', label: 'ÜBERNAHME' },
+					]}
+				/>
 			</Probe>
 		</Abschnitt>
 	</div>
