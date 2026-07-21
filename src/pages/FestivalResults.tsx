@@ -176,7 +176,7 @@ export default function FestivalResults() {
 					<FestivalOverviewView
 						festivalId={festivalId}
 						festival={festival}
-						onEditFestival={() => setEditDialogOpen(true)}
+						onTabChange={handleTabChange}
 					/>
 				)}
 				{activeTab === 'shifts' && (

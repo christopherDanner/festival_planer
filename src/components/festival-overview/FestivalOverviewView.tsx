@@ -1,13 +1,12 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Pencil, MapPin, Users, Package, CalendarClock, AlertCircle, HandCoins } from 'lucide-react';
 import { getStations, getStationShifts, getShiftAssignments, getStationMembers } from '@/lib/shiftService';
 import { getMaterials } from '@/lib/materialService';
 import { getScheduleDays } from '@/lib/scheduleService';
 import { getMembers } from '@/lib/memberService';
 import { getSponsorings } from '@/lib/sponsorService';
-import { festivalSponsoringTotal } from '@/lib/sponsoringTotals';
+import type { FestivalTab } from '@/components/festival/FestivalTabBar';
+import Festplakat from './Festplakat';
 
 interface FestivalOverviewViewProps {
 	festivalId: string;
@@ -18,41 +17,32 @@ interface FestivalOverviewViewProps {
 		end_date?: string;
 		location?: string;
 	};
-	onEditFestival: () => void;
+	/** Absprung in einen anderen Fest-Tab (z. B. Ablaufplan). */
+	onTabChange: (tab: FestivalTab) => void;
 }
 
-function StatsCard({ title, icon, value, subtitle, progress }: {
-	title: string;
-	icon: React.ReactNode;
-	value: string;
-	subtitle: string;
-	progress?: number;
-}) {
+/** Leere Platzhalter-Spalte — Kopf steht, Inhalt folgt (#86 Lücken / #85 Zahlen). */
+function PlaceholderColumn({ title }: { title: string }) {
 	return (
-		<div className="border bg-card p-4">
-			<div className="flex items-center gap-2 text-muted-foreground mb-2">
-				<span className="h-4 w-4">{icon}</span>
-				<span className="text-xs font-medium uppercase tracking-wide">{title}</span>
-			</div>
-			<div className="text-2xl font-bold">{value}</div>
-			<div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
-			{progress !== undefined && (
-				<div className="mt-2 h-1.5 bg-muted overflow-hidden">
-					<div
-						className="h-full bg-primary transition-all"
-						style={{ width: `${Math.min(progress * 100, 100)}%` }}
-					/>
-				</div>
-			)}
+		<div className="min-w-0">
+			<h4 className="text-xs font-bold uppercase tracking-[.07em] text-tinte-soft">{title}</h4>
+			<p className="mt-2 text-[12.5px] text-tinte-soft">folgt</p>
 		</div>
 	);
 }
 
+/**
+ * Dashboard-Tab (`overview`) in Werkzeug-Plakat-Handschrift, Variante C „Festplakat"
+ * (DESIGN-VISION §5): drei Spalten — Lücken (#86) · Festplakat · Zahlen (#85).
+ * Dieses Gerüst baut Layout + Plakat; links/rechts sind Platzhalter. Die
+ * Datenlade-Hooks bleiben erhalten und werden von #85/#86 genutzt.
+ */
 const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 	festivalId,
 	festival,
-	onEditFestival
+	onTabChange
 }) => {
+	// Datenquellen für Lücken- und Zahlen-Spalten (#85/#86) — bereits hier geladen.
 	const { data: stations = [] } = useQuery({
 		queryKey: ['stations', festivalId],
 		queryFn: () => getStations(festivalId)
@@ -94,135 +84,34 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 		queryFn: () => getSponsorings(festivalId)
 	});
 
-	// Date string
-	const dateString = new Date(festival.start_date).toLocaleDateString('de-AT') +
-		(festival.end_date && festival.end_date !== festival.start_date
-			? ` – ${new Date(festival.end_date).toLocaleDateString('de-AT')}`
-			: '');
-
-	// Stats: Stations — count stations where ALL required positions are filled
-	const totalStations = stations.length;
-	const fullyStaffedStations = stations.filter(station => {
-		const stationShifts = shifts.filter(s => s.station_id === station.id);
-		if (stationShifts.length === 0) {
-			// Station without shifts: check station-level members vs required_people
-			const stationLevelCount = stationMembers.filter(sm => sm.station_id === station.id).length;
-			return stationLevelCount >= station.required_people;
-		}
-		// Station with shifts: every shift must be fully staffed
-		return stationShifts.every(shift => {
-			const shiftAssigned = assignments.filter(a => a.station_shift_id === shift.id).length;
-			return shiftAssigned >= shift.required_people;
-		});
-	}).length;
-
-	// Stats: Members — count unique members assigned to shifts OR stations
-	const assignedMemberIds = new Set<string>();
-	assignments.forEach(a => { if (a.member_id) assignedMemberIds.add(a.member_id); });
-	stationMembers.forEach(sm => { if (sm.member_id) assignedMemberIds.add(sm.member_id); });
-	const assignedMembers = assignedMemberIds.size;
-	const totalMembers = members.length;
-	const freeMembers = Math.max(0, totalMembers - assignedMembers);
-
-	// Stats: Materials
-	const totalMaterials = materials.length;
-	const totalCost = materials.reduce((sum, m) => {
-		if (m.unit_price != null) {
-			return sum + m.unit_price * m.ordered_quantity;
-		}
-		return sum;
-	}, 0);
-
-	// Stats: Sponsoring — Anzahl Sponsoren + Gesamtsumme (sponsoringTotals, keine doppelte Summenlogik)
-	const sponsorCount = sponsorings.length;
-	const sponsoringTotalSum = festivalSponsoringTotal(sponsorings);
-
-	// Stats: Schedule
-	const allEntries = scheduleDays.flatMap(day => day.phases?.flatMap(phase => phase.entries || []) || []);
-	const totalTasks = allEntries.filter(e => e.type === 'task').length;
-	const doneTasks = allEntries.filter(e => e.type === 'task' && e.status === 'done').length;
-
-	// Action Items
-	const actionItems: { text: string; severity: 'warning' | 'info' }[] = [];
-
-	stations.forEach(station => {
-		const stationShifts = shifts.filter(s => s.station_id === station.id);
-		const totalNeeded = stationShifts.reduce((sum, s) => sum + s.required_people, 0);
-		const shiftAssigned = assignments.filter(a => stationShifts.some(s => s.id === a.station_shift_id)).length;
-		const stationLevelAssigned = stationMembers.filter(sm => sm.station_id === station.id).length;
-		const totalAssigned = shiftAssigned + stationLevelAssigned;
-		const needed = Math.max(0, (totalNeeded || station.required_people) - totalAssigned);
-		if (needed > 0) {
-			actionItems.push({ text: `${station.name}: ${needed} Personen fehlen noch`, severity: 'warning' });
-		}
-	});
-
-	const openTasks = allEntries.filter(e => e.type === 'task' && e.status === 'open');
-	if (openTasks.length > 0) {
-		actionItems.push({ text: `${openTasks.length} Aufgaben im Ablaufplan noch offen`, severity: 'info' });
-	}
-
-	const noPriceMaterials = materials.filter(m => m.unit_price == null);
-	if (noPriceMaterials.length > 0) {
-		actionItems.push({ text: `${noPriceMaterials.length} Materialien ohne Preis`, severity: 'info' });
-	}
+	// Referenzieren, damit die Hooks für #85/#86 bestehen bleiben (noch ungenutzt).
+	void stations;
+	void shifts;
+	void assignments;
+	void stationMembers;
+	void materials;
+	void members;
+	void sponsorings;
 
 	return (
-		<div className="space-y-6">
-			{/* Stats Grid */}
-			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-				<StatsCard
-					title="Stationen"
-					icon={<MapPin />}
-					value={`${fullyStaffedStations}/${totalStations}`}
-					subtitle={`voll besetzt · ${totalStations - fullyStaffedStations} offen`}
-					progress={totalStations > 0 ? fullyStaffedStations / totalStations : 0}
-				/>
-				<StatsCard
-					title="Mitglieder"
-					icon={<Users />}
-					value={assignedMembers.toString()}
-					subtitle={`eingeteilt \u00b7 ${freeMembers} frei`}
-					progress={totalMembers > 0 ? assignedMembers / totalMembers : 0}
-				/>
-				<StatsCard
-					title="Materialien"
-					icon={<Package />}
-					value={totalMaterials.toString()}
-					subtitle={`Positionen \u00b7 \u20ac${totalCost.toLocaleString('de-AT')}`}
-				/>
-				<StatsCard
-					title="Ablaufplan"
-					icon={<CalendarClock />}
-					value={`${doneTasks}/${totalTasks}`}
-					subtitle="Aufgaben erledigt"
-					progress={totalTasks > 0 ? doneTasks / totalTasks : 0}
-				/>
-				<StatsCard
-					title="Sponsoring"
-					icon={<HandCoins />}
-					value={sponsorCount.toString()}
-					subtitle={`Sponsoren · €${sponsoringTotalSum.toLocaleString('de-AT')}`}
+		<div className="grid grid-cols-1 items-start gap-5 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
+			{/* Links: Lücken (#86) — mobil nach dem Plakat */}
+			<div className="order-2 min-[900px]:order-none">
+				<PlaceholderColumn title="Da fehlt noch was" />
+			</div>
+
+			{/* Mitte: Festplakat — mobil zuerst */}
+			<div className="order-1 min-[900px]:order-none">
+				<Festplakat
+					festival={festival}
+					scheduleDays={scheduleDays}
+					onOpenSchedule={() => onTabChange('schedule')}
 				/>
 			</div>
 
-			{/* Action Items */}
-			<div className="border bg-card p-5">
-				<h3 className="font-semibold mb-3 flex items-center gap-2">
-					<AlertCircle className="h-5 w-5 text-amber-500" />
-					Handlungsbedarf
-				</h3>
-				<div className="space-y-2">
-					{actionItems.map((item, i) => (
-						<div key={i} className="flex items-center gap-3 text-sm py-1.5 border-b last:border-b-0">
-							<span className={`h-2 w-2 ${item.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'}`} />
-							<span className="text-foreground/80">{item.text}</span>
-						</div>
-					))}
-					{actionItems.length === 0 && (
-						<p className="text-sm text-muted-foreground">Alles erledigt!</p>
-					)}
-				</div>
+			{/* Rechts: Zahlen (#85) — mobil nach den Lücken */}
+			<div className="order-3 min-[900px]:order-none">
+				<PlaceholderColumn title="Zahlen" />
 			</div>
 		</div>
 	);
