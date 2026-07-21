@@ -89,7 +89,7 @@ const ScheduleEntryTable = ({
 								)}
 								{index === 0 && <div className="flex-1" />}
 								{/* Dot */}
-								<div className="relative z-10 h-2 w-2 rounded-full bg-primary/40 ring-2 ring-background shrink-0 my-1" />
+								<div className="relative z-10 h-2 w-2 bg-primary/40 ring-2 ring-background shrink-0 my-1" />
 								{/* Line below dot */}
 								{index < entries.length - 1 && (
 									<div className="w-px flex-1 bg-border" />

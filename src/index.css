@@ -2,122 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
-All colors MUST be HSL.
+/* Definition of the design system (design-vision/DESIGN-VISION.md §4, verbindlich).
+Alle Farb-Tokens sind OKLCH-Kanaltripel (L C H); das Theme mappt via
+oklch(var(--token) / <alpha-value>). Keine hsl()-Tokens mehr.
 */
 
 @layer base {
-  :root {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+	:root {
+		/* Werkzeug-Plakat-Farbrollen */
+		--papier: 0.97 0.008 95;
+		--tinte: 0.24 0.02 145;
+		--tinte-soft: 0.44 0.02 145;
+		--gruen: 0.4 0.1 160;
+		--gruen-tief: 0.33 0.09 160;
+		--gelb: 0.86 0.15 92;
+		--rot: 0.55 0.18 30;
+		--linie: 0.87 0.012 100;
+		--fusszeile: 0.955 0.01 100;
+		--weiss: 1 0 0;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+		/* shadcn-Rollen, auf die Farbrollen gemappt */
+		--background: var(--papier);
+		--foreground: var(--tinte);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+		--card: var(--weiss);
+		--card-foreground: var(--tinte);
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+		--popover: var(--weiss);
+		--popover-foreground: var(--tinte);
 
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
+		--primary: var(--gelb);
+		--primary-foreground: var(--tinte);
 
-    --muted: 214 32% 95%;
-    --muted-foreground: 215 16% 42%;
+		--secondary: var(--fusszeile);
+		--secondary-foreground: var(--tinte);
 
-    --accent: 38 92% 50%;
-    --accent-foreground: 0 0% 100%;
+		--muted: var(--fusszeile);
+		--muted-foreground: var(--tinte-soft);
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+		--accent: var(--gelb);
+		--accent-foreground: var(--tinte);
 
-    --border: 214 20% 85%;
-    --input: 214 20% 88%;
-    --ring: 221 83% 53%;
+		--destructive: var(--rot);
+		--destructive-foreground: var(--weiss);
 
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 98%;
+		--border: var(--linie);
+		--input: var(--tinte);
+		--ring: var(--tinte);
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 12%;
+		--success: var(--gruen);
+		--success-foreground: var(--weiss);
 
-    /* Semantic status tokens */
-    --status-empty: 214 32% 94%;
-    --status-partial: 38 60% 93%;
-    --status-complete: 142 30% 91%;
-    --status-empty-border: 214 20% 82%;
-    --status-partial-border: 38 45% 72%;
-    --status-complete-border: 142 30% 68%;
+		--warning: var(--gelb);
+		--warning-foreground: var(--tinte);
 
-    --gradient-hero: linear-gradient(135deg, hsl(221 83% 40%), hsl(221 83% 53%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(214 20% 98%));
+		/* Ampel-Logik: leer = Rot, teilbesetzt = Gelb, voll = Grün.
+		Flächen als helle Töne der Ampelfarbe, Kanten in der Ampelfarbe. */
+		--status-empty: 0.94 0.03 30;
+		--status-partial: 0.94 0.06 92;
+		--status-complete: 0.94 0.04 160;
+		--status-empty-border: var(--rot);
+		--status-partial-border: var(--gelb);
+		--status-complete-border: var(--gruen);
 
-    /* Shadow scale */
-    --shadow-festival: 0 10px 30px -10px hsl(221 83% 53% / 0.2);
-    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.04), 0 2px 8px hsl(0 0% 0% / 0.06);
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 217 33% 20%;
-    --sidebar-ring: 221 83% 53%;
-  }
-
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217 33% 15%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 38 92% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 217 91% 60%;
-
-    --sidebar-background: 222 47% 6%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 12%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 217 33% 15%;
-    --sidebar-ring: 217 91% 60%;
-  }
+		--radius: 0rem;
+	}
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+	* {
+		@apply border-border;
+	}
 
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+	body {
+		/* Fallback-Versicherung für Browser ohne OKLCH: erst Literalwert, dann var() */
+		background-color: #f7f5ec;
+		background-color: oklch(var(--background));
+		color: #253029;
+		color: oklch(var(--foreground));
+		font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
 }

@@ -38,7 +38,7 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 	if (isMobile) {
 		const canMove = !(isFirst && isLast);
 		return (
-			<div className={`rounded-lg border bg-card p-2 ${borderClass}`}>
+			<div className={`border bg-card p-2 ${borderClass}`}>
 				<div className="flex items-start gap-1.5">
 					{/* Move buttons */}
 					{canMove && (
@@ -115,7 +115,7 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 	}
 
 	return (
-		<div className={`rounded-lg border bg-card p-3 ${borderClass}`}>
+		<div className={`border bg-card p-3 ${borderClass}`}>
 			{/* Top row: time badge, move buttons, action buttons */}
 			<div className="flex items-center justify-between mb-2">
 				<div className="flex items-center gap-2">

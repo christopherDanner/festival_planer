@@ -363,11 +363,11 @@ export default function MaterialUebernahme() {
 						Feste werden geladen…
 					</div>
 				) : sortedFestivals.length === 0 ? (
-					<div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+					<div className="border bg-card p-6 text-center text-sm text-muted-foreground">
 						Du hast noch keine Feste angelegt. Lege zuerst ein Fest an, um Material zu übernehmen.
 					</div>
 				) : sortedFestivals.length === 1 ? (
-					<div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+					<div className="border bg-card p-6 text-center text-sm text-muted-foreground">
 						Für die Material-Übernahme werden mindestens zwei Feste benötigt — ein Quell- und ein Zielfest. Du hast bisher nur ein Fest angelegt.
 					</div>
 				) : (
@@ -484,7 +484,7 @@ export default function MaterialUebernahme() {
 								Materialien werden geladen…
 							</div>
 						) : matchResult.rows.length === 0 ? (
-							<div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+							<div className="border bg-card p-6 text-center text-sm text-muted-foreground">
 								Weder Ziel- noch Quellfest haben Material-Positionen.
 							</div>
 						) : (

@@ -101,13 +101,13 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				<div className="h-10 bg-muted rounded animate-pulse" />
 				<div className="grid grid-cols-3 gap-2 sm:gap-3">
 					{[1, 2, 3].map((i) => (
-						<div key={i} className="rounded-lg border bg-card p-3 sm:p-4 animate-pulse space-y-2">
+						<div key={i} className="border bg-card p-3 sm:p-4 animate-pulse space-y-2">
 							<div className="h-3 bg-muted rounded w-1/2" />
 							<div className="h-5 bg-muted rounded w-1/3" />
 						</div>
 					))}
 				</div>
-				<div className="rounded-lg border bg-card p-4 sm:p-6 animate-pulse space-y-3">
+				<div className="border bg-card p-4 sm:p-6 animate-pulse space-y-3">
 					<div className="h-4 bg-muted rounded w-full" />
 					<div className="h-4 bg-muted rounded w-full" />
 					<div className="h-4 bg-muted rounded w-3/4" />
@@ -128,15 +128,15 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 			{/* Summary stats */}
 			{materials.length > 0 && (
 				<div className="grid grid-cols-3 gap-2 sm:gap-3">
-					<div className="rounded-lg border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0">
+					<div className="border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0">
 						<p className="text-[10px] sm:text-xs text-muted-foreground">Materialien</p>
 						<p className="text-base sm:text-lg font-semibold">{materials.length}</p>
 					</div>
-					<div className="rounded-lg border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0">
+					<div className="border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0">
 						<p className="text-[10px] sm:text-xs text-muted-foreground">Kategorien</p>
 						<p className="text-base sm:text-lg font-semibold">{categoryCount}</p>
 					</div>
-					<div className="rounded-lg border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0 overflow-hidden">
+					<div className="border bg-card px-2 sm:px-4 py-2 sm:py-3 min-w-0 overflow-hidden">
 						<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Gesch. Kosten</p>
 						<p className="text-base sm:text-lg font-semibold truncate">{totalCost > 0 ? `${totalCost.toFixed(0)} €` : '–'}</p>
 					</div>

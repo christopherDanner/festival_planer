@@ -41,7 +41,7 @@ const ScheduleEntryRow = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, is
 			</div>
 
 			{/* Card content */}
-			<div className="flex-1 rounded-lg border bg-card p-3 hover:shadow-sm transition-shadow duration-150">
+			<div className="flex-1 border bg-card p-3">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						{/* Type badge */}

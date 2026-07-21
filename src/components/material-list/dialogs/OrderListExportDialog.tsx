@@ -103,7 +103,7 @@ const OrderListExportDialog: React.FC<OrderListExportDialogProps> = ({
 							<button
 								type="button"
 								onClick={() => setAxisAndReset('supplier')}
-								className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+								className={`px-3 py-1 text-xs border transition-colors ${
 									axis === 'supplier' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted/50'
 								}`}>
 								Lieferant
@@ -111,7 +111,7 @@ const OrderListExportDialog: React.FC<OrderListExportDialogProps> = ({
 							<button
 								type="button"
 								onClick={() => setAxisAndReset('station')}
-								className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+								className={`px-3 py-1 text-xs border transition-colors ${
 									axis === 'station' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted/50'
 								}`}>
 								Station

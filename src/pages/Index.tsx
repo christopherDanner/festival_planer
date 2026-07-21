@@ -82,9 +82,9 @@ export default function Index() {
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-						<Card className="shadow-card hover:shadow-lg transition-shadow">
+						<Card>
 							<CardHeader>
-								<div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+								<div className="w-12 h-12 bg-primary/10 flex items-center justify-center mb-4">
 									<Calendar className="h-6 w-6 text-primary" />
 								</div>
 								<CardTitle>Fest-Verwaltung</CardTitle>
@@ -110,9 +110,9 @@ export default function Index() {
 							</CardContent>
 						</Card>
 
-						<Card className="shadow-card hover:shadow-lg transition-shadow">
+						<Card>
 							<CardHeader>
-								<div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+								<div className="w-12 h-12 bg-primary/10 flex items-center justify-center mb-4">
 									<Users className="h-6 w-6 text-primary" />
 								</div>
 								<CardTitle>Personen-Einteilung</CardTitle>
@@ -149,10 +149,10 @@ export default function Index() {
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-						<Card className="shadow-card">
+						<Card>
 							<CardContent className="p-6">
 								<div className="flex items-center gap-4 mb-4">
-									<div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+									<div className="w-12 h-12 bg-primary/10 flex items-center justify-center">
 										<Music className="h-6 w-6 text-primary" />
 									</div>
 									<div>
@@ -167,10 +167,10 @@ export default function Index() {
 							</CardContent>
 						</Card>
 
-						<Card className="shadow-card">
+						<Card>
 							<CardContent className="p-6">
 								<div className="flex items-center gap-4 mb-4">
-									<div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+									<div className="w-12 h-12 bg-primary/10 flex items-center justify-center">
 										<Tent className="h-6 w-6 text-primary" />
 									</div>
 									<div>
@@ -185,10 +185,10 @@ export default function Index() {
 							</CardContent>
 						</Card>
 
-						<Card className="shadow-card">
+						<Card>
 							<CardContent className="p-6">
 								<div className="flex items-center gap-4 mb-4">
-									<div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+									<div className="w-12 h-12 bg-primary/10 flex items-center justify-center">
 										<Beer className="h-6 w-6 text-primary" />
 									</div>
 									<div>
@@ -207,7 +207,7 @@ export default function Index() {
 			</section>
 
 			{/* CTA Section */}
-			<section className="py-20 bg-gradient-to-br from-primary/10 to-secondary/10">
+			<section className="py-20 bg-muted">
 				<div className="container mx-auto px-4 text-center">
 					<h2 className="text-3xl lg:text-4xl font-bold mb-4">Bereit für dein nächstes Fest?</h2>
 					<p className="text-xl mb-8 text-muted-foreground max-w-2xl mx-auto">

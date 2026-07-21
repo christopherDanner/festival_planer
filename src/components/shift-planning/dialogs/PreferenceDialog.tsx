@@ -98,7 +98,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 									<div
 										key={station.id}
 										className={cn(
-											'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+											'flex items-center space-x-3 p-3 border cursor-pointer transition-colors',
 											isSelected
 												? 'bg-green-50 border-green-200'
 												: 'hover:bg-muted border-border'
@@ -143,7 +143,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 								);
 								if (shiftsForStation.length === 0) return null;
 								return (
-									<div key={station.id} className="border rounded-lg p-4">
+									<div key={station.id} className="border p-4">
 										<div className="flex items-center gap-2 mb-4">
 											<MapPin className="h-5 w-5 text-green-600" />
 											<h4 className="text-lg font-semibold">{station.name}</h4>
@@ -168,7 +168,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 													<div
 														key={shift.id}
 														className={cn(
-															'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+															'flex items-center space-x-3 p-3 border cursor-pointer transition-colors',
 															isSelected
 																? 'bg-blue-50 border-blue-200'
 																: 'hover:bg-muted border-border'

@@ -53,7 +53,7 @@ const StationShiftCard: React.FC<StationShiftCardProps> = ({
 
 	return (
 		<div
-			className="border rounded-lg bg-card"
+			className="border bg-card"
 			onDragOver={(e) => e.preventDefault()}
 			onDrop={(e) => onDrop(stationShift.id, e)}>
 			{/* Header */}

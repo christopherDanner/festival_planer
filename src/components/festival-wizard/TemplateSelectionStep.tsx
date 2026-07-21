@@ -78,7 +78,7 @@ export default function TemplateSelectionStep({
 	};
 
 	const chipClass = (state: boolean | 'indeterminate') =>
-		`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+		`text-xs px-2.5 py-1 border transition-colors cursor-pointer ${
 			state === true
 				? 'bg-primary text-primary-foreground border-primary'
 				: state === 'indeterminate'

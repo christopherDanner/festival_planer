@@ -45,7 +45,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 	return (
 		<div
 			className={cn(
-				'bg-card border rounded-lg p-3 transition-colors',
+				'bg-card border p-3 transition-colors',
 				onTapSelect ? 'cursor-pointer active:bg-accent/70' : 'cursor-move',
 				'hover:bg-muted/50'
 			)}
@@ -61,7 +61,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 				<div className="flex items-center justify-between">
 					<span className="font-medium text-sm flex items-center">
 						<span className={cn(
-							'w-2 h-2 rounded-full inline-block mr-2',
+							'w-2 h-2 inline-block mr-2',
 							isAssigned ? 'bg-primary' : 'bg-muted-foreground/30'
 						)} />
 						{member.last_name} {member.first_name}

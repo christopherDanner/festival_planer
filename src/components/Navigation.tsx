@@ -27,7 +27,7 @@ export default function Navigation() {
 						type="button"
 						onClick={() => navigate(user ? '/dashboard' : '/')}
 						className="flex items-center space-x-1.5 sm:space-x-2 min-w-0 shrink">
-						<div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-hero rounded-lg flex items-center justify-center shrink-0">
+						<div className="w-7 h-7 sm:w-8 sm:h-8 bg-gruen flex items-center justify-center shrink-0">
 							<span className="text-primary-foreground font-bold text-xs sm:text-sm">F</span>
 						</div>
 						<span className="font-semibold text-sm sm:text-base truncate">Festmeister</span>

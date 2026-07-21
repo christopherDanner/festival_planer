@@ -150,7 +150,7 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 							<button
 								type="button"
 								onClick={() => setFilterMode('all')}
-								className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+								className={`px-3 py-1 text-xs border transition-colors ${
 									filterMode === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted/50'
 								}`}>
 								Gesamte Liste
@@ -158,7 +158,7 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 							<button
 								type="button"
 								onClick={() => setFilterMode('station')}
-								className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+								className={`px-3 py-1 text-xs border transition-colors ${
 									filterMode === 'station' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted/50'
 								}`}>
 								Nach Station
@@ -166,7 +166,7 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 							<button
 								type="button"
 								onClick={() => setFilterMode('supplier')}
-								className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+								className={`px-3 py-1 text-xs border transition-colors ${
 									filterMode === 'supplier' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted/50'
 								}`}>
 								Nach Lieferant

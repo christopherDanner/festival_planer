@@ -104,7 +104,7 @@ export default function FestivalResults() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5 flex items-center justify-center">
+			<div className="min-h-screen flex items-center justify-center">
 				<p>Lade Festdaten...</p>
 			</div>
 		);
@@ -124,7 +124,7 @@ export default function FestivalResults() {
 	const subtitleString = subtitleParts.join(' \u00b7 ');
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+		<div className="min-h-screen">
 			<PageHeader
 				title={festival.name || 'Fest'}
 				subtitle={subtitleString}

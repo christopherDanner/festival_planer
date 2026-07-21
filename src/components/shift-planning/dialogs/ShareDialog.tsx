@@ -255,7 +255,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 					)}
 
 					{previewText && (
-						<div className="whitespace-pre-wrap font-mono text-xs bg-muted rounded-lg p-3 max-h-40 overflow-y-auto border">
+						<div className="whitespace-pre-wrap font-mono text-xs bg-muted p-3 max-h-40 overflow-y-auto border">
 							{previewText}
 						</div>
 					)}

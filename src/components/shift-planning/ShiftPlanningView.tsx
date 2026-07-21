@@ -345,7 +345,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			{isMobile && (
 				<>
 					<Button
-						className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full shadow-md bg-primary hover:bg-primary/90"
+						className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 bg-primary hover:bg-primary/90"
 						onClick={() => setIsMemberDrawerOpen(true)}
 					>
 						<Users className="h-6 w-6 text-primary-foreground" />

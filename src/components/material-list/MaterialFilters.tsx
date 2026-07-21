@@ -57,7 +57,7 @@ const MaterialFilters: React.FC<MaterialFiltersProps> = ({
 				{isMobile && (
 					<Button variant="outline" size="sm" className="h-9 gap-1.5 shrink-0" onClick={() => setFiltersOpen(!filtersOpen)}>
 						<Filter className="h-4 w-4" />
-						{hasActiveFilters && <span className="h-2 w-2 rounded-full bg-primary" />}
+						{hasActiveFilters && <span className="h-2 w-2 bg-primary" />}
 					</Button>
 				)}
 			</div>

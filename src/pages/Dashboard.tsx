@@ -150,7 +150,7 @@ export default function Dashboard() {
 	const renderFestivalCard = (festival: Festival, isUpcoming: boolean) => (
 		<Card
 			key={festival.id}
-			className={`group hover:shadow-md transition-all duration-200 cursor-pointer border bg-card hover:-translate-y-0.5 ${!isUpcoming ? 'opacity-60 hover:opacity-80' : ''}`}
+			className={`group transition-all duration-200 cursor-pointer border bg-card hover:-translate-y-0.5 ${!isUpcoming ? 'opacity-60 hover:opacity-80' : ''}`}
 			onClick={() => navigate(`/festival-results?id=${festival.id}`)}>
 			<CardHeader className="pb-3">
 				<div className="flex justify-between items-start">
@@ -166,7 +166,7 @@ export default function Dashboard() {
 						<Calendar className="h-3.5 w-3.5" />
 						<span>{formatDate(festival)}</span>
 						{isUpcoming && (
-							<span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+							<span className="text-xs bg-primary/10 text-primary px-2 py-0.5 font-medium">
 								{getDaysUntil(festival.start_date)}
 							</span>
 						)}
@@ -221,7 +221,7 @@ export default function Dashboard() {
 					{loading ? (
 						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 							{[1, 2, 3].map((i) => (
-								<div key={i} className="rounded-xl border bg-card p-6 space-y-4 animate-pulse">
+								<div key={i} className="border bg-card p-6 space-y-4 animate-pulse">
 									<div className="h-5 bg-muted rounded w-2/3" />
 									<div className="h-4 bg-muted rounded w-1/3" />
 									<div className="h-4 bg-muted rounded w-1/2" />
@@ -251,7 +251,7 @@ export default function Dashboard() {
 								<div>
 									<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Nächstes Fest</h2>
 									<Card
-										className="group cursor-pointer border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-transparent hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5"
+										className="group cursor-pointer border-primary/20 transition-all duration-200 hover:-translate-y-0.5"
 										onClick={() => navigate(`/festival-results?id=${nextFestival.id}`)}>
 										<div className="p-4 sm:p-8">
 											<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
@@ -259,7 +259,7 @@ export default function Dashboard() {
 													<h3 className="text-xl sm:text-3xl font-extrabold text-foreground group-hover:text-primary transition-colors">
 														{nextFestival.name}
 													</h3>
-													<span className="inline-block bg-primary text-primary-foreground text-xs sm:text-sm font-semibold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full mt-1.5 sm:mt-2">
+													<span className="inline-block bg-primary text-primary-foreground text-xs sm:text-sm font-semibold px-2.5 sm:px-3 py-0.5 sm:py-1 mt-1.5 sm:mt-2">
 														{getDaysUntil(nextFestival.start_date)}
 													</span>
 													<div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-2">
