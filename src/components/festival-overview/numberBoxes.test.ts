@@ -9,7 +9,7 @@ import {
 	deriveSponsoringMetric,
 	formatEuro,
 	formatDeltaEuro
-} from './numbersColumn';
+} from './numberBoxes';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
 

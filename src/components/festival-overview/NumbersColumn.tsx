@@ -15,7 +15,7 @@ import {
 	formatEuro,
 	formatDeltaEuro,
 	type DeltaTone
-} from './numbersColumn';
+} from './numberBoxes';
 
 interface NumbersColumnProps {
 	stations: Station[];
