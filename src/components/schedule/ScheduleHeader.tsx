@@ -38,7 +38,7 @@ export default function ScheduleHeader({ onAddDay, onExport, hasData }: Schedule
           </Button>
         </div>
       </div>
-      <div className="mt-3 h-px bg-gradient-to-r from-primary/40 via-primary/20 to-transparent" />
+      <div className="mt-3 h-px bg-border" />
     </div>
   );
 }

@@ -195,7 +195,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					<DialogTitle>{material ? 'Material bearbeiten' : 'Material hinzufügen'}</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-3">
-					<section className="space-y-3 rounded-lg border bg-muted/30 p-4">
+					<section className="space-y-3 border bg-muted/30 p-4">
 						<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Grunddaten
 						</h3>
@@ -311,7 +311,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					</div>
 					</section>
 
-					<section className="space-y-3 rounded-lg border bg-muted/30 p-4">
+					<section className="space-y-3 border bg-muted/30 p-4">
 						<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Einheit & Gebinde
 						</h3>
@@ -360,7 +360,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					)}
 					</section>
 
-					<section className="space-y-3 rounded-lg border bg-muted/30 p-4">
+					<section className="space-y-3 border bg-muted/30 p-4">
 						<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Mengen
 						</h3>
@@ -392,7 +392,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					</div>
 					</section>
 
-					<section className="space-y-3 rounded-lg border bg-muted/30 p-4">
+					<section className="space-y-3 border bg-muted/30 p-4">
 						<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Preis
 						</h3>
@@ -479,7 +479,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 					</div>
 					</section>
 
-					<section className="space-y-3 rounded-lg border bg-muted/30 p-4">
+					<section className="space-y-3 border bg-muted/30 p-4">
 						<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Notizen
 						</h3>

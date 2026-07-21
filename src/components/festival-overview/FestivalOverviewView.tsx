@@ -29,7 +29,7 @@ function StatsCard({ title, icon, value, subtitle, progress }: {
 	progress?: number;
 }) {
 	return (
-		<div className="rounded-xl border bg-card p-4">
+		<div className="border bg-card p-4">
 			<div className="flex items-center gap-2 text-muted-foreground mb-2">
 				<span className="h-4 w-4">{icon}</span>
 				<span className="text-xs font-medium uppercase tracking-wide">{title}</span>
@@ -37,9 +37,9 @@ function StatsCard({ title, icon, value, subtitle, progress }: {
 			<div className="text-2xl font-bold">{value}</div>
 			<div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
 			{progress !== undefined && (
-				<div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+				<div className="mt-2 h-1.5 bg-muted overflow-hidden">
 					<div
-						className="h-full bg-primary rounded-full transition-all"
+						className="h-full bg-primary transition-all"
 						style={{ width: `${Math.min(progress * 100, 100)}%` }}
 					/>
 				</div>
@@ -207,7 +207,7 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 			</div>
 
 			{/* Action Items */}
-			<div className="rounded-xl border bg-card p-5">
+			<div className="border bg-card p-5">
 				<h3 className="font-semibold mb-3 flex items-center gap-2">
 					<AlertCircle className="h-5 w-5 text-amber-500" />
 					Handlungsbedarf
@@ -215,7 +215,7 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 				<div className="space-y-2">
 					{actionItems.map((item, i) => (
 						<div key={i} className="flex items-center gap-3 text-sm py-1.5 border-b last:border-b-0">
-							<span className={`h-2 w-2 rounded-full ${item.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'}`} />
+							<span className={`h-2 w-2 ${item.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'}`} />
 							<span className="text-foreground/80">{item.text}</span>
 						</div>
 					))}

@@ -44,10 +44,10 @@ const SchedulePhaseSection = ({
 			{/* Phase header — prominent banner */}
 			<div className="group flex items-center gap-3 mb-3">
 				{/* Left accent dot on the day's border line */}
-				<div className="hidden sm:block absolute -left-[calc(1rem+5.5px)] sm:-left-[calc(1.25rem+5.5px)] w-3 h-3 rounded-full bg-primary/30 border-2 border-background" />
+				<div className="hidden sm:block absolute -left-[calc(1rem+5.5px)] sm:-left-[calc(1.25rem+5.5px)] w-3 h-3 bg-primary/30 border-2 border-background" />
 
 				{/* Phase banner */}
-				<div className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-lg bg-muted/80 border border-border/50 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
+				<div className="flex-1 min-w-0 flex items-center justify-between gap-2 bg-muted/80 border border-border/50 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
 					<div className="flex items-center gap-2.5 min-w-0">
 						<span className="font-bold text-xs sm:text-sm text-foreground uppercase tracking-wide truncate">{phase.name}</span>
 						{hasProgress && (

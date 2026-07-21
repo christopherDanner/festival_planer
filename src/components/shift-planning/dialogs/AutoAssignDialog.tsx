@@ -65,7 +65,7 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 							/>
 						</div>
 					</div>
-					<div className="bg-muted p-4 rounded-lg">
+					<div className="bg-muted p-4">
 						<p className="text-sm text-muted-foreground">
 							Die automatische Zuteilung berücksichtigt nur Stationen, die den jeweiligen
 							Schichten zugewiesen wurden. Mitglieder mit Stationswünschen werden bevorzugt

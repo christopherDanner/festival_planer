@@ -163,14 +163,14 @@ const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId, festivalNam
 			{/* Mobile: Karten-Liste */}
 			<div className="md:hidden space-y-2">
 				{categories.length === 0 ? (
-					<div className="rounded-lg border bg-card py-8 text-center text-sm text-muted-foreground">
+					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
 						Noch keine Sponsoring-Kategorien
 					</div>
 				) : (
 					categories.map((category) => (
 						<div
 							key={category.id}
-							className="rounded-lg border bg-card p-3 flex items-center justify-between gap-2">
+							className="border bg-card p-3 flex items-center justify-between gap-2">
 							<div className="flex-1 min-w-0">
 								<div className="font-medium truncate">{category.name}</div>
 								<div className="text-sm text-muted-foreground">{formatValue(category.value)}</div>
@@ -197,7 +197,7 @@ const SponsoringView: React.FC<SponsoringViewProps> = ({ festivalId, festivalNam
 			</div>
 
 			{/* Desktop: Tabelle */}
-			<div className="hidden md:block rounded-lg border bg-card">
+			<div className="hidden md:block border bg-card">
 				<Table>
 					<TableHeader>
 						<TableRow>

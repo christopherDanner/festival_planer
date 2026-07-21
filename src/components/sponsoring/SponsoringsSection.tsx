@@ -267,7 +267,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 			{/* Mobile: Karten-Liste */}
 			<div className="md:hidden space-y-2">
 				{rows.length === 0 ? (
-					<div className="rounded-lg border bg-card py-8 text-center text-sm text-muted-foreground">
+					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
 						Noch keine Sponsorings erfasst
 					</div>
 				) : (
@@ -275,7 +275,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 						{rows.map((row) => {
 							const sponsoring = sponsorings.find((s) => s.id === row.sponsoringId)!;
 							return (
-								<div key={row.sponsoringId} className="rounded-lg border bg-card p-3">
+								<div key={row.sponsoringId} className="border bg-card p-3">
 									<div className="flex items-start justify-between gap-2">
 										<div className="flex-1 min-w-0">
 											<div className="font-medium truncate">{row.companyName}</div>
@@ -313,7 +313,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 								</div>
 							);
 						})}
-						<div className="rounded-lg border bg-card p-3 flex items-center justify-between">
+						<div className="border bg-card p-3 flex items-center justify-between">
 							<span className="font-semibold text-sm">Gesamtsumme</span>
 							<span className="font-semibold">{formatEuro(total)}</span>
 						</div>
@@ -322,7 +322,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 			</div>
 
 			{/* Desktop: Tabelle */}
-			<div className="hidden md:block rounded-lg border bg-card">
+			<div className="hidden md:block border bg-card">
 				<Table>
 					<TableHeader>
 						<TableRow>

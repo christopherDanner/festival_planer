@@ -64,7 +64,7 @@ const StationCard: React.FC<StationCardProps> = ({
 
 	return (
 		<div className={cn(
-			'rounded-lg border border-l-4 bg-card shadow-sm',
+			'border border-l-4 bg-card',
 			getAccentColor(stationMembers.length, station.required_people)
 		)}>
 			{/* Header */}

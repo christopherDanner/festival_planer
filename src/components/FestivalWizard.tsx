@@ -125,7 +125,7 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+		<div className="min-h-screen">
 			<div className="container mx-auto px-4 py-8">
 				<div className="flex justify-between items-center mb-8">
 					<h1 className="text-3xl font-bold">Neues Fest erstellen</h1>
@@ -136,7 +136,7 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
 
 				<div className="max-w-lg mx-auto">
 					{step === 1 && (
-						<Card className="shadow-lg">
+						<Card>
 							<CardHeader className="text-center">
 								<CardTitle className="text-2xl flex items-center justify-center gap-2">
 									<Calendar className="h-6 w-6" />
