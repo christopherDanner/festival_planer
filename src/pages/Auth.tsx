@@ -54,7 +54,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Fest-Planer</CardTitle>
+          <CardTitle className="font-display text-2xl">Fest-Planer</CardTitle>
           <CardDescription>
             Melden Sie sich mit Ihrem Fest-Planer Konto an
           </CardDescription>
