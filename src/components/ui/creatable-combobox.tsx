@@ -52,7 +52,7 @@ export const CreatableCombobox: React.FC<CreatableComboboxProps> = ({
 					variant="outline"
 					role="combobox"
 					aria-expanded={open}
-					className="w-full justify-between font-normal hover:bg-background hover:text-foreground">
+					className="w-full justify-between font-normal tracking-normal">
 					<span className={cn('truncate', !value && 'text-muted-foreground')}>
 						{value || emptyPlaceholder}
 					</span>
