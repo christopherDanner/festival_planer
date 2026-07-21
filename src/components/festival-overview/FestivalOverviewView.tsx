@@ -1,6 +1,11 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getStations, getStationShifts, getShiftAssignments, getStationMembers } from '@/lib/shiftService';
+import {
+	getStations,
+	getStationShifts,
+	getShiftAssignments,
+	getStationMembers
+} from '@/lib/shiftService';
 import { getMaterials } from '@/lib/materialService';
 import { getScheduleDays } from '@/lib/scheduleService';
 import { getMembers } from '@/lib/memberService';
@@ -8,6 +13,7 @@ import { getSponsorings } from '@/lib/sponsorService';
 import type { FestivalTab } from '@/components/festival/FestivalTabBar';
 import Festplakat from './Festplakat';
 import NumbersColumn from './NumbersColumn';
+import GapColumn from './GapColumn';
 
 interface FestivalOverviewViewProps {
 	festivalId: string;
@@ -22,7 +28,7 @@ interface FestivalOverviewViewProps {
 	onTabChange: (tab: FestivalTab) => void;
 }
 
-/** Leere Platzhalter-Spalte — Kopf steht, Inhalt folgt (#86 Lücken / #85 Zahlen). */
+/** Leere Platzhalter-Spalte — Kopf steht, Inhalt folgt (#85 Zahlen). */
 function PlaceholderColumn({ title }: { title: string }) {
 	return (
 		<div className="min-w-0">
@@ -85,14 +91,22 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 		queryFn: () => getSponsorings(festivalId)
 	});
 
-	// members bleibt für die Lücken-Spalte (#86) geladen, hier noch ungenutzt.
+	// Referenzieren, damit die verbleibenden Hooks für #85 bestehen bleiben (noch ungenutzt).
 	void members;
 
 	return (
 		<div className="grid grid-cols-1 items-start gap-5 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
 			{/* Links: Lücken (#86) — mobil nach dem Plakat */}
 			<div className="order-2 min-[900px]:order-none">
-				<PlaceholderColumn title="Da fehlt noch was" />
+				<GapColumn
+					stations={stations}
+					shifts={shifts}
+					assignments={assignments}
+					stationMembers={stationMembers}
+					scheduleDays={scheduleDays}
+					materials={materials}
+					onTabChange={onTabChange}
+				/>
 			</div>
 
 			{/* Mitte: Festplakat — mobil zuerst */}
