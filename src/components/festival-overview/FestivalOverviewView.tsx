@@ -7,6 +7,7 @@ import { getMembers } from '@/lib/memberService';
 import { getSponsorings } from '@/lib/sponsorService';
 import type { FestivalTab } from '@/components/festival/FestivalTabBar';
 import Festplakat from './Festplakat';
+import NumbersColumn from './NumbersColumn';
 
 interface FestivalOverviewViewProps {
 	festivalId: string;
@@ -84,14 +85,8 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 		queryFn: () => getSponsorings(festivalId)
 	});
 
-	// Referenzieren, damit die Hooks für #85/#86 bestehen bleiben (noch ungenutzt).
-	void stations;
-	void shifts;
-	void assignments;
-	void stationMembers;
-	void materials;
+	// members bleibt für die Lücken-Spalte (#86) geladen, hier noch ungenutzt.
 	void members;
-	void sponsorings;
 
 	return (
 		<div className="grid grid-cols-1 items-start gap-5 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
@@ -111,7 +106,15 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 
 			{/* Rechts: Zahlen (#85) — mobil nach den Lücken */}
 			<div className="order-3 min-[900px]:order-none">
-				<PlaceholderColumn title="Zahlen" />
+				<NumbersColumn
+					stations={stations}
+					shifts={shifts}
+					assignments={assignments}
+					stationMembers={stationMembers}
+					materials={materials}
+					sponsorings={sponsorings}
+					onTabChange={onTabChange}
+				/>
 			</div>
 		</div>
 	);
