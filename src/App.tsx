@@ -3,6 +3,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
@@ -16,6 +17,10 @@ import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
+
+// Toolkit-Schaukasten: nur im Dev-Build registriert (Issue #74); im
+// Prod-Build entfällt Route und Chunk (import.meta.env.DEV → false).
+const Werkstatt = import.meta.env.DEV ? lazy(() => import('./pages/Werkstatt')) : null;
 
 const App = () => (
 	<QueryClientProvider client={queryClient}>
@@ -32,6 +37,16 @@ const App = () => (
 						<Route path="/sponsors" element={<ProtectedRoute><Sponsors /></ProtectedRoute>} />
 						<Route path="/festival-results" element={<ProtectedRoute><FestivalResults /></ProtectedRoute>} />
 						<Route path="/festivals/:festivalId/material-uebernahme" element={<ProtectedRoute><MaterialUebernahme /></ProtectedRoute>} />
+						{Werkstatt && (
+							<Route
+								path="/werkstatt"
+								element={
+									<Suspense fallback={null}>
+										<Werkstatt />
+									</Suspense>
+								}
+							/>
+						)}
 						{/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 						<Route path="*" element={<NotFound />} />
 					</Routes>
