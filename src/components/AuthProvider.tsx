@@ -18,22 +18,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    // Auth-State-Listener: hält user/session aktuell (auch nach Auto-Login).
+    // loading wird bewusst nicht hier beendet, sondern erst nach dem
+    // Bootstrap unten — sonst würde ProtectedRoute vor dem Auto-Login
+    // kurz nach /auth umleiten.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
       }
     );
 
-    // Check for an existing session. No auto-login: unauthenticated users
-    // are sent to /auth by the route protection.
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const bootstrap = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // Dev-Komfort: ohne Session lokal automatisch anmelden, damit kein
+      // manueller Login nötig ist. Greift NUR im Dev-Build und nur, wenn
+      // Zugangsdaten in .env (VITE_DEV_AUTH_*) hinterlegt sind. Im Prod-Build
+      // ist import.meta.env.DEV false → der Zweig wird wegoptimiert.
+      if (!session && import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+        const email = import.meta.env.VITE_DEV_AUTH_EMAIL;
+        const password = import.meta.env.VITE_DEV_AUTH_PASSWORD;
+        if (email && password) {
+          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) {
+            console.warn('[dev-auto-login] fehlgeschlagen:', error.message);
+          }
+          // Bei Erfolg hat onAuthStateChange user/session bereits gesetzt.
+          setLoading(false);
+          return;
+        }
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-    });
+    };
+    bootstrap();
 
     return () => subscription.unsubscribe();
   }, []);

@@ -9,6 +9,7 @@ const stampVariants = cva('inline-block whitespace-nowrap font-display font-semi
 			green: 'border-gruen text-gruen',
 			red: 'border-rot text-rot',
 			ink: 'border-tinte text-tinte',
+			yellow: 'border-gelb text-tinte',
 		},
 		size: {
 			sm: 'border-1.5 px-2 py-px text-[10.5px] tracking-[.05em]',
@@ -29,6 +30,7 @@ const stampVariants = cva('inline-block whitespace-nowrap font-display font-semi
 		{ filled: true, tone: 'green', className: 'bg-gruen text-white' },
 		{ filled: true, tone: 'red', className: 'bg-rot text-white' },
 		{ filled: true, tone: 'ink', className: 'bg-tinte text-white' },
+		{ filled: true, tone: 'yellow', className: 'bg-gelb text-tinte' },
 	],
 	defaultVariants: {
 		tone: 'green',

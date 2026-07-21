@@ -20,7 +20,7 @@ Gewünscht: echter Login-Gate, Zugang nur für bestimmte Leute. Beim Durchsprech
    Betroffene Kindtabellen (festival_id-basiert, von der Migration abgedeckt): `stations`, `station_shifts`, `station_members`, `shift_assignments`, `station_shift_assignments`, `festival_member_preferences`, `festival_materials`, `schedule_days`, `schedule_phases`, `schedule_entries`, `magic_links`, `member_preferences`. `members` trägt ein eigenes `user_id` und wird wie `festivals` behandelt (DELETE = Ersteller).
 2. **Auth per E-Mail + Passwort** (Supabase Auth).
 3. **Selbstregistrierung deaktiviert.** Konten werden manuell im Supabase-Dashboard angelegt. Das ist der Gatekeeper für "nur bestimmte Leute".
-4. **Auto-Login-Backdoor entfernt.** Hartkodierte Zugangsdaten raus; `signUp`/„Registrieren"-Tab entfernt; Routen außer `/auth` erfordern Authentifizierung.
+4. **Auto-Login-Backdoor entfernt.** Hartkodierte Zugangsdaten raus; `signUp`/„Registrieren"-Tab entfernt; Routen außer `/auth` erfordern Authentifizierung. **(Ergänzt durch ADR 0004: ein dev-only Auto-Login über gitignored `.env.local` ist wieder erlaubt — ohne hartkodierte Creds und ohne Schwächung des Prod-Gates.)**
 
 ## Konsequenzen
 
