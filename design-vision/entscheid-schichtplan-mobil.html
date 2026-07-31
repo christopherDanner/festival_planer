@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Entscheidungshilfe zu Wayfinder-Ticket #68, Frage 8:
+     Helferliste am Handy — A = Block unter dem Fokus (Vision §6) · B = Schublade + FAB (heutige App)
+     Beide Fassungen sind voll bedienbar: Helfer antippen → freien Platz antippen. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Entscheid: Helferliste am Handy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button { font: inherit; cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: oklch(0.93 0.006 95); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 20px 22px 60px; }
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .lead { font-size: 13px; color: var(--ink-soft); max-width: 860px; }
+  .lead b { color: var(--ink); }
+  .scoreboard { display: flex; gap: 26px; margin-top: 14px; font-size: 12.5px; }
+  .scoreboard div { border: 2px solid var(--ink); background: #fff; padding: 7px 13px; font-weight: 700; }
+  .scoreboard span { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; color: var(--red); font-variant-numeric: tabular-nums; }
+
+  .stage { display: grid; grid-template-columns: repeat(2, 390px); gap: 56px; margin-top: 24px; justify-content: start; }
+  @media (max-width: 900px) { .stage { grid-template-columns: 390px; gap: 40px; } }
+  .vhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; }
+  .vhead .tag { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; background: var(--ink); color: var(--yellow); padding: 2px 10px; letter-spacing: .05em; }
+  .vhead .name { font-weight: 800; font-size: 13.5px; }
+  .vnote { font-size: 12px; color: var(--ink-soft); margin: 0 0 12px; min-height: 60px; }
+  .vnote .pro { color: var(--green); font-weight: 700; }
+  .vnote .con { color: var(--red); font-weight: 700; }
+
+  /* ---------- Geräterahmen ---------- */
+  .phone { width: 390px; height: 760px; border: 3px solid var(--ink); background: var(--paper); position: relative; overflow: hidden; box-shadow: 6px 6px 0 var(--ink); }
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; padding-bottom: 74px; }
+  .screen::-webkit-scrollbar { width: 6px; } .screen::-webkit-scrollbar-thumb { background: oklch(0.8 0.01 100); }
+
+  /* Mast + Tabs kompakt (mobil) */
+  .mast { background: var(--green); background-image: var(--halftone); color: #fff; padding: 9px 12px; display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; border-bottom: 2.5px solid var(--ink); }
+  .mast .wordmark { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .015em; }
+  .planbar { background: #fff; border-bottom: 2.5px solid var(--ink); padding: 8px 12px; display: flex; align-items: center; gap: 9px; }
+  .planbar b { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+  .planbar .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; color: var(--red); font-variant-numeric: tabular-nums; }
+  .ruler { position: relative; height: 15px; border: 1.5px solid var(--ink); flex: 1; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px); background-size: 100% 40%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+
+  /* Auswahl-Streifen */
+  .selbar { position: sticky; top: 0; z-index: 20; display: none; align-items: center; gap: 8px; background: var(--yellow); border-bottom: 2.5px solid var(--ink); padding: 9px 12px; font-size: 12.5px; font-weight: 700; }
+  .selbar.on { display: flex; }
+  .selbar .cancel { margin-left: auto; border: 2px solid var(--ink); background: #fff; font-size: 11px; font-weight: 700; padding: 4px 9px; }
+
+  .strip { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 10px 12px; }
+  .stab { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 7px 9px; }
+  .stab h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12.5px; text-transform: uppercase; display: flex; justify-content: space-between; gap: 6px; }
+  .stab h3 .q { font-size: 11px; font-variant-numeric: tabular-nums; }
+  .stab .mini { position: relative; height: 8px; border: 1.5px solid var(--ink); margin-top: 5px; }
+  .stab .mini i { position: absolute; inset: 0 auto 0 0; }
+  .stab.part .mini i { background: var(--yellow); } .stab.crit .mini i { background: var(--red); } .stab.full .mini i { background: var(--green); }
+  .stab.on { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+
+  .focus { border: 2.5px solid var(--ink); background: #fff; margin: 0 12px; }
+  .fhead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 10px 13px; border-bottom: 2.5px solid var(--ink); }
+  .fhead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 19px; text-transform: uppercase; }
+  .fhead .meta { font-size: 11.5px; color: oklch(0.92 0.02 110); display: block; margin-top: 2px; }
+  .fhead .meta b { color: var(--yellow); }
+  .crown { color: var(--yellow); }
+  .dayhead { padding: 7px 13px; background: oklch(0.955 0.01 100); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; }
+  .dayhead h4 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13px; text-transform: uppercase; color: var(--green); letter-spacing: .04em; }
+  .dayhead .dm { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+  .dayhead .dm.warn { color: var(--red); }
+  .focus > .dayhead:first-of-type { border-top: 0; }
+  .srow { padding: 10px 13px; border-bottom: 1px solid var(--line); }
+  .srow .t { display: flex; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+  .srow .t time { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; }
+  .srow .t .nm { font-size: 11px; color: var(--ink-soft); font-weight: 600; }
+  .srow .t .st { margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: .05em; }
+  .srow .t .st.ok { color: var(--green); } .srow .t .st.warn { color: var(--red); }
+  .bigslots { display: grid; gap: 6px; }
+  .bslot { border: 1.5px solid var(--ink); padding: 10px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; background: oklch(0.97 0.008 95); min-height: 42px; }
+  .bslot .p { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11px; color: var(--ink-soft); }
+  .bslot.free { border-style: dashed; border-color: var(--red); color: var(--red); font-weight: 700; font-size: 11.5px; background: #fff; width: 100%; text-align: left; }
+  .armed .bslot.free { background: oklch(0.97 0.03 92); border-color: var(--ink); border-style: solid; color: var(--ink); box-shadow: inset 0 0 0 2px var(--yellow); }
+  .bslot.justset { animation: pulse .5s ease; }
+  @keyframes pulse { from { box-shadow: inset 0 0 0 3px var(--green); } to { box-shadow: none; } }
+
+  /* Helferliste als Block (A) */
+  .crewblock { border: 2.5px solid var(--ink); background: #fff; margin: 14px 12px 0; }
+  .crewblock .chead { padding: 8px 12px; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; background: oklch(0.93 0.02 105); }
+  .cbody { padding: 10px 12px; display: grid; gap: 8px; }
+  .search { width: 100%; border: 2px solid var(--ink); padding: 8px 10px; font: 500 13px "Public Sans", sans-serif; }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { flex: 1; border: 0; background: none; font-weight: 600; font-size: 11.5px; padding: 8px 3px; color: var(--ink-soft); border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+  .grp { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--green); margin-top: 2px; }
+  .grp.rest { color: var(--ink-soft); }
+  .list { display: flex; flex-wrap: wrap; gap: 5px; }
+  .mchip { display: inline-flex; align-items: center; gap: 6px; background: oklch(0.94 0.015 110); padding: 8px 5px 8px 8px; font-weight: 500; font-size: 12.5px; border: 0; color: var(--ink); min-height: 40px; }
+  .mchip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--paper); flex: none; }
+  .mchip .cnt { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 10.5px; background: var(--ink); color: #fff; padding: 1px 5px; }
+  .mchip .dots { color: var(--ink-soft); font-weight: 800; padding: 0 4px; }
+  .mchip.sel { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+  .newhelper { display: block; width: 100%; text-align: left; border: 2px dashed var(--ink-soft); background: transparent; color: var(--ink-soft); font-weight: 700; font-size: 12px; padding: 10px; }
+
+  /* Bottom-Tab-Bar (aus #56) */
+  .bottombar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; background: var(--paper); border-top: 2.5px solid var(--ink); }
+  .bottombar a { flex: 1; text-align: center; padding: 9px 2px 11px; font-size: 10px; font-weight: 700; color: var(--ink-soft); text-decoration: none; text-transform: uppercase; letter-spacing: .03em; }
+  .bottombar a.on { background: var(--yellow); color: var(--ink); }
+
+  /* FAB + Schublade (B) */
+  .fab { position: absolute; right: 14px; bottom: 74px; z-index: 35; width: 56px; height: 56px; border: 2.5px solid var(--ink); background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11px; line-height: 1.1; text-transform: uppercase; }
+  .scrim { position: absolute; inset: 0; z-index: 38; background: oklch(0.24 0.02 145 / .45); display: none; }
+  .scrim.on { display: block; }
+  .drawer { position: absolute; left: 0; right: 0; bottom: 0; z-index: 40; max-height: 74%; background: var(--paper); border-top: 3px solid var(--ink); transform: translateY(101%); transition: transform .22s ease; display: flex; flex-direction: column; }
+  .drawer.on { transform: translateY(0); }
+  .drawer .dhead { padding: 10px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; display: flex; align-items: center; }
+  .drawer .dhead button { margin-left: auto; border: 2px solid var(--ink); background: #fff; font-size: 11px; font-weight: 700; padding: 4px 9px; }
+  .drawer .cbody { overflow-y: auto; }
+  .grip { width: 46px; height: 4px; background: var(--ink-soft); margin: 7px auto 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <h2>Entscheid #68 · Frage 8 — Helferliste am Handy</h2>
+  <p class="lead">
+    Beide Geräte zeigen dieselbe Station <b>Ausschank</b> mit 13 Schichten über vier Tage (Frage 4, Variante A)
+    und sind <b>voll bedienbar</b>: Helfer antippen → freien Platz antippen. Der Zähler oben misst mit, wie oft du
+    scrollen musstest — das ist die eigentliche Frage.
+  </p>
+  <div class="scoreboard">
+    <div>A · Scroll-Wege: <span id="scA">0</span></div>
+    <div>B · Scroll-Wege: <span id="scB">0</span></div>
+    <div style="border-style:dashed;font-weight:600;color:var(--ink-soft)">Teile drei Helfer ein und vergleiche.</div>
+  </div>
+
+  <div class="stage">
+
+    <!-- ================== A ================== -->
+    <div>
+      <div class="vhead"><span class="tag">A</span><span class="name">Block unter dem Fokus — Vision §6</span></div>
+      <p class="vnote">
+        <span class="pro">Pro:</span> ein Code-Pfad, kein FAB, kein Drawer; alles auf einem Blatt.
+        <span class="con">Contra:</span> Marke und Platz liegen selten gleichzeitig im Bild.
+      </p>
+      <div class="phone" data-v="a">
+        <div class="screen" id="scrA">
+          <div class="mast"><span class="wordmark">FESTMEISTER</span><h1>Musikfest Steinbach 2026</h1></div>
+          <div class="selbar" data-sel><span data-selname></span><button class="cancel" data-cancel>Abbrechen</button></div>
+          <div class="planbar"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i></div></div>
+          <div class="strip" data-strip></div>
+          <div class="focus" data-focus></div>
+          <div class="crewblock">
+            <div class="chead">Helfer für Ausschank</div>
+            <div class="cbody">
+              <input class="search" placeholder="Name suchen …">
+              <div class="seg"><button class="on">Alle (18)</button><button>Frei (9)</button><button>Zugeteilt (9)</button></div>
+              <div class="grp">Wünschen sich diese Station (3)</div>
+              <div class="list" data-crew-pref></div>
+              <div class="grp rest">Weitere (15)</div>
+              <div class="list" data-crew-rest></div>
+              <button class="newhelper">+ Neuen Helfer anlegen …</button>
+            </div>
+          </div>
+        </div>
+        <nav class="bottombar"><a href="#">Dashboard</a><a class="on" href="#">Schicht</a><a href="#">Material</a><a href="#">Ablauf</a><a href="#">Sponsor</a></nav>
+      </div>
+    </div>
+
+    <!-- ================== B ================== -->
+    <div>
+      <div class="vhead"><span class="tag">B</span><span class="name">Schublade + FAB — heutige App, restylt</span></div>
+      <p class="vnote">
+        <span class="pro">Pro:</span> Helfer wählen schließt die Schublade, der Platz liegt sofort im Bild; funktioniert heute schon.
+        <span class="con">Contra:</span> bewusste Abweichung von §6, zweiter Darstellungspfad neben dem Desktop.
+      </p>
+      <div class="phone" data-v="b">
+        <div class="screen" id="scrB">
+          <div class="mast"><span class="wordmark">FESTMEISTER</span><h1>Musikfest Steinbach 2026</h1></div>
+          <div class="selbar" data-sel><span data-selname></span><button class="cancel" data-cancel>Abbrechen</button></div>
+          <div class="planbar"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i></div></div>
+          <div class="strip" data-strip></div>
+          <div class="focus" data-focus></div>
+        </div>
+        <button class="fab" data-fab>Helfer</button>
+        <div class="scrim" data-scrim></div>
+        <div class="drawer" data-drawer>
+          <div class="grip"></div>
+          <div class="dhead">Helfer für Ausschank<button data-close>Schließen</button></div>
+          <div class="cbody">
+            <input class="search" placeholder="Name suchen …">
+            <div class="seg"><button class="on">Alle (18)</button><button>Frei (9)</button><button>Zugeteilt (9)</button></div>
+            <div class="grp">Wünschen sich diese Station (3)</div>
+            <div class="list" data-crew-pref></div>
+            <div class="grp rest">Weitere (15)</div>
+            <div class="list" data-crew-rest></div>
+            <button class="newhelper">+ Neuen Helfer anlegen …</button>
+          </div>
+        </div>
+        <nav class="bottombar"><a href="#">Dashboard</a><a class="on" href="#">Schicht</a><a href="#">Material</a><a href="#">Ablauf</a><a href="#">Sponsor</a></nav>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const SHIFTS = [
+    ["DO", "16–20", "Aufbau Schankanlage", 2, 2], ["DO", "20–22", "Kühlung anfahren", 1, 1],
+    ["FR", "17–21", "Anstich", 3, 4], ["FR", "21–01", "Barbetrieb", 2, 4],
+    ["SA", "11–15", "Frühschoppen", 4, 4], ["SA", "15–19", "", 3, 4],
+    ["SA", "19–23", "", 3, 4], ["SA", "23–02", "Barbetrieb", 1, 2],
+    ["SO", "09–13", "Frühschoppen", 2, 4], ["SO", "13–17", "", 1, 4],
+    ["SO", "17–20", "Ausklang", 0, 3], ["SO", "20–23", "Abbau Schank", 0, 2],
+    ["SO", "23–01", "Endreinigung", 0, 2]
+  ];
+  const DAYS = [["DO", "Donnerstag 23. Juli"], ["FR", "Freitag 24. Juli"], ["SA", "Samstag 25. Juli"], ["SO", "Sonntag 26. Juli"]];
+  const HELPERS = [
+    ["Lukas Hofstätter", 0, true], ["Paul Grabner", 0, true], ["Franz Hochauer", 3, true],
+    ["Johann Steiner", 0, false], ["Martin Kalteis", 0, false], ["Katharina Moser", 0, false],
+    ["Florian Haas", 0, false], ["Susanne Bichler", 0, false], ["Roman Aigner", 0, false],
+    ["Bernhard Wieser", 0, false], ["Maria Leitner", 2, false], ["Peter Gruber", 1, false],
+    ["Karin Fuchs", 1, false], ["Josef Brandstetter", 2, false], ["Elisabeth Auer", 1, false],
+    ["Monika Wagner", 1, false], ["Gerhard Eder", 1, false], ["Andreas Pöchhacker", 1, false]
+  ];
+  const NAMES = ["Franz Hochauer", "Maria Leitner", "Peter Gruber", "Karin Fuchs", "Josef Brandstetter", "Elisabeth Auer", "Monika Wagner", "Gerhard Eder"];
+  const STATIONS = [["Ausschank", 41, 52, "crit"], ["Grill", 4, 6, "part"], ["Kassa", 6, 7, "part"], ["Weinlaube", 2, 4, "part"]];
+
+  function buildFocus(el) {
+    let h = `<div class="fhead"><h3>Ausschank</h3><span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer · <b>19 Plätze offen</b></span></div>`;
+    DAYS.forEach(([k, long]) => {
+      const list = SHIFTS.filter(s => s[0] === k);
+      const o = list.reduce((n, s) => n + (s[4] - s[3]), 0);
+      h += `<div class="dayhead"><h4>${long}</h4><span class="dm">${list.length} Schichten</span><span class="dm ${o ? "warn" : ""}">${o ? o + " offen" : "voll"}</span></div>`;
+      list.forEach((s, i) => {
+        const [, time, name, ist, soll] = s;
+        const offen = soll - ist;
+        let slots = "";
+        for (let j = 0; j < soll; j++) {
+          slots += j < ist
+            ? `<span class="bslot"><span class="p">${j + 1}</span>${NAMES[(i + j) % NAMES.length]}</span>`
+            : `<button class="bslot free"><span class="p">${j + 1}</span>+ HELFER HIER EINTRAGEN</button>`;
+        }
+        h += `<div class="srow"><div class="t"><time>${time}</time><span class="nm">${name ? name + " · " : ""}${soll} Plätze</span>
+          <span class="st ${offen ? "warn" : "ok"}">${offen ? offen + " OFFEN" : "VOLL"}</span></div>
+          <div class="bigslots">${slots}</div></div>`;
+      });
+    });
+    el.innerHTML = h;
+  }
+
+  const chip = h => `<button class="mchip">${h[0]}${h[1] ? `<span class="cnt">${h[1]}</span>` : ""}<span class="dots">⋮</span></button>`;
+
+  document.querySelectorAll(".phone").forEach(phone => {
+    phone.querySelector("[data-strip]").innerHTML = STATIONS.map(([n, i, s, c], k) =>
+      `<button class="stab ${c}${k === 0 ? " on" : ""}"><h3>${n}<span class="q">${k === 0 ? "11/14" : i + "/" + s}</span></h3>
+        <div class="mini"><i style="width:${Math.round(i / s * 100)}%"></i></div></button>`).join("");
+    buildFocus(phone.querySelector("[data-focus]"));
+    phone.querySelector("[data-crew-pref]").innerHTML = HELPERS.filter(h => h[2]).map(chip).join("");
+    phone.querySelector("[data-crew-rest]").innerHTML = HELPERS.filter(h => !h[2]).map(chip).join("");
+  });
+
+  // ---- Scroll-Zähler: zählt Richtungswechsel über 150px ----
+  const counters = { a: 0, b: 0 };
+  [["a", "scrA", "scA"], ["b", "scrB", "scB"]].forEach(([key, elId, outId]) => {
+    const el = document.getElementById(elId);
+    let last = 0, dir = 0, acc = 0;
+    el.addEventListener("scroll", () => {
+      const d = el.scrollTop - last;
+      last = el.scrollTop;
+      if (Math.sign(d) !== dir && Math.abs(d) > 1) { dir = Math.sign(d); acc = 0; }
+      acc += Math.abs(d);
+      if (acc > 150) { acc = -1e9; counters[key]++; document.getElementById(outId).textContent = counters[key]; }
+    });
+  });
+
+  // ---- Antippen-Paar ----
+  document.querySelectorAll(".phone").forEach(phone => {
+    const v = phone.dataset.v;
+    const selbar = phone.querySelector("[data-sel]");
+    const selname = phone.querySelector("[data-selname]");
+    const drawer = phone.querySelector("[data-drawer]");
+    const scrim = phone.querySelector("[data-scrim]");
+    const focus = phone.querySelector("[data-focus]");
+    let picked = null;
+
+    function clear() {
+      picked = null;
+      selbar.classList.remove("on");
+      focus.classList.remove("armed");
+      phone.querySelectorAll(".mchip.sel").forEach(c => c.classList.remove("sel"));
+    }
+    function openDrawer(o) { if (!drawer) return; drawer.classList.toggle("on", o); scrim.classList.toggle("on", o); }
+
+    phone.addEventListener("click", e => {
+      if (e.target.closest("[data-fab]")) { openDrawer(true); return; }
+      if (e.target.closest("[data-close]") || e.target.closest("[data-scrim]")) { openDrawer(false); return; }
+      if (e.target.closest("[data-cancel]")) { clear(); return; }
+      if (e.target.closest(".dots")) { e.stopPropagation(); return; }
+
+      const c = e.target.closest(".mchip");
+      if (c) {
+        phone.querySelectorAll(".mchip.sel").forEach(x => x.classList.remove("sel"));
+        c.classList.add("sel");
+        picked = c.childNodes[0].textContent.trim();
+        selname.textContent = picked + " — freien Platz antippen";
+        selbar.classList.add("on");
+        focus.classList.add("armed");
+        if (v === "b") openDrawer(false);
+        return;
+      }
+
+      const slot = e.target.closest(".bslot.free");
+      if (slot && picked) {
+        const p = slot.querySelector(".p").textContent;
+        slot.outerHTML = `<span class="bslot justset"><span class="p">${p}</span>${picked}</span>`;
+        clear();
+      }
+    });
+  });
+</script>
+</body>
+</html>

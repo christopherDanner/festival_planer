@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Entscheidungshilfe zu Wayfinder-Ticket #68, Frage 1:
+     Wie sieht eine Station OHNE Schichten auf der Fokus-Werkbank aus?
+     A = Platz-Raster (Fußzeile wird vollwertig) · B = nur schmale Markenzeile -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Entscheid: Station ohne Schichten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button { font: inherit; cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 20px 22px 60px; }
+
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 34px 0 6px; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .lead { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; max-width: 780px; }
+  .lead b { color: var(--ink); }
+
+  /* Ampel-Reiter (unverändert aus Variante E) */
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stab { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 10px 12px 9px; }
+  .stab h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; }
+  .stab h3 .q { font-size: 12px; font-variant-numeric: tabular-nums; }
+  .stab .mini { position: relative; height: 10px; border: 1.5px solid var(--ink); margin-top: 7px; background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0.85 0.01 100) 8px 9px); background-size: 100% 45%; background-repeat: repeat-x; background-position: bottom; }
+  .stab .mini i { position: absolute; inset: 0 auto 0 0; }
+  .stab.full .mini i { background: var(--green); }
+  .stab.part .mini i { background: var(--yellow); }
+  .stab.crit .mini i { background: var(--red); }
+  .stab.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+
+  /* Fokus-Kasten */
+  .focus { border: 2.5px solid var(--ink); background: #fff; margin-top: 16px; }
+  .focus .fhead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 14px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .focus .fhead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 24px; letter-spacing: .02em; text-transform: uppercase; }
+  .focus .fhead .meta { font-size: 12.5px; color: oklch(0.92 0.02 110); }
+  .focus .fhead .meta b { color: var(--yellow); }
+  .focus .fhead .auto { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0; padding: 8px 13px; font-weight: 700; font-size: 12px; }
+  .crown { color: var(--yellow); }
+
+  .srow { padding: 13px 18px; border-bottom: 1px solid var(--line); }
+  .srow:last-of-type { border-bottom: 0; }
+  .srow .t { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; }
+  .srow .t time { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 18px; letter-spacing: .02em; }
+  .srow .t .nm { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  .srow .t .st { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
+  .srow .t .st.ok { color: var(--green); } .srow .t .st.warn { color: var(--red); }
+  .bigslots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+  .bslot { border: 1.5px solid var(--ink); padding: 7px 10px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; background: oklch(0.97 0.008 95); }
+  .bslot .p { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11px; color: var(--ink-soft); }
+  .bslot.free { border-style: dashed; border-color: var(--red); color: var(--red); font-weight: 700; font-size: 11.5px; letter-spacing: .03em; background: #fff; cursor: pointer; }
+  .bslot.free:hover { background: oklch(0.97 0.02 30); }
+
+  .stmemrow { padding: 10px 18px; border-top: 2px solid var(--ink); background: oklch(0.955 0.01 100); font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .stmemrow b { text-transform: uppercase; letter-spacing: .05em; font-size: 10.5px; color: var(--ink-soft); }
+  .mchip { display: inline-flex; align-items: center; gap: 7px; background: oklch(0.94 0.015 110); padding: 4px 10px 4px 7px; font-weight: 500; font-size: 12.5px; }
+  .mchip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--paper); flex: none; }
+  .mchip .x { color: var(--ink-soft); font-weight: 700; margin-left: 2px; cursor: pointer; }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); padding: 3px 8px; font-size: 11px; }
+  .addshift { display: block; width: 100%; text-align: center; padding: 11px; border: 0; border-top: 1px solid var(--line); background: #fff; font-weight: 700; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+  .addshift:hover { background: oklch(0.955 0.01 100); color: var(--ink); }
+
+  /* Sektions-Kennzeichnung der Varianten */
+  .vhead { display: flex; align-items: baseline; gap: 12px; margin-top: 30px; }
+  .vhead .tag { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; background: var(--ink); color: var(--yellow); padding: 3px 11px; letter-spacing: .05em; }
+  .vhead .name { font-weight: 800; font-size: 15px; }
+  .vnote { font-size: 12.5px; color: var(--ink-soft); margin: 8px 0 0; max-width: 820px; }
+  .vnote .pro { color: var(--green); font-weight: 700; }
+  .vnote .con { color: var(--red); font-weight: 700; }
+  hr.sep { border: 0; border-top: 2.5px solid var(--ink); margin: 46px 0 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <h2>Entscheid #68 · Frage 1 — Station ohne Schichten auf der Fokus-Werkbank</h2>
+  <p class="lead">
+    Im Datenmodell gibt es zwei Besetzungs-Ebenen: <b>Station direkt</b>
+    (<code>stations.required_people</code> + <code>station_members</code>) und
+    <b>Schicht</b> (<code>station_shifts.required_people</code> + <code>shift_assignments</code>).
+    Das Dashboard rechnet schon: <b>Station mit Schichten → Schicht-Summe, sonst Stations-Ebene.</b>
+    Der Fächer-Prototyp E zeigt aber nur den Schicht-Fall. Unten die zwei Antworten für den anderen Fall —
+    zuerst als Referenz, wie es <i>mit</i> Schichten aussieht.
+  </p>
+
+  <!-- ======================= REFERENZ ======================= -->
+  <div class="vhead"><span class="tag">REF</span><span class="name">Station MIT Schichten (unverändert aus Fächer E)</span></div>
+  <p class="vnote">So sieht die Werkbank heute schon aus. Die Plätze hängen an den Schichten, unten die schmale Fußzeile für Stationsmitglieder ohne Schicht.</p>
+
+  <div class="strip" style="margin-top:14px">
+    <button class="stab crit on"><h3>Ausschank <span class="q">11/14</span></h3><div class="mini"><i style="width:79%"></i></div></button>
+    <button class="stab part"><h3>Grill <span class="q">4/6</span></h3><div class="mini"><i style="width:66%"></i></div></button>
+    <button class="stab crit"><h3>Einlass <span class="q">0/3</span></h3><div class="mini"><i style="width:0%"></i></div></button>
+    <button class="stab part"><h3>Weinlaube <span class="q">2/4</span></h3><div class="mini"><i style="width:50%"></i></div></button>
+  </div>
+
+  <div class="focus">
+    <div class="fhead">
+      <h3>Ausschank</h3>
+      <span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer · <b>3 Plätze offen</b></span>
+      <button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button>
+    </div>
+    <div class="srow">
+      <div class="t"><time>SA 11–15</time><span class="nm">Frühschoppen · 4 Plätze</span><span class="st ok">VOLL</span></div>
+      <div class="bigslots">
+        <span class="bslot"><span class="p">1</span>Franz Hochauer</span>
+        <span class="bslot"><span class="p">2</span>Maria Leitner</span>
+        <span class="bslot"><span class="p">3</span>Peter Gruber</span>
+        <span class="bslot"><span class="p">4</span>Karin Fuchs</span>
+      </div>
+    </div>
+    <div class="srow">
+      <div class="t"><time>SA 15–19</time><span class="nm">4 Plätze</span><span class="st warn">1 OFFEN</span></div>
+      <div class="bigslots">
+        <span class="bslot"><span class="p">1</span>Josef Brandstetter</span>
+        <span class="bslot"><span class="p">2</span>Elisabeth Auer</span>
+        <span class="bslot"><span class="p">3</span>Monika Wagner</span>
+        <span class="bslot free"><span class="p">4</span>+ HELFER HIERHER ZIEHEN</span>
+      </div>
+    </div>
+    <button class="addshift">+ Schicht anlegen</button>
+    <div class="stmemrow"><b>Stationsmitglieder ohne Schicht:</b><span class="mchip">Roman Aigner<span class="x">×</span></span><button class="btn quiet">+ hinzufügen</button></div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- ======================= VARIANTE A ======================= -->
+  <div class="vhead"><span class="tag">A</span><span class="name">Platz-Raster — die Fußzeile wird vollwertig</span></div>
+  <p class="vnote">
+    Ohne Schichten zeigt der Fokus ein Platz-Raster über <code>required_people</code> — dieselbe Geste, dieselbe Optik, nur eine Ebene tiefer.
+    <span class="pro">Pro:</span> Die Dashboard-Zählregel wird visuell wahr; „Einlass 0/3" oben und drei rote Plätze unten sagen dasselbe. Ziehen/Antippen funktioniert überall gleich.
+    <span class="con">Contra:</span> Zwei Render-Zweige im Fokus-Kasten statt einem.
+  </p>
+
+  <div class="strip" style="margin-top:14px">
+    <button class="stab crit"><h3>Ausschank <span class="q">11/14</span></h3><div class="mini"><i style="width:79%"></i></div></button>
+    <button class="stab part"><h3>Grill <span class="q">4/6</span></h3><div class="mini"><i style="width:66%"></i></div></button>
+    <button class="stab crit on"><h3>Einlass <span class="q">1/3</span></h3><div class="mini"><i style="width:33%"></i></div></button>
+    <button class="stab part"><h3>Weinlaube <span class="q">2/4</span></h3><div class="mini"><i style="width:50%"></i></div></button>
+  </div>
+
+  <div class="focus">
+    <div class="fhead">
+      <h3>Einlass</h3>
+      <span class="meta">Ohne Schichten · <span class="crown">♛</span> Elisabeth Auer · <b>2 Plätze offen</b></span>
+      <button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button>
+    </div>
+    <div class="srow">
+      <div class="t"><time>GANZES FEST</time><span class="nm">Keine Schichten · 3 Plätze</span><span class="st warn">2 OFFEN</span></div>
+      <div class="bigslots">
+        <span class="bslot"><span class="p">1</span>Roman Aigner</span>
+        <span class="bslot free"><span class="p">2</span>+ HELFER HIERHER ZIEHEN</span>
+        <span class="bslot free"><span class="p">3</span>+ HELFER HIERHER ZIEHEN</span>
+      </div>
+    </div>
+    <button class="addshift">+ Schicht anlegen — Station in Zeitfenster aufteilen</button>
+  </div>
+
+  <hr class="sep">
+
+  <!-- ======================= VARIANTE B ======================= -->
+  <div class="vhead"><span class="tag">B</span><span class="name">Nur die schmale Markenzeile — ein Zweig, wie im Fächer</span></div>
+  <p class="vnote">
+    Ohne Schichten bleibt vom Fokus nur Kopf + Fußzeile übrig.
+    <span class="pro">Pro:</span> Ein einziger Render-Zweig, exakt der Prototyp.
+    <span class="con">Contra:</span> Der häufigste Einstiegszustand (neue Station, noch nichts geplant) ist ein fast leerer Kasten; das „0/3" oben hat unten keine Entsprechung, und wo man den zweiten und dritten Helfer hinzieht, ist nicht zu sehen.
+  </p>
+
+  <div class="strip" style="margin-top:14px">
+    <button class="stab crit"><h3>Ausschank <span class="q">11/14</span></h3><div class="mini"><i style="width:79%"></i></div></button>
+    <button class="stab part"><h3>Grill <span class="q">4/6</span></h3><div class="mini"><i style="width:66%"></i></div></button>
+    <button class="stab crit on"><h3>Einlass <span class="q">1/3</span></h3><div class="mini"><i style="width:33%"></i></div></button>
+    <button class="stab part"><h3>Weinlaube <span class="q">2/4</span></h3><div class="mini"><i style="width:50%"></i></div></button>
+  </div>
+
+  <div class="focus">
+    <div class="fhead">
+      <h3>Einlass</h3>
+      <span class="meta">Ohne Schichten · <span class="crown">♛</span> Elisabeth Auer · <b>2 Plätze offen</b></span>
+      <button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button>
+    </div>
+    <button class="addshift">+ Schicht anlegen</button>
+    <div class="stmemrow"><b>Stationsmitglieder ohne Schicht:</b><span class="mchip">Roman Aigner<span class="x">×</span></span><button class="btn quiet">+ hinzufügen</button></div>
+  </div>
+
+</div>
+</body>
+</html>

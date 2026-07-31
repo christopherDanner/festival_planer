@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Entscheidungshilfe zu Wayfinder-Ticket #68, Frage 3:
+     Wie verhält sich der Ampel-Reiter-Streifen bei vielen Stationen?
+     A = umbrechendes Raster · B = horizontal scrollende Zeile · C = umbrechend mit Einklapp -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Entscheid: Ampel-Reiter-Streifen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button { font: inherit; cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 20px 22px 60px; }
+
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .lead { font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; max-width: 820px; }
+  .lead b { color: var(--ink); }
+
+  /* Kontext: Mast + Tabs + Planbar, damit die Höhe ehrlich wirkt */
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; display: flex; align-items: center; gap: 18px; padding: 10px 20px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 20px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 12.5px; color: oklch(0.92 0.02 110); }
+  .mast .when b { color: var(--yellow); }
+  nav.tabs { display: flex; border: 2.5px solid var(--ink); border-top: 0; background: #fff; overflow-x: auto; }
+  nav.tabs a { color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 13.5px; padding: 10px 17px; white-space: nowrap; border-right: 1px solid var(--line); }
+  nav.tabs a.on { color: var(--ink); background: var(--yellow); box-shadow: inset 0 -3px 0 var(--ink); }
+  .planbar { display: flex; align-items: center; gap: 14px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 250px; flex: 1; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; color: var(--red); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 90px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; color: var(--ink); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+
+  /* Der Reiter selbst — identisch in allen Varianten */
+  .stab { border: 2px solid var(--ink); background: #fff; text-align: left; padding: 10px 12px 9px; }
+  .stab h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; letter-spacing: .03em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .stab h3 .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stab h3 .q { font-size: 12px; font-variant-numeric: tabular-nums; flex: none; }
+  .stab .mini { position: relative; height: 10px; border: 1.5px solid var(--ink); margin-top: 7px; background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0.85 0.01 100) 8px 9px); background-size: 100% 45%; background-repeat: repeat-x; background-position: bottom; }
+  .stab .mini i { position: absolute; inset: 0 auto 0 0; }
+  .stab.full .mini i { background: var(--green); }
+  .stab.part .mini i { background: var(--yellow); }
+  .stab.crit .mini i { background: var(--red); }
+  .stab.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--ink); }
+  .stab:hover:not(.on) { background: oklch(0.955 0.01 100); }
+
+  /* A — umbrechend */
+  .strip-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-top: 16px; }
+  /* B — scrollend */
+  .strip-scroll { display: flex; gap: 10px; margin-top: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+  .strip-scroll .stab { flex: 0 0 210px; }
+  .fade { position: relative; }
+  .fade::after { content: ""; position: absolute; top: 0; bottom: 8px; right: 0; width: 46px; background: linear-gradient(90deg, transparent, var(--paper)); pointer-events: none; }
+  /* C — eingeklappt */
+  .more { border: 2px dashed var(--ink-soft); background: transparent; color: var(--ink-soft); font-weight: 700; font-size: 12.5px; display: flex; align-items: center; justify-content: center; letter-spacing: .03em; }
+  .more:hover { border-color: var(--ink); color: var(--ink); background: oklch(0.955 0.01 100); }
+
+  /* Fokus-Kasten, gekürzt — nur damit man sieht, was der Streifen wegdrückt */
+  .focus { border: 2.5px solid var(--ink); background: #fff; margin-top: 18px; }
+  .focus .fhead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 13px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .focus .fhead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 23px; letter-spacing: .02em; text-transform: uppercase; }
+  .focus .fhead .meta { font-size: 12.5px; color: oklch(0.92 0.02 110); }
+  .focus .fhead .meta b { color: var(--yellow); }
+  .focus .fhead .auto { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0; padding: 8px 13px; font-weight: 700; font-size: 12px; }
+  .crown { color: var(--yellow); }
+  .srow { padding: 13px 18px; border-bottom: 1px solid var(--line); }
+  .srow .t { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; }
+  .srow .t time { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 18px; }
+  .srow .t .nm { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  .srow .t .st { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .05em; color: var(--red); }
+  .bigslots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+  .bslot { border: 1.5px solid var(--ink); padding: 7px 10px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; background: oklch(0.97 0.008 95); }
+  .bslot .p { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11px; color: var(--ink-soft); }
+  .bslot.free { border-style: dashed; border-color: var(--red); color: var(--red); font-weight: 700; font-size: 11.5px; background: #fff; }
+  .cut { text-align: center; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); padding: 8px; border-top: 1px dashed var(--line); }
+
+  .vhead { display: flex; align-items: baseline; gap: 12px; margin-top: 40px; }
+  .vhead .tag { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; background: var(--ink); color: var(--yellow); padding: 3px 11px; letter-spacing: .05em; }
+  .vhead .name { font-weight: 800; font-size: 15px; }
+  .vnote { font-size: 12.5px; color: var(--ink-soft); margin: 8px 0 0; max-width: 860px; }
+  .vnote .pro { color: var(--green); font-weight: 700; }
+  .vnote .con { color: var(--red); font-weight: 700; }
+  hr.sep { border: 0; border-top: 2.5px solid var(--ink); margin: 46px 0 0; }
+  .toggle { margin: 14px 0 0; display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink-soft); }
+  .toggle button { border: 2px solid var(--ink); background: #fff; font-weight: 700; font-size: 12px; padding: 5px 11px; }
+  .toggle button.on { background: var(--yellow); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <h2>Entscheid #68 · Frage 3 — Ampel-Reiter bei vielen Stationen</h2>
+  <p class="lead">
+    Alle drei Varianten zeigen <b>dasselbe Fest mit 9 Stationen</b>. Der Streifen ist nach dem Wechsel auf die
+    Fokus-Werkbank die einzige verbliebene Gesamtübersicht — was er nicht zeigt, sieht niemand mehr.
+    Der Fokus-Kasten darunter ist gekürzt, aber vorhanden, damit sichtbar wird, wie weit der Streifen ihn nach unten drückt.
+  </p>
+  <div class="toggle">
+    <span>Stationszahl umschalten:</span>
+    <button data-n="4">4</button><button data-n="6">6</button><button class="on" data-n="9">9</button><button data-n="14">14</button>
+  </div>
+
+  <!-- ======================= A ======================= -->
+  <div class="vhead"><span class="tag">A</span><span class="name">Umbrechendes Raster — alle Stationen immer sichtbar</span></div>
+  <p class="vnote">
+    <span class="pro">Pro:</span> vollständige Übersicht, kein verstecktes Problem; entspricht dem Rest der Handschrift (Raster, keine Scroll-Container).
+    <span class="con">Contra:</span> bei 14 Stationen vier Zeilen ≈ 300px, der Fokus rutscht unter die Falz.
+  </p>
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span><h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs"><a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Sponsoring</a></nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button><button class="btn">AUTO-ZUTEILUNG</button><button class="btn quiet">Teilen / Export</button>
+  </div>
+  <div class="strip-wrap" data-strip="a"></div>
+  <div class="focus">
+    <div class="fhead"><h3>Ausschank</h3><span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer · <b>3 Plätze offen</b></span><button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button></div>
+    <div class="srow"><div class="t"><time>SA 15–19</time><span class="nm">4 Plätze</span><span class="st">1 OFFEN</span></div>
+      <div class="bigslots"><span class="bslot"><span class="p">1</span>Josef Brandstetter</span><span class="bslot"><span class="p">2</span>Elisabeth Auer</span><span class="bslot"><span class="p">3</span>Monika Wagner</span><span class="bslot free"><span class="p">4</span>+ HELFER HIERHER ZIEHEN</span></div>
+    </div>
+    <div class="cut">… weitere Schichten</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- ======================= B ======================= -->
+  <div class="vhead"><span class="tag">B</span><span class="name">Horizontal scrollende Zeile</span></div>
+  <p class="vnote">
+    <span class="pro">Pro:</span> konstante Höhe, egal wie viele Stationen; der Fokus bleibt immer an derselben Stelle.
+    <span class="con">Contra:</span> die hinteren Stationen liegen hinter dem Rand — erfahrungsgemäß genau die vergessenen. Am Desktop ohne Trackpad mühsam.
+  </p>
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span><h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs"><a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Sponsoring</a></nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button><button class="btn">AUTO-ZUTEILUNG</button><button class="btn quiet">Teilen / Export</button>
+  </div>
+  <div class="fade"><div class="strip-scroll" data-strip="b"></div></div>
+  <div class="focus">
+    <div class="fhead"><h3>Ausschank</h3><span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer · <b>3 Plätze offen</b></span><button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button></div>
+    <div class="srow"><div class="t"><time>SA 15–19</time><span class="nm">4 Plätze</span><span class="st">1 OFFEN</span></div>
+      <div class="bigslots"><span class="bslot"><span class="p">1</span>Josef Brandstetter</span><span class="bslot"><span class="p">2</span>Elisabeth Auer</span><span class="bslot"><span class="p">3</span>Monika Wagner</span><span class="bslot free"><span class="p">4</span>+ HELFER HIERHER ZIEHEN</span></div>
+    </div>
+    <div class="cut">… weitere Schichten</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- ======================= C ======================= -->
+  <div class="vhead"><span class="tag">C</span><span class="name">Umbrechend, ab 6 Stationen eingeklappt</span></div>
+  <p class="vnote">
+    Zeigt eine Zeile plus einen Aufklapp-Kasten; klickbar.
+    <span class="pro">Pro:</span> gedeckelte Höhe ohne Scroll-Falle.
+    <span class="con">Contra:</span> Zusatzmechanik, und im eingeklappten Zustand ist die kritische Station womöglich versteckt — der Kasten müsste dann selbst rot werden, was die Ampel-Sprache verwässert.
+  </p>
+  <header class="mast">
+    <span class="wordmark">FESTMEISTER</span><h1>Musikfest Steinbach 2026</h1>
+    <span class="when">Fr 24. – So 26. Juli · <b>noch 4 Tage</b></span>
+  </header>
+  <nav class="tabs"><a href="#">Dashboard</a><a class="on" href="#">Schichtplan</a><a href="#">Material</a><a href="#">Ablaufplan</a><a href="#">Sponsoring</a></nav>
+  <div class="planbar">
+    <div class="kpi"><b>Besetzt</b><span class="val">41/52</span><div class="ruler"><i style="width:79%"></i><em style="left:79%"></em></div></div>
+    <button class="btn">+ STATION</button><button class="btn">AUTO-ZUTEILUNG</button><button class="btn quiet">Teilen / Export</button>
+  </div>
+  <div class="strip-wrap" data-strip="c"></div>
+  <div class="focus">
+    <div class="fhead"><h3>Ausschank</h3><span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer · <b>3 Plätze offen</b></span><button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button></div>
+    <div class="srow"><div class="t"><time>SA 15–19</time><span class="nm">4 Plätze</span><span class="st">1 OFFEN</span></div>
+      <div class="bigslots"><span class="bslot"><span class="p">1</span>Josef Brandstetter</span><span class="bslot"><span class="p">2</span>Elisabeth Auer</span><span class="bslot"><span class="p">3</span>Monika Wagner</span><span class="bslot free"><span class="p">4</span>+ HELFER HIERHER ZIEHEN</span></div>
+    </div>
+    <div class="cut">… weitere Schichten</div>
+  </div>
+
+</div>
+
+<script>
+  const STATIONS = [
+    ["Ausschank", 11, 14], ["Grill", 4, 6], ["Kassa", 6, 7], ["Weinlaube", 2, 4],
+    ["Einlass", 0, 3], ["Küche", 5, 5], ["Kaffee & Kuchen", 3, 6], ["Aufbau", 8, 8],
+    ["Abbau", 1, 9], ["Parkplatz", 2, 4], ["Tombola", 0, 2], ["Schank Süd", 4, 8],
+    ["Getränkelager", 3, 3], ["Reinigung", 1, 5]
+  ];
+  const COLLAPSE_AT = 6;
+  let expanded = false;
+
+  function tab(s, active) {
+    const [name, ist, soll] = s;
+    const pct = soll ? Math.round(ist / soll * 100) : 0;
+    const cls = ist === 0 ? "crit" : ist >= soll ? "full" : "part";
+    return `<button class="stab ${cls}${active ? " on" : ""}">
+      <h3><span class="n">${name}</span><span class="q">${ist}/${soll}</span></h3>
+      <div class="mini"><i style="width:${pct}%"></i></div></button>`;
+  }
+
+  function render(n) {
+    const list = STATIONS.slice(0, n);
+    document.querySelector('[data-strip="a"]').innerHTML = list.map((s, i) => tab(s, i === 0)).join("");
+    document.querySelector('[data-strip="b"]').innerHTML = list.map((s, i) => tab(s, i === 0)).join("");
+
+    const c = document.querySelector('[data-strip="c"]');
+    if (list.length > COLLAPSE_AT && !expanded) {
+      const shown = list.slice(0, COLLAPSE_AT - 1);
+      const hidden = list.slice(COLLAPSE_AT - 1);
+      const crit = hidden.filter(s => s[1] < s[2]).length;
+      c.innerHTML = shown.map((s, i) => tab(s, i === 0)).join("") +
+        `<button class="stab more" id="moreBtn">+ ${hidden.length} weitere${crit ? " · " + crit + " nicht voll" : ""}</button>`;
+      document.getElementById("moreBtn").onclick = () => { expanded = true; render(n); };
+    } else {
+      c.innerHTML = list.map((s, i) => tab(s, i === 0)).join("");
+      if (list.length > COLLAPSE_AT) {
+        c.insertAdjacentHTML("beforeend", `<button class="stab more" id="lessBtn">− einklappen</button>`);
+        document.getElementById("lessBtn").onclick = () => { expanded = false; render(n); };
+      }
+    }
+  }
+
+  document.querySelectorAll(".toggle button").forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll(".toggle button").forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+      expanded = false;
+      render(+b.dataset.n);
+    };
+  });
+  render(9);
+</script>
+</body>
+</html>

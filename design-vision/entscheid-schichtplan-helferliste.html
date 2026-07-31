@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Entscheidungshilfe zu Wayfinder-Ticket #68, Frage 7:
+     Wie viel Auskunft trägt eine Helfer-Marke, und wo hängen Bearbeiten/Entfernen?
+     A = nackte Marke + ⋮ · B = Zeile mit Zuteilungs-Auskunft · C = Marke mit Zähler -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Entscheid: Helferliste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button { font: inherit; cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 20px 22px 60px; }
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .lead { font-size: 13px; color: var(--ink-soft); max-width: 840px; }
+  .lead b { color: var(--ink); }
+
+  .row3 { display: grid; grid-template-columns: repeat(3, 264px); gap: 40px; margin-top: 22px; align-items: start; justify-content: start; }
+  @media (max-width: 1000px) { .row3 { grid-template-columns: 264px; gap: 34px; } }
+
+  .vhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .vhead .tag { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; background: var(--ink); color: var(--yellow); padding: 2px 10px; letter-spacing: .05em; }
+  .vhead .name { font-weight: 800; font-size: 13.5px; }
+  .vnote { font-size: 12px; color: var(--ink-soft); margin: 0 0 10px; min-height: 76px; }
+  .vnote .pro { color: var(--green); font-weight: 700; }
+  .vnote .con { color: var(--red); font-weight: 700; }
+
+  /* Helferliste-Rahmen — identisch in allen drei */
+  .crew { border: 2.5px solid var(--ink); background: #fff; }
+  .crew .chead { padding: 9px 12px; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; background: oklch(0.93 0.02 105); }
+  .crew .cbody { padding: 10px 12px; display: grid; gap: 8px; }
+  .crew .grp { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--green); margin-top: 4px; }
+  .crew .grp.rest { color: var(--ink-soft); }
+  .search { width: 100%; border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+  .search::placeholder { color: var(--ink-soft); }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { flex: 1; border: 0; background: none; font-weight: 600; font-size: 11.5px; padding: 6px 3px; color: var(--ink-soft); border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+  .newhelper { display: block; width: 100%; text-align: left; border: 2px dashed var(--ink-soft); background: transparent; color: var(--ink-soft); font-weight: 700; font-size: 12px; padding: 8px 10px; margin-top: 6px; }
+  .newhelper:hover { border-color: var(--ink); color: var(--ink); background: oklch(0.955 0.01 100); }
+
+  /* --- gemeinsame Marken-Grundform --- */
+  .mchip { display: inline-flex; align-items: center; gap: 7px; background: oklch(0.94 0.015 110); padding: 4px 4px 4px 7px; font-weight: 500; font-size: 12.5px; border: 0; color: var(--ink); text-align: left; cursor: grab; }
+  .mchip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--paper); flex: none; }
+  .mchip:hover { background: oklch(0.90 0.02 110); }
+  .mchip .dots { color: var(--ink-soft); font-weight: 800; padding: 0 3px; line-height: 1; }
+  .mchip .dots:hover { color: var(--ink); }
+  .mchip.sel { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+  .list { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  /* A — nackte Marke */
+  [data-v="a"] .mchip { padding-right: 3px; }
+
+  /* B — Zeile mit Auskunft */
+  [data-v="b"] .hrow { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 6px; border: 1.5px solid var(--ink); background: #fff; padding: 6px 5px 6px 9px; cursor: grab; }
+  [data-v="b"] .hrow:hover { background: oklch(0.955 0.01 100); }
+  [data-v="b"] .hrow .nm { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  [data-v="b"] .hrow .cnt { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11px; letter-spacing: .04em; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  [data-v="b"] .hrow .cnt.free { color: var(--red); }
+  [data-v="b"] .hrow .dots { color: var(--ink-soft); font-weight: 800; padding: 0 4px; }
+  [data-v="b"] .list { display: grid; gap: 4px; }
+
+  /* C — Marke mit Zähler-Plakette */
+  [data-v="c"] .mchip .cnt { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 10.5px; background: var(--ink); color: #fff; padding: 1px 5px; letter-spacing: .03em; }
+  [data-v="c"] .mchip .dots { opacity: 0; }
+  [data-v="c"] .mchip:hover .dots, [data-v="c"] .mchip:focus-within .dots { opacity: 1; }
+
+  /* Menü-Attrappe */
+  .menu { position: absolute; z-index: 50; border: 2px solid var(--ink); background: #fff; box-shadow: 4px 4px 0 var(--ink); min-width: 200px; }
+  .menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; font-size: 12.5px; font-weight: 600; color: var(--ink); border-bottom: 1px solid var(--line); }
+  .menu button:last-child { border-bottom: 0; color: var(--red); }
+  .menu button:hover { background: oklch(0.94 0.015 110); }
+  .hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 10px; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <h2>Entscheid #68 · Frage 7 — Die Helferliste</h2>
+  <p class="lead">
+    Dieselben <b>18 Helfer</b> in der 264px-Spalte, gefiltert auf „Frei", gruppiert nach Wunsch-Passung zur
+    fokussierten Station <b>Ausschank</b>. Die ⋮ sind angeklickbar — dahinter liegt in allen drei Fassungen
+    dasselbe Menü (<i>Bearbeiten &amp; Wünsche</i> · <i>Aus dem Fest entfernen</i>), weil #62 den
+    Präferenz-Dialog in den Helfer-Dialog auflöst. Klick auf den Namen wählt die Marke aus (Antippen-Paar, #54).
+  </p>
+
+  <div class="row3">
+
+    <!-- ============ A ============ -->
+    <div data-v="a">
+      <div class="vhead"><span class="tag">A</span><span class="name">Nackte Marke + ⋮</span></div>
+      <p class="vnote">
+        Der Prototyp, minimal ergänzt.
+        <span class="pro">Pro:</span> alle 18 passen ohne Scrollen aufs Blatt; ruhigste Fläche.
+        <span class="con">Contra:</span> die Marke sagt nichts über die Person — wer schon drei Schichten hat, sieht aus wie jemand, der noch keine hat.
+      </p>
+      <aside class="crew">
+        <div class="chead">Helfer für Ausschank</div>
+        <div class="cbody">
+          <input class="search" placeholder="Name suchen …">
+          <div class="seg"><button>Alle (18)</button><button class="on">Frei (9)</button><button>Zugeteilt (9)</button></div>
+          <div class="grp">Wünschen sich diese Station (2)</div>
+          <div class="list" data-list="a-pref"></div>
+          <div class="grp rest">Weitere freie Helfer (7)</div>
+          <div class="list" data-list="a-rest"></div>
+          <button class="newhelper">+ Neuen Helfer anlegen …</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ============ B ============ -->
+    <div data-v="b">
+      <div class="vhead"><span class="tag">B</span><span class="name">Zeile mit Zuteilungs-Auskunft</span></div>
+      <p class="vnote">
+        Eine Zeile je Helfer, rechts wie viele Schichten er schon hat.
+        <span class="pro">Pro:</span> beantwortet beim Einteilen die eigentliche Frage („wen hab ich noch nicht ausgenutzt?") ohne Klick.
+        <span class="con">Contra:</span> braucht die doppelte Höhe; bei 18 Helfern wird gescrollt.
+      </p>
+      <aside class="crew">
+        <div class="chead">Helfer für Ausschank</div>
+        <div class="cbody">
+          <input class="search" placeholder="Name suchen …">
+          <div class="seg"><button>Alle (18)</button><button class="on">Frei (9)</button><button>Zugeteilt (9)</button></div>
+          <div class="grp">Wünschen sich diese Station (2)</div>
+          <div class="list" data-list="b-pref"></div>
+          <div class="grp rest">Weitere freie Helfer (7)</div>
+          <div class="list" data-list="b-rest"></div>
+          <button class="newhelper">+ Neuen Helfer anlegen …</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ============ C ============ -->
+    <div data-v="c">
+      <div class="vhead"><span class="tag">C</span><span class="name">Marke mit Zähler-Plakette</span></div>
+      <p class="vnote">
+        Marke wie A, aber wer schon eingeteilt ist, trägt eine schwarze Oswald-Plakette. ⋮ erscheint erst bei Hover/Fokus.
+        <span class="pro">Pro:</span> fast so kompakt wie A, sagt aber das Wesentliche.
+        <span class="con">Contra:</span> die versteckte ⋮ ist am Touchgerät nicht auffindbar — dort müsste sie dauerhaft stehen.
+      </p>
+      <aside class="crew">
+        <div class="chead">Helfer für Ausschank</div>
+        <div class="cbody">
+          <input class="search" placeholder="Name suchen …">
+          <div class="seg"><button class="on">Alle (18)</button><button>Frei (9)</button><button>Zugeteilt (9)</button></div>
+          <div class="grp">Wünschen sich diese Station (3)</div>
+          <div class="list" data-list="c-pref"></div>
+          <div class="grp rest">Weitere (15)</div>
+          <div class="list" data-list="c-rest"></div>
+          <button class="newhelper">+ Neuen Helfer anlegen …</button>
+        </div>
+      </aside>
+    </div>
+
+  </div>
+  <p class="hint">Tipp: auf einen Namen klicken = auswählen (gelbe Marke mit Versatz-Schatten). Auf ⋮ klicken = Menü.</p>
+</div>
+
+<script>
+  // [Name, Schichten, wünscht Ausschank]
+  const H = [
+    ["Lukas Hofstätter", 0, true], ["Paul Grabner", 0, true], ["Johann Steiner", 0, false],
+    ["Martin Kalteis", 0, false], ["Katharina Moser", 0, false], ["Florian Haas", 0, false],
+    ["Susanne Bichler", 0, false], ["Roman Aigner", 0, false], ["Bernhard Wieser", 0, false],
+    ["Franz Hochauer", 3, true], ["Maria Leitner", 2, false], ["Peter Gruber", 1, false],
+    ["Karin Fuchs", 1, false], ["Josef Brandstetter", 2, false], ["Elisabeth Auer", 1, false],
+    ["Monika Wagner", 1, false], ["Gerhard Eder", 1, false], ["Andreas Pöchhacker", 1, false]
+  ];
+  const free = H.filter(h => h[1] === 0);
+  const all = H;
+
+  const dots = `<span class="dots" role="button" tabindex="0">⋮</span>`;
+  const chipA = h => `<button class="mchip" draggable="true">${h[0]}${dots}</button>`;
+  const rowB = h => `<div class="hrow" draggable="true"><span class="nm">${h[0]}</span>
+      <span class="cnt ${h[1] ? "" : "free"}">${h[1] ? h[1] + " SCH." : "FREI"}</span>${dots}</div>`;
+  const chipC = h => `<button class="mchip" draggable="true">${h[0]}${h[1] ? `<span class="cnt">${h[1]}</span>` : ""}${dots}</button>`;
+
+  const put = (key, html) => document.querySelector(`[data-list="${key}"]`).innerHTML = html;
+  put("a-pref", free.filter(h => h[2]).map(chipA).join(""));
+  put("a-rest", free.filter(h => !h[2]).map(chipA).join(""));
+  put("b-pref", free.filter(h => h[2]).map(rowB).join(""));
+  put("b-rest", free.filter(h => !h[2]).map(rowB).join(""));
+  put("c-pref", all.filter(h => h[2]).map(chipC).join(""));
+  put("c-rest", all.filter(h => !h[2]).map(chipC).join(""));
+
+  let open = null;
+  function closeMenu() { if (open) { open.remove(); open = null; } }
+  document.addEventListener("click", e => {
+    const d = e.target.closest(".dots");
+    closeMenu();
+    if (d) {
+      e.stopPropagation();
+      const r = d.getBoundingClientRect();
+      const m = document.createElement("div");
+      m.className = "menu";
+      m.style.top = (r.bottom + scrollY + 4) + "px";
+      m.style.left = Math.min(r.left + scrollX, innerWidth - 220) + "px";
+      m.innerHTML = `<button>Bearbeiten &amp; Wünsche …</button><button>Aus dem Fest entfernen</button>`;
+      document.body.appendChild(m);
+      open = m;
+      return;
+    }
+    const chip = e.target.closest(".mchip, .hrow");
+    if (chip) {
+      const wasSel = chip.classList.contains("sel");
+      document.querySelectorAll(".mchip.sel, .hrow.sel").forEach(x => x.classList.remove("sel"));
+      if (!wasSel) chip.classList.add("sel");
+    }
+  });
+</script>
+</body>
+</html>

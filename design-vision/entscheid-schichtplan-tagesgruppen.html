@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Entscheidungshilfe zu Wayfinder-Ticket #68, Frage 4:
+     Wie werden Schichten über mehrere Tage im Fokus-Kasten gegliedert?
+     A = Tages-Zwischentitel · B = flache Liste (Fächer-Prototyp) · C = Tages-Segmentschalter -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Entscheid: Schichten über mehrere Tage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button { font: inherit; cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 960px; margin: 0 auto; padding: 20px 22px 60px; }
+
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .lead { font-size: 13px; color: var(--ink-soft); max-width: 820px; }
+  .lead b { color: var(--ink); }
+
+  .focus { border: 2.5px solid var(--ink); background: #fff; margin-top: 16px; }
+  .focus .fhead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 13px 18px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .focus .fhead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 23px; letter-spacing: .02em; text-transform: uppercase; }
+  .focus .fhead .meta { font-size: 12.5px; color: oklch(0.92 0.02 110); }
+  .focus .fhead .meta b { color: var(--yellow); }
+  .focus .fhead .auto { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0; padding: 8px 13px; font-weight: 700; font-size: 12px; }
+  .crown { color: var(--yellow); }
+
+  /* Tages-Zwischentitel (A) — Sprache aus dem Ablaufplan-Programmzettel */
+  .dayhead { display: flex; align-items: baseline; gap: 10px; padding: 9px 18px; background: oklch(0.955 0.01 100); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); }
+  .dayhead h4 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--green); }
+  .dayhead .dmeta { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .dayhead .dmeta.warn { color: var(--red); }
+  .dayhead .dmeta.ok { color: var(--green); }
+  .focus > .dayhead:first-of-type { border-top: 0; }
+
+  .srow { padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .srow:last-child { border-bottom: 0; }
+  .srow .t { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .srow .t time { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 18px; letter-spacing: .02em; white-space: nowrap; }
+  .srow .t time .day { color: var(--ink-soft); }
+  .srow .t .nm { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  .srow .t .st { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .05em; white-space: nowrap; }
+  .srow .t .st.ok { color: var(--green); } .srow .t .st.warn { color: var(--red); }
+  .bigslots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+  .bslot { border: 1.5px solid var(--ink); padding: 7px 10px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; background: oklch(0.97 0.008 95); }
+  .bslot .p { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11px; color: var(--ink-soft); }
+  .bslot.free { border-style: dashed; border-color: var(--red); color: var(--red); font-weight: 700; font-size: 11.5px; letter-spacing: .03em; background: #fff; }
+  .bslot.free:hover { background: oklch(0.97 0.02 30); }
+
+  /* Tages-Segmentschalter (C) */
+  .dayseg { display: flex; border-bottom: 2px solid var(--ink); background: #fff; overflow-x: auto; }
+  .dayseg button { flex: 1; border: 0; border-right: 1px solid var(--line); background: none; padding: 9px 6px 8px; color: var(--ink-soft); font-weight: 700; font-size: 12px; white-space: nowrap; display: grid; gap: 3px; }
+  .dayseg button:last-child { border-right: 0; }
+  .dayseg button .dn { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+  .dayseg button .dc { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+  .dayseg button .dc.warn { color: var(--red); } .dayseg button .dc.ok { color: var(--green); }
+  .dayseg button.on { background: var(--yellow); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+  .dayseg button:hover:not(.on) { background: oklch(0.955 0.01 100); }
+
+  .addshift { display: block; width: 100%; text-align: center; padding: 11px; border: 0; border-top: 2px solid var(--ink); background: #fff; font-weight: 700; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+  .addshift:hover { background: oklch(0.955 0.01 100); color: var(--ink); }
+  .stmemrow { padding: 10px 18px; border-top: 2px solid var(--ink); background: oklch(0.955 0.01 100); font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .stmemrow b { text-transform: uppercase; letter-spacing: .05em; font-size: 10.5px; color: var(--ink-soft); }
+  .mchip { display: inline-flex; align-items: center; gap: 7px; background: oklch(0.94 0.015 110); padding: 4px 10px 4px 7px; font-weight: 500; font-size: 12.5px; }
+  .mchip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--paper); flex: none; }
+
+  .vhead { display: flex; align-items: baseline; gap: 12px; margin-top: 42px; }
+  .vhead .tag { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; background: var(--ink); color: var(--yellow); padding: 3px 11px; letter-spacing: .05em; }
+  .vhead .name { font-weight: 800; font-size: 15px; }
+  .vnote { font-size: 12.5px; color: var(--ink-soft); margin: 8px 0 0; max-width: 860px; }
+  .vnote .pro { color: var(--green); font-weight: 700; }
+  .vnote .con { color: var(--red); font-weight: 700; }
+  hr.sep { border: 0; border-top: 2.5px solid var(--ink); margin: 46px 0 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <h2>Entscheid #68 · Frage 4 — Schichten über mehrere Tage</h2>
+  <p class="lead">
+    Dieselbe Station <b>Ausschank</b> in allen drei Varianten: <b>13 Schichten über vier Tage</b>
+    (Do Aufbau, Fr, Sa, So) — realistischer als die vier Samstag-Schichten im Fächer-Prototyp.
+    Die Schicht über Mitternacht (SA 23 – SO 02) ist dabei, weil sie in jeder Variante anders zu lesen ist.
+  </p>
+
+  <!-- ================= A ================= -->
+  <div class="vhead"><span class="tag">A</span><span class="name">Tages-Zwischentitel — grüner Oswald-Kopf je Tag</span></div>
+  <p class="vnote">
+    Sprache aus dem Ablaufplan-Programmzettel („Tage als grüne Oswald-Zwischentitel", Vision §5).
+    Jeder Tageskopf trägt seinen eigenen Offen-Zähler.
+    <span class="pro">Pro:</span> Tagesgrenzen sind sichtbar, „wer kann Sonntag früh?" ist eine Augenbewegung; der Zeit-Chip wird kürzer, weil der Tag im Kopf steht.
+    <span class="con">Contra:</span> vier zusätzliche Zeilen Höhe; die Mitternachts-Schicht braucht trotzdem beide Tage im Chip.
+  </p>
+  <div class="focus" id="varA"></div>
+
+  <hr class="sep">
+
+  <!-- ================= B ================= -->
+  <div class="vhead"><span class="tag">B</span><span class="name">Flache Liste — exakt der Fächer-Prototyp</span></div>
+  <p class="vnote">
+    Alles chronologisch untereinander, der Tag steckt im Zeit-Chip.
+    <span class="pro">Pro:</span> genau das abgenommene Bild, kein zusätzliches Bauteil, geringste Höhe.
+    <span class="con">Contra:</span> bei 13 Schichten eine lange Wand; der Tageswechsel ist nur am Kürzel im Chip zu erkennen und geht beim Scrollen unter.
+  </p>
+  <div class="focus" id="varB"></div>
+
+  <hr class="sep">
+
+  <!-- ================= C ================= -->
+  <div class="vhead"><span class="tag">C</span><span class="name">Tages-Segmentschalter — ein Tag auf der Werkbank</span></div>
+  <p class="vnote">
+    Reiter je Tag mit Offen-Zähler, darunter nur dieser Tag. Klickbar.
+    <span class="pro">Pro:</span> kürzester Kasten, konsequente Fortsetzung des Fokus-Gedankens (erst eine Station, dann ein Tag).
+    <span class="con">Contra:</span> zweite Fokus-Ebene über der ersten — man muss jetzt Station <i>und</i> Tag richtig stehen haben; die Mitternachts-Schicht gehört zu zwei Tagen und muss willkürlich einem zugeschlagen werden.
+  </p>
+  <div class="focus" id="varC"></div>
+
+</div>
+
+<script>
+  // [Tag, Zeit, Name, besetzt, soll]
+  const SHIFTS = [
+    ["DO", "16–20", "Aufbau Schankanlage", 2, 2],
+    ["FR", "17–21", "Anstich",             3, 4],
+    ["FR", "21–01", "Barbetrieb",          2, 4],
+    ["SA", "11–15", "Frühschoppen",        4, 4],
+    ["SA", "15–19", "",                    3, 4],
+    ["SA", "19–23", "",                    3, 4],
+    ["SA", "23–02", "Barbetrieb",          1, 2],
+    ["SO", "09–13", "Frühschoppen",        2, 4],
+    ["SO", "13–17", "",                    1, 4],
+    ["SO", "17–20", "Ausklang",            0, 3],
+    ["SO", "20–23", "Abbau Schank",        0, 2],
+    ["SO", "23–01", "Endreinigung",        0, 2],
+    ["DO", "20–22", "Kühlung anfahren",    1, 1]
+  ];
+  const DAYS = [
+    ["DO", "Donnerstag 23. Juli", "Aufbau"],
+    ["FR", "Freitag 24. Juli", ""],
+    ["SA", "Samstag 25. Juli", ""],
+    ["SO", "Sonntag 26. Juli", ""]
+  ];
+  const NAMES = ["Franz Hochauer", "Maria Leitner", "Peter Gruber", "Karin Fuchs", "Josef Brandstetter", "Elisabeth Auer", "Monika Wagner", "Gerhard Eder"];
+
+  const byDay = d => SHIFTS.filter(s => s[0] === d);
+  const openOf = list => list.reduce((n, s) => n + (s[4] - s[3]), 0);
+
+  function slots(ist, soll, seed) {
+    let h = "";
+    for (let i = 0; i < soll; i++) {
+      h += i < ist
+        ? `<span class="bslot"><span class="p">${i + 1}</span>${NAMES[(seed + i) % NAMES.length]}</span>`
+        : `<span class="bslot free"><span class="p">${i + 1}</span>+ HELFER HIERHER ZIEHEN</span>`;
+    }
+    return `<div class="bigslots">${h}</div>`;
+  }
+
+  function row(s, i, withDay) {
+    const [day, time, name, ist, soll] = s;
+    const offen = soll - ist;
+    const st = offen === 0 ? `<span class="st ok">VOLL</span>` : `<span class="st warn">${offen} OFFEN</span>`;
+    const label = withDay ? `<span class="day">${day} </span>${time}` : time;
+    const sub = name ? `${name} · ${soll} Plätze` : `${soll} Plätze`;
+    return `<div class="srow"><div class="t"><time>${label}</time><span class="nm">${sub}</span>${st}</div>${slots(ist, soll, i)}</div>`;
+  }
+
+  const HEAD = `<div class="fhead"><h3>Ausschank</h3>
+      <span class="meta">Zelt Nord · <span class="crown">♛</span> Franz Hochauer · <b>19 Plätze offen</b></span>
+      <button class="auto">NUR DIESE STATION AUTO-FÜLLEN</button></div>`;
+  const FOOT = `<button class="addshift">+ Schicht anlegen</button>
+    <div class="stmemrow"><b>Stationsmitglieder ohne Schicht:</b><span class="mchip">Roman Aigner</span></div>`;
+
+  // A — Tages-Zwischentitel
+  let a = HEAD;
+  DAYS.forEach(([k, long, tag]) => {
+    const list = byDay(k);
+    if (!list.length) return;
+    const o = openOf(list);
+    a += `<div class="dayhead"><h4>${long}</h4>
+      <span class="dmeta">${list.length} Schichten</span>
+      <span class="dmeta ${o ? "warn" : "ok"}">${o ? o + " offen" : "voll besetzt"}</span>
+      ${tag ? `<span class="dmeta">${tag}</span>` : ""}</div>`;
+    a += list.map((s, i) => row(s, i, false)).join("");
+  });
+  document.getElementById("varA").innerHTML = a + FOOT;
+
+  // B — flache Liste
+  const flat = DAYS.flatMap(([k]) => byDay(k));
+  document.getElementById("varB").innerHTML = HEAD + flat.map((s, i) => row(s, i, true)).join("") + FOOT;
+
+  // C — Tages-Segmentschalter
+  function renderC(active) {
+    let seg = `<div class="dayseg">`;
+    DAYS.forEach(([k, long]) => {
+      const list = byDay(k);
+      const o = openOf(list);
+      seg += `<button data-day="${k}" class="${k === active ? "on" : ""}">
+        <span class="dn">${long.split(" ")[0]}</span>
+        <span class="dc ${o ? "warn" : "ok"}">${o ? o + " offen" : "voll"}</span></button>`;
+    });
+    seg += `</div>`;
+    const list = byDay(active);
+    document.getElementById("varC").innerHTML = HEAD + seg + list.map((s, i) => row(s, i, false)).join("") + FOOT;
+    document.querySelectorAll("#varC .dayseg button").forEach(b => b.onclick = () => renderC(b.dataset.day));
+  }
+  renderC("SA");
+</script>
+</body>
+</html>
