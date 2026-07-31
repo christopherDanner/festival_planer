@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<!-- MINI-FÄCHER zur offenen Frage aus Wayfinder-Ticket #64:
+     Wie werden Feste eingeräumt, die bevorstehen, aber NICHT das nächste sind?
+     Der Master-Prototyp zeigt nur EIN bevorstehendes Fest — heute hat die App drei Blöcke.
+     Drei Varianten, identische Daten (3 bevorstehend, 4 vergangen), damit nur das Layout vergleicht.
+     Handschrift: F „Werkzeug-Plakat", Akzentschrift Oswald 600 (Anton-Nachfolge lt. #71). -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fächer — Plakatwand-Ränge (Fest-Einstieg)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  button { font: inherit; cursor: pointer; }
+
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+    --disp: "Oswald", sans-serif;
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); min-height: 100vh; }
+
+  /* ---- Fächer-Schalter (nicht Teil der Vision) ---- */
+  .picker { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px;
+            background: var(--ink); color: #fff; padding: 9px 16px; flex-wrap: wrap; }
+  .picker .lbl { font-family: var(--disp); font-weight: 600; font-size: 12px; letter-spacing: .1em;
+                 text-transform: uppercase; color: var(--yellow); }
+  .picker button { background: none; border: 1.5px solid oklch(1 0 0 / .35); color: #fff;
+                   font-size: 12.5px; font-weight: 600; padding: 6px 13px; }
+  .picker button.on { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
+  .picker .hint { margin-left: auto; font-size: 11.5px; color: oklch(0.86 0.02 110); }
+
+  .frame { max-width: 1180px; margin: 0 auto; padding: 18px 22px 90px; }
+  .variant { display: none; }
+  .variant.on { display: block; }
+
+  .vhead { border-left: 5px solid var(--yellow); padding: 2px 0 2px 12px; margin: 22px 0 4px; }
+  .vhead h2 { font-family: var(--disp); font-weight: 600; font-size: 19px; letter-spacing: .03em;
+              text-transform: uppercase; }
+  .vhead p { font-size: 12.5px; color: var(--ink-soft); max-width: 70ch; margin-top: 3px; }
+
+  /* ---- Mast ---- */
+  .mast { border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone);
+          color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap;
+          margin-top: 18px; }
+  .mast .wordmark { font-family: var(--disp); font-weight: 600; font-size: 15px; letter-spacing: .06em; color: var(--yellow); }
+  .mast h1 { font-family: var(--disp); font-weight: 600; font-size: 22px; letter-spacing: .02em; text-transform: uppercase; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .newbtn { margin-left: auto; background: var(--yellow); color: var(--ink); border: 0;
+                  padding: 9px 15px; font-weight: 700; font-size: 12.5px; }
+
+  /* ---- Zwischen-Überschrift auf der Wand ---- */
+  h3.rank { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em;
+            margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; color: var(--ink-soft); }
+  h3.rank::after { content: ""; flex: 1; height: 7px;
+                   background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px);
+                   background-size: 8px 8px; }
+
+  /* ---- Plakate ---- */
+  .wall { display: grid; gap: 16px; align-items: start; }
+  .wall.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wall.lead { grid-template-columns: 1.3fr 1fr 1fr; }
+  /* Rang 1 steht allein auf seiner Zeile → über zwei Spalten, damit „groß" auch groß aussieht */
+  .wall.solo { grid-template-columns: 1.3fr 1fr 1fr; }
+  .wall.solo > .plakat.next { grid-column: span 2; }
+
+  .plakat { border: 2.5px solid var(--ink); text-align: center; background: #fff; }
+
+  /* Rang 1 — das nächste Fest, großes grünes Plakat */
+  .plakat.next { background: var(--green); background-image: var(--halftone); color: #fff;
+                 padding: 26px 20px 18px; box-shadow: 8px 8px 0 oklch(0.24 0.02 145 / .18); }
+  .plakat.next .fm { font-family: var(--disp); font-weight: 600; font-size: 11px; letter-spacing: .14em; color: var(--yellow); }
+  .plakat.next h4 { font-family: var(--disp); font-weight: 600; font-size: 27px; letter-spacing: .02em;
+                    text-transform: uppercase; margin: 6px 0 3px; line-height: 1.1; }
+  .plakat.next .date { font-family: var(--disp); font-weight: 600; font-size: 14px; color: var(--yellow); letter-spacing: .05em; }
+  .plakat.next .cd { display: inline-block; background: var(--yellow); color: var(--ink); font-family: var(--disp);
+                     font-weight: 600; font-size: 13px; letter-spacing: .06em; padding: 4px 12px; margin-top: 11px; }
+  .plakat.next .stats { display: flex; justify-content: center; gap: 16px; margin-top: 13px;
+                        font-size: 11.5px; color: oklch(0.92 0.02 110); flex-wrap: wrap; }
+  .plakat.next .openbtn { display: block; width: 100%; margin-top: 14px; background: #fff; color: var(--ink);
+                          border: 0; padding: 10px; font-weight: 700; font-size: 12.5px; }
+
+  /* Rang 2 — weitere bevorstehende: Papier-Grund, Countdown-Stempel, kein ERLEDIGT */
+  .plakat.soon { padding: 18px 14px 14px; position: relative; }
+  .plakat.soon .fm { font-family: var(--disp); font-weight: 600; font-size: 10.5px; letter-spacing: .12em; color: var(--ink-soft); }
+  .plakat.soon h4 { font-family: var(--disp); font-weight: 600; font-size: 18px; letter-spacing: .02em;
+                    text-transform: uppercase; margin: 5px 0 2px; }
+  .plakat.soon .date { font-family: var(--disp); font-weight: 600; font-size: 12.5px; color: var(--ink-soft); letter-spacing: .04em; }
+  .plakat.soon .cdmark { position: absolute; top: 10px; right: -8px; background: var(--yellow); color: var(--ink);
+                         border: 2px solid var(--ink); font-family: var(--disp); font-weight: 600; font-size: 10.5px;
+                         letter-spacing: .07em; padding: 2px 8px; transform: rotate(-4deg); }
+  .plakat.soon .stats { display: flex; justify-content: center; gap: 14px; margin-top: 10px;
+                        font-size: 11px; color: var(--ink-soft); flex-wrap: wrap; }
+
+  /* Rang 3 — vergangene: getönt + ERLEDIGT-Stempel */
+  .plakat.past { background: oklch(0.93 0.015 100); border-color: var(--ink-soft);
+                 padding: 18px 14px 14px; position: relative; }
+  .plakat.past .fm { font-family: var(--disp); font-weight: 600; font-size: 10.5px; letter-spacing: .12em; color: var(--ink-soft); }
+  .plakat.past h4 { font-family: var(--disp); font-weight: 600; font-size: 17px; letter-spacing: .02em;
+                    text-transform: uppercase; margin: 5px 0 2px; }
+  .plakat.past .date { font-family: var(--disp); font-weight: 600; font-size: 12.5px; color: var(--ink-soft); letter-spacing: .04em; }
+  .plakat.past .stampd { position: absolute; top: 10px; right: -8px; border: 2px solid var(--green); color: var(--green);
+                         font-family: var(--disp); font-weight: 600; font-size: 10.5px; letter-spacing: .08em;
+                         padding: 2px 8px; transform: rotate(6deg); background: #fff; }
+  .plakat.past .stats { display: flex; justify-content: center; gap: 14px; margin-top: 10px;
+                        font-size: 11px; color: var(--ink-soft); flex-wrap: wrap; }
+
+  .row2 { display: flex; gap: 6px; margin-top: 11px; }
+  .btn { border: 2px solid var(--ink); background: #fff; color: var(--ink); font-weight: 700;
+         font-size: 11.5px; padding: 7px 10px; flex: 1; }
+  .btn.primary { background: var(--yellow); }
+
+  /* Archiv-Schalter (Variante C) */
+  .archiv { margin-top: 28px; }
+  .archiv .toggle { width: 100%; border: 2.5px dashed var(--ink-soft); background: none; color: var(--ink-soft);
+                    font-family: var(--disp); font-weight: 600; font-size: 14px; letter-spacing: .08em;
+                    text-transform: uppercase; padding: 13px; display: flex; align-items: center;
+                    justify-content: center; gap: 10px; }
+  .archiv .toggle:hover { border-color: var(--ink); color: var(--ink); }
+  .archiv .body { display: none; margin-top: 16px; }
+  .archiv.open .body { display: block; }
+  .archiv.open .toggle { border-style: solid; border-color: var(--ink); color: var(--ink); background: #fff; }
+
+  .note { margin-top: 26px; border-left: 4px solid var(--red); background: oklch(0.97 0.015 40);
+          padding: 10px 14px; font-size: 12px; color: var(--ink-soft); }
+  .note b { color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .frame { padding: 14px 14px 90px; }
+    .wall.c3, .wall.lead { grid-template-columns: 1fr; }
+    .mast h1 { font-size: 19px; }
+    .picker .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="picker">
+  <span class="lbl">Plakatwand-Ränge</span>
+  <button data-v="a" class="on">A — Drei Ränge</button>
+  <button data-v="b">B — Eine Wand</button>
+  <button data-v="c">C — Archiv aufklappbar</button>
+  <span class="hint">Gleiche Daten: 3 bevorstehend, 4 vergangen · Kennzahlen sind Platzhalter (eigene Frage)</span>
+</div>
+
+<div class="frame">
+
+  <!-- ============================= VARIANTE A ============================= -->
+  <section class="variant on" data-v="a">
+    <div class="vhead">
+      <h2>A — Drei Ränge, drei Plakat-Größen</h2>
+      <p>Bekannte Ordnung von heute, neu geschrieben: nächstes Fest groß und grün, weitere bevorstehende als
+        Papier-Plakate mit gelbem Countdown-Stempel, vergangene getönt mit „ERLEDIGT". Zwischenzeilen ordnen die Wand.</p>
+    </div>
+
+    <header class="mast">
+      <span class="wordmark">FESTMEISTER</span>
+      <h1>Meine Feste</h1>
+      <span class="when">7 Feste · 3 bevorstehend</span>
+      <button class="newbtn">+ NEUES FEST</button>
+    </header>
+
+    <h3 class="rank">Nächstes Fest</h3>
+    <div class="wall solo">
+      <div class="plakat next">
+        <div class="fm">NÄCHSTES FEST</div>
+        <h4>Musikfest Steinbach 2026</h4>
+        <div class="date">FR 24. – SO 26. JULI</div>
+        <span class="cd">NOCH 4 TAGE</span>
+        <div class="stats"><span>41/52 Schichten</span><span>86 Materialien</span><span>€ 4.850 Sponsoring</span></div>
+        <button class="openbtn">FEST ÖFFNEN →</button>
+      </div>
+    </div>
+
+    <h3 class="rank">Weitere bevorstehende Feste</h3>
+    <div class="wall c3">
+      <div class="plakat soon">
+        <span class="cdmark">IN 3 MONATEN</span>
+        <div class="fm">2026</div>
+        <h4>Herbstkonzert</h4>
+        <div class="date">SA 24. OKTOBER 2026</div>
+        <div class="stats"><span>0/6 Schichten</span><span>12 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat soon">
+        <span class="cdmark">IN 5 MONATEN</span>
+        <div class="fm">2026</div>
+        <h4>Adventmarkt</h4>
+        <div class="date">FR 4. – SO 6. DEZ. 2026</div>
+        <div class="stats"><span>0/14 Schichten</span><span>—</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+    </div>
+
+    <h3 class="rank">Vergangene Feste</h3>
+    <div class="wall c3">
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2025</div>
+        <h4>Musikfest Steinbach</h4>
+        <div class="date">25.–27. JULI 2025</div>
+        <div class="stats"><span>52 Schichten</span><span>€ 4.400 Sponsoring</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2025</div>
+        <h4>Stadlfest</h4>
+        <div class="date">5.–6. SEPT. 2025</div>
+        <div class="stats"><span>18 Schichten</span><span>34 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2024</div>
+        <h4>Musikfest Steinbach</h4>
+        <div class="date">26.–28. JULI 2024</div>
+        <div class="stats"><span>48 Schichten</span><span>€ 3.900 Sponsoring</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2024</div>
+        <h4>Frühjahrskonzert</h4>
+        <div class="date">12. APRIL 2024</div>
+        <div class="stats"><span>6 Schichten</span><span>9 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+    </div>
+
+    <div class="note"><b>Kostet:</b> einen dritten Plakat-Typ („bevorstehend, nicht als nächstes")
+      inklusive Countdown-Stempel — den die Vision nicht zeigt.
+      <b>Bringt:</b> vergangene Feste bleiben sichtbar, ohne die bevorstehenden zu verdrängen.</div>
+  </section>
+
+  <!-- ============================= VARIANTE B ============================= -->
+  <section class="variant" data-v="b">
+    <div class="vhead">
+      <h2>B — Eine Wand, zwei Ränge</h2>
+      <p>Nächstes Fest groß und grün, alles andere gleichrangig daneben — chronologisch, bevorstehende mit
+        Countdown-Stempel, vergangene getönt mit „ERLEDIGT". Keine Zwischenzeilen: der Stempel sagt, was Sache ist.
+        Am nächsten am Master-Prototyp.</p>
+    </div>
+
+    <header class="mast">
+      <span class="wordmark">FESTMEISTER</span>
+      <h1>Meine Feste</h1>
+      <span class="when">7 Feste · 3 bevorstehend</span>
+      <button class="newbtn">+ NEUES FEST</button>
+    </header>
+
+    <div class="wall lead" style="margin-top:24px">
+      <div class="plakat next">
+        <div class="fm">NÄCHSTES FEST</div>
+        <h4>Musikfest Steinbach 2026</h4>
+        <div class="date">FR 24. – SO 26. JULI</div>
+        <span class="cd">NOCH 4 TAGE</span>
+        <div class="stats"><span>41/52 Schichten</span><span>86 Materialien</span><span>€ 4.850 Sponsoring</span></div>
+        <button class="openbtn">FEST ÖFFNEN →</button>
+      </div>
+      <div class="plakat soon">
+        <span class="cdmark">IN 3 MONATEN</span>
+        <div class="fm">2026</div>
+        <h4>Herbstkonzert</h4>
+        <div class="date">SA 24. OKTOBER 2026</div>
+        <div class="stats"><span>0/6 Schichten</span><span>12 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat soon">
+        <span class="cdmark">IN 5 MONATEN</span>
+        <div class="fm">2026</div>
+        <h4>Adventmarkt</h4>
+        <div class="date">FR 4. – SO 6. DEZ. 2026</div>
+        <div class="stats"><span>0/14 Schichten</span><span>—</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+    </div>
+
+    <div class="wall c3" style="margin-top:16px">
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2025</div>
+        <h4>Musikfest Steinbach</h4>
+        <div class="date">25.–27. JULI 2025</div>
+        <div class="stats"><span>52 Schichten</span><span>€ 4.400 Sponsoring</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2025</div>
+        <h4>Stadlfest</h4>
+        <div class="date">5.–6. SEPT. 2025</div>
+        <div class="stats"><span>18 Schichten</span><span>34 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2024</div>
+        <h4>Musikfest Steinbach</h4>
+        <div class="date">26.–28. JULI 2024</div>
+        <div class="stats"><span>48 Schichten</span><span>€ 3.900 Sponsoring</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat past">
+        <span class="stampd">ERLEDIGT</span>
+        <div class="fm">2024</div>
+        <h4>Frühjahrskonzert</h4>
+        <div class="date">12. APRIL 2024</div>
+        <div class="stats"><span>6 Schichten</span><span>9 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+    </div>
+
+    <div class="note"><b>Kostet:</b> bei vielen Festen wird die Wand lang und flach — Stempel statt Struktur.
+      <b>Bringt:</b> eine einzige Wand, keine Kategorien, die man lesen muss.</div>
+  </section>
+
+  <!-- ============================= VARIANTE C ============================= -->
+  <section class="variant" data-v="c">
+    <div class="vhead">
+      <h2>C — Nur bevorstehende, Archiv aufklappbar</h2>
+      <p>Die Wand zeigt ausschließlich, was noch kommt. Vergangene Feste liegen hinter einem
+        gestrichelten „ARCHIV"-Schalter — ausgeklappt sehen sie aus wie in A. (Schalter ist klickbar.)</p>
+    </div>
+
+    <header class="mast">
+      <span class="wordmark">FESTMEISTER</span>
+      <h1>Meine Feste</h1>
+      <span class="when">7 Feste · 3 bevorstehend</span>
+      <button class="newbtn">+ NEUES FEST</button>
+    </header>
+
+    <div class="wall lead" style="margin-top:24px">
+      <div class="plakat next">
+        <div class="fm">NÄCHSTES FEST</div>
+        <h4>Musikfest Steinbach 2026</h4>
+        <div class="date">FR 24. – SO 26. JULI</div>
+        <span class="cd">NOCH 4 TAGE</span>
+        <div class="stats"><span>41/52 Schichten</span><span>86 Materialien</span><span>€ 4.850 Sponsoring</span></div>
+        <button class="openbtn">FEST ÖFFNEN →</button>
+      </div>
+      <div class="plakat soon">
+        <span class="cdmark">IN 3 MONATEN</span>
+        <div class="fm">2026</div>
+        <h4>Herbstkonzert</h4>
+        <div class="date">SA 24. OKTOBER 2026</div>
+        <div class="stats"><span>0/6 Schichten</span><span>12 Materialien</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+      <div class="plakat soon">
+        <span class="cdmark">IN 5 MONATEN</span>
+        <div class="fm">2026</div>
+        <h4>Adventmarkt</h4>
+        <div class="date">FR 4. – SO 6. DEZ. 2026</div>
+        <div class="stats"><span>0/14 Schichten</span><span>—</span></div>
+        <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+      </div>
+    </div>
+
+    <div class="archiv" id="archiv">
+      <button class="toggle" id="archivToggle">Archiv — 4 vergangene Feste <span id="archivChevron">▾</span></button>
+      <div class="body">
+        <div class="wall c3">
+          <div class="plakat past">
+            <span class="stampd">ERLEDIGT</span>
+            <div class="fm">2025</div>
+            <h4>Musikfest Steinbach</h4>
+            <div class="date">25.–27. JULI 2025</div>
+            <div class="stats"><span>52 Schichten</span><span>€ 4.400 Sponsoring</span></div>
+            <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+          </div>
+          <div class="plakat past">
+            <span class="stampd">ERLEDIGT</span>
+            <div class="fm">2025</div>
+            <h4>Stadlfest</h4>
+            <div class="date">5.–6. SEPT. 2025</div>
+            <div class="stats"><span>18 Schichten</span><span>34 Materialien</span></div>
+            <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+          </div>
+          <div class="plakat past">
+            <span class="stampd">ERLEDIGT</span>
+            <div class="fm">2024</div>
+            <h4>Musikfest Steinbach</h4>
+            <div class="date">26.–28. JULI 2024</div>
+            <div class="stats"><span>48 Schichten</span><span>€ 3.900 Sponsoring</span></div>
+            <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+          </div>
+          <div class="plakat past">
+            <span class="stampd">ERLEDIGT</span>
+            <div class="fm">2024</div>
+            <h4>Frühjahrskonzert</h4>
+            <div class="date">12. APRIL 2024</div>
+            <div class="stats"><span>6 Schichten</span><span>9 Materialien</span></div>
+            <div class="row2"><button class="btn">ÖFFNEN</button><button class="btn primary">ALS VORLAGE</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><b>Kostet:</b> „ALS VORLAGE" — der häufigste Weg zu einem neuen Fest — liegt hinter
+      einem Klick, obwohl die Vorlage fast immer ein vergangenes Fest ist.
+      <b>Bringt:</b> die ruhigste Wand; nach zehn Jahren Vereinsleben erschlägt das Archiv den Einstieg nicht.</div>
+  </section>
+
+</div>
+
+<script>
+  function show(v) {
+    document.querySelectorAll('.picker button').forEach(x => x.classList.toggle('on', x.dataset.v === v));
+    document.querySelectorAll('.variant').forEach(s => s.classList.toggle('on', s.dataset.v === v));
+  }
+  document.querySelectorAll('.picker button').forEach(b => {
+    b.addEventListener('click', () => { show(b.dataset.v); window.scrollTo({ top: 0 }); });
+  });
+  // ?variant=a|b|c — wie in den anderen Bereichs-Fächern
+  const wanted = new URLSearchParams(location.search).get('variant');
+  if (wanted && document.querySelector(`.variant[data-v="${wanted}"]`)) show(wanted);
+  const arch = document.getElementById('archiv');
+  document.getElementById('archivToggle').addEventListener('click', () => {
+    arch.classList.toggle('open');
+    document.getElementById('archivChevron').textContent = arch.classList.contains('open') ? '▴' : '▾';
+  });
+</script>
+</body>
+</html>
