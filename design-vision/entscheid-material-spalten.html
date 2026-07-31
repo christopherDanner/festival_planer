@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #66, Bereich Material.
+     FRAGE: Welche Spalten trägt die Positionstabelle?
+     Vision §5 nennt 8 Spalten und streicht damit Brutto. Der Code hat 13 — und dort sind
+     Netto UND Brutto EINGABEfelder: was man tippt, wird zur Quelle (price_is_net kippt),
+     das andere zeigt abgeleitet/kursiv. Die Vision würde also eine Eingabe entfernen, nicht
+     eine Doppelung. Drei Umsetzungen, gleiche 19 Positionen (Station Küche), echte
+     Gebinde-Umrechnung („→ 3 Kartons"), 5 Preise fehlen.
+     Umschaltbar via ?v=1|2|3 oder Schalter unten. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Material — Welche Spalten trägt die Tabelle?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 140px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin-bottom: 16px; font-size: 13px; line-height: 1.55; max-width: 1180px; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+  .measure .plus { color: var(--green); font-weight: 700; } .measure .minus { color: var(--red); font-weight: 700; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; }
+  .measure .fit { color: var(--green); font-weight: 800; } .measure .nofit { color: var(--red); font-weight: 800; }
+
+  .board { max-width: 1180px; }
+  h2.sect { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 22px 0 10px; display: flex; align-items: center; gap: 12px; }
+  h2.sect::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+
+  .kasten { border: 2.5px solid var(--ink); background: #fff; }
+  .khead { display: flex; align-items: center; gap: 14px; padding: 11px 16px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; flex-wrap: wrap; }
+  .khead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 18px; letter-spacing: .02em; text-transform: uppercase; }
+  .khead .meta { font-size: 12px; color: oklch(0.92 0.02 110); }
+  .khead .meta b { color: var(--yellow); }
+  .khead .meta .warn { color: oklch(0.84 0.14 45); font-weight: 800; }
+  .khead .btn { margin-left: auto; border: 0; background: var(--yellow); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 6px 11px; font-weight: 700; font-size: 12px; color: var(--ink); }
+
+  .tablewrap { overflow-x: auto; }
+  .mtable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .mtable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .mtable td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .mtable tr:hover td { background: oklch(0.965 0.012 100); }
+  .mtable th.num, .mtable td.num { text-align: right; }
+  .mtable .sub { font-size: 10.5px; color: var(--ink-soft); display: block; margin-top: 1px; }
+  .mtable .pos { color: var(--red); font-weight: 700; } .mtable .neg { color: var(--green); font-weight: 700; }
+  .mtable .none { color: oklch(0.66 0.015 120); }
+  .mtable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .mtable .warncell { outline: 1.5px dashed var(--red); outline-offset: -1.5px; color: var(--red); font-weight: 700; font-size: 11px; }
+  .catbadge { font-size: 10px; font-weight: 700; letter-spacing: .03em; padding: 1px 6px; background: oklch(0.94 0.015 110); }
+  .rowmenu { color: var(--ink-soft); font-weight: 800; }
+  .nowrap { white-space: nowrap; }
+
+  /* Eingabezelle: gelb = hier wird getippt (Vorbild .editcell aus dem Fächer) */
+  .edit { background: var(--yellow); outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700; padding: 2px 6px; display: inline-block; min-width: 40px; text-align: right; }
+  .derived { color: var(--ink-soft); font-style: italic; }
+  .gbhint { font-size: 10px; color: var(--ink-soft); display: block; }
+
+  /* Preis-Stempel (Umsetzung 3) */
+  .stamp { font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border: 1.5px solid var(--ink); padding: 0 4px; margin-left: 5px; background: #fff; vertical-align: 1px; }
+  .stamp.brutto { background: var(--ink); color: #fff; }
+
+  .variant { display: none; } .variant.active { display: block; }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 275px; text-align: center; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="measure" id="mbox"></div>
+<div class="board">
+  <h2 class="sect">Desktop — Arbeitsfläche wie im Fest-Tab</h2>
+  <div id="desk"></div>
+</div>
+
+<div id="switcher">
+  <button id="prev">‹</button><span class="lbl" id="slbl"></span><button id="next">›</button>
+</div>
+
+<script>
+/* ---------- Daten: Station Küche, 19 Positionen ---------- */
+// [name, kategorie, lieferant, gebinde, stkJeGebinde, einheit, bestellt, verbraucht, preis, istNetto, mwst]
+const RAW=[
+ ['Schweinsbraten rohe Ware','Lebensmittel','Fleischerei Maier','–',null,'kg',35,33,9.40,true,10],
+ ['Backhendl Teile','Lebensmittel','Fleischerei Maier','–',null,'kg',40,38,6.80,true,10],
+ ['Schnitzelfleisch','Lebensmittel','Fleischerei Maier','–',null,'kg',28,25,11.20,true,10],
+ ['Speck geschnitten','Lebensmittel','Fleischerei Maier','–',null,'kg',6,5,13.90,true,10],
+ ['Brot dunkel 1 kg','Lebensmittel','Bäckerei Ruf','–',null,'Stk',25,22,3.20,true,10],
+ ['Kartoffelsalat fertig','Lebensmittel','Metro','Eimer 5 kg',5,'kg',70,60,16.20,false,10],
+ ['Krautsalat fertig','Lebensmittel','Metro','Eimer 5 kg',5,'kg',50,40,14.80,false,10],
+ ['Pommes tiefgekühlt','Lebensmittel','Metro','Karton 10 kg',10,'kg',120,110,13.40,true,10],
+ ['Frittieröl 10 l','Lebensmittel','Metro','Kanister 10 l',10,'l',50,40,21.90,false,10],
+ ['Kren im Glas','Lebensmittel','Metro','Glas 1 kg',1,'kg',4,3,6.90,true,10],
+ ['Salz grob','Lebensmittel','Metro','Sack 5 kg',5,'kg',10,5,4.20,true,10],
+ ['Zwiebel 5 kg','Lebensmittel','Metro','Sack 5 kg',5,'kg',30,25,7.30,true,10],
+ ['Teller Karton groß','Verbrauch','Metro','Karton 500 Stk',500,'Stk',2500,2000,31.20,true,20],
+ ['Besteck Holz Set','Verbrauch','Metro','Karton 1000 Stk',1000,'Stk',4000,3000,44.80,false,20],
+ ['Servietten','Verbrauch','Metro','Karton 2000 Stk',2000,'Stk',6000,4000,22.40,true,20],
+ ['Küchenrolle','Verbrauch','Metro','Pack 8 Rollen',8,'Rolle',48,40,9.20,true,20],
+ ['Einweghandschuhe','Verbrauch','Metro','Karton 1000 Stk',1000,'Stk',2000,2000,null,true,20],
+ ['Gasflasche 11 kg','Verbrauch','Lagerhaus','–',null,'Stk',4,3,null,false,20],
+ ['Spülmittel 5 l','Verbrauch','Metro','Kanister 5 l',5,'l',15,10,null,true,20],
+];
+const M=RAW.map((r,i)=>({id:'m'+i,name:r[0],category:r[1],supplier:r[2],packaging:r[3],per:r[4],unit:r[5],
+  ordered:r[6],actual:r[7],price:r[8],isNet:r[9],tax:r[10]}));
+
+const eur=n=>n==null?'–':n.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const eur0=n=>n==null?'–':Math.round(n).toLocaleString('de-AT')+' €';
+const netOf=m=>m.price==null?null:(m.isNet?m.price:m.price/(1+m.tax/100));
+const grossOf=m=>m.price==null?null:(m.isNet?m.price*(1+m.tax/100):m.price);
+const total=m=>{const g=grossOf(m);return g==null?null:g*(m.actual??m.ordered);};
+const sumAll=M.reduce((s,m)=>s+(total(m)??0),0);
+const noPrice=M.filter(m=>m.price==null).length;
+const pack=(qty,m)=>m.per?`→ ${Math.ceil(qty/m.per)} × ${m.packaging.split(' ')[0]}`:'';
+
+/* ---------- Zeilen-Bausteine je Umsetzung ---------- */
+function cellsV1(m){ // Vision wörtlich: Netto, kein Brutto, kein MwSt-Spalte
+  return `<td class="nowrap"><b>${m.name}</b><span class="sub"><span class="catbadge">${m.category}</span> · ${m.tax}% MwSt</span></td>
+    <td class="nowrap">${m.supplier}</td><td class="nowrap">${m.packaging}</td>
+    <td class="num nowrap"><span class="edit">${m.ordered}</span> ${m.unit}<span class="gbhint">${pack(m.ordered,m)}</span></td>
+    <td class="num nowrap"><span class="edit">${m.actual}</span> ${m.unit}<span class="gbhint">${pack(m.actual,m)}</span></td>
+    ${diffTd(m)}
+    <td class="num nowrap">${m.price==null?'<span class="warncell">PREIS FEHLT</span>':`<span class="edit">${eur(netOf(m))}</span>`}</td>
+    <td class="num nowrap">${total(m)==null?'<span class="none">–</span>':`<b>${eur(total(m))}</b>`}</td>
+    <td><span class="rowmenu">⋮</span></td>`;
+}
+function cellsV2(m){ // Ist-Umfang: MwSt + Netto + Brutto, beide tippbar
+  const isNetSrc=m.isNet||m.price==null;
+  return `<td class="nowrap"><b>${m.name}</b><span class="sub"><span class="catbadge">${m.category}</span></span></td>
+    <td class="nowrap">${m.supplier}</td><td class="nowrap">${m.packaging}</td>
+    <td class="num nowrap"><span class="edit">${m.ordered}</span> ${m.unit}<span class="gbhint">${pack(m.ordered,m)}</span></td>
+    <td class="num nowrap"><span class="edit">${m.actual}</span> ${m.unit}<span class="gbhint">${pack(m.actual,m)}</span></td>
+    ${diffTd(m)}
+    <td class="num nowrap"><select style="border:1.5px solid var(--ink);font-size:11px;padding:1px 2px"><option>${m.tax}%</option><option>10%</option><option>20%</option></select></td>
+    <td class="num nowrap">${m.price==null?'<span class="warncell">FEHLT</span>':(isNetSrc?`<span class="edit">${eur(netOf(m))}</span>`:`<span class="derived">${eur(netOf(m))}</span>`)}</td>
+    <td class="num nowrap">${m.price==null?'<span class="warncell">FEHLT</span>':(!isNetSrc?`<span class="edit">${eur(grossOf(m))}</span>`:`<span class="derived">${eur(grossOf(m))}</span>`)}</td>
+    <td class="num nowrap">${total(m)==null?'<span class="none">–</span>':`<b>${eur(total(m))}</b>`}</td>
+    <td><span class="rowmenu">⋮</span></td>`;
+}
+function cellsV3(m){ // Ein Preis-Feld + Stempel netto/brutto, MwSt in die Subzeile
+  return `<td class="nowrap"><b>${m.name}</b><span class="sub"><span class="catbadge">${m.category}</span> · ${m.tax}% MwSt</span></td>
+    <td class="nowrap">${m.supplier}</td><td class="nowrap">${m.packaging}</td>
+    <td class="num nowrap"><span class="edit">${m.ordered}</span> ${m.unit}<span class="gbhint">${pack(m.ordered,m)}</span></td>
+    <td class="num nowrap"><span class="edit">${m.actual}</span> ${m.unit}<span class="gbhint">${pack(m.actual,m)}</span></td>
+    ${diffTd(m)}
+    <td class="num nowrap">${m.price==null?'<span class="warncell">PREIS FEHLT</span>'
+      :`<span class="edit">${eur(m.price)}</span><button class="stamp${m.isNet?'':' brutto'}" title="Umschalten netto/brutto">${m.isNet?'netto':'brutto'}</button>
+        <span class="gbhint">${m.isNet?'brutto '+eur(grossOf(m)):'netto '+eur(netOf(m))}</span>`}</td>
+    <td class="num nowrap">${total(m)==null?'<span class="none">–</span>':`<b>${eur(total(m))}</b>`}</td>
+    <td><span class="rowmenu">⋮</span></td>`;
+}
+function diffTd(m){
+  const d=m.actual-m.ordered;
+  const t=d===0?'±0':`<span class="${d>0?'pos':'neg'}">${d>0?'+':''}${d}</span>`;
+  return `<td class="num nowrap">${t}</td>`;
+}
+const IMPL={
+ 1:{name:'1 — Vision wörtlich (9 Spalten)',hint:'Netto only · Kategorie+MwSt in der Subzeile',
+    head:['Material','Lieferant','Gebinde','Bestellt','Verbraucht','Δ','Netto','Gesamt',''],cells:cellsV1,foot:7},
+ 2:{name:'2 — Ist-Umfang in Plakat-Optik (11)',hint:'MwSt-Feld + Netto UND Brutto tippbar',
+    head:['Material','Lieferant','Gebinde','Bestellt','Verbraucht','Δ','MwSt','Netto','Brutto','Gesamt',''],cells:cellsV2,foot:9},
+ 3:{name:'3 — Preis-Stempel (9 Spalten)',hint:'ein Preisfeld + Stempel netto/brutto zum Kippen',
+    head:['Material','Lieferant','Gebinde','Bestellt','Verbraucht','Δ','Preis','Gesamt',''],cells:cellsV3,foot:7},
+};
+
+let vi=1;
+function build(){
+  const im=IMPL[vi];
+  document.getElementById('desk').innerHTML=`<div class="kasten">
+    <div class="khead"><h3>Küche</h3>
+      <span class="meta">${M.length} Positionen · Zwischensumme <b>${eur0(sumAll)}</b> · <span class="warn">${noPrice} ohne Preis</span></span>
+      <button class="btn">+ POSITION FÜR KÜCHE</button></div>
+    <div class="tablewrap"><table class="mtable" id="tbl">
+      <thead><tr>${im.head.map((h,i)=>`<th class="${i>=3&&h?'num':''}">${h}</th>`).join('')}</tr></thead>
+      <tbody>${M.map(m=>`<tr>${im.cells(m)}</tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="${im.foot}" class="num">Zwischensumme Küche</td><td class="num">${eur(sumAll)}</td><td></td></tr></tfoot>
+    </table></div></div>`;
+  measure();
+}
+function measure(){
+  const im=IMPL[vi], w=document.querySelector('.tablewrap'), t=document.getElementById('tbl');
+  const need=Math.round(t.scrollWidth), have=Math.round(w.clientWidth);
+  const fits=need<=have+1;
+  document.getElementById('mbox').innerHTML=`<h4>Umsetzung ${im.name}</h4>
+    Mindestbreite der Tabelle: <span class="px">${need} px</span> — verfügbar ${have} px →
+    ${fits?'<span class="fit">passt ohne Querscrollen</span>':`<span class="nofit">${need-have} px zu breit, muss querscrollen</span>`}.
+    Spalten: <b>${im.head.length}</b>. Gelbe Zellen = tippbar.
+    ${vi==1?'<span class="plus">+ schmalste Tabelle, ruhigstes Bild.</span> <span class="minus">− Bruttopreis kann nicht mehr getippt werden: liegt die Rechnung mit Bruttopreisen vor, muss man rückwärts rechnen oder den Dialog öffnen. MwSt nur lesbar, nicht änderbar.</span>':''}
+    ${vi==2?'<span class="plus">+ verliert keine Fähigkeit, alles bleibt in der Zeile tippbar.</span> <span class="minus">− zwei Preisspalten, von denen eine immer nur abgeleitet ist — der Blick muss erst prüfen, welche gilt (kursiv = abgeleitet).</span>':''}
+    ${vi==3?'<span class="plus">+ so schmal wie die Vision UND behält beide Eingaben; der Stempel sagt ausdrücklich, welche Basis gilt, statt es über Kursivschrift anzudeuten.</span> <span class="minus">− ein neuer Baustein (Kipp-Stempel); der abgeleitete Wert steht klein darunter statt in eigener Spalte.</span>':''}`;
+  document.getElementById('slbl').innerHTML=im.name+'<small>'+im.hint+'</small>';
+  history.replaceState(null,'','?v='+vi);
+}
+document.getElementById('prev').onclick=()=>{vi=vi===1?3:vi-1;build();};
+document.getElementById('next').onclick=()=>{vi=vi===3?1:vi+1;build();};
+vi=Math.min(3,Math.max(1,parseInt(new URLSearchParams(location.search).get('v')||'1',10)));
+build();
+addEventListener('resize',measure);
+</script>
+</body>
+</html>

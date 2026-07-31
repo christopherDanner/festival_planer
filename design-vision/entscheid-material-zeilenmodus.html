@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #66, Bereich Material.
+     FRAGE (Idee des Nutzers): Bearbeiten pro ZEILE. Ein Edit-Knopf je Zeile macht nur DIESE Zeile
+     zu Eingabefeldern — und zwar nur die Mengen-/Preisspalten. Speichern übernimmt alle Werte der
+     Zeile. Der volle Positions-Dialog (Name, Lieferant, Gebinde, Kategorie, Station) bleibt
+     zusätzlich über ⋮ erreichbar.
+     Die Tabelle nutzt table-layout:fixed — die Spaltenbreiten sind inhaltsunabhängig, deshalb
+     springt beim Umschalten auf Eingabe NICHTS.
+     Netto und Brutto sind beide Eingabefelder und rechnen sich über die MwSt der Zeile LIVE
+     gegenseitig mit; Δ und Gesamt rechnen live mit. Ohne MwSt sind Netto und Brutto gleich.
+     Drei Ausführungen — Unterschied: was passiert bei mehreren Zeilen.
+     Umschaltbar via ?v=a|b|c oder Schalter unten. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Material — Bearbeiten pro Zeile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 170px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin-bottom: 16px; font-size: 13px; line-height: 1.55; max-width: 1180px; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+  .measure .plus { color: var(--green); font-weight: 700; } .measure .minus { color: var(--red); font-weight: 700; }
+  .measure .big { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .measure ul { margin: 6px 0 0 18px; } .measure li { margin-bottom: 2px; }
+
+  .board { max-width: 1180px; }
+  .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .search { border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); flex: 1; min-width: 170px; }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 6px 11px; font-weight: 700; font-size: 12px; color: var(--ink); }
+  .btn:hover { background: oklch(0.94 0.015 110); }
+  .btn.primary { background: var(--yellow); }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { border: 0; background: none; font-weight: 600; font-size: 12px; padding: 7px 12px; color: var(--ink-soft); border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+
+  .kasten { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .khead { display: flex; align-items: center; gap: 14px; padding: 11px 16px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; flex-wrap: wrap; }
+  .khead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 18px; text-transform: uppercase; letter-spacing: .02em; }
+  .khead .meta { font-size: 12px; color: oklch(0.92 0.02 110); }
+  .khead .meta b { color: var(--yellow); }
+  .khead .btn { margin-left: auto; border: 0; background: var(--yellow); }
+
+  /* WICHTIG: fixe Spaltenbreiten -> Umschalten lesen/eingeben verschiebt nichts */
+  .tablewrap { overflow-x: auto; }
+  .mtable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; table-layout: fixed; min-width: 1080px; }
+  .mtable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 8px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); }
+  .mtable td { padding: 6px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: top; }
+  /* Feste Zeilenhöhe in BEIDEN Zuständen — sonst wächst die Zeile beim Bearbeiten
+     und schiebt alles darunter nach unten (gemessen: 44px -> 56px). */
+  .mtable tbody td { height: 56px; }
+  .mtable th.num, .mtable td.num { text-align: right; }
+  .mtable .nm { font-weight: 700; line-height: 1.25; }
+  .mtable .sub { font-size: 10.5px; color: var(--ink-soft); display: block; margin-top: 2px; }
+  .mtable .pos { color: var(--red); font-weight: 700; } .mtable .neg { color: var(--green); font-weight: 700; }
+  .mtable .none { color: oklch(0.66 0.015 120); }
+  .mtable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .mtable .warncell { outline: 1.5px dashed var(--red); outline-offset: -1.5px; color: var(--red); font-weight: 700; font-size: 10.5px; text-align: right; }
+  .catbadge { font-size: 10px; font-weight: 700; padding: 1px 6px; background: oklch(0.94 0.015 110); }
+  .gbhint { font-size: 10px; color: var(--ink-soft); display: block; margin-top: 1px; }
+  .ell { overflow: hidden; text-overflow: ellipsis; }
+
+  tr.reading:hover td { background: oklch(0.965 0.012 100); }
+  /* Zeile in Bearbeitung: gelber Grund + Tinte-Rahmen, gleiche Höhe wie gelesen */
+  tr.editing td { background: oklch(0.955 0.055 95); box-shadow: inset 0 2px 0 var(--ink), inset 0 -2px 0 var(--ink); }
+  tr.editing td:first-child { box-shadow: inset 2px 0 0 var(--ink), inset 0 2px 0 var(--ink), inset 0 -2px 0 var(--ink); }
+  tr.editing td:last-child { box-shadow: inset -2px 0 0 var(--ink), inset 0 2px 0 var(--ink), inset 0 -2px 0 var(--ink); }
+  tr.justsaved td { background: oklch(0.93 0.06 160); transition: background .9s ease-out; }
+
+  .cin { width: 100%; border: 2px solid var(--ink); background: #fff; padding: 3px 6px; font: 700 13px "Public Sans", sans-serif; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+  .cin:focus { outline: 3px solid var(--ink); outline-offset: 1px; }
+  select.cin { text-align: left; font-weight: 600; padding: 3px 2px; }
+  .actbtns { display: flex; gap: 3px; justify-content: flex-end; }
+  .ibtn { border: 2px solid var(--ink); background: #fff; font-weight: 800; font-size: 12px; padding: 2px 7px; line-height: 1.35; }
+  .ibtn.ok { background: var(--yellow); }
+  .ibtn:hover { background: oklch(0.9 0.14 92); }
+  .ibtn.ghost { border-color: transparent; color: var(--ink-soft); font-size: 14px; }
+  .ibtn.ghost:hover { border-color: var(--ink); background: #fff; color: var(--ink); }
+  .keyhint { font-size: 9.5px; color: var(--ink-soft); font-weight: 600; letter-spacing: .02em; }
+
+  /* b: Helferleiste unter der Zeile */
+  tr.helper td { background: oklch(0.985 0.02 95) !important; border-bottom: 2px solid var(--ink); padding-top: 0; }
+  .helperbar { display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; font-size: 11.5px; color: var(--ink-soft); padding: 2px 0 6px; }
+  .helperbar b { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; color: var(--ink); }
+  .helperbar .k { font-weight: 800; text-transform: uppercase; letter-spacing: .05em; font-size: 9.5px; display: block; }
+
+  /* c: Sammel-Fußleiste */
+  .bulkbar { position: sticky; bottom: 0; z-index: 30; border: 2.5px solid var(--ink); border-top: 0; background: var(--yellow); padding: 9px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; box-shadow: 0 -4px 0 oklch(0.24 0.02 145 / .12); }
+  .bulkbar .cnt { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; }
+  .bulkbar .sp { margin-left: auto; display: flex; gap: 8px; }
+  .bulkbar.none { background: #fff; color: var(--ink-soft); }
+
+  /* Positions-Dialog (bleibt für Stammdaten) */
+  .modal { position: fixed; inset: 0; background: oklch(0.24 0.02 145 / 0.5); display: none; z-index: 60; align-items: center; justify-content: center; padding: 20px; }
+  .modal.open { display: flex; }
+  .dlg { background: var(--paper); border: 3px solid var(--ink); box-shadow: 8px 8px 0 oklch(0.24 0.02 145 / .35); width: 100%; max-width: 600px; max-height: 88vh; overflow-y: auto; }
+  .dlghead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 12px 18px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; }
+  .dlghead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; text-transform: uppercase; }
+  .dlghead .x { margin-left: auto; border: 0; background: var(--yellow); padding: 4px 10px; font-weight: 800; font-size: 12px; }
+  .dlgbody { padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .dlgnote { grid-column: 1/-1; border: 2px solid var(--ink); border-left-width: 7px; background: #fff; padding: 8px 11px; font-size: 12px; }
+  .fld { display: flex; flex-direction: column; gap: 4px; }
+  .fld.wide { grid-column: 1 / -1; }
+  .fld label { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  .fld input, .fld select { border: 2px solid var(--ink); background: #fff; padding: 7px 9px; font: 500 13px "Public Sans", sans-serif; color: var(--ink); }
+  .dlgfoot { border-top: 2px solid var(--ink); padding: 12px 18px; display: flex; gap: 9px; justify-content: flex-end; background: #fff; position: sticky; bottom: 0; }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 300px; text-align: center; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="measure" id="mbox"></div>
+<div class="board" id="board"></div>
+
+<div class="modal" id="modal"><div class="dlg">
+  <div class="dlghead"><h3 id="dlgtitle">Position bearbeiten</h3><button class="x" id="dlgx">SCHLIESSEN</button></div>
+  <div class="dlgbody">
+    <div class="dlgnote">Hier liegen die <b>Stammdaten</b> der Position. Mengen und Preise ändert man schneller
+      direkt in der Zeile (Knopf ✎) — sie stehen hier trotzdem, damit eine neue Position in einem Zug vollständig wird.</div>
+    <div class="fld wide"><label>Bezeichnung</label><input id="f-name"></div>
+    <div class="fld"><label>Kategorie</label><input id="f-cat"></div>
+    <div class="fld"><label>Station</label><select><option>Küche</option><option>Bar</option><option>— Ohne Station —</option></select></div>
+    <div class="fld"><label>Lieferant</label><input id="f-sup"></div>
+    <div class="fld"><label>Gebinde</label><input id="f-pack"></div>
+    <div class="fld"><label>Einheit</label><input id="f-unit"></div>
+    <div class="fld"><label>Stück je Gebinde</label><input id="f-per" type="number"></div>
+    <div class="fld wide"><label>Notiz</label><input placeholder="z. B. Abholung Freitag 14 Uhr"></div>
+  </div>
+  <div class="dlgfoot"><button class="btn">ABBRECHEN</button><button class="btn primary">SPEICHERN</button></div>
+</div></div>
+
+<div id="switcher">
+  <button id="prev">‹</button><span class="lbl" id="slbl"></span><button id="next">›</button>
+</div>
+
+<script>
+/* ---------- Daten: Station Küche, 19 Positionen ---------- */
+const RAW=[
+ ['Schweinsbraten rohe Ware','Lebensmittel','Fleischerei Maier','–',null,'kg',35,33,9.40,true,10],
+ ['Backhendl Teile','Lebensmittel','Fleischerei Maier','–',null,'kg',40,38,6.80,true,10],
+ ['Schnitzelfleisch','Lebensmittel','Fleischerei Maier','–',null,'kg',28,25,11.20,true,10],
+ ['Speck geschnitten','Lebensmittel','Fleischerei Maier','–',null,'kg',6,5,13.90,true,10],
+ ['Brot dunkel 1 kg','Lebensmittel','Bäckerei Ruf','–',null,'Stk',25,22,3.20,true,10],
+ ['Kartoffelsalat fertig','Lebensmittel','Metro','Eimer 5 kg',5,'kg',70,60,16.20,false,10],
+ ['Krautsalat fertig','Lebensmittel','Metro','Eimer 5 kg',5,'kg',50,40,14.80,false,10],
+ ['Pommes tiefgekühlt','Lebensmittel','Metro','Karton 10 kg',10,'kg',120,110,13.40,true,10],
+ ['Frittieröl 10 l','Lebensmittel','Metro','Kanister 10 l',10,'l',50,40,21.90,false,10],
+ ['Kren im Glas','Lebensmittel','Metro','Glas 1 kg',1,'kg',4,3,6.90,true,10],
+ ['Salz grob','Lebensmittel','Metro','Sack 5 kg',5,'kg',10,5,4.20,true,null],
+ ['Zwiebel 5 kg','Lebensmittel','Metro','Sack 5 kg',5,'kg',30,25,7.30,true,10],
+ ['Teller Karton groß','Verbrauch','Metro','Karton 500 Stk',500,'Stk',2500,2000,31.20,true,20],
+ ['Besteck Holz Set','Verbrauch','Metro','Karton 1000 Stk',1000,'Stk',4000,3000,44.80,false,20],
+ ['Servietten','Verbrauch','Metro','Karton 2000 Stk',2000,'Stk',6000,4000,22.40,true,20],
+ ['Küchenrolle','Verbrauch','Metro','Pack 8 Rollen',8,'Rolle',48,40,9.20,true,20],
+ ['Einweghandschuhe','Verbrauch','Metro','Karton 1000 Stk',1000,'Stk',2000,null,null,true,20],
+ ['Gasflasche 11 kg','Verbrauch','Lagerhaus','–',null,'Stk',4,null,null,false,null],
+ ['Spülmittel 5 l','Verbrauch','Metro','Kanister 5 l',5,'l',15,null,null,true,20],
+];
+const M=RAW.map((r,i)=>({id:'m'+i,name:r[0],category:r[1],supplier:r[2],packaging:r[3],per:r[4],unit:r[5],
+  ordered:r[6],actual:r[7],price:r[8],isNet:r[9],tax:r[10]}));
+
+const num=n=>n.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const eur0=n=>n==null?'–':Math.round(n).toLocaleString('de-AT')+' €';
+const r2=n=>Math.round(n*100)/100;
+// Ohne MwSt: netto == brutto
+const netFrom=(price,isNet,tax)=>price==null?null:(tax==null?price:(isNet?price:r2(price/(1+tax/100))));
+const grossFrom=(price,isNet,tax)=>price==null?null:(tax==null?price:(isNet?r2(price*(1+tax/100)):price));
+const netOf=m=>netFrom(m.price,m.isNet,m.tax), grossOf=m=>grossFrom(m.price,m.isNet,m.tax);
+const total=m=>{const g=grossOf(m);return g==null?null:r2(g*(m.actual??m.ordered));};
+const sumAll=()=>M.reduce((s,m)=>s+(total(m)??0),0);
+const pack=(q,m)=>(q!=null&&q!==''&&m.per)?`→ ${Math.ceil(q/m.per)} × ${m.packaging.split(' ')[0]}`:'';
+const noPrice=()=>M.filter(m=>m.price==null).length;
+
+/* ---------- Zustand ---------- */
+let VAR='a';                 // a | b | c
+let editing=new Set();       // ids in Bearbeitung
+let drafts={};               // id -> {ordered,actual,tax,net,gross,src}
+let saved=new Set();         // kurz nach dem Speichern (grüner Blitz)
+let discardNote='';
+
+function draftOf(m){
+  return drafts[m.id] ??= { ordered:String(m.ordered), actual:m.actual==null?'':String(m.actual),
+    tax:m.tax, net:netOf(m)==null?'':String(netOf(m)), gross:grossOf(m)==null?'':String(grossOf(m)), src:m.isNet?'net':'gross' };
+}
+function startEdit(id){
+  if(VAR!=='c' && editing.size && !editing.has(id)){
+    const prev=[...editing][0];
+    if(dirty(prev)) discardNote='Änderungen an „'+M.find(m=>m.id===prev).name+'" wurden verworfen.';
+    editing.clear(); delete drafts[prev];
+  }
+  editing.add(id); draftOf(M.find(m=>m.id===id)); render();
+  setTimeout(()=>document.querySelector(`tr[data-row="${id}"] .cin`)?.focus(),0);
+}
+function dirty(id){
+  const m=M.find(x=>x.id===id), d=drafts[id]; if(!d) return false;
+  return d.ordered!==String(m.ordered) || d.actual!==(m.actual==null?'':String(m.actual))
+      || d.tax!==m.tax || d.net!==(netOf(m)==null?'':String(netOf(m)));
+}
+function commit(id){
+  const m=M.find(x=>x.id===id), d=drafts[id];
+  m.ordered = d.ordered===''?0:Number(d.ordered);
+  m.actual  = d.actual===''?null:Number(d.actual);
+  m.tax     = d.tax;
+  if(d.src==='net'){ m.price = d.net===''?null:Number(d.net); m.isNet=true; }
+  else            { m.price = d.gross===''?null:Number(d.gross); m.isNet=false; }
+  editing.delete(id); delete drafts[id];
+  saved.add(id); setTimeout(()=>{saved.delete(id); render();},950);
+}
+function cancel(id){ editing.delete(id); delete drafts[id]; render(); }
+
+/* ---------- Zeilen ---------- */
+function readingRow(m){
+  const d=(m.actual==null)?null:m.actual-m.ordered;
+  const dT=d==null?'<span class="none">–</span>':(d===0?'±0':`<span class="${d>0?'pos':'neg'}">${d>0?'+':''}${d}</span>`);
+  const pFail=m.price==null;
+  return `<tr class="reading${saved.has(m.id)?' justsaved':''}" data-row="${m.id}">
+    <td><div class="nm ell">${m.name}</div><span class="sub"><span class="catbadge">${m.category}</span></span></td>
+    <td class="ell">${m.supplier}</td>
+    <td class="ell">${m.packaging}</td>
+    <td class="num">${m.ordered} <span class="sub" style="display:inline">${m.unit}</span><span class="gbhint">${pack(m.ordered,m)}</span></td>
+    <td class="num">${m.actual==null?'<span class="none">–</span>':`${m.actual} <span class="sub" style="display:inline">${m.unit}</span><span class="gbhint">${pack(m.actual,m)}</span>`}</td>
+    <td class="num">${dT}</td>
+    <td class="num">${m.tax==null?'<span class="none">keine</span>':m.tax+'%'}</td>
+    <td class="${pFail?'warncell':'num'}">${pFail?'FEHLT':num(netOf(m))}</td>
+    <td class="${pFail?'warncell':'num'}">${pFail?'FEHLT':num(grossOf(m))}</td>
+    <td class="num">${total(m)==null?'<span class="none">–</span>':`<b>${num(total(m))}</b>`}</td>
+    <td><div class="actbtns">
+      <button class="ibtn js-edit" data-id="${m.id}" title="Mengen & Preise dieser Zeile">✎</button>
+      <button class="ibtn ghost js-dlg" data-id="${m.id}" title="Position bearbeiten (Stammdaten)">⋮</button>
+    </div></td></tr>`;
+}
+function editingRow(m){
+  const d=draftOf(m);
+  const ord=d.ordered===''?null:Number(d.ordered), act=d.actual===''?null:Number(d.actual);
+  const diff=act==null||ord==null?null:act-ord;
+  const dT=diff==null?'<span class="none">–</span>':(diff===0?'±0':`<span class="${diff>0?'pos':'neg'}">${diff>0?'+':''}${diff}</span>`);
+  const g=d.gross===''?null:Number(d.gross);
+  const tot=g==null?null:r2(g*((act??ord)??0));
+  return `<tr class="editing" data-row="${m.id}">
+    <td><div class="nm ell">${m.name}</div><span class="sub">Mengen & Preise — <span class="keyhint">Enter speichert · Esc bricht ab</span></span></td>
+    <td class="ell">${m.supplier}</td>
+    <td class="ell">${m.packaging}</td>
+    <td class="num"><input class="cin js-f" data-f="ordered" data-id="${m.id}" type="number" value="${d.ordered}"><span class="gbhint">${pack(ord,m)}</span></td>
+    <td class="num"><input class="cin js-f" data-f="actual" data-id="${m.id}" type="number" value="${d.actual}" placeholder="–"><span class="gbhint">${pack(act,m)}</span></td>
+    <td class="num">${dT}</td>
+    <td class="num"><select class="cin js-f" data-f="tax" data-id="${m.id}">
+      <option value=""${d.tax==null?' selected':''}>keine</option>
+      <option value="10"${d.tax===10?' selected':''}>10%</option>
+      <option value="13"${d.tax===13?' selected':''}>13%</option>
+      <option value="20"${d.tax===20?' selected':''}>20%</option></select></td>
+    <td class="num"><input class="cin js-f" data-f="net" data-id="${m.id}" type="number" step="0.01" value="${d.net}" placeholder="–"></td>
+    <td class="num"><input class="cin js-f" data-f="gross" data-id="${m.id}" type="number" step="0.01" value="${d.gross}" placeholder="–"></td>
+    <td class="num">${tot==null?'<span class="none">–</span>':`<b>${num(tot)}</b>`}</td>
+    <td><div class="actbtns">
+      <button class="ibtn ok js-save" data-id="${m.id}" title="Zeile speichern">✓</button>
+      <button class="ibtn js-cancel" data-id="${m.id}" title="Abbrechen">✕</button>
+    </div></td></tr>`;
+}
+function helperRow(m){
+  const d=draftOf(m);
+  const ord=d.ordered===''?null:Number(d.ordered), act=d.actual===''?null:Number(d.actual);
+  const g=d.gross===''?null:Number(d.gross);
+  const tot=g==null?null:r2(g*((act??ord)??0));
+  const oldTot=total(m);
+  return `<tr class="helper"><td colspan="11"><div class="helperbar">
+    <span><span class="k">Gebinde bestellt</span>${pack(ord,m)||'—'}</span>
+    <span><span class="k">Gebinde verbraucht</span>${pack(act,m)||'—'}</span>
+    <span><span class="k">Preisbasis</span>${d.src==='net'?'netto eingegeben':'brutto eingegeben'}</span>
+    <span><span class="k">Gesamt neu</span><b>${tot==null?'–':num(tot)+' €'}</b>${oldTot!=null&&tot!=null&&tot!==oldTot?` <span class="${tot>oldTot?'pos':'neg'}">(vorher ${num(oldTot)} €)</span>`:''}</span>
+  </div></td></tr>`;
+}
+
+/* ---------- Aufbau ---------- */
+const HEAD=[['Material',''],['Lieferant',''],['Gebinde',''],['Bestellt','num'],['Verbraucht','num'],['Δ','num'],
+            ['MwSt','num'],['Netto','num'],['Brutto','num'],['Gesamt','num'],['','']];
+const COLW=['19%','11%','11%','9%','9%','4.5%','7%','8%','8%','8.5%','5%'];
+function build(){
+  const rows=M.map(m=>{
+    if(!editing.has(m.id)) return readingRow(m);
+    return editingRow(m) + (VAR==='b'?helperRow(m):'');
+  }).join('');
+  const dirtyCount=[...editing].filter(dirty).length;
+  const bulk = VAR==='c' ? `<div class="bulkbar${editing.size?'':' none'}">
+      ${editing.size?`<span class="cnt">${editing.size}</span> <span>Zeile${editing.size===1?'':'n'} offen${dirtyCount?`, davon <b>${dirtyCount} geändert</b>`:''}</span>`
+                    :'<span>Keine Zeile in Bearbeitung — ✎ in einer Zeile öffnet Mengen & Preise. Mehrere Zeilen gleichzeitig möglich.</span>'}
+      ${editing.size?`<span class="sp"><button class="btn js-allcancel">ALLE VERWERFEN</button><button class="btn primary js-allsave">ALLE ${editing.size} SPEICHERN</button></span>`:''}
+    </div>` : '';
+  document.getElementById('board').innerHTML=`
+    <div class="planbar">
+      <div class="seg"><button class="on">ARBEITSLISTE</button><button>ÜBERNAHME</button></div>
+      <input class="search" placeholder="Suche in 76 Positionen …">
+      <button class="btn">EXPORT</button><button class="btn primary">+ POSITION</button></div>
+    <div class="kasten">
+      <div class="khead"><h3>Küche</h3>
+        <span class="meta">${M.length} Positionen · <b>${eur0(sumAll())}</b> · ${noPrice()} ohne Preis</span>
+        <button class="btn">+ POSITION FÜR KÜCHE</button></div>
+      <div class="tablewrap"><table class="mtable" id="tbl">
+        <colgroup>${COLW.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
+        <thead><tr>${HEAD.map(h=>`<th class="${h[1]}">${h[0]}</th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="9" class="num">Zwischensumme Küche</td><td class="num">${num(sumAll())}</td><td></td></tr></tfoot>
+      </table></div>
+      ${bulk}
+    </div>`;
+  wire(); paintNote();
+}
+function wire(){
+  document.querySelectorAll('.js-edit').forEach(b=>b.onclick=()=>{discardNote='';startEdit(b.dataset.id);});
+  document.querySelectorAll('.js-save').forEach(b=>b.onclick=()=>{commit(b.dataset.id);render();});
+  document.querySelectorAll('.js-cancel').forEach(b=>b.onclick=()=>cancel(b.dataset.id));
+  document.querySelectorAll('.js-dlg').forEach(b=>b.onclick=()=>openDlg(b.dataset.id));
+  const as=document.querySelector('.js-allsave'), ac=document.querySelector('.js-allcancel');
+  if(as) as.onclick=()=>{[...editing].forEach(commit);render();};
+  if(ac) ac.onclick=()=>{[...editing].forEach(id=>{editing.delete(id);delete drafts[id];});render();};
+  document.querySelectorAll('.js-f').forEach(inp=>{
+    inp.oninput=inp.onchange=()=>{
+      const id=inp.dataset.id, f=inp.dataset.f, d=drafts[id];
+      if(f==='tax'){ d.tax = inp.value===''?null:Number(inp.value);
+        // MwSt geändert: die zuletzt getippte Seite bleibt Quelle, die andere rechnet neu
+        if(d.src==='net') d.gross = d.net===''?'':String(grossFrom(Number(d.net),true,d.tax));
+        else              d.net   = d.gross===''?'':String(netFrom(Number(d.gross),false,d.tax));
+      }
+      else if(f==='net'){ d.net=inp.value; d.src='net';
+        d.gross = inp.value===''?'':String(grossFrom(Number(inp.value),true,d.tax)); }
+      else if(f==='gross'){ d.gross=inp.value; d.src='gross';
+        d.net = inp.value===''?'':String(netFrom(Number(inp.value),false,d.tax)); }
+      else d[f]=inp.value;
+      const pos=[...document.querySelectorAll('.js-f')].indexOf(inp);
+      render();
+      const again=document.querySelectorAll('.js-f')[pos];
+      if(again){ again.focus(); if(again.setSelectionRange&&again.type!=='number'){} }
+    };
+    inp.onkeydown=e=>{
+      if(e.key==='Enter'){e.preventDefault();commit(inp.dataset.id);render();}
+      if(e.key==='Escape'){e.preventDefault();cancel(inp.dataset.id);}
+    };
+  });
+}
+function openDlg(id){
+  const m=M.find(x=>x.id===id);
+  document.getElementById('dlgtitle').textContent=m.name;
+  document.getElementById('f-name').value=m.name;
+  document.getElementById('f-cat').value=m.category;
+  document.getElementById('f-sup').value=m.supplier;
+  document.getElementById('f-pack').value=m.packaging;
+  document.getElementById('f-unit').value=m.unit;
+  document.getElementById('f-per').value=m.per??'';
+  document.getElementById('modal').classList.add('open');
+}
+document.getElementById('dlgx').onclick=()=>document.getElementById('modal').classList.remove('open');
+document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')e.currentTarget.classList.remove('open');};
+
+const INFO={
+ a:{name:'a — Eine Zeile zur Zeit',hint:'✎ macht Mengen+Preise dieser Zeile tippbar',
+   good:'Nachgemessen: Spaltenpositionen identisch, Zeilenhöhe 56 px in beiden Zuständen, die nächste Zeile verschiebt sich um <b>0 px</b>. Kein Zusatz-Bedienelement.',
+   bad:'Öffnet man eine zweite Zeile, sind die Änderungen der ersten weg. Bei einer Metro-Rechnung mit 30 Positionen tippt man 30× einzeln und speichert 30×.'},
+ b:{name:'b — Eine Zeile + Helferleiste',hint:'zusätzlich Gebinde, Preisbasis, „Gesamt neu"',
+   good:'Zeigt beim Tippen mit, was daraus folgt: Gebindezahl, welche Preisbasis gilt, neue Gesamtsumme samt vorherigem Wert.',
+   bad:'Nachgemessen: die Helferleiste schiebt alles darunter um <b>56 px</b> nach unten — genau das, was a mit 0 px vermeidet.'},
+ c:{name:'c — Mehrere Zeilen gleichzeitig',hint:'Sammel-Fußleiste: ALLE n SPEICHERN',
+   good:'Deckt den Rechnungs-Fall: mehrere Zeilen öffnen, alle Preise eintippen, EIN Mal speichern. Passt zur Lieferanten-Achse — eine Rechnung, ein Lieferant, viele Zeilen.',
+   bad:'Ein zusätzliches Bedienelement (Fußleiste) und ein Zustand mehr, den man verlieren kann: offene Zeilen beim Achsenwechsel oder Filtern.'}
+};
+function paintNote(){
+  const i=INFO[VAR];
+  document.getElementById('mbox').innerHTML=`<h4>Ausführung ${i.name}</h4>
+    Alle drei: <b>✎ in der Zeile</b> macht genau <b>Bestellt · Verbraucht · MwSt · Netto · Brutto</b> tippbar.
+    <b>Δ und Gesamt rechnen live mit</b>, Netto und Brutto rechnen sich über die MwSt der Zeile gegenseitig —
+    tippe in Netto, und Brutto folgt (bei „keine MwSt" sind beide gleich, siehe „Salz grob").
+    Nur lesend bleiben Material, Lieferant, Gebinde. <b>⋮</b> öffnet weiterhin den Stammdaten-Dialog.
+    <br>Die Spaltenbreiten sind fix gesetzt (<code>table-layout: fixed</code>) — <b>beim Umschalten verschiebt sich keine Spalte</b>.
+    <ul><li><span class="plus">Dafür:</span> ${i.good}</li>
+        <li><span class="minus">Dagegen:</span> ${i.bad}</li></ul>
+    ${discardNote?`<div style="margin-top:7px;color:var(--red);font-weight:700">▲ ${discardNote}</div>`:''}`;
+  document.getElementById('slbl').innerHTML=i.name+'<small>'+i.hint+'</small>';
+  history.replaceState(null,'','?v='+VAR);
+}
+function render(){build();}
+const ORDER=['a','b','c'];
+document.getElementById('prev').onclick=()=>{VAR=ORDER[(ORDER.indexOf(VAR)+2)%3];editing.clear();drafts={};discardNote='';render();};
+document.getElementById('next').onclick=()=>{VAR=ORDER[(ORDER.indexOf(VAR)+1)%3];editing.clear();drafts={};discardNote='';render();};
+VAR=['a','b','c'].includes(new URLSearchParams(location.search).get('v'))?new URLSearchParams(location.search).get('v'):'a';
+render();
+</script>
+</body>
+</html>

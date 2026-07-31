@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #66, Bereich Material.
+     FRAGE: Wo wird eine Position bearbeitet, wenn die Tabelle nur mehr liest?
+     Vorgabe des Nutzers: Inline-Eingabefelder verstreut über die Spalten sind unsauber.
+     Netto UND Brutto bleiben zwei getrennte Spalten, nur lesend (ohne MwSt sind sie gleich).
+     Offen bleibt der Massen-Fall: „Verbraucht" wird laut CONTEXT.md nach dem Fest für ALLE
+     Positionen nachgetragen — 76 Stück. Drei Umsetzungen, gleiche Daten.
+     Umschaltbar via ?v=1|2|3 oder Schalter unten. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Material — Wo wird bearbeitet?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 150px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin-bottom: 16px; font-size: 13px; line-height: 1.55; max-width: 1180px; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+  .measure .plus { color: var(--green); font-weight: 700; } .measure .minus { color: var(--red); font-weight: 700; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; }
+  .measure td, .measure th { border: 1px solid var(--line); padding: 3px 9px; text-align: left; }
+  .measure th { background: oklch(0.94 0.015 105); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .measure .big { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+
+  .board { max-width: 1180px; }
+  .planbar { display: flex; align-items: center; gap: 10px; border: 2.5px solid var(--ink); background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .search { flex: 1; min-width: 170px; }
+  .search { border: 2px solid var(--ink); padding: 7px 10px; font: 500 13px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 6px 11px; font-weight: 700; font-size: 12px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { border: 0; background: none; font-weight: 600; font-size: 12px; padding: 7px 12px; color: var(--ink-soft); border-right: 1px solid var(--line); white-space: nowrap; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+
+  .kasten { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .khead { display: flex; align-items: center; gap: 14px; padding: 11px 16px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; flex-wrap: wrap; }
+  .khead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 18px; text-transform: uppercase; letter-spacing: .02em; }
+  .khead .meta { font-size: 12px; color: oklch(0.92 0.02 110); }
+  .khead .meta b { color: var(--yellow); }
+  .khead .btn { margin-left: auto; border: 0; background: var(--yellow); }
+
+  .tablewrap { overflow-x: auto; }
+  .mtable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .mtable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .mtable td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mtable tr:hover td { background: oklch(0.965 0.012 100); }
+  .mtable th.num, .mtable td.num { text-align: right; }
+  .mtable .sub { font-size: 10.5px; color: var(--ink-soft); display: block; margin-top: 1px; }
+  .mtable .pos { color: var(--red); font-weight: 700; } .mtable .neg { color: var(--green); font-weight: 700; }
+  .mtable .none { color: oklch(0.66 0.015 120); }
+  .mtable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .mtable .warncell { outline: 1.5px dashed var(--red); outline-offset: -1.5px; color: var(--red); font-weight: 700; font-size: 11px; }
+  .catbadge { font-size: 10px; font-weight: 700; padding: 1px 6px; background: oklch(0.94 0.015 110); }
+  .gbhint { font-size: 10px; color: var(--ink-soft); display: block; }
+  .rowbtn { border: 1.5px solid var(--ink); background: #fff; font-weight: 800; font-size: 12px; padding: 1px 7px; }
+  .rowbtn:hover { background: var(--yellow); }
+
+  /* V1: Dialog */
+  .modal { position: fixed; inset: 0; background: oklch(0.24 0.02 145 / 0.5); display: none; z-index: 60; align-items: center; justify-content: center; padding: 20px; }
+  .modal.open { display: flex; }
+  .dlg { background: var(--paper); border: 3px solid var(--ink); box-shadow: 8px 8px 0 oklch(0.24 0.02 145 / .35); width: 100%; max-width: 620px; max-height: 88vh; overflow-y: auto; }
+  .dlghead { background: var(--green); background-image: var(--halftone); color: #fff; padding: 12px 18px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; }
+  .dlghead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; text-transform: uppercase; letter-spacing: .02em; }
+  .dlghead .x { margin-left: auto; border: 0; background: var(--yellow); padding: 4px 10px; font-weight: 800; font-size: 12px; }
+  .dlgbody { padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .fld { display: flex; flex-direction: column; gap: 4px; }
+  .fld.wide { grid-column: 1 / -1; }
+  .fld label { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  .fld input, .fld select { border: 2px solid var(--ink); background: #fff; padding: 7px 9px; font: 500 13px "Public Sans", sans-serif; color: var(--ink); }
+  .fld .hint { font-size: 10.5px; color: var(--ink-soft); }
+  .dlgfoot { border-top: 2px solid var(--ink); padding: 12px 18px; display: flex; gap: 9px; justify-content: flex-end; background: #fff; position: sticky; bottom: 0; }
+
+  /* V2: Erfassungs-Modus */
+  .capnote { border: 2px solid var(--ink); background: var(--yellow); padding: 8px 14px; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 10px; border-top: 0; }
+  .capnote .sp { margin-left: auto; font-weight: 800; font-size: 11.5px; }
+  .capin { border: 2px solid var(--ink); background: var(--yellow); width: 74px; text-align: right; padding: 4px 7px; font: 700 13px "Public Sans", sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .capin:focus { outline: 3px solid var(--ink); outline-offset: 1px; }
+  .savestamp { font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 1px 5px; border: 1.5px solid var(--green); color: var(--green); background: #fff; margin-left: 7px; }
+  .savestamp.pending { border-color: var(--ink-soft); color: var(--ink-soft); }
+
+  /* V3: Zeile aufklappen */
+  .editstrip td { background: oklch(0.955 0.012 100) !important; border-bottom: 2px solid var(--ink); }
+  .stripgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 11px; padding: 6px 0 10px; }
+  .stripgrid .fld input, .stripgrid .fld select { padding: 5px 8px; font-size: 12.5px; }
+  .stripfoot { display: flex; gap: 8px; justify-content: flex-end; padding-bottom: 8px; }
+
+  .variant { display: none; } .variant.active { display: block; }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 290px; text-align: center; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="measure" id="mbox"></div>
+<div class="board" id="board"></div>
+
+<div class="modal" id="modal"><div class="dlg">
+  <div class="dlghead"><h3 id="dlgtitle">Position bearbeiten</h3><button class="x" id="dlgx">SCHLIESSEN</button></div>
+  <div class="dlgbody">
+    <div class="fld wide"><label>Bezeichnung</label><input id="f-name"></div>
+    <div class="fld"><label>Kategorie</label><input id="f-cat"></div>
+    <div class="fld"><label>Station</label><select><option>Küche</option><option>Bar</option><option>— Ohne Station —</option></select></div>
+    <div class="fld"><label>Lieferant</label><input id="f-sup"></div>
+    <div class="fld"><label>Gebinde</label><input id="f-pack"></div>
+    <div class="fld"><label>Bestellt</label><input id="f-ord" type="number"><span class="hint" id="h-ord"></span></div>
+    <div class="fld"><label>Verbraucht</label><input id="f-act" type="number"><span class="hint" id="h-act"></span></div>
+    <div class="fld"><label>MwSt</label><select id="f-tax"><option>keine</option><option>10%</option><option>13%</option><option>20%</option></select></div>
+    <div class="fld"><label>Preis je Einheit</label><input id="f-price" type="number"><span class="hint">netto oder brutto — Basis unten wählen</span></div>
+    <div class="fld wide"><label>Preisbasis</label><div class="seg" style="width:max-content"><button class="on">NETTO EINGEGEBEN</button><button>BRUTTO EINGEGEBEN</button></div></div>
+    <div class="fld wide"><label>Notiz</label><input></div>
+  </div>
+  <div class="dlgfoot"><button class="btn">ABBRECHEN</button><button class="btn primary">SPEICHERN</button></div>
+</div></div>
+
+<div id="switcher">
+  <button id="prev">‹</button><span class="lbl" id="slbl"></span><button id="next">›</button>
+</div>
+
+<script>
+/* ---------- Daten: Station Küche, 19 Positionen ---------- */
+const RAW=[
+ ['Schweinsbraten rohe Ware','Lebensmittel','Fleischerei Maier','–',null,'kg',35,33,9.40,true,10],
+ ['Backhendl Teile','Lebensmittel','Fleischerei Maier','–',null,'kg',40,38,6.80,true,10],
+ ['Schnitzelfleisch','Lebensmittel','Fleischerei Maier','–',null,'kg',28,25,11.20,true,10],
+ ['Speck geschnitten','Lebensmittel','Fleischerei Maier','–',null,'kg',6,5,13.90,true,10],
+ ['Brot dunkel 1 kg','Lebensmittel','Bäckerei Ruf','–',null,'Stk',25,22,3.20,true,10],
+ ['Kartoffelsalat fertig','Lebensmittel','Metro','Eimer 5 kg',5,'kg',70,60,16.20,false,10],
+ ['Krautsalat fertig','Lebensmittel','Metro','Eimer 5 kg',5,'kg',50,40,14.80,false,10],
+ ['Pommes tiefgekühlt','Lebensmittel','Metro','Karton 10 kg',10,'kg',120,110,13.40,true,10],
+ ['Frittieröl 10 l','Lebensmittel','Metro','Kanister 10 l',10,'l',50,40,21.90,false,10],
+ ['Kren im Glas','Lebensmittel','Metro','Glas 1 kg',1,'kg',4,3,6.90,true,10],
+ ['Salz grob','Lebensmittel','Metro','Sack 5 kg',5,'kg',10,5,4.20,true,null],
+ ['Zwiebel 5 kg','Lebensmittel','Metro','Sack 5 kg',5,'kg',30,25,7.30,true,10],
+ ['Teller Karton groß','Verbrauch','Metro','Karton 500 Stk',500,'Stk',2500,2000,31.20,true,20],
+ ['Besteck Holz Set','Verbrauch','Metro','Karton 1000 Stk',1000,'Stk',4000,3000,44.80,false,20],
+ ['Servietten','Verbrauch','Metro','Karton 2000 Stk',2000,'Stk',6000,4000,22.40,true,20],
+ ['Küchenrolle','Verbrauch','Metro','Pack 8 Rollen',8,'Rolle',48,40,9.20,true,20],
+ ['Einweghandschuhe','Verbrauch','Metro','Karton 1000 Stk',1000,'Stk',2000,null,null,true,20],
+ ['Gasflasche 11 kg','Verbrauch','Lagerhaus','–',null,'Stk',4,null,null,false,null],
+ ['Spülmittel 5 l','Verbrauch','Metro','Kanister 5 l',5,'l',15,null,null,true,20],
+];
+const M=RAW.map((r,i)=>({id:'m'+i,name:r[0],category:r[1],supplier:r[2],packaging:r[3],per:r[4],unit:r[5],
+  ordered:r[6],actual:r[7],price:r[8],isNet:r[9],tax:r[10]}));
+const eur=n=>n==null?'–':n.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const eur0=n=>n==null?'–':Math.round(n).toLocaleString('de-AT')+' €';
+// Ohne MwSt: netto == brutto (Vorgabe des Nutzers)
+const netOf=m=>m.price==null?null:(m.tax==null?m.price:(m.isNet?m.price:m.price/(1+m.tax/100)));
+const grossOf=m=>m.price==null?null:(m.tax==null?m.price:(m.isNet?m.price*(1+m.tax/100):m.price));
+const total=m=>{const g=grossOf(m);return g==null?null:g*(m.actual??m.ordered);};
+const sumAll=()=>M.reduce((s,m)=>s+(total(m)??0),0);
+const pack=(q,m)=>(q!=null&&m.per)?`→ ${Math.ceil(q/m.per)} × ${m.packaging.split(' ')[0]}`:'';
+const offen=()=>M.filter(m=>m.actual==null).length;
+
+/* ---------- gemeinsame Spalten (nur lesend, Netto UND Brutto getrennt) ---------- */
+const HEAD=['Material','Lieferant','Gebinde','Bestellt','Verbraucht','Δ','MwSt','Netto','Brutto','Gesamt',''];
+function readRow(m, mode){
+  const d=(m.actual==null)?null:m.actual-m.ordered;
+  const dT=d==null?'<span class="none">–</span>':(d===0?'±0':`<span class="${d>0?'pos':'neg'}">${d>0?'+':''}${d}</span>`);
+  const actCell = mode==='capture'
+    ? `<input class="capin" value="${m.actual??''}" data-id="${m.id}" placeholder="–">${m.actual!=null?'<span class="savestamp">✓ gespeichert</span>':'<span class="savestamp pending">offen</span>'}`
+    : (m.actual==null?'<span class="none">–</span>':`${m.actual} ${m.unit}<span class="gbhint">${pack(m.actual,m)}</span>`);
+  const last = mode==='strip'
+    ? `<button class="rowbtn js-strip" data-id="${m.id}">BEARBEITEN</button>`
+    : (mode==='capture' ? '' : `<button class="rowbtn js-dlg" data-id="${m.id}">⋮</button>`);
+  return `<tr data-row="${m.id}">
+    <td><b>${m.name}</b><span class="sub"><span class="catbadge">${m.category}</span></span></td>
+    <td>${m.supplier}</td><td>${m.packaging}</td>
+    <td class="num">${m.ordered} ${m.unit}<span class="gbhint">${pack(m.ordered,m)}</span></td>
+    <td class="num">${actCell}</td>
+    <td class="num">${dT}</td>
+    <td class="num">${m.tax==null?'<span class="none">keine</span>':m.tax+'%'}</td>
+    <td class="num${m.price==null?' warncell':''}">${m.price==null?'FEHLT':eur(netOf(m))}</td>
+    <td class="num${m.price==null?' warncell':''}">${m.price==null?'FEHLT':eur(grossOf(m))}</td>
+    <td class="num">${total(m)==null?'<span class="none">–</span>':`<b>${eur(total(m))}</b>`}</td>
+    <td>${last}</td></tr>`;
+}
+function tableHTML(mode){
+  return `<div class="tablewrap"><table class="mtable" id="tbl">
+    <thead><tr>${HEAD.map((h,i)=>`<th class="${i>=3&&h?'num':''}">${h}</th>`).join('')}</tr></thead>
+    <tbody id="tb">${M.map(m=>readRow(m,mode)).join('')}</tbody>
+    <tfoot><tr><td colspan="9" class="num">Zwischensumme Küche</td><td class="num">${eur(sumAll())}</td><td></td></tr></tfoot>
+  </table></div>`;
+}
+function shell(modes, active, extra){
+  return `<div class="planbar">
+    <div class="seg">${modes.map(x=>`<button class="${x===active?'on':''}">${x}</button>`).join('')}</div>
+    <input class="search" placeholder="Suche in 76 Positionen …">
+    <button class="btn">EXPORT</button><button class="btn primary">+ POSITION</button></div>
+    ${extra||''}
+    <div class="kasten"><div class="khead"><h3>Küche</h3>
+      <span class="meta">${M.length} Positionen · <b>${eur0(sumAll())}</b> · 3 ohne Preis</span>
+      <button class="btn">+ POSITION FÜR KÜCHE</button></div>
+      ${tableHTML(active==='NACHTRAG'?'capture':(CUR===3?'strip':'read'))}</div>`;
+}
+
+/* ---------- Umsetzungen ---------- */
+let CUR=1;
+const IMPL={
+ 1:{name:'1 — Alles im Dialog',hint:'Tabelle liest nur; ⋮ öffnet den Positions-Dialog',
+    render:()=>shell(['ARBEITSLISTE','ÜBERNAHME'],'ARBEITSLISTE')},
+ 2:{name:'2 — Eigener NACHTRAG-Modus',hint:'dritter Modus: eine gelbe Spalte, Auto-Save-Stempel',
+    render:()=>shell(['ARBEITSLISTE','NACHTRAG','ÜBERNAHME'],'NACHTRAG',
+      `<div class="capnote">▲ Nachtrag nach dem Fest — nur „Verbraucht" ist tippbar. Tab springt zur nächsten Zeile, gespeichert wird sofort.
+        <span class="sp">${offen()} von ${M.length} offen</span></div>`)},
+ 3:{name:'3 — Zeile aufklappen',hint:'Zeile klappt zu einem Formularstreifen auf, kein Dialog',
+    render:()=>shell(['ARBEITSLISTE','ÜBERNAHME'],'ARBEITSLISTE')},
+};
+const COUNT={
+ 1:{single:'4 Klicks (⋮ → Dialog → Feld → Speichern)',bulk:'76 × 4 = <span class="big">304 Klicks</span> + 76× Dialog auf/zu'},
+ 2:{single:'nicht dafür gedacht — Stammdaten weiterhin im Dialog',bulk:'1 Klick ins erste Feld, dann <span class="big">nur Tab + Zahl</span> — 0 weitere Klicks'},
+ 3:{single:'2 Klicks (Bearbeiten → Feld), Speichern per Enter',bulk:'76 × 2 = <span class="big">152 Klicks</span>, Tabelle springt bei jedem Aufklappen'},
+};
+function build(){
+  document.getElementById('board').innerHTML=IMPL[CUR].render();
+  wire(); measure();
+}
+function wire(){
+  document.querySelectorAll('.js-dlg').forEach(b=>b.onclick=()=>openDlg(b.dataset.id));
+  document.querySelectorAll('.js-strip').forEach(b=>b.onclick=()=>toggleStrip(b.dataset.id));
+  document.querySelectorAll('.capin').forEach(inp=>{
+    inp.onchange=()=>{const m=M.find(x=>x.id===inp.dataset.id); m.actual=inp.value===''?null:Number(inp.value); build();};
+  });
+}
+function openDlg(id){
+  const m=M.find(x=>x.id===id);
+  document.getElementById('dlgtitle').textContent=m.name;
+  document.getElementById('f-name').value=m.name;
+  document.getElementById('f-cat').value=m.category;
+  document.getElementById('f-sup').value=m.supplier;
+  document.getElementById('f-pack').value=m.packaging;
+  document.getElementById('f-ord').value=m.ordered;
+  document.getElementById('f-act').value=m.actual??'';
+  document.getElementById('f-price').value=m.price??'';
+  document.getElementById('h-ord').textContent=pack(m.ordered,m);
+  document.getElementById('h-act').textContent=pack(m.actual,m);
+  document.getElementById('modal').classList.add('open');
+}
+document.getElementById('dlgx').onclick=()=>document.getElementById('modal').classList.remove('open');
+document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')e.currentTarget.classList.remove('open');};
+function toggleStrip(id){
+  const tr=document.querySelector(`tr[data-row="${id}"]`);
+  const nxt=tr.nextElementSibling;
+  if(nxt&&nxt.classList.contains('editstrip')){nxt.remove();return;}
+  document.querySelectorAll('.editstrip').forEach(x=>x.remove());
+  const m=M.find(x=>x.id===id);
+  const strip=document.createElement('tr');
+  strip.className='editstrip';
+  strip.innerHTML=`<td colspan="11"><div class="stripgrid">
+    <div class="fld"><label>Bezeichnung</label><input value="${m.name}"></div>
+    <div class="fld"><label>Kategorie</label><input value="${m.category}"></div>
+    <div class="fld"><label>Lieferant</label><input value="${m.supplier}"></div>
+    <div class="fld"><label>Gebinde</label><input value="${m.packaging}"></div>
+    <div class="fld"><label>Bestellt</label><input type="number" value="${m.ordered}"></div>
+    <div class="fld"><label>Verbraucht</label><input type="number" value="${m.actual??''}"></div>
+    <div class="fld"><label>MwSt</label><select><option>${m.tax==null?'keine':m.tax+'%'}</option><option>10%</option><option>20%</option></select></div>
+    <div class="fld"><label>Preis</label><input type="number" value="${m.price??''}"></div>
+    <div class="fld"><label>Preisbasis</label><select><option>netto</option><option>brutto</option></select></div>
+  </div><div class="stripfoot"><button class="btn">ABBRECHEN</button><button class="btn primary">SPEICHERN</button></div></td>`;
+  tr.after(strip);
+}
+function measure(){
+  const im=IMPL[CUR], c=COUNT[CUR];
+  document.getElementById('mbox').innerHTML=`<h4>Umsetzung ${im.name}</h4>
+    Alle drei zeigen dieselben <b>11 Spalten, nur lesend</b> — Netto und Brutto getrennt, ohne MwSt sind sie gleich
+    (Zeilen „Salz grob" und „Gasflasche" haben keine MwSt).
+    <table><tr><th>Fall</th><th>Aufwand</th></tr>
+      <tr><td>Eine Position korrigieren</td><td>${c.single}</td></tr>
+      <tr><td><b>76× „Verbraucht" nach dem Fest</b></td><td>${c.bulk}</td></tr></table>
+    ${CUR==1?'<span class="plus">+ eine einzige Bearbeitungsstelle, ruhigste Tabelle, nichts Neues zu bauen (Dialog existiert).</span> <span class="minus">− der Massenfall wird zur Klickorgie; genau der Fall, für den CONTEXT.md „nach dem Fest nachgepflegt" vorsieht.</span>':''}
+    ${CUR==2?'<span class="plus">+ Massenfall wird ein Durchtippen; genau das Muster, das die ÜBERNAHME hier schon verwendet (Wunschmenge + Auto-Save-Stempel) — kein neues Konzept, nur symmetrisch angewandt.</span> <span class="minus">− ein dritter Modus in der Leiste; Stammdaten brauchen trotzdem den Dialog.</span>':''}
+    ${CUR==3?'<span class="plus">+ kein Modal, Kontext der Nachbarzeilen bleibt sichtbar.</span> <span class="minus">− beim Massenfall springt die Tabelle bei jedem Aufklappen; 9 Felder aufgeklappt, obwohl nur eines gebraucht wird.</span>':''}`;
+  document.getElementById('slbl').innerHTML=im.name+'<small>'+im.hint+'</small>';
+  history.replaceState(null,'','?v='+CUR);
+}
+document.getElementById('prev').onclick=()=>{CUR=CUR===1?3:CUR-1;build();};
+document.getElementById('next').onclick=()=>{CUR=CUR===3?1:CUR+1;build();};
+CUR=Math.min(3,Math.max(1,parseInt(new URLSearchParams(location.search).get('v')||'1',10)));
+build();
+</script>
+</body>
+</html>

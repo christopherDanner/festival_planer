@@ -15,7 +15,7 @@ Festmeister hat **einen einzigen, geteilten Datenbestand** — keine Mandanten- 
 Konsequenz für die DB (RLS): SELECT/INSERT/UPDATE für jeden authentifizierten Benutzer. **DELETE** richtet sich nach der Tragweite (Blast-Radius, siehe ADR 0002) — mit genau einer geschützten Grenze:
 
 - **Ganzes Fest** (`festivals`) — Löschen ist katastrophal (Cascade über alle Kinddaten) und bleibt auf den Ersteller (`user_id = auth.uid()`) beschränkt.
-- **Alles innerhalb eines Fests** (Stationen, Schichten, Mitglieder, Material-Positionen, Ablauf-Einträge usw.) — routinemäßiges Löschen; jeder authentifizierte Benutzer darf löschen, dasselbe Prädikat wie SELECT/UPDATE.
+- **Alles innerhalb eines Fests** (Stationen, Schichten, Helfer, Material-Positionen, Ablauf-Einträge usw.) — routinemäßiges Löschen; jeder authentifizierte Benutzer darf löschen, dasselbe Prädikat wie SELECT/UPDATE.
 
 `user_id` auf einem Fest ist daher kein Besitz-/Sichtbarkeits-Marker mehr, sondern nur noch Ersteller-Nachweis fürs Löschen des Fests selbst.
 
@@ -23,11 +23,20 @@ Konsequenz für die DB (RLS): SELECT/INSERT/UPDATE für jeden authentifizierten 
 
 Login-Konto eines Organisators (Supabase Auth, E-Mail + Passwort). Benutzer planen Feste im *gemeinsamen Arbeitsbereich*. **Selbstregistrierung ist deaktiviert** — Konten werden manuell im Supabase-Dashboard angelegt. Das gatekeept den Zugang ("nur bestimmte Leute").
 
-Nicht zu verwechseln mit *Mitglied*: Ein Benutzer hat ein Login und Vollzugriff; ein Mitglied hat kein Login.
+Nicht zu verwechseln mit *Helfer*: Ein Benutzer hat ein Login und Vollzugriff; ein Helfer hat kein Login.
 
-## Mitglied
+## Helfer
 
-Helfer/Freiwilliger, der bei einem Fest eingeteilt wird (`members`). Ein Mitglied ist **kein** Login-Benutzer — es gibt Präferenzen (Stationen, Schichten) typischerweise über einen tokenbasierten Magic-Link ohne Anmeldung ab (`magic_links`, `member_preferences`). Klar abgrenzen: *Benutzer* = Organisator mit Login, *Mitglied* = einzuteilende Person ohne Login.
+Freiwilliger, der bei einem Fest eingeteilt wird (`festival_helpers`). Ein Helfer ist **kein** Login-Benutzer. Klar abgrenzen: *Benutzer* = Organisator mit Login, *Helfer* = einzuteilende Person ohne Login.
+
+Ein Helfer **gehört dem Fest**, in dem er steht — es gibt keinen festübergreifenden Personenbestand und keine Helfer-Stammdatenseite. Dieselbe Person bei zwei Festen sind zwei Helfer. Angelegt und entfernt wird er in der *Helferliste* des Schichtplans; entfernt heißt vollständig weg, samt seiner Zuteilungen. Entscheidung in ADR 0005 (bewusst anders als beim *Sponsor*, der global bleibt).
+
+Seine *Wünsche* (bevorzugte Stationen und Schichten) hängen direkt an ihm, weil er ohnehin pro Fest lebt.
+_Avoid_: Mitglied (heißt in einem Verein etwas anderes), Member.
+
+## Helferliste
+
+Die Helfer eines Fests, geführt im Schichtplan. Zugleich der einzige Ort, an dem Helfer entstehen und verschwinden — und, weil es keinen Bestand gibt, ist die *Fest-Kopie* der einzige Weg, die Helfer eines vergangenen Fests in ein neues zu holen.
 
 ## Material-Übernahme
 
@@ -54,6 +63,18 @@ Ein einzelnes Material, das pro Fest geführt wird (`festival_materials`). Wesen
 
 Eine Position ist einer Station zugeordnet (oder keiner). Stations-Mapping zwischen zwei Festen läuft per Stationsname.
 
+## Bestellwert & Verbrauchswert
+
+Die zwei Geldsummen einer Materialliste. **Beide rechnen brutto** — der Verein zahlt brutto, eine Kostenzahl ohne Mehrwertsteuer ist für die Kassa wertlos.
+
+- **Bestellwert** — Σ (Bestellt-Menge × Bruttopreis) über alle bepreisten Positionen. Was das Fest an Material kosten soll.
+- **Verbrauchswert** — Σ (Verbraucht-Menge × Bruttopreis), nur über Positionen mit erfasster Verbraucht-Menge. Was tatsächlich verbraucht wurde.
+- **Kosten einer Position** — Bruttopreis × (Verbraucht-Menge, sonst Bestellt-Menge). Eine Zeile trägt *eine* Summe; solange nichts nachgetragen ist, gilt die Bestellmenge.
+
+Der **Bruttopreis** einer Position leitet sich aus dem erfassten Preis (`unit_price`) und der Angabe ab, ob dieser netto oder brutto gemeint ist (`price_is_net`), zusammen mit dem Steuersatz (`tax_rate`). **Ohne Steuersatz sind Netto- und Bruttopreis gleich.** Positionen ohne Preis zählen in keine Summe, sondern als *Preislücke*.
+
+Bestellwert und Verbrauchswert sind bereichsübergreifend dieselben Zahlen — die Materialliste und das Dashboard müssen für dasselbe Fest denselben Betrag zeigen. Entscheidung dokumentiert in ADR 0006.
+
 ## Station
 
 Funktionale Einheit innerhalb eines Festes (`stations`), z.B. "Bar", "Küche", "Kassa". Stationen sind pro Fest definiert, werden aber bei der Material-Übernahme per Name zwischen Festen gemappt.
@@ -71,7 +92,7 @@ Zwei verschiedene Exporte mit unterschiedlichem Zweck:
 
 ## Sponsor
 
-Firma/Person, die ein Fest finanziell oder als Sachleistung unterstützt. **Globale, wiederverwendbare Stammdaten** (wie *Mitglied*, nicht pro Fest) — eine Firma wird einmal angelegt und über Feste hinweg verknüpft. Felder: Firmenname, Ansprechpartner, Email, Telefon, Adresse, Website, Notizen. Dass ein Sponsor global lebt, ermöglicht die *Wiederkontaktierung* ohne Kopieren.
+Firma/Person, die ein Fest finanziell oder als Sachleistung unterstützt. **Globale, wiederverwendbare Stammdaten** (anders als der *Helfer*, der pro Fest lebt) — eine Firma wird einmal angelegt und über Feste hinweg verknüpft. Felder: Firmenname, Ansprechpartner, Email, Telefon, Adresse, Website, Notizen. Dass ein Sponsor global lebt, ermöglicht die *Wiederkontaktierung* ohne Kopieren.
 _Avoid_: Firma (als eigener Begriff — Firma und Sponsor sind hier dasselbe), Gönner.
 
 ## Sponsoring-Kategorie

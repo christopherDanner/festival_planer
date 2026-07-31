@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #66, Bereich Material.
+     FRAGE: Wie wird am Handy die Gruppe gewählt (Achse C ist entschieden)?
+     Auflage des Nutzers: Der Achsen-Umschalter (SORTIERT NACH) bleibt oben als Buttons wie am
+     Desktop. Nur die Gruppen-Auswahl darunter darf NICHT als vollständige Reiter-Liste
+     dastehen — zu viel Platzverlust. Drei Umsetzungen, gleiche Daten, 390px-Rahmen.
+     Gemessen wird, wie viel Höhe bis zum Tabellenanfang draufgeht.
+     Umschaltbar via ?v=1|2|3 oder Schalter unten. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Material — Gruppen-Auswahl am Handy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select { font: inherit; cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: oklch(0.88 0.01 100); padding: 20px 12px 140px; }
+  .osw { font-family: "Oswald", sans-serif; font-weight: 600; }
+
+  /* Bühne: zwei Handys nebeneinander (Station-Achse / Lieferant-Achse) */
+  .stage { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+  .phonewrap { }
+  .phonelbl { text-align: center; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: oklch(0.32 0.02 145); margin-bottom: 7px; }
+  .phone { width: 390px; height: 780px; overflow-y: auto; overflow-x: hidden; border: 3px solid var(--ink); background: var(--paper); position: relative; box-shadow: 6px 6px 0 oklch(0.32 0.02 145); }
+  .phone::-webkit-scrollbar { width: 6px; } .phone::-webkit-scrollbar-thumb { background: oklch(0.6 0.02 145); }
+
+  /* Shell mobil */
+  .mast { background: var(--green); background-image: var(--halftone); color: #fff; padding: 8px 12px; display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+  .mast .wordmark { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12px; letter-spacing: .04em; color: var(--yellow); }
+  .mast h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .015em; text-transform: uppercase; }
+  .mast .when { font-size: 11px; color: oklch(0.92 0.02 110); width: 100%; }
+  .mast .when b { color: var(--yellow); }
+
+  .planbar { background: #fff; border-bottom: 2px solid var(--ink); padding: 8px 12px; display: flex; gap: 7px; align-items: center; }
+  .search { flex: 1; min-width: 0; border: 2px solid var(--ink); padding: 6px 9px; font: 500 12.5px "Public Sans", sans-serif; background: #fff; color: var(--ink); }
+  .search::placeholder { color: var(--ink-soft); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 6px 9px; font-weight: 700; font-size: 12px; color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--yellow); }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { border: 0; background: none; font-weight: 600; font-size: 11.5px; padding: 6px 9px; color: var(--ink-soft); border-right: 1px solid var(--line); white-space: nowrap; flex: 1; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); font-weight: 700; }
+
+  .modeline { padding: 8px 12px 0; }
+  .axisline { padding: 9px 12px 0; }
+  .axislbl { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); margin-bottom: 4px; }
+
+  /* ---- V1: Dropdown ---- */
+  .gsel { width: 100%; border: 2px solid var(--ink); background: #fff; font: 700 13px "Public Sans", sans-serif; padding: 8px 9px; color: var(--ink);
+          appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%), linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+          background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+  .gselwarn { font-size: 11px; font-weight: 700; color: var(--red); margin-top: 4px; }
+
+  /* ---- V2: Schublade ---- */
+  .drawerbar { width: 100%; border: 2px solid var(--ink); background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); padding: 7px 10px; display: flex; align-items: center; gap: 9px; text-align: left; }
+  .drawerbar .nm { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .02em; }
+  .drawerbar .ct { font-size: 11px; color: oklch(0.36 0.02 145); font-weight: 700; }
+  .drawerbar .warn { color: var(--red); font-size: 11px; font-weight: 800; margin-left: auto; }
+  .drawerbar .chev { font-weight: 800; font-size: 13px; }
+  .sheet { position: absolute; inset: 0; background: oklch(0.24 0.02 145 / 0.45); display: none; z-index: 40; }
+  .sheet.open { display: block; }
+  .sheetinner { position: absolute; left: 0; right: 0; bottom: 0; max-height: 74%; overflow-y: auto; background: var(--paper); border-top: 3px solid var(--ink); }
+  .sheethead { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--green); background-image: var(--halftone); color: #fff; position: sticky; top: 0; }
+  .sheethead h4 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+  .sheethead .x { margin-left: auto; border: 0; background: var(--yellow); padding: 3px 9px; font-weight: 800; font-size: 12px; }
+  .sheetlist { padding: 10px 12px 18px; display: grid; gap: 7px; }
+  .sheetrow { border: 2px solid var(--ink); background: #fff; padding: 8px 11px; text-align: left; display: flex; align-items: center; gap: 10px; }
+  .sheetrow.on { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+  .sheetrow .nm { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; }
+  .sheetrow .sub { font-size: 11px; color: var(--ink-soft); }
+  .sheetrow .r { margin-left: auto; text-align: right; }
+  .sheetrow .warn { color: var(--red); font-size: 10.5px; font-weight: 800; }
+
+  /* ---- V3: Streifen (scrollend) ---- */
+  .strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 5px; }
+  .strip::-webkit-scrollbar { height: 4px; } .strip::-webkit-scrollbar-thumb { background: oklch(0.7 0.02 145); }
+  .chip { border: 2px solid var(--ink); background: #fff; padding: 5px 9px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .chip .nm { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12.5px; text-transform: uppercase; }
+  .chip .n { font-size: 10.5px; color: var(--ink-soft); font-weight: 700; }
+  .chip .dot { width: 7px; height: 7px; background: var(--red); }
+  .chip.on { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+
+  /* Kasten mobil */
+  .kasten { border-top: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); background: #fff; margin-top: 10px; }
+  .khead { padding: 9px 12px; border-bottom: 2px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  .khead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; text-transform: uppercase; letter-spacing: .02em; }
+  .khead .meta { font-size: 11px; color: oklch(0.92 0.02 110); margin-top: 2px; }
+  .khead .meta b { color: var(--yellow); }
+  .khead .meta .warn { color: oklch(0.84 0.14 45); font-weight: 800; }
+  .khead .btn { background: var(--yellow); border: 0; margin-top: 7px; }
+  .tablewrap { overflow-x: auto; }
+  .mtable { border-collapse: collapse; background: #fff; font-size: 12.5px; }
+  .mtable th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 7px 9px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .mtable td { padding: 7px 9px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mtable th.num, .mtable td.num { text-align: right; }
+  .mtable .sub { font-size: 10px; color: var(--ink-soft); display: block; }
+  .mtable .pos { color: var(--red); font-weight: 700; } .mtable .neg { color: var(--green); font-weight: 700; }
+  .mtable .none { color: var(--ink-soft); }
+  .mtable .warncell { outline: 1.5px dashed var(--red); outline-offset: -1.5px; color: var(--red); font-weight: 700; }
+  .catbadge { font-size: 9.5px; font-weight: 700; padding: 1px 6px; background: oklch(0.94 0.015 110); }
+
+  .bottombar { position: sticky; bottom: 0; display: flex; background: var(--paper); border-top: 2px solid var(--ink); }
+  .bottombar a { flex: 1; text-align: center; font-size: 10px; font-weight: 700; padding: 8px 2px; color: var(--ink-soft); text-decoration: none; }
+  .bottombar a.on { background: var(--yellow); color: var(--ink); }
+
+  /* Messmarke */
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 0 auto 18px; max-width: 830px; font-size: 13px; line-height: 1.55; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+  .measure .plus { color: var(--green); font-weight: 700; } .measure .minus { color: var(--red); font-weight: 700; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; }
+
+  .variant { display: none; } .variant.active { display: block; }
+
+  #switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 4px; background: #16161a; color: #fff; border-radius: 999px; padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 600 13px/1 "Public Sans", system-ui, sans-serif; }
+  #switcher button { background: none; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 999px; font-size: 16px; }
+  #switcher button:hover { background: rgba(255,255,255,.15); }
+  #switcher .lbl { padding: 0 10px; min-width: 260px; text-align: center; }
+  #switcher .lbl small { display: block; font-weight: 400; color: #b7b7c2; margin-top: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="measure" id="mbox"></div>
+<div class="stage" id="stage"></div>
+
+<div id="switcher">
+  <button id="prev">‹</button><span class="lbl" id="slbl"></span><button id="next">›</button>
+</div>
+
+<script>
+/* ---------- Daten (Auszug aus entscheid-material-achse.html, gleiche Zahlen) ---------- */
+const S={bar:'Bar',kueche:'Küche',kassa:'Kassa',ausschank:'Ausschank',grill:'Grillstation',kaffee:'Kaffee & Kuchen',lager:'Lager/Technik',none:null};
+const RAW=[
+ ['Bier Fass 50 l','Getränke',S.ausschank,'Brauerei Zipf','Fass 50 l',24,21,68.40,20],
+ ['Radler Fass 30 l','Getränke',S.ausschank,'Brauerei Zipf','Fass 30 l',6,4,41.20,20],
+ ['Bier Flasche 0,5 l','Getränke',S.bar,'Getränke Hofer','Kiste 20 Stk',40,36,17.90,20],
+ ['Almdudler 0,35 l','Getränke',S.bar,'Getränke Hofer','Kiste 24 Stk',30,27,14.60,20],
+ ['Cola 1 l','Getränke',S.bar,'Getränke Hofer','Karton 12 Stk',22,19,11.40,20],
+ ['Mineral still 0,5 l','Getränke',S.bar,'Getränke Hofer','Karton 24 Stk',18,13,8.20,20],
+ ['Mineral prickelnd 0,5 l','Getränke',S.bar,'Getränke Hofer','Karton 24 Stk',18,16,8.20,20],
+ ['Apfelsaft gespritzt 1 l','Getränke',S.bar,'Getränke Hofer','Karton 6 Stk',14,11,9.80,20],
+ ['Weißwein Grüner Veltliner','Getränke',S.bar,'Weingut Pfeiffer','Karton 6 Fl',12,9,38.40,20],
+ ['Rotwein Zweigelt','Getränke',S.bar,'Weingut Pfeiffer','Karton 6 Fl',8,5,42.00,20],
+ ['Sekt 0,75 l','Getränke',S.bar,'Weingut Pfeiffer','Karton 6 Fl',4,2,46.80,20],
+ ['Schnaps Obstler 1 l','Getränke',S.bar,'Brennerei Lechner','Flasche',6,4,18.50,20],
+ ['Energydrink 0,25 l','Getränke',S.bar,'Getränke Hofer','Karton 24 Stk',6,5,19.20,20],
+ ['Kaffeebohnen 1 kg','Getränke',S.kaffee,'Metro','Sack 1 kg',8,6,14.90,20],
+ ['Tee Sortiment','Getränke',S.kaffee,'Metro','Karton 100 Btl',3,1,7.40,20],
+ ['Milch 1 l','Lebensmittel',S.kaffee,'Metro','Karton 12 Stk',6,5,11.60,10],
+ ['Schlagobers 250 ml','Lebensmittel',S.kaffee,'Metro','Karton 10 Stk',9,8,12.30,10],
+ ['Zucker Portionen','Lebensmittel',S.kaffee,'Metro','Karton 1000 Stk',2,1,16.80,10],
+ ['Bratwurst','Lebensmittel',S.grill,'Fleischerei Maier','kg',60,54,7.90,10],
+ ['Käsekrainer','Lebensmittel',S.grill,'Fleischerei Maier','kg',45,41,8.60,10],
+ ['Schweinsbraten rohe Ware','Lebensmittel',S.kueche,'Fleischerei Maier','kg',35,33,9.40,10],
+ ['Backhendl Teile','Lebensmittel',S.kueche,'Fleischerei Maier','kg',40,38,6.80,10],
+ ['Schnitzelfleisch','Lebensmittel',S.kueche,'Fleischerei Maier','kg',28,25,11.20,10],
+ ['Speck geschnitten','Lebensmittel',S.kueche,'Fleischerei Maier','kg',6,5,13.90,10],
+ ['Semmeln','Lebensmittel',S.grill,'Bäckerei Ruf','Sack 50 Stk',30,27,9.50,10],
+ ['Hot-Dog-Wecken','Lebensmittel',S.grill,'Bäckerei Ruf','Sack 40 Stk',12,9,10.80,10],
+ ['Brot dunkel 1 kg','Lebensmittel',S.kueche,'Bäckerei Ruf','Stk',25,22,3.20,10],
+ ['Kuchen Blech (Spende)','Lebensmittel',S.kaffee,null,'Blech',18,16,null,10],
+ ['Strudel Blech','Lebensmittel',S.kaffee,'Bäckerei Ruf','Blech',10,9,18.40,10],
+ ['Kartoffelsalat fertig','Lebensmittel',S.kueche,'Metro','Eimer 5 kg',14,12,16.20,10],
+ ['Krautsalat fertig','Lebensmittel',S.kueche,'Metro','Eimer 5 kg',10,8,14.80,10],
+ ['Pommes tiefgekühlt','Lebensmittel',S.kueche,'Metro','Karton 10 kg',12,11,13.40,10],
+ ['Frittieröl 10 l','Lebensmittel',S.kueche,'Metro','Kanister 10 l',5,4,21.90,10],
+ ['Senf 5 kg','Lebensmittel',S.grill,'Metro','Eimer 5 kg',3,2,12.60,10],
+ ['Ketchup 5 kg','Lebensmittel',S.grill,'Metro','Eimer 5 kg',3,2,13.80,10],
+ ['Kren im Glas','Lebensmittel',S.kueche,'Metro','Glas 1 kg',4,3,6.90,10],
+ ['Salz grob','Lebensmittel',S.kueche,'Metro','Sack 5 kg',2,1,4.20,10],
+ ['Gewürzmischung Grill','Lebensmittel',S.grill,'Metro','Dose 1 kg',3,2,9.70,10],
+ ['Zwiebel 5 kg','Lebensmittel',S.kueche,'Metro','Sack 5 kg',6,5,7.30,10],
+ ['Bierbecher 0,5 l','Verbrauch',S.ausschank,'Metro','Karton 1000 Stk',6,5,42.00,20],
+ ['Bierbecher 0,3 l','Verbrauch',S.ausschank,'Metro','Karton 1000 Stk',4,3,36.50,20],
+ ['Weinglas Kunststoff','Verbrauch',S.bar,'Metro','Karton 500 Stk',3,2,28.90,20],
+ ['Kaffeetassen Papier','Verbrauch',S.kaffee,'Metro','Karton 1000 Stk',2,2,38.40,20],
+ ['Teller Karton groß','Verbrauch',S.kueche,'Metro','Karton 500 Stk',5,4,31.20,20],
+ ['Teller Karton klein','Verbrauch',S.grill,'Metro','Karton 500 Stk',4,3,24.60,20],
+ ['Besteck Holz Set','Verbrauch',S.kueche,'Metro','Karton 1000 Stk',4,3,44.80,20],
+ ['Servietten','Verbrauch',S.kueche,'Metro','Karton 2000 Stk',3,2,22.40,20],
+ ['Müllsäcke 120 l','Verbrauch',S.lager,'Metro','Rolle 25 Stk',12,10,7.60,20],
+ ['Küchenrolle','Verbrauch',S.kueche,'Metro','Pack 8 Rollen',6,5,9.20,20],
+ ['Alufolie Rolle','Verbrauch',S.grill,'Metro','Rolle',4,3,6.40,20],
+ ['Einweghandschuhe','Verbrauch',S.kueche,'Metro','Karton 1000 Stk',2,2,19.80,20],
+ ['Grillkohle 10 kg','Verbrauch',S.grill,'Lagerhaus','Sack 10 kg',14,12,11.40,20],
+ ['Grillanzünder','Verbrauch',S.grill,'Lagerhaus','Pack',6,4,3.80,20],
+ ['Gasflasche 11 kg','Verbrauch',S.kueche,'Lagerhaus','Flasche',4,3,28.60,20],
+ ['Spülmittel 5 l','Verbrauch',S.kueche,'Metro','Kanister 5 l',3,2,11.90,20],
+ ['Handseife','Verbrauch',S.lager,'Metro','Flasche',6,4,2.90,20],
+ ['Toilettenpapier','Verbrauch',S.lager,'Metro','Pack 24 Rollen',5,4,16.40,20],
+ ['Wechselgeld-Rollen','Organisation',S.kassa,null,'Set',8,8,null,20],
+ ['Kassabuch-Blöcke','Organisation',S.kassa,'Bürohaus Kern','Block',6,5,2.40,20],
+ ['Bonrollen Registrierkasse','Organisation',S.kassa,'Bürohaus Kern','Pack 10 Stk',4,3,8.90,20],
+ ['Wertmarken Getränke','Organisation',S.kassa,'Druckerei Wals','Block 500 Stk',20,17,6.20,20],
+ ['Wertmarken Essen','Organisation',S.kassa,'Druckerei Wals','Block 500 Stk',14,12,6.20,20],
+ ['Geldtaschen','Organisation',S.kassa,'Bürohaus Kern','Stk',6,6,7.80,20],
+ ['Kugelschreiber','Organisation',S.kassa,'Bürohaus Kern','Pack 50 Stk',2,1,11.20,20],
+ ['Bierzeltgarnitur Miete','Ausstattung',S.none,'Zeltverleih Brandt','Garnitur',60,58,8.90,20],
+ ['Festzelt 20×10 m Miete','Ausstattung',S.none,'Zeltverleih Brandt','Zelt',1,1,1840.00,20],
+ ['Pavillon 3×3 m Miete','Ausstattung',S.none,'Zeltverleih Brandt','Stk',6,5,64.00,20],
+ ['Bühnenpodest Miete','Ausstattung',S.none,'Zeltverleih Brandt','Element',12,12,22.50,20],
+ ['Stromverteiler Miete','Ausstattung',S.none,'Elektro Sturm','Stk',4,4,34.00,20],
+ ['Kabeltrommel 25 m','Ausstattung',S.lager,'Elektro Sturm','Stk',8,7,19.60,20],
+ ['Lichterketten Außen','Ausstattung',S.none,'Elektro Sturm','Stk',14,12,null,20],
+ ['Beschilderung Plakate','Organisation',S.none,'Druckerei Wals','Stk',30,28,4.10,20],
+ ['Banner Einfahrt','Organisation',S.none,'Druckerei Wals','Stk',2,2,68.00,20],
+ ['Erste-Hilfe-Koffer','Organisation',S.none,null,'Stk',2,2,null,20],
+ ['Funkgeräte Miete','Ausstattung',S.none,null,'Stk',6,6,null,20],
+ ['Kassa-Container Miete','Ausstattung',S.none,null,'Stk',1,1,null,20],
+];
+const M=RAW.map((r,i)=>({id:'m'+i,name:r[0],category:r[1],station:r[2],supplier:r[3],packaging:r[4],ordered:r[5],actual:r[6],net:r[7],tax:r[8]}));
+const NO_ST='Ohne Station', NO_SUP='Kein Lieferant';
+const eur=n=>n==null?'–':n.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const eur0=n=>n==null?'–':Math.round(n).toLocaleString('de-AT')+' €';
+const gross=m=>m.net==null?null:m.net*(1+m.tax/100);
+const total=m=>{const g=gross(m);return g==null?null:g*(m.actual??m.ordered);};
+const sumOf=rs=>rs.reduce((s,m)=>s+(total(m)??0),0);
+const noPrice=rs=>rs.filter(m=>m.net==null).length;
+const AXKEY={station:m=>m.station??NO_ST, supplier:m=>m.supplier??NO_SUP, category:m=>m.category, all:()=>'Alle Positionen'};
+function groups(ax){
+  const map=new Map(); M.forEach(m=>{const k=AXKEY[ax](m); if(!map.has(k))map.set(k,[]); map.get(k).push(m);});
+  const arr=[...map.entries()].map(([name,rows])=>({name,rows}));
+  arr.sort((x,y)=>{const xs=x.name.startsWith('Ohne')||x.name.startsWith('Kein'),ys=y.name.startsWith('Ohne')||y.name.startsWith('Kein');
+    if(xs!==ys)return xs?1:-1; return x.name.localeCompare(y.name,'de');});
+  return arr;
+}
+
+/* ---------- Bausteine ---------- */
+function tableHTML(rows, groupName, showStation, addLbl){
+  const sub=sumOf(rows), np=noPrice(rows);
+  return `<div class="kasten">
+    <div class="khead">
+      <h3>${groupName}</h3>
+      <div class="meta">${rows.length} Positionen · <b>${eur0(sub)}</b>${np?` · <span class="warn">${np} ohne Preis</span>`:''}</div>
+      <button class="btn">${addLbl}</button>
+    </div>
+    <div class="tablewrap"><table class="mtable">
+      <thead><tr><th>Material</th>${showStation?'<th>Station</th>':''}<th>Lieferant</th><th>Gebinde</th>
+        <th class="num">Best.</th><th class="num">Verbr.</th><th class="num">Δ</th><th class="num">Netto</th><th class="num">Gesamt</th><th></th></tr></thead>
+      <tbody>${rows.map(m=>{
+        const d=(m.actual==null)?null:m.actual-m.ordered;
+        const dT=d==null?'<span class="none">–</span>':(d===0?'±0':`<span class="${d>0?'pos':'neg'}">${d>0?'+':''}${d}</span>`);
+        return `<tr>
+          <td><b>${m.name}</b><span class="sub"><span class="catbadge">${m.category}</span> · ${m.tax}%</span></td>
+          ${showStation?`<td>${m.station??'<span class="none">–</span>'}</td>`:''}
+          <td>${m.supplier??'<span class="none">–</span>'}</td><td>${m.packaging}</td>
+          <td class="num">${m.ordered}</td><td class="num">${m.actual??'<span class="none">–</span>'}</td><td class="num">${dT}</td>
+          <td class="num${m.net==null?' warncell':''}">${m.net==null?'FEHLT':eur(m.net)}</td>
+          <td class="num">${m.net==null?'<span class="none">–</span>':`<b>${eur(total(m))}</b>`}</td>
+          <td>⋮</td></tr>`;}).join('')}</tbody>
+    </table></div></div>`;
+}
+function shellTop(ax){
+  return `<div class="mast"><span class="wordmark">FESTMEISTER</span><h1>Musikfest Steinbach 2027</h1>
+    <span class="when">in <b>62 Tagen</b> · 23.–25.07.2027</span></div>
+   <div class="planbar"><input class="search" placeholder="Suche in 76 Positionen …"><button class="btn primary">+</button><button class="btn">⋯</button></div>
+   <div class="modeline"><div class="seg"><button class="on">ARBEITSLISTE</button><button>ÜBERNAHME</button></div></div>
+   <div class="axisline"><div class="axislbl">Sortiert nach</div>
+     <div class="seg axisseg"><button data-ax="station" class="${ax==='station'?'on':''}">STATION</button><button data-ax="supplier" class="${ax==='supplier'?'on':''}">LIEFER.</button><button data-ax="category" class="${ax==='category'?'on':''}">KATEG.</button><button data-ax="all" class="${ax==='all'?'on':''}">ALLE</button></div></div>`;
+}
+const BOTTOM=`<div class="bottombar"><a href="#">Dash</a><a href="#">Schicht</a><a href="#" class="on">Material</a><a href="#">Ablauf</a><a href="#">Sponsor</a></div>`;
+
+/* ---------- Die drei Umsetzungen ---------- */
+function v1(ax, active){ // Dropdown
+  const gs=groups(ax), g=gs.find(x=>x.name===active)??gs[0];
+  const np=noPrice(g.rows);
+  return shellTop(ax) + `<div style="padding:9px 12px 0">
+    <select class="gsel">${gs.map(x=>`<option ${x.name===g.name?'selected':''}>${x.name} (${x.rows.length}) · ${eur0(sumOf(x.rows))}${noPrice(x.rows)?' · '+noPrice(x.rows)+' ohne Preis':''}</option>`).join('')}</select>
+    ${np?`<div class="gselwarn">▲ ${np} Positionen ohne Preis in dieser Gruppe</div>`:''}
+  </div>` + tableHTML(g.rows,g.name,ax!=='station','+ POSITION') + BOTTOM;
+}
+function v2(ax, active){ // Schublade
+  const gs=groups(ax), g=gs.find(x=>x.name===active)??gs[0];
+  const np=noPrice(g.rows);
+  return shellTop(ax) + `<div style="padding:9px 12px 0">
+    <button class="drawerbar js-open"><span class="nm">${g.name}</span><span class="ct">${g.rows.length} Pos · ${eur0(sumOf(g.rows))}</span>${np?`<span class="warn">${np} ⚠</span>`:''}<span class="chev">▾</span></button>
+  </div>
+  <div class="sheet"><div class="sheetinner">
+    <div class="sheethead"><h4>Gruppe wählen</h4><button class="x js-close">FERTIG</button></div>
+    <div class="sheetlist">${gs.map(x=>{const n=noPrice(x.rows);return `<button class="sheetrow ${x.name===g.name?'on':''}" data-g="${x.name}">
+      <span><span class="nm">${x.name}</span><span class="sub" style="display:block">${x.rows.length} Positionen</span></span>
+      <span class="r"><span style="font-weight:800;font-size:12.5px">${eur0(sumOf(x.rows))}</span>${n?`<span class="warn" style="display:block">${n} ohne Preis</span>`:'<span class="sub" style="display:block">✓ vollständig</span>'}</span></button>`;}).join('')}</div>
+  </div></div>` + tableHTML(g.rows,g.name,ax!=='station','+ POSITION') + BOTTOM;
+}
+function v3(ax, active){ // scrollender Streifen
+  const gs=groups(ax), g=gs.find(x=>x.name===active)??gs[0];
+  return shellTop(ax) + `<div style="padding:9px 12px 0"><div class="strip">${gs.map(x=>{const n=noPrice(x.rows);
+    return `<button class="chip ${x.name===g.name?'on':''}" data-g="${x.name}"><span class="nm">${x.name}</span><span class="n">${x.rows.length}</span>${n?'<span class="dot"></span>':''}</button>`;}).join('')}</div></div>`
+    + tableHTML(g.rows,g.name,ax!=='station','+ POSITION') + BOTTOM;
+}
+const IMPL={1:{f:v1,name:'1 — Dropdown',hint:'ein Auswahlfeld, Gruppen als Options'},
+            2:{f:v2,name:'2 — Schublade',hint:'Balken + Bottom-Sheet (Idiom aus #68)'},
+            3:{f:v3,name:'3 — Scrollender Streifen',hint:'Reiter einzeilig, horizontal wischen'}};
+
+/* ---------- Bühne: zwei Achsen nebeneinander ---------- */
+let vi=1, state={station:null, supplier:null};
+function build(){
+  const impl=IMPL[vi];
+  document.getElementById('stage').innerHTML=['station','supplier'].map(ax=>
+    `<div class="phonewrap"><div class="phonelbl">Achse „${ax==='station'?'Station':'Lieferant'}" — ${groups(ax).length} Gruppen</div>
+     <div class="phone" data-ax="${ax}">${impl.f(ax, state[ax])}</div></div>`).join('');
+  // Interaktionen
+  document.querySelectorAll('.phone').forEach(ph=>{
+    const ax=ph.dataset.ax;
+    ph.querySelectorAll('.js-open').forEach(b=>b.onclick=()=>ph.querySelector('.sheet').classList.add('open'));
+    ph.querySelectorAll('.js-close').forEach(b=>b.onclick=()=>ph.querySelector('.sheet').classList.remove('open'));
+    ph.querySelectorAll('.sheetrow,.chip').forEach(b=>b.onclick=()=>{state[ax]=b.dataset.g; build();});
+    const sel=ph.querySelector('.gsel');
+    if(sel) sel.onchange=()=>{state[ax]=sel.value.split(' (')[0]; build();};
+  });
+  measure();
+}
+function measure(){
+  const out=[];
+  document.querySelectorAll('.phone').forEach(ph=>{
+    const k=ph.querySelector('.kasten'), top=ph.querySelector('.mast');
+    out.push(Math.round(k.getBoundingClientRect().top - top.getBoundingClientRect().top));
+  });
+  const impl=IMPL[vi];
+  document.getElementById('mbox').innerHTML=`<h4>Umsetzung ${impl.name}</h4>
+    Höhe bis zum Tabellenanfang: <span class="px">${out[0]} px</span> (Achse Station, 8 Gruppen) ·
+    <span class="px">${out[1]} px</span> (Achse Lieferant, 13 Gruppen).
+    Von 780 px Schirmhöhe bleiben für die Tabelle <b>${780-out[1]} px</b>.
+    <br><b>Gemessen:</b> alle drei Umsetzungen liegen bei 254–261 px — die Platzfrage ist von allen dreien
+    gleich gut gelöst und entscheidet <i>nicht</i>. Die verworfene Vollliste aller Reiter kostet allein
+    <span class="px">467 px</span> (Achse Lieferant) bzw. 269 px (Station) — die Sorge war also berechtigt.
+    Entschieden wird nach: Überblick, Antipp-Wege, Gesten-Kollision.
+    ${vi==1?'<span class="plus">+ konstant flach, egal wie viele Gruppen; Systemtastatur/Rad bedient es.</span> <span class="minus">− Warnungen nur als Text in der Option, kein Überblick auf einen Blick; im Ranking der Gruppen blind.</span>':''}
+    ${vi==2?'<span class="plus">+ konstant flach UND der Überblick bleibt (Sheet zeigt €, Positionen, „ohne Preis" je Gruppe); gleiches Idiom wie die Helferliste-Schublade aus #68.</span> <span class="minus">− ein Antippen mehr bis zur Gruppe.</span>':''}
+    ${vi==3?'<span class="plus">+ Wechsel ohne Zwischenschritt, direkt wischen.</span> <span class="minus">− versteckt Gruppen hinter dem Rand (bei 13 Lieferanten sieht man ~2,5); Wischen kollidiert mit dem horizontalen Scrollen der Tabelle direkt darunter.</span>':''}`;
+  document.getElementById('slbl').innerHTML=impl.name+'<small>'+impl.hint+'</small>';
+  history.replaceState(null,'','?v='+vi);
+}
+document.getElementById('prev').onclick=()=>{vi=vi===1?3:vi-1;build();};
+document.getElementById('next').onclick=()=>{vi=vi===3?1:vi+1;build();};
+vi=Math.min(3,Math.max(1,parseInt(new URLSearchParams(location.search).get('v')||'1',10)));
+build();
+</script>
+</body>
+</html>
