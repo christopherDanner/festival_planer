@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lektion 2 — Stufen-Denken: Melodien als Zahlen hören</title>
+<style>
+  :root{
+    --ink:#1a1c1e; --muted:#5c6370; --accent:#8a5a2b; --accent-dark:#6b4520;
+    --accent-soft:#f4ead9; --line:#e3ddd2; --bg:#faf7f1; --card:#ffffff;
+    --ok:#2e7d32; --bad:#b3402a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--ink);
+    line-height:1.6;padding:3rem 1.5rem}
+  main{max-width:760px;margin:0 auto}
+  header{border-bottom:3px double var(--accent);padding-bottom:1.2rem;margin-bottom:2rem}
+  .kicker{font-family:Verdana,sans-serif;font-size:.7rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:.4rem}
+  h1{font-size:1.9rem;font-weight:normal;line-height:1.25}
+  .meta{color:var(--muted);font-style:italic;margin-top:.5rem;font-size:.95rem}
+  h2{font-family:Verdana,sans-serif;font-size:1.05rem;margin:2.4rem 0 .8rem;
+    padding-bottom:.3rem;border-bottom:1px solid var(--line)}
+  h2 .num{color:var(--accent);margin-right:.4rem}
+  p{margin-bottom:.9rem}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:1.1rem 1.3rem;margin:1rem 0}
+  .box.accent{background:var(--accent-soft);border-left:4px solid var(--accent)}
+  .steps{counter-reset:st;list-style:none;margin:1rem 0}
+  .steps li{counter-increment:st;position:relative;padding:.5rem 0 .5rem 2.6rem;margin-bottom:.3rem}
+  .steps li::before{content:counter(st);position:absolute;left:0;top:.55rem;
+    width:1.7rem;height:1.7rem;border-radius:50%;background:var(--accent);color:#fff;
+    font-family:Verdana,sans-serif;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+  table{border-collapse:collapse;margin:.8rem 0;font-size:.95rem;width:100%}
+  .twrap{overflow-x:auto}
+  td,th{border:1px solid var(--line);padding:.4rem .7rem;text-align:center}
+  th{background:var(--accent-soft);font-family:Verdana,sans-serif;font-size:.8rem}
+  td.l,th.l{text-align:left}
+  code{font-family:Consolas,monospace;background:var(--accent-soft);padding:.1rem .35rem;border-radius:4px}
+  .quiz{background:var(--card);border:2px solid var(--accent);border-radius:10px;
+    padding:1.3rem 1.4rem;margin:1.2rem 0}
+  .quiz h3{font-family:Verdana,sans-serif;font-size:.95rem;margin-bottom:.2rem}
+  .q{margin:1rem 0 .4rem;font-weight:bold}
+  .qrow{display:flex;flex-wrap:wrap;gap:.5rem;margin:.4rem 0}
+  button{font-family:Verdana,sans-serif;font-size:.88rem;padding:.5rem 1rem;
+    border-radius:6px;border:1px solid var(--accent);background:#fff;color:var(--accent-dark);cursor:pointer}
+  button:hover:not(:disabled){background:var(--accent-soft)}
+  button:disabled{opacity:.5;cursor:default}
+  button.right{background:var(--ok);border-color:var(--ok);color:#fff;opacity:1}
+  button.wrong{background:var(--bad);border-color:var(--bad);color:#fff;opacity:1}
+  .fb{font-family:Verdana,sans-serif;font-size:.85rem;min-height:1.3rem;color:var(--muted)}
+  .check{list-style:none;margin:.6rem 0}
+  .check li{margin:.45rem 0}
+  .check label{display:flex;gap:.6rem;align-items:flex-start;cursor:pointer}
+  .check input{margin-top:.35rem;accent-color:var(--accent);width:1rem;height:1rem}
+  details{margin:1rem 0;border:1px dashed var(--accent);border-radius:8px;padding:.8rem 1.1rem;background:#fff}
+  summary{font-family:Verdana,sans-serif;font-size:.9rem;color:var(--accent-dark);cursor:pointer}
+  a{color:var(--accent-dark)}
+  .cite{font-size:.8rem;color:var(--muted)}
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:3px double var(--accent);color:var(--muted);font-size:.9rem}
+  @media print{ body{background:#fff;padding:0} button{display:none} }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="kicker">Tenorhorn auswendig · Lektion 2</div>
+    <h1>Stufen-Denken — Melodien als Zahlen hören</h1>
+    <p class="meta">~25 Minuten · Voraussetzung: Lektion 1 (Entchen nach Gehör ✓).
+    Ziel: Du hörst und denkst Melodien als <strong>Stufen-Zahlen (1–7)</strong> — dann funktioniert
+    jede Melodie von jedem Startton, automatisch.</p>
+  </header>
+
+  <h2><span class="num">1</span>Die eine Idee dieser Lektion</h2>
+  <p>Eine Melodie ist keine Folge von Tonnamen — sie ist eine Folge von <strong>Positionen in der
+  Tonleiter</strong>. „Alle meine Entchen“ beginnt nicht „mit c′“, sondern mit
+  <code>1&nbsp;2&nbsp;3&nbsp;4&nbsp;5</code>: Grundton, dann die Leiter rauf. Startest du auf f′ statt c′,
+  bleiben die Zahlen exakt gleich — nur die Griffe ändern sich. Musiker nennen das
+  <em>relatives Hören</em> bzw. „movable do“; es ist der Kern der Kodály-Gehörbildung und die
+  Standardmethode, um Gehörtes tonartunabhängig zu erkennen
+  (<a href="https://www.musical-u.com/learn/solfege-isnt-childs-play/">Musical U: Solfege</a>,
+  <a href="https://transcribeasong.com/what-is-movable-do-a-complete-guide-to-solfege-for-beginners/">Guide: What is Movable Do</a>).</p>
+
+  <div class="box accent">
+    <p style="margin:0"><strong>Stufe 1 ist „Zuhause“.</strong> Fast jede Melodie endet dort — das ist
+    der Ton, der sich nach <em>fertig</em> anfühlt. Finde Zuhause, und alle anderen Töne bekommen
+    ihre Zahl von selbst.</p>
+  </div>
+
+  <p>Deine Anker aus Lektion 1, jetzt mit Zahlen:</p>
+  <div class="twrap"><table>
+    <tr><th class="l">Anker</th><th>Stufen</th><th class="l">Klang-Gefühl</th></tr>
+    <tr><td class="l">Entchen-Anfang</td><td><code>1 2 3 4 5</code></td><td class="l">Leiter rauf, Schritt für Schritt</td></tr>
+    <tr><td class="l">Kuckucksruf</td><td><code>5 → 3</code></td><td class="l">kleiner Sprung runter (deine Terz!)</td></tr>
+    <tr><td class="l">Melodie-Schluss</td><td><code>… → 1</code></td><td class="l">„angekommen, fertig“</td></tr>
+  </table></div>
+
+  <h2><span class="num">2</span>Zahlen-Quiz (5 Min)</h2>
+  <p>Melodie innerlich vorsingen, „Zuhause“ suchen, Zahlen zuordnen. Sofort-Feedback per Klick.</p>
+
+  <div class="quiz" id="quiz">
+    <h3>Bekannte Melodien in Stufen</h3>
+    <div class="q">1 · „Alle meine Entchen“ — der allerletzte Ton („…Höh’“) ist welche Stufe?</div>
+    <div class="qrow" data-a="1"><button>1</button><button>3</button><button>5</button><button>7</button></div>
+    <div class="fb">Tipp: Klingt der Schluss nach „fertig, Zuhause“?</div>
+
+    <div class="q">2 · „Bruder Jakob“ — die ersten vier Töne („Bru-der Ja-kob“)?</div>
+    <div class="qrow" data-a="1 2 3 1"><button>1 2 3 1</button><button>1 2 3 4</button><button>3 4 5 3</button><button>1 3 5 3</button></div>
+    <div class="fb">Tipp: Beginnt die Melodie Zuhause? Und kehrt der 4. Ton dorthin zurück?</div>
+
+    <div class="q">3 · Der Kuckucksruf — welche zwei Stufen?</div>
+    <div class="qrow" data-a="5 3"><button>5 3</button><button>3 1</button><button>5 1</button><button>2 1</button></div>
+    <div class="fb">Tipp: Sing nach dem „Ku-ckuck“ weiter runter bis es nach Zuhause klingt — wie viele Töne brauchst du noch?</div>
+
+    <div class="q">4 · „Happy Birthday“ — auf welcher Stufe beginnt „hap-py“?</div>
+    <div class="qrow" data-a="5"><button>5</button><button>1</button><button>3</button></div>
+    <div class="fb">Tipp: „…to youuu“ (Schluss) = 1. Vergleich den Anfangston damit — höher oder tiefer, und wie weit?</div>
+  </div>
+
+  <h2><span class="num">3</span>Ans Horn: gleiche Zahlen, neuer Startton (15 Min)</h2>
+  <ol class="steps">
+    <li><strong>Zahlen singen.</strong> Sing Entchen mit Zahlen statt Text: <code>1 2 3 4 5 5 · 6 6 6 6 5 …</code> — zweimal. (Zahlen laut mitsprechen verankert die Stufen; brummen + denken geht zur Not auch.)</li>
+    <li><strong>Alter Startton, neues Denken.</strong> Spiel Entchen von geschriebenem c′ — aber denk dabei die Zahlen, nicht die Notennamen.</li>
+    <li><strong>Neuer Startton f′ (Griff 1).</strong> Gleiche Zahlen, Ohr führt. Vor jedem Ton: welche Stufe kommt?</li>
+    <li><strong>Noch einer: g′ (Griff 0).</strong> Wenn das klappt, hast du bewiesen: die Melodie wohnt jetzt in Zahlen, nicht in Griffen.</li>
+    <li><strong>Transfer-Test „Bruder Jakob“.</strong> Erste Zeile (<code>1 2 3 1 · 1 2 3 1</code>) von c′ nach Gehör — eine Melodie, die du <em>nie</em> aus Noten für Tenorhorn gespielt hast.</li>
+  </ol>
+
+  <ul class="check" id="checklist">
+    <li><label><input type="checkbox" data-k="c1"> Entchen mit Zahlen gesungen</label></li>
+    <li><label><input type="checkbox" data-k="c2"> Entchen von c′ in Zahlen gedacht</label></li>
+    <li><label><input type="checkbox" data-k="c3"> Entchen von f′ gespielt</label></li>
+    <li><label><input type="checkbox" data-k="c4"> Entchen von g′ gespielt</label></li>
+    <li><label><input type="checkbox" data-k="c5"> Bruder Jakob (Zeile 1) nach Gehör 🎉</label></li>
+  </ul>
+
+  <details>
+    <summary>Griff-Spickzettel für Start auf f′ — nur im Notfall</summary>
+    <div class="twrap"><table>
+      <tr><th>Stufe</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
+      <tr><th>geschrieben</th><td>f′</td><td>g′</td><td>a′</td><td>b′</td><td>c″</td><td>d″</td></tr>
+      <tr><th>Griff</th><td>1</td><td>0</td><td>1·2</td><td>1</td><td>0</td><td>1</td></tr>
+    </table></div>
+    <p class="cite">Merke: Du sollst die Griffe <em>finden</em>, nicht ablesen. Erst raten, dann prüfen.</p>
+  </details>
+
+  <h2><span class="num">4</span>Wenn du hängst</h2>
+  <div class="box">
+    <p><strong>„Ich finde Zuhause nicht.“</strong> Sing die Melodie zu Ende und halt den letzten Ton — das ist fast immer die 1.</p>
+    <p><strong>„Von f′ komm ich durcheinander.“</strong> Normal — das Muskelgedächtnis von c′ funkt dazwischen. Langsamer, vor jedem Ton die Zahl denken.</p>
+    <p style="margin-bottom:0"><strong>„Stufe 4 oder 5 — welche war’s?“</strong> Sing von dort in Schritten runter bis Zuhause und zähl mit: 4 Töne = du warst auf der 4.</p>
+  </div>
+
+  <h2><span class="num">5</span>Dein Sieg heute</h2>
+  <p>Eine Melodie, drei Starttöne, null Noten — du transponierst nach Gehör, was viele reine
+  Notenspieler nie lernen. Nächste Lektion: <strong>Nachspielen von Aufnahmen</strong> — echte Stücke
+  Phrase für Phrase heraushören, mit Loop-Technik. Genau das „Nachhören und Nachspielen“ aus deiner Mission.</p>
+
+  <footer>
+    <p><strong>Fragen? Frag deinen Lehrer.</strong> Meld dich mit Quiz-Ergebnis + welche Starttöne geklappt
+    haben — darauf baue ich Lektion 3.</p>
+    <p class="cite">Quellen: <a href="https://www.musical-u.com/learn/solfege-isnt-childs-play/">Musical U — Solfege: Why Do Re Mi Isn’t Just Child’s Play</a> ·
+    <a href="https://transcribeasong.com/what-is-movable-do-a-complete-guide-to-solfege-for-beginners/">Transcribe a Song — What is Movable Do</a> ·
+    <a href="https://www.researchgate.net/publication/262882014_Musical_'learning_styles'_and_'learning_strategies'_in_the_instrumental_lesson_The_Ear_Playing_Project_EPP">Ear Playing Project (Green et al.)</a> ·
+    Begriffe: <a href="../reference/GLOSSARY.html">Glossar</a></p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  document.querySelectorAll('#quiz .qrow').forEach(row=>{
+    const answer=row.dataset.a, fb=row.nextElementSibling;
+    row.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+      const right=b.textContent.trim()===answer;
+      b.className=right?'right':'wrong';
+      if(right){ row.querySelectorAll('button').forEach(x=>x.disabled=true); b.disabled=false;
+        fb.textContent='✓ Richtig.'; fb.style.color='#2e7d32'; }
+      else{ fb.textContent='✗ Nochmal hinhören — Tipp oben nutzen.'; fb.style.color='#b3402a';
+        setTimeout(()=>{b.className='';},900); }
+    });
+  });
+  document.querySelectorAll('#checklist input').forEach(cb=>{
+    const key='th-l2-'+cb.dataset.k;
+    cb.checked=localStorage.getItem(key)==='1';
+    cb.onchange=()=>localStorage.setItem(key,cb.checked?'1':'0');
+  });
+})();
+</script>
+</body>
+</html>

@@ -28,6 +28,14 @@ etablierte Blechbläser-Didaktik, hochwertige Praxis-Blogs von Fachleuten.
   Use for: Übungsformen Lektion 1–3.
   https://academicalliance.com/training-young-low-brass-players-ear-development/
 
+## Knowledge — Stufen-Denken / relatives Hören
+- **Musical U — Solfege: Why Do Re Mi Isn't Just Child's Play.** Gut lesbare
+  Einführung in movable do / relatives Hören und warum es Gehörspiel trägt.
+  Use for: Lektion 2. https://www.musical-u.com/learn/solfege-isnt-childs-play/
+- **Transcribe a Song — What is Movable Do (Complete Guide).** Praxisguide:
+  Stufen statt Tonnamen, tonartunabhängig heraushören. Use for: Lektion 2–3.
+  https://transcribeasong.com/what-is-movable-do-a-complete-guide-to-solfege-for-beginners/
+
 ## Knowledge — Auswendig lernen (Strang B)
 - **Chaffin et al. — Performing from memory / Performance Cues.**
   Kernforschung: sicheres Auswendigspiel = bewusst gesetzte Einstiegspunkte
@@ -57,7 +65,8 @@ etablierte Blechbläser-Didaktik, hochwertige Praxis-Blogs von Fachleuten.
   Vorschlagen klären.)*
 
 ## Gaps / TODO
-- Quelle für Stufen-/movable-do-Gehörtraining auf Deutsch (Lektion 2).
+- ✅ Movable-do-Quellen (Musical U, Transcribe a Song) — erledigt für Lektion 2.
+  (Deutschsprachige Alternative wäre noch nice-to-have.)
 - Gute freie Play-along-/Loop-Quelle für Blasmusik-Melodien (Lektion 3).
 - EPP-/McPherson-PDFs noch nicht volltext gegengelesen (über Abstracts/Snippets
   verifiziert) — bei Gelegenheit nachholen.

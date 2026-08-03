@@ -25,7 +25,7 @@
 
 ## Curriculum-Arc (geplant, anpassbar)
 1. ✅ ausgeliefert — Hear it, play it: erste Melodie nach Gehör (Richtung/Schritt-Sprung hören, Sing→Buzz→Spiel, „Alle meine Entchen“)
-2. ⬜ Stufen-Denken: Melodien als Zahlen hören (1–7), Startton-unabhängig
+2. ✅ ausgeliefert — Stufen-Denken: Melodien als Zahlen hören (1–7), Entchen von f′/g′, Transfer Bruder Jakob
 3. ⬜ Nachspielen von Aufnahme: Loop-Technik, Phrase für Phrase (Call & Response)
 4. ⬜ Noten auswendig I: die 4 Gedächtnisse (aural/visuell/motorisch/analytisch), Chunking
 5. ⬜ Noten auswendig II: Performance Cues & Einstiegspunkte, Blackout-Recovery
