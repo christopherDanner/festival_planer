@@ -90,6 +90,36 @@ Zwei verschiedene Exporte mit unterschiedlichem Zweck:
 - **Materialliste** — Planungs-/Referenzliste. Zeigt pro Position Bestellt- und Verbraucht-Menge plus eine leere "Neue Menge"-Spalte zum händischen Ausfüllen. Dient der Bestellplanung fürs kommende Fest.
 - **Bestellliste** — die tatsächliche Bestellung. Gruppiert nach Lieferant oder Station, enthält nur Positionen mit Bestellmenge (`ordered_quantity`) > 0, reduziert auf Bezeichnung + Menge + Einheit. Dient als Bestellung, die an einen Lieferanten gegeben bzw. an einer Station gebraucht wird.
 
+## Ablaufplan
+
+Der Zeitplan eines Fests: was wann passiert und wer sich darum kümmert. Er besteht aus zwei Papieren mit verschiedenem Publikum — der *Aufgaben-Werkliste* (intern) und dem *Programmzettel* (Aushang). Beide speisen sich aus denselben *Ablauf-Einträgen*.
+_Avoid_: Zeitplan, Regieplan.
+
+## Ablauf-Tag
+
+Ein Tag im Ablaufplan (`schedule_days`) mit Datum und freiem Label („Aufbau", „Nachbereitung"). Die eigentlichen Festtage (`start_date` bis `end_date`) entstehen automatisch beim ersten Öffnen; jeder weitere Tag davor oder danach wird von Hand angelegt. Ändert sich später das Fest-Datum, ziehen bestehende Tage **nicht** nach.
+
+## Phase
+
+Optionale Untergruppe innerhalb eines *Ablauf-Tags* (`schedule_phases`), z.B. „Anlieferung", „Frühschoppen", „Abendprogramm". Sie ordnet die Arbeit eines Tages in Blöcke und ist **nur in der Aufgaben-Werkliste sichtbar** — auf dem Programmzettel nicht, weil sie ein Planungsbegriff ist. Eine Phase löschen nimmt ihre Einträge mit. Entscheidung in ADR 0007.
+_Avoid_: Schicht (das ist der Zeitblock einer *Station* im Schichtplan), Abschnitt.
+
+## Ablauf-Eintrag
+
+Eine Zeile des Ablaufplans (`schedule_entries`). Sie **gehört einem Ablauf-Tag** und liegt optional in einer *Phase* (ADR 0007). Gereiht wird nach Startzeit, nicht von Hand. Zwei Arten, die sich auf zwei Papiere verteilen:
+
+- **Aufgabe** — etwas, das jemand erledigen muss. Trägt Status (offen/erledigt) und einen *Helfer* als Verantwortlichen. Steht in der *Aufgaben-Werkliste*.
+- **Programmpunkt** — etwas, das dem Publikum passiert („Fassanstich", „Frühschoppen"). Trägt **weder Status noch Verantwortlichen**. Steht auf dem *Programmzettel*.
+
+## Aufgaben-Werkliste
+
+Das linke, interne Papier des Ablaufplans: alle *Aufgaben* eines Fests, gegliedert nach *Ablauf-Tag* → *Phase*, je Zeile Haken, Uhrzeit, Titel und Verantwortlicher. Filterbar nach offen/erledigt und nach Verantwortlichem. Exportiert genau das, was gerade gefiltert am Bildschirm steht.
+
+## Programmzettel
+
+Das rechte Papier des Ablaufplans und zugleich der **Aushang**: nur *Programmpunkte*, nach *Ablauf-Tag* gruppiert, je Zeile Uhrzeit und Titel. Er wird direkt bearbeitet, zeigt aber keine Haken, keine Phasen und keine Verantwortlichen — er geht ans Publikum. Als PDF in Plakat-Optik druckbar.
+_Avoid_: Programmliste, Aushangplan.
+
 ## Sponsor
 
 Firma/Person, die ein Fest finanziell oder als Sachleistung unterstützt. **Globale, wiederverwendbare Stammdaten** (anders als der *Helfer*, der pro Fest lebt) — eine Firma wird einmal angelegt und über Feste hinweg verknüpft. Felder: Firmenname, Ansprechpartner, Email, Telefon, Adresse, Website, Notizen. Dass ein Sponsor global lebt, ermöglicht die *Wiederkontaktierung* ohne Kopieren.

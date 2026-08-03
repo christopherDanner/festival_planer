@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<!-- PROTOTYP (wegwerfbar) — Entscheidungshilfe zu Wayfinder-Ticket #67, Frage 1:
+     Die Phase bleibt (Nutzer-Entscheid) — aber auf welchem Papier wird sie sichtbar?
+     A = auf beiden · B = nur Aufgaben-Werkliste · C = nur Programmzettel
+     Alle drei zeigen DIESELBEN Daten: 20 Aufgaben (8 erledigt) + 11 Programmpunkte,
+     5 Tage, 11 Phasen — die Menge eines echten dreitägigen Musikfests. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festmeister — Entscheid: Wo wird die Phase sichtbar?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button { font: inherit; cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  .frame { max-width: 1120px; margin: 0 auto; padding: 20px 22px 80px; }
+
+  h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 26px; letter-spacing: .03em; text-transform: uppercase; }
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .lead { font-size: 13px; color: var(--ink-soft); max-width: 880px; margin-top: 8px; }
+  .lead b { color: var(--ink); }
+
+  .vhead { display: flex; align-items: baseline; gap: 12px; margin-top: 46px; }
+  .vhead .tag { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; background: var(--ink); color: var(--yellow); padding: 3px 11px; letter-spacing: .05em; }
+  .vhead .name { font-weight: 800; font-size: 15px; }
+  .vhead .mess { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); font-variant-numeric: tabular-nums; border: 1.5px solid var(--line); padding: 3px 8px; background: #fff; }
+  .vnote { font-size: 12.5px; color: var(--ink-soft); margin: 8px 0 0; max-width: 900px; }
+  .vnote .pro { color: var(--green); font-weight: 700; }
+  .vnote .con { color: var(--red); font-weight: 700; }
+
+  /* ---- Werkzeugleiste (identisch in allen Varianten) ---- */
+  .planbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: 2.5px solid var(--ink); background: #fff; padding: 10px 14px; margin-top: 16px; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .planbar .kpi b { font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); }
+  .planbar .kpi .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 19px; letter-spacing: .02em; }
+  .ruler { width: 150px; height: 11px; border: 1.5px solid var(--ink); background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 10px); position: relative; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--green); }
+  .btn { border: 2px solid var(--ink); background: #fff; padding: 7px 12px; font-weight: 700; font-size: 12px; letter-spacing: .03em; }
+  .btn.primary { background: var(--yellow); }
+  .btn.quiet { border-color: var(--line); color: var(--ink-soft); }
+
+  /* ---- Schreibtisch ---- */
+  .desk { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 14px; }
+  .work { border: 2.5px solid var(--ink); background: #fff; }
+  .work .whead { padding: 10px 14px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .work .whead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .03em; text-transform: uppercase; margin-right: auto; }
+  .seg { display: flex; border: 2px solid var(--ink); background: #fff; }
+  .seg button { border: 0; border-right: 1px solid var(--line); background: none; padding: 5px 9px; font-weight: 700; font-size: 11.5px; color: var(--ink-soft); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); }
+  .fsel { border: 2px solid var(--ink); background: #fff; font: 600 11.5px "Public Sans", sans-serif; padding: 5px 7px; }
+
+  /* Tages-Zwischentitel (Oswald grün, wie im Programmzettel) */
+  .dayhead { display: flex; align-items: center; gap: 10px; padding: 9px 14px 6px; border-top: 2px solid var(--ink); background: oklch(0.965 0.01 100); }
+  .work > .dayhead:first-of-type { border-top: 0; }
+  .dayhead h4 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--green); }
+  .dayhead .dmeta { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .dayhead .dmeta.warn { color: var(--red); }
+  .dayhead::after { content: ""; flex: 1; height: 5px; background-image: radial-gradient(oklch(0.8 0.02 120) 0.9px, transparent 1.1px); background-size: 6px 6px; }
+
+  /* Phasen-Zwischentitel (eine Stufe leiser als der Tag) */
+  .phhead { padding: 7px 14px 4px 14px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); background: #fff; border-bottom: 1px solid var(--line); display: flex; gap: 9px; align-items: baseline; }
+  .phhead .pc { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .phhead .pc.warn { color: var(--red); }
+
+  /* Gruppenkopf der Vision (Vorbereitung / Festtage / Nachbereitung) */
+  .grphead { padding: 8px 14px 5px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); background: oklch(0.965 0.01 100); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: baseline; }
+  .work > .grphead:first-of-type { border-top: 0; }
+  .grphead .gc { color: var(--red); font-variant-numeric: tabular-nums; }
+
+  /* Aufgabenzeile */
+  .t { display: flex; align-items: center; gap: 11px; padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .t .cb { width: 17px; height: 17px; border: 2px solid var(--ink); background: #fff; flex: none; }
+  .t .cb.done { background: var(--green); position: relative; }
+  .t .cb.done::after { content: "✓"; position: absolute; inset: -3px 0 0 1px; color: #fff; font-size: 13px; font-weight: 800; }
+  .t .ti { flex: 1; min-width: 0; }
+  .t .ti b { font-weight: 700; }
+  .t .ti .sub { display: block; font-size: 11.5px; color: var(--ink-soft); }
+  .t.done .ti b { color: var(--ink-soft); text-decoration: line-through; }
+  .t .resp { flex: none; display: inline-flex; align-items: center; gap: 6px; background: oklch(0.94 0.015 110); padding: 3px 9px 3px 6px; font-weight: 500; font-size: 12px; }
+  .t .resp::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--paper); flex: none; }
+  /* feste Oswald-Zeitspalte, bündig (Vision-Auflage „Uhrzeiten prominent") */
+  .t .zeit { flex: none; width: 62px; text-align: right; font-family: "Oswald", sans-serif; font-weight: 600; letter-spacing: .02em; line-height: 1.05; }
+  .t .zeit .hh { font-size: 17px; display: block; }
+  .t .zeit .dd { font-size: 10.5px; color: var(--ink-soft); display: block; text-transform: uppercase; letter-spacing: .06em; }
+  .t .zeit .none { font-size: 11px; color: var(--ink-soft); font-family: "Public Sans", sans-serif; font-weight: 700; }
+  .wfoot { padding: 9px 14px; font-size: 12px; color: var(--ink-soft); display: flex; gap: 16px; flex-wrap: wrap; border-top: 2px solid var(--ink); }
+  .wfoot b { color: var(--red); }
+
+  /* ---- Programmzettel ---- */
+  .zettel { border: 2.5px solid var(--ink); background: #fff; }
+  .zettel .zhead { text-align: center; padding: 15px 14px 12px; border-bottom: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; }
+  .zettel .zhead .fm { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11.5px; letter-spacing: .1em; color: var(--yellow); }
+  .zettel .zhead h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 21px; letter-spacing: .03em; text-transform: uppercase; margin-top: 3px; }
+  .zettel .zday { padding: 10px 16px 4px; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--green); display: flex; align-items: center; gap: 10px; }
+  .zettel .zday::after { content: ""; flex: 1; height: 5px; background-image: radial-gradient(oklch(0.8 0.02 120) 0.9px, transparent 1.1px); background-size: 6px 6px; }
+  .zettel .zph { padding: 6px 16px 2px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
+  .zettel .zrow { display: flex; gap: 12px; padding: 5px 16px; font-size: 13px; align-items: baseline; }
+  .zettel .zrow time { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; width: 50px; flex: none; }
+  .zettel .zrow b { font-weight: 700; }
+  .zettel .zrow .sub { display: block; font-size: 11px; color: var(--ink-soft); }
+  .zettel .zfoot { margin-top: 10px; border-top: 2px solid var(--ink); padding: 9px 16px; font-size: 11px; color: var(--ink-soft); display: flex; justify-content: space-between; gap: 10px; }
+
+  hr.sep { border: 0; border-top: 2.5px solid var(--ink); margin: 50px 0 0; }
+  @media (max-width: 900px) { .desk { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <h1>Ablaufplan — wo wird die Phase sichtbar?</h1>
+  <p class="lead">
+    Entschieden ist: die <b>Phase bleibt</b> als Untergruppe zwischen Tag und Eintrag und muss in der UI zu sehen sein.
+    Offen ist, <b>auf welchem der beiden Papiere</b>. Alle drei Varianten zeigen dieselben Daten eines dreitägigen
+    Musikfests: <b>20 Aufgaben</b> (8 erledigt), <b>11 Programmpunkte</b>, 5 Tage, 11 Phasen.
+    Die Höhe der Aufgabenliste steht bei jeder Variante rechts oben — sie ist der Preis der Gliederung.
+  </p>
+
+  <!-- ############ A ############ -->
+  <div class="vhead"><span class="tag">A</span><span class="name">Phase auf beiden Papieren</span><span class="mess" id="m-a">— px</span></div>
+  <p class="vnote">Werkliste: <b>Tag → Phase → Aufgabe</b>. Zettel: <b>Tag → Phase → Punkt</b>. Die Gliederung ist überall dieselbe — dafür fällt die Vision-Gruppierung Vorbereitung/Festtage/Nachbereitung weg und der Zettel bekommt eine dritte Titelstufe.</p>
+  <div id="v-a"></div>
+  <hr class="sep">
+
+  <!-- ############ B ############ -->
+  <div class="vhead"><span class="tag">B</span><span class="name">Phase nur in der Aufgaben-Werkliste</span><span class="mess" id="m-b">— px</span></div>
+  <p class="vnote">Werkliste wie A: <b>Tag → Phase → Aufgabe</b>. Der Zettel bleibt der schlanke Aushang der Vision: nur Tag, Zeit und Punkt — er geht ans Publikum, das mit „Aufbau Zelt &amp; Technik" nichts anfangen kann.</p>
+  <div id="v-b"></div>
+  <hr class="sep">
+
+  <!-- ############ C ############ -->
+  <div class="vhead"><span class="tag">C</span><span class="name">Phase nur im Programmzettel</span><span class="mess" id="m-c">— px</span></div>
+  <p class="vnote">Werkliste bleibt die Vision: eine Liste quer über alle Tage, gruppiert nach <b>Vorbereitung / Festtage / Nachbereitung</b>, mit Tag+Uhrzeit in der Zeitspalte. Der Zettel gliedert nach <b>Tag → Phase</b>.</p>
+  <div id="v-c"></div>
+</div>
+
+<script>
+/* ---------------- EINE Datenquelle für alle drei Varianten ---------------- */
+const FEST = "Musikfest Steinbach 2026";
+const DAYS = [
+  { kurz: "Do", datum: "23. Juli", titel: "Donnerstag 23.", label: "Aufbau", gruppe: "vor", phasen: [
+    { name: "Anlieferung", eintraege: [
+      { art: "task", zeit: "08:00", titel: "Zelt-Anlieferung Fa. Huber", sub: "Zufahrt über Sportplatz freihalten", wer: "F. Hochauer", erledigt: false },
+      { art: "task", zeit: "10:00", titel: "Kühlwagen stellen + anschließen", wer: "F. Hochauer", erledigt: true },
+      { art: "task", zeit: "11:00", titel: "Getränke-Anlieferung Brauerei", wer: "H. Zeller", erledigt: false },
+    ]},
+    { name: "Aufbau Zelt & Technik", eintraege: [
+      { art: "task", zeit: "13:00", titel: "Zelt aufstellen", sub: "alle verfügbaren Helfer", wer: "P. Gruber", erledigt: true },
+      { art: "task", zeit: "16:00", titel: "Strom + Beleuchtung verlegen", wer: "P. Gruber", erledigt: false },
+      { art: "task", zeit: "18:00", titel: "Bühne + Tonanlage", wer: "M. Steiner", erledigt: false },
+    ]},
+  ]},
+  { kurz: "Fr", datum: "24. Juli", titel: "Freitag 24.", label: null, gruppe: "fest", phasen: [
+    { name: "Vorbereitung", eintraege: [
+      { art: "task", zeit: "10:00", titel: "Feuerwehr-Abnahme", wer: "Obmann", erledigt: false },
+      { art: "task", zeit: "14:00", titel: "Kassa bestücken (Wechselgeld)", wer: "E. Auer", erledigt: true },
+      { art: "task", zeit: "16:00", titel: "Schank einkühlen", wer: "H. Zeller", erledigt: true },
+    ]},
+    { name: "Abendprogramm", eintraege: [
+      { art: "program", zeit: "18:00", titel: "Eröffnung + Fassanstich", sub: "mit Bürgermeister" },
+      { art: "program", zeit: "19:30", titel: "„Die Steinbacher“" },
+      { art: "task", zeit: "22:00", titel: "Nachschub Bier prüfen", wer: "H. Zeller", erledigt: false },
+      { art: "program", zeit: "23:00", titel: "Barbetrieb bis 02:00" },
+    ]},
+  ]},
+  { kurz: "Sa", datum: "25. Juli", titel: "Samstag 25.", label: null, gruppe: "fest", phasen: [
+    { name: "Frühschoppen", eintraege: [
+      { art: "task", zeit: "09:00", titel: "Zelt reinigen + Tische richten", wer: "Festleitung", erledigt: true },
+      { art: "program", zeit: "11:00", titel: "Frühschoppen — MV Steinbach" },
+    ]},
+    { name: "Nachmittag", eintraege: [
+      { art: "task", zeit: "14:30", titel: "Empfang Gastkapelle vorbereiten", wer: "Obmann", erledigt: true },
+      { art: "program", zeit: "15:00", titel: "Gastkapelle Purgstall", sub: "Einmarsch Hauptstraße" },
+    ]},
+    { name: "Abendprogramm", eintraege: [
+      { art: "program", zeit: "18:30", titel: "Einlass" },
+      { art: "task", zeit: "19:00", titel: "Kassa verstärken (+2)", wer: "E. Auer", erledigt: true },
+      { art: "program", zeit: "19:30", titel: "„Die Lauser“" },
+    ]},
+  ]},
+  { kurz: "So", datum: "26. Juli", titel: "Sonntag 26.", label: null, gruppe: "fest", phasen: [
+    { name: "Frühschoppen", eintraege: [
+      { art: "task", zeit: "08:30", titel: "Bänke für Feldmesse richten", wer: "P. Gruber", erledigt: true },
+      { art: "program", zeit: "09:30", titel: "Feldmesse" },
+      { art: "program", zeit: "10:30", titel: "Frühschoppen — MV Purgstall" },
+    ]},
+    { name: "Ausklang", eintraege: [
+      { art: "task", zeit: "15:00", titel: "Tombola-Preise auslegen", wer: "Schriftführer", erledigt: false },
+      { art: "program", zeit: "16:00", titel: "Tombola-Verlosung" },
+      { art: "program", zeit: "18:00", titel: "Ausklang / Zeltschluss" },
+    ]},
+  ]},
+  { kurz: "Mo", datum: "27. Juli", titel: "Montag 27.", label: "Nachbereitung", gruppe: "nach", phasen: [
+    { name: "Abbau", eintraege: [
+      { art: "task", zeit: "08:00", titel: "Zeltabbau", sub: "alle verfügbaren Helfer, Treffpunkt 08:00", wer: "Festleitung", erledigt: false },
+      { art: "task", zeit: "10:00", titel: "Leergut-Rückgabe Brauerei", wer: "H. Zeller", erledigt: false },
+      { art: "task", zeit: "13:00", titel: "Gelände säubern", wer: "P. Gruber", erledigt: false },
+    ]},
+    { name: "Abrechnung", eintraege: [
+      { art: "task", zeit: null, titel: "Material-Inventur + Verbrauch eintragen", sub: "→ Materialliste: Ist-Mengen", wer: "Schriftführer", erledigt: false },
+      { art: "task", zeit: "18:00", titel: "Kassa-Abrechnung", wer: "E. Auer", erledigt: false },
+    ]},
+  ]},
+];
+
+const GRUPPEN = [
+  { key: "vor",  titel: "Vorbereitung" },
+  { key: "fest", titel: "Festtage" },
+  { key: "nach", titel: "Nachbereitung" },
+];
+
+const esc = s => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const tasks = d => d.phasen.flatMap(p => p.eintraege.filter(e => e.art === "task"));
+const allTasks = DAYS.flatMap(tasks);
+const offen = allTasks.filter(t => !t.erledigt).length;
+
+/* ---- Bausteine ---- */
+function zeitspalte(e, mitTag, kurz) {
+  if (!e.zeit) return `<span class="zeit"><span class="none">ohne Zeit</span></span>`;
+  return `<span class="zeit"><span class="hh">${e.zeit}</span>${mitTag ? `<span class="dd">${kurz}</span>` : ""}</span>`;
+}
+function taskZeile(e, mitTag, kurz) {
+  return `<div class="t${e.erledigt ? " done" : ""}">
+    <span class="cb${e.erledigt ? " done" : ""}"></span>
+    <span class="ti"><b>${esc(e.titel)}</b>${e.sub ? `<span class="sub">${esc(e.sub)}</span>` : ""}</span>
+    ${zeitspalte(e, mitTag, kurz)}
+    <span class="resp">${esc(e.wer || "—")}</span>
+  </div>`;
+}
+function planbar() {
+  const pct = Math.round((allTasks.length - offen) / allTasks.length * 100);
+  return `<div class="planbar">
+    <div class="kpi"><b>Aufgaben</b><span class="val">${allTasks.length - offen}/${allTasks.length}</span>
+      <div class="ruler"><i style="width:${pct}%"></i></div></div>
+    <button class="btn primary">+ AUFGABE</button>
+    <button class="btn">+ PROGRAMMPUNKT</button>
+    <button class="btn quiet">Export</button>
+  </div>`;
+}
+function whead() {
+  const erl = allTasks.length - offen;
+  return `<div class="whead"><h3>Aufgaben-Werkliste</h3>
+    <div class="seg"><button class="on">Alle (${allTasks.length})</button><button>Offen (${offen})</button><button>Erledigt (${erl})</button></div>
+    <select class="fsel"><option>Verantwortlich: alle</option><option>E. Auer</option><option>F. Hochauer</option><option>Obmann</option></select></div>`;
+}
+function wfoot() {
+  const vorFest = DAYS.filter(d => d.gruppe === "vor").flatMap(tasks).filter(t => !t.erledigt).length;
+  const nach = DAYS.filter(d => d.gruppe === "nach").flatMap(tasks).filter(t => !t.erledigt).length;
+  return `<div class="wfoot"><span><b>${vorFest} offen</b> vor dem Fest</span><span>${nach} in der Nachbereitung</span>
+    <span>${allTasks.length - offen} von ${allTasks.length} erledigt</span></div>`;
+}
+
+/* ---- Werkliste: nach Tag → Phase (A und B) ---- */
+function werklisteTagPhase() {
+  let h = whead();
+  for (const d of DAYS) {
+    const dt = tasks(d);
+    if (!dt.length) continue;
+    const dOffen = dt.filter(t => !t.erledigt).length;
+    h += `<div class="dayhead"><h4>${d.titel}${d.label ? " · " + d.label : ""}</h4>
+      <span class="dmeta${dOffen ? " warn" : ""}">${dOffen ? dOffen + " offen" : "fertig"}</span></div>`;
+    for (const p of d.phasen) {
+      const pt = p.eintraege.filter(e => e.art === "task");
+      if (!pt.length) continue;
+      const pOffen = pt.filter(t => !t.erledigt).length;
+      h += `<div class="phhead"><span>${esc(p.name)}</span><span class="pc${pOffen ? " warn" : ""}">${pt.length - pOffen}/${pt.length}</span></div>`;
+      h += pt.map(e => taskZeile(e, false, d.kurz)).join("");
+    }
+  }
+  return `<div class="work">${h}${wfoot()}</div>`;
+}
+
+/* ---- Werkliste: Vision-Gruppen quer über alle Tage (C) ---- */
+function werklisteGruppen() {
+  let h = whead();
+  for (const g of GRUPPEN) {
+    const tage = DAYS.filter(d => d.gruppe === g.key);
+    const alle = tage.flatMap(d => tasks(d).map(e => ({ e, kurz: d.kurz })));
+    if (!alle.length) continue;
+    const gOffen = alle.filter(x => !x.e.erledigt).length;
+    const spanne = tage.length === 1 ? `${tage[0].kurz} ${tage[0].datum}` : `${tage[0].kurz}–${tage[tage.length - 1].kurz}`;
+    h += `<div class="grphead"><span>${g.titel} · ${spanne}</span><span class="gc">${gOffen} offen</span></div>`;
+    h += alle.map(x => taskZeile(x.e, true, x.kurz)).join("");
+  }
+  return `<div class="work">${h}${wfoot()}</div>`;
+}
+
+/* ---- Programmzettel ---- */
+function zettel(mitPhasen) {
+  let h = `<div class="zhead"><div class="fm">${FEST.toUpperCase()}</div><h3>Programm</h3></div>`;
+  for (const d of DAYS) {
+    const prog = d.phasen.flatMap(p => p.eintraege.filter(e => e.art === "program").map(e => ({ e, phase: p.name })));
+    if (!prog.length) continue;
+    h += `<div class="zday">${d.titel}</div>`;
+    if (mitPhasen) {
+      let letzte = null;
+      for (const { e, phase } of prog) {
+        if (phase !== letzte) { h += `<div class="zph">${esc(phase)}</div>`; letzte = phase; }
+        h += `<div class="zrow"><time>${e.zeit ?? ""}</time><span><b>${esc(e.titel)}</b>${e.sub ? `<span class="sub">${esc(e.sub)}</span>` : ""}</span></div>`;
+      }
+    } else {
+      for (const { e } of prog) {
+        h += `<div class="zrow"><time>${e.zeit ?? ""}</time><span><b>${esc(e.titel)}</b>${e.sub ? `<span class="sub">${esc(e.sub)}</span>` : ""}</span></div>`;
+      }
+    }
+  }
+  h += `<div class="zfoot"><span>Druckt als Aushang / teilt per WhatsApp</span><span>${DAYS.flatMap(d => d.phasen.flatMap(p => p.eintraege)).filter(e => e.art === "program").length} Punkte</span></div>`;
+  return `<aside class="zettel">${h}</aside>`;
+}
+
+function desk(links, rechts) { return planbar() + `<div class="desk">${links}${rechts}</div>`; }
+
+document.getElementById("v-a").innerHTML = desk(werklisteTagPhase(), zettel(true));
+document.getElementById("v-b").innerHTML = desk(werklisteTagPhase(), zettel(false));
+document.getElementById("v-c").innerHTML = desk(werklisteGruppen(), zettel(true));
+
+/* ---- Messung: Höhe der Aufgabenliste + des Zettels ---- */
+for (const v of ["a", "b", "c"]) {
+  const wrap = document.getElementById("v-" + v);
+  const w = Math.round(wrap.querySelector(".work").getBoundingClientRect().height);
+  const z = Math.round(wrap.querySelector(".zettel").getBoundingClientRect().height);
+  document.getElementById("m-" + v).textContent = `Werkliste ${w} px · Zettel ${z} px`;
+}
+</script>
+</body>
+</html>
