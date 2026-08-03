@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lektion 1 — Hear it, play it: deine erste Melodie ohne Noten</title>
+<style>
+  :root{
+    --ink:#1a1c1e; --muted:#5c6370; --accent:#8a5a2b; --accent-dark:#6b4520;
+    --accent-soft:#f4ead9; --line:#e3ddd2; --bg:#faf7f1; --card:#ffffff;
+    --ok:#2e7d32; --ok-soft:#e6f2e6; --bad:#b3402a; --bad-soft:#f9e8e4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--ink);
+    line-height:1.6;padding:3rem 1.5rem}
+  main{max-width:760px;margin:0 auto}
+  header{border-bottom:3px double var(--accent);padding-bottom:1.2rem;margin-bottom:2rem}
+  .kicker{font-family:Verdana,sans-serif;font-size:.7rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:.4rem}
+  h1{font-size:1.9rem;font-weight:normal;line-height:1.25}
+  .meta{color:var(--muted);font-style:italic;margin-top:.5rem;font-size:.95rem}
+  h2{font-family:Verdana,sans-serif;font-size:1.05rem;margin:2.4rem 0 .8rem;
+    padding-bottom:.3rem;border-bottom:1px solid var(--line)}
+  h2 .num{color:var(--accent);margin-right:.4rem}
+  p{margin-bottom:.9rem}
+  em{font-style:italic}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:1.1rem 1.3rem;margin:1rem 0}
+  .box.accent{background:var(--accent-soft);border-left:4px solid var(--accent)}
+  .steps{counter-reset:st;list-style:none;margin:1rem 0}
+  .steps li{counter-increment:st;position:relative;padding:.5rem 0 .5rem 2.6rem;margin-bottom:.3rem}
+  .steps li::before{content:counter(st);position:absolute;left:0;top:.55rem;
+    width:1.7rem;height:1.7rem;border-radius:50%;background:var(--accent);color:#fff;
+    font-family:Verdana,sans-serif;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+  .quiz{background:var(--card);border:2px solid var(--accent);border-radius:10px;
+    padding:1.3rem 1.4rem;margin:1.2rem 0}
+  .quiz h3{font-family:Verdana,sans-serif;font-size:.95rem;margin-bottom:.6rem}
+  .qrow{display:flex;flex-wrap:wrap;gap:.6rem;margin:.8rem 0}
+  button{font-family:Verdana,sans-serif;font-size:.9rem;padding:.55rem 1.1rem;
+    border-radius:6px;border:1px solid var(--accent);background:#fff;color:var(--accent-dark);
+    cursor:pointer}
+  button:hover:not(:disabled){background:var(--accent-soft)}
+  button:disabled{opacity:.45;cursor:default}
+  button.play{background:var(--accent);color:#fff;font-weight:bold}
+  button.play:hover:not(:disabled){background:var(--accent-dark)}
+  .fb{font-family:Verdana,sans-serif;font-size:.88rem;min-height:1.4rem;margin-top:.4rem}
+  .fb.ok{color:var(--ok)} .fb.bad{color:var(--bad)}
+  .score{font-family:Verdana,sans-serif;font-size:.8rem;color:var(--muted);margin-top:.3rem}
+  .check{list-style:none;margin:.6rem 0}
+  .check li{margin:.45rem 0}
+  .check label{display:flex;gap:.6rem;align-items:flex-start;cursor:pointer}
+  .check input{margin-top:.35rem;accent-color:var(--accent);width:1rem;height:1rem}
+  details{margin:1rem 0;border:1px dashed var(--accent);border-radius:8px;padding:.8rem 1.1rem;background:#fff}
+  summary{font-family:Verdana,sans-serif;font-size:.9rem;color:var(--accent-dark);cursor:pointer}
+  table{border-collapse:collapse;margin:.8rem 0;font-size:.95rem}
+  td,th{border:1px solid var(--line);padding:.35rem .8rem;text-align:center}
+  th{background:var(--accent-soft);font-family:Verdana,sans-serif;font-size:.8rem}
+  a{color:var(--accent-dark)}
+  .cite{font-size:.8rem;color:var(--muted)}
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:3px double var(--accent);
+    color:var(--muted);font-size:.9rem}
+  @media print{ .quiz,button{display:none} body{background:#fff;padding:0} }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="kicker">Tenorhorn auswendig · Lektion 1</div>
+    <h1>Hear it, play it — deine erste Melodie ohne Noten</h1>
+    <p class="meta">~25 Minuten · Du brauchst: dein Tenorhorn, dein Mundstück, Kopfhörer oder Lautsprecher.
+    Ziel: Am Ende hast du eine komplette Melodie <strong>nur nach Gehör</strong> gespielt — zum ersten Mal seit sechs Jahren ganz ohne Notenblatt.</p>
+  </header>
+
+  <h2><span class="num">1</span>Die eine Idee dieser Lektion</h2>
+  <p><strong>Erst innerlich hören, dann spielen.</strong> Nachspielen nach Gehör ist kein Talent,
+  sondern eine lernbare Fertigkeit — die Forschung ist da eindeutig
+  (<a href="https://www.researchgate.net/publication/258171046_Playing_by_Ear_Foundation_or_Frill">Woody: „Playing by Ear — Foundation or Frill?“</a>).
+  Und du hast einen versteckten Vorteil: Als Blechbläser <em>musst</em> du längst vorhören.
+  Mit einem Griff sind am Tenorhorn mehrere Naturtöne spielbar — dass du das g′ triffst und nicht
+  das c′ darunter, entscheidet dein Ohr, nicht dein Finger
+  (<a href="https://pressbooks.palni.org/brasstechniquesandpedagogy/chapter/pitch-and-intonation/">Brass Techniques &amp; Pedagogy: Pitch &amp; Intonation</a>).
+  Sechs Jahre Tenorhorn heißt: Dein Ohr arbeitet schon. Wir machen es nur bewusst.</p>
+
+  <div class="box accent">
+    <p style="margin:0">Beim Heraushören einer Melodie stellst du dir pro Ton genau <strong>zwei Fragen</strong>:</p>
+    <p style="margin:.4rem 0 0"><strong>① Rauf oder runter?</strong> &nbsp;&nbsp; <strong>② Schritt oder Sprung?</strong><br>
+    <span class="cite">Schritt = Nachbarstufe („gehend“) · Sprung = darüber hinweg („hüpfend“) — siehe <a href="../reference/GLOSSARY.html">Glossar</a>.</span></p>
+  </div>
+
+  <h2><span class="num">2</span>Ohren-Check im Browser (5 Min)</h2>
+  <p>Bevor du zum Horn greifst: zwei kurze Hörtests mit sofortigem Feedback. Du hörst jeweils
+  zwei Töne nacheinander.</p>
+
+  <div class="quiz" id="quizA">
+    <h3>Quiz A — Rauf oder runter? (10 Fragen)</h3>
+    <div class="qrow"><button class="play" id="aPlay">▶ Töne abspielen</button>
+      <button id="aRepeat" disabled>↻ nochmal</button></div>
+    <div class="qrow">
+      <button class="ans" data-v="up" disabled>Rauf</button>
+      <button class="ans" data-v="down" disabled>Runter</button>
+      <button class="ans" data-v="same" disabled>Gleich</button>
+    </div>
+    <div class="fb" id="aFb"></div>
+    <div class="score" id="aScore">Frage 1 von 10 · 0 richtig</div>
+  </div>
+
+  <div class="quiz" id="quizB">
+    <h3>Quiz B — Schritt oder Sprung? (10 Fragen)</h3>
+    <div class="qrow"><button class="play" id="bPlay">▶ Töne abspielen</button>
+      <button id="bRepeat" disabled>↻ nochmal</button></div>
+    <div class="qrow">
+      <button class="ans" data-v="step" disabled>Schritt</button>
+      <button class="ans" data-v="leap" disabled>Sprung</button>
+    </div>
+    <div class="fb" id="bFb"></div>
+    <div class="score" id="bScore">Frage 1 von 10 · 0 richtig</div>
+  </div>
+
+  <p class="cite">Richtwert: 8/10 oder besser → weiter. Darunter: kein Problem, einfach die Runde
+  wiederholen — genau dafür ist der Test da.</p>
+
+  <h2><span class="num">3</span>Ans Horn: Sing → Buzz → Spiel (15 Min)</h2>
+  <p>Die klassische Blechbläser-Lernfolge
+  (<a href="https://sites.lib.jmu.edu/brasspedagogy/2016/05/31/sing-buzz-play/">JMU Brass Pedagogy: „Sing, Buzz, Play“</a>):
+  Erst <strong>singen</strong> — das prüft, ob die Melodie wirklich im Kopf ist. Dann auf dem
+  <strong>Mundstück buzzen</strong> — ohne Ventile führt dich nur das Ohr. Erst dann
+  <strong>spielen</strong>. Singen muss nicht schön sein, nur ungefähr die richtige Tonhöhe treffen — brummen reicht.</p>
+
+  <p>Dein Stück: <strong>„Alle meine Entchen“</strong>. Bewusst simpel — heute zählt der Ablauf,
+  nicht das Stück. Kannst du die Melodie im Kopf abrufen? Gut, mehr brauchst du nicht.</p>
+
+  <ol class="steps">
+    <li><strong>Singen.</strong> Sing (oder brumm) die ganze Melodie einmal komplett. Stockst du irgendwo, ist die Lücke im Kopf — nicht in den Fingern.</li>
+    <li><strong>Buzzen.</strong> Buzz die erste Phrase („Alle meine Entchen“) auf dem Mundstück. Grobe Kontur reicht: rauf, in Schritten.</li>
+    <li><strong>Spielen, Phrase 1.</strong> Startton: <strong>geschriebenes c′ — ohne Ventil</strong>. Frag dich vor jedem Ton: rauf oder runter? Schritt oder Sprung? Dann erst greifen.</li>
+    <li><strong>Falsch getippt? Perfekt.</strong> Ton zu hoch/zu tief → korrigieren, Phrase nochmal. Jeder korrigierte Fehler kalibriert dein Ohr — das <em>ist</em> die Übung, nicht ihr Scheitern.</li>
+    <li><strong>Phrase für Phrase weiter.</strong> Immer: erst singen, dann spielen. Nie zwei Phrasen auf einmal.</li>
+    <li><strong>Ganz durchspielen.</strong> Von vorn bis hinten, ohne Noten, ohne Spickzettel. Zweimal sauber = geschafft.</li>
+  </ol>
+
+  <ul class="check" id="checklist">
+    <li><label><input type="checkbox" data-k="c1"> Melodie komplett gesungen/gebrummt</label></li>
+    <li><label><input type="checkbox" data-k="c2"> Erste Phrase auf dem Mundstück gebuzzt</label></li>
+    <li><label><input type="checkbox" data-k="c3"> Erste Phrase am Horn nach Gehör gefunden</label></li>
+    <li><label><input type="checkbox" data-k="c4"> Alle Phrasen einzeln erarbeitet</label></li>
+    <li><label><input type="checkbox" data-k="c5"> Ganze Melodie 2× ohne Noten durchgespielt 🎉</label></li>
+  </ul>
+
+  <details>
+    <summary>Spickzettel — nur öffnen, wenn du wirklich feststeckst</summary>
+    <p style="margin-top:.6rem">Die Melodie in <strong>Stufen</strong> (1 = dein Startton c′):</p>
+    <p><code>1 2 3 4 5 5 · 6 6 6 6 5 · 6 6 6 6 5 · 4 4 4 4 3 3 · 5 5 5 5 1</code></p>
+    <table>
+      <tr><th>Stufe</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
+      <tr><th>geschrieben</th><td>c′</td><td>d′</td><td>e′</td><td>f′</td><td>g′</td><td>a′</td></tr>
+      <tr><th>Griff</th><td>0</td><td>1·3</td><td>1·2</td><td>1</td><td>0</td><td>1·2</td></tr>
+    </table>
+    <p class="cite">Warum Stufen statt Tonnamen? Weil die Melodie dann von <em>jedem</em> Startton aus funktioniert — das wird Lektion 2.</p>
+  </details>
+
+  <h2><span class="num">4</span>Wenn du hängst</h2>
+  <div class="box">
+    <p><strong>„Ich finde den nächsten Ton nicht.“</strong> Sing den nächsten Ton laut, halte ihn — und such ihn dann am Horn durch Probieren. Erst Stimme, dann Instrument.</p>
+    <p><strong>„Ich höre nicht, ob es ein Sprung ist.“</strong> Zurück zu Quiz B, eine Runde. Dann weiter.</p>
+    <p style="margin-bottom:0"><strong>„Singen ist mir unangenehm.“</strong> Summen mit geschlossenem Mund zählt voll. Es geht ums innere Hören, nicht um Gesang.</p>
+  </div>
+
+  <h2><span class="num">5</span>Dein Sieg heute</h2>
+  <p>Eine Melodie komplett nach Gehör — der Ablauf <em>Vorhören → Singen → Buzzen → Spielen</em> ist
+  ab jetzt dein Standardwerkzeug. In der nächsten Lektion lernst du, Melodien als Stufen-Zahlen zu hören:
+  Dann klappt dieselbe Melodie von jedem Startton, und schwerere Stücke werden hörbar.
+  <strong>Bonus fürs Selbstbewusstsein:</strong> Spiel „Alle meine Entchen“ morgen nochmal aus dem Kalten — ohne diese Seite.</p>
+
+  <footer>
+    <p><strong>Fragen? Frag deinen Lehrer.</strong> Ich bin dein Agent — sag mir, wie die Übung lief
+    (Quiz-Ergebnis + wie weit du am Horn gekommen bist), dann baue ich Lektion 2 exakt darauf auf.
+    Unklarheiten, andere Wunsch-Melodie, zu leicht/zu schwer: einfach schreiben.</p>
+    <p class="cite">Quellen: <a href="https://www.researchgate.net/publication/258171046_Playing_by_Ear_Foundation_or_Frill">Woody, „Playing by Ear: Foundation or Frill?“</a> ·
+    <a href="https://sites.lib.jmu.edu/brasspedagogy/2016/05/31/sing-buzz-play/">JMU Brass Pedagogy, „Sing, Buzz, Play“</a> ·
+    <a href="https://pressbooks.palni.org/brasstechniquesandpedagogy/chapter/pitch-and-intonation/">Brass Techniques &amp; Pedagogy (PALNI), „Pitch and Intonation“</a> ·
+    <a href="https://academicalliance.com/training-young-low-brass-players-ear-development/">Academic Alliance, „Low Brass Ear Development“</a> ·
+    Begriffe: <a href="../reference/GLOSSARY.html">Glossar</a></p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  let ctx=null;
+  function audio(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); return ctx; }
+  function tone(freq, t0, dur){
+    const c=audio(), o=c.createOscillator(), g=c.createGain();
+    o.type='triangle'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0,t0);
+    g.gain.linearRampToValueAtTime(.35,t0+.03);
+    g.gain.setValueAtTime(.35,t0+dur-.08);
+    g.gain.linearRampToValueAtTime(0,t0+dur);
+    o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0+dur);
+  }
+  const f=st=>220*Math.pow(2,st/12); // Basis a (220 Hz), st = Halbtöne
+  function playPair(s1,s2){ const t=audio().currentTime+.05; tone(f(s1),t,.7); tone(f(s2),t+.85,.7); }
+  const rnd=a=>a[Math.floor(Math.random()*a.length)];
+
+  function makeQuiz(cfg){
+    const root=document.getElementById(cfg.id);
+    const play=root.querySelector('.play'), rep=root.querySelectorAll('button')[1],
+          ans=root.querySelectorAll('.ans'), fb=root.querySelector('.fb'),
+          score=root.querySelector('.score');
+    let q=1, ok=0, cur=null, done=false;
+    function next(){ cur=cfg.gen(); }
+    function upd(){ score.textContent = done
+      ? 'Fertig: '+ok+' von 10 richtig'+(ok>=8?' — stark, weiter zu Teil 3!':' — spiel ruhig noch eine Runde (Seite neu laden).')
+      : 'Frage '+q+' von 10 · '+ok+' richtig'; }
+    next(); upd();
+    play.onclick=()=>{ playPair(cur.s1,cur.s2); rep.disabled=false; ans.forEach(b=>b.disabled=false); fb.textContent=''; fb.className='fb'; };
+    rep.onclick=()=>playPair(cur.s1,cur.s2);
+    ans.forEach(b=>b.onclick=()=>{
+      if(done) return;
+      const right = b.dataset.v===cur.v;
+      if(right){ ok++; fb.textContent='✓ Richtig — '+cur.why; fb.className='fb ok'; }
+      else{ fb.textContent='✗ Es war: '+cur.why; fb.className='fb bad'; }
+      ans.forEach(x=>x.disabled=true); rep.disabled=true;
+      if(q>=10){ done=true; play.disabled=true; } else { q++; next(); }
+      upd();
+    });
+  }
+
+  // Quiz A: Richtung. Basiston zufällig, 2. Ton rauf/runter (2–12 HT) oder gleich.
+  makeQuiz({ id:'quizA', gen(){
+    const base=rnd([-4,-2,0,2,4,5]);
+    const kind=Math.random()<.2?'same':(Math.random()<.5?'up':'down');
+    const d=rnd([2,3,4,5,7,9,12]);
+    if(kind==='same') return {s1:base,s2:base,v:'same',why:'derselbe Ton.'};
+    if(kind==='up')   return {s1:base,s2:base+d,v:'up',why:'es ging rauf.'};
+    return {s1:base,s2:base-d,v:'down',why:'es ging runter.'};
+  }});
+
+  // Quiz B: Schritt (1–2 HT) vs. Sprung (5,7,9,12 HT), Richtung zufällig.
+  makeQuiz({ id:'quizB', gen(){
+    const base=rnd([-4,-2,0,2,4]);
+    const step=Math.random()<.5, dir=Math.random()<.5?1:-1;
+    const d=step?rnd([1,2]):rnd([5,7,9,12]);
+    return {s1:base,s2:base+dir*d,v:step?'step':'leap',
+      why:step?'ein Schritt (Nachbarton).':'ein Sprung (weiter weg).'};
+  }});
+
+  // Checkliste in localStorage
+  document.querySelectorAll('#checklist input').forEach(cb=>{
+    const key='th-l1-'+cb.dataset.k;
+    cb.checked=localStorage.getItem(key)==='1';
+    cb.onchange=()=>localStorage.setItem(key,cb.checked?'1':'0');
+  });
+})();
+</script>
+</body>
+</html>
