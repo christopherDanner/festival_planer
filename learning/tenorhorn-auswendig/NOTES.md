@@ -39,6 +39,13 @@
   (Intervallnamen, Tonleitern)? → in Lektion 1/2 beiläufig abfragen.
 
 ## Status
-- Workspace neu angelegt (2026-08-03). Lektion 1 ausgeliefert, noch kein
-  nachgewiesenes Können — auf Rückmeldung zur Entchen-Übung warten.
+- Lektion 1 **bestanden** (2026-08-03): Entchen 2× komplett nach Gehör,
+  Quiz 3/4 (LR-0002). Schwachstelle Terz-vs-Sekunde → in L2/3 gezielt üben.
+- User bevorzugt Lektionen **direkt im Chat** („bitte hier starten“) —
+  Quiz-Format: bekannte Melodien innerlich vorhören statt Audio-Datei.
+  HTML-Lektionen trotzdem als Nachschlagewerk weiter ausliefern.
+- Nächster Schritt: Lektion 2 (Stufen-Denken), Brücke bereits gelegt
+  (Entchen von anderem Startton).
 - Community-Präferenz noch nicht erfragt.
+- Noch offen (Profil): Singbereitschaft war offenbar kein Problem;
+  Theorie-Level weiter unklar.
