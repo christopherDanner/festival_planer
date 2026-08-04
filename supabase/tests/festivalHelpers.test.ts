@@ -18,12 +18,6 @@ import { applyMigration, createTestDatabase } from './testDatabase';
 
 const MIGRATION = '20260804000001_create_festival_helpers.sql';
 
-async function migratedDatabase(): Promise<PGlite> {
-	const db = await createTestDatabase();
-	await applyMigration(db, MIGRATION);
-	return db;
-}
-
 type ColumnRow = {
 	column_name: string;
 	data_type: string;
@@ -58,9 +52,9 @@ function isoDate(offsetDays: number): string {
 }
 
 type LegacyData = {
-	festivals: Record<'vergangen' | 'vergangenLeer' | 'planung' | 'geloescht', string>;
+	festivals: Record<'past' | 'pastWithoutTrace' | 'planned' | 'deleted', string>;
 	stations: Record<'bar' | 'grill', string>;
-	shifts: Record<'barAbend', string>;
+	shifts: Record<'barEvening', string>;
 };
 
 /**
@@ -104,57 +98,65 @@ async function seedLegacyData(db: PGlite): Promise<LegacyData> {
 			)
 		).rows[0].id;
 
-	const vergangen = await insertFestival(db, 'Zeltfest 2025', isoDate(-30));
-	const vergangenLeer = await insertFestival(db, 'Kirtag 2024', isoDate(-60));
-	const planung = await insertFestival(db, 'Zeltfest 2026', isoDate(30));
-	const geloescht = await insertFestival(db, 'Abgesagtes Fest', isoDate(30));
-	await db.query(`UPDATE festivals SET deleted_at = now() WHERE id = $1`, [geloescht]);
+	const past = await insertFestival(db, 'Zeltfest 2025', isoDate(-30));
+	const pastWithoutTrace = await insertFestival(db, 'Kirtag 2024', isoDate(-60));
+	const planned = await insertFestival(db, 'Zeltfest 2026', isoDate(30));
+	const deleted = await insertFestival(db, 'Abgesagtes Fest', isoDate(30));
+	await db.query(`UPDATE festivals SET deleted_at = now() WHERE id = $1`, [deleted]);
 
-	const bar = await stationId(vergangen, 'Bar', null);
-	await stationId(vergangen, 'Kassa', cilli);
-	const barAbend = await shiftId(vergangen, bar, 'Abendschicht');
+	const bar = await stationId(past, 'Bar', null);
+	await stationId(past, 'Kassa', cilli);
+	const barEvening = await shiftId(past, bar, 'Abendschicht');
 	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [
-		vergangen,
+		past,
 		bar,
 		anna,
 		bert
 	]);
 	await db.query(
 		`INSERT INTO shift_assignments (festival_id, station_shift_id, station_id, member_id) VALUES ($1, $2, $3, $4)`,
-		[vergangen, barAbend, bar, anna]
+		[past, barEvening, bar, anna]
 	);
 	await db.query(
 		`INSERT INTO festival_member_preferences (festival_id, member_id, station_preferences, shift_preferences)
 		 VALUES ($1, $2, ARRAY[$3::text], ARRAY[$4::text])`,
-		[vergangen, dora, bar, barAbend]
+		[past, dora, bar, barEvening]
 	);
 
-	await stationId(vergangenLeer, 'Lager', null);
+	await stationId(pastWithoutTrace, 'Lager', null);
 
-	const grill = await stationId(planung, 'Grill', null);
-	await shiftId(planung, grill, 'Mittagsschicht');
+	const grill = await stationId(planned, 'Grill', null);
+	await shiftId(planned, grill, 'Mittagsschicht');
 	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3)`, [
-		planung,
+		planned,
 		grill,
 		franz
 	]);
 	await db.query(
 		`INSERT INTO festival_member_preferences (festival_id, member_id, station_preferences, shift_preferences)
 		 VALUES ($1, $2, ARRAY['keine-uuid', $3::text], ARRAY[]::text[])`,
-		[planung, emil, grill]
+		[planned, emil, grill]
 	);
 
 	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3)`, [
-		geloescht,
-		await stationId(geloescht, 'Zelt', null),
+		deleted,
+		await stationId(deleted, 'Zelt', null),
 		anna
 	]);
 
 	return {
-		festivals: { vergangen, vergangenLeer, planung, geloescht },
+		festivals: { past, pastWithoutTrace, planned, deleted },
 		stations: { bar, grill },
-		shifts: { barAbend }
+		shifts: { barEvening }
 	};
+}
+
+/** Bestand von vor dem Umbau, danach die echte Migration darüber. */
+async function migratedDatabaseWithLegacyData(): Promise<{ db: PGlite; legacy: LegacyData }> {
+	const db = await createTestDatabase();
+	const legacy = await seedLegacyData(db);
+	await applyMigration(db, MIGRATION);
+	return { db, legacy };
 }
 
 /** Die Vornamen der Helfer eines Fests, über source_member_id zurückgeschlüsselt. */
@@ -166,6 +168,17 @@ async function helperNamesOf(db: PGlite, festivalId: string): Promise<string[]> 
 		[festivalId]
 	);
 	return result.rows.map((row) => row.first_name);
+}
+
+/** Die Helfer-Zeilen eines Fests, die aus einem bestimmten Member entstanden sind. */
+async function helperIdsOf(db: PGlite, festivalId: string, firstName: string): Promise<string[]> {
+	const result = await db.query<{ id: string }>(
+		`SELECT fh.id FROM festival_helpers fh
+		   JOIN members m ON m.id = fh.source_member_id
+		  WHERE fh.festival_id = $1 AND m.first_name = $2`,
+		[festivalId, firstName]
+	);
+	return result.rows.map((row) => row.id);
 }
 
 async function preferencesOf(
@@ -182,11 +195,23 @@ async function preferencesOf(
 	return result.rows[0];
 }
 
+/** Helfer-Zeilen und gesetzte Zeiger — das, was ein zweiter Durchlauf nicht ändern darf. */
+async function countsOf(db: PGlite): Promise<{ helpers: number; pointers: number }> {
+	const result = await db.query<{ helpers: number; pointers: number }>(
+		`SELECT (SELECT count(*)::int FROM festival_helpers) AS helpers,
+		        (SELECT count(*)::int FROM station_members WHERE helper_id IS NOT NULL)
+		      + (SELECT count(*)::int FROM shift_assignments WHERE helper_id IS NOT NULL)
+		      + (SELECT count(*)::int FROM stations WHERE responsible_helper_id IS NOT NULL) AS pointers`
+	);
+	return result.rows[0];
+}
+
 describe('festival_helpers', () => {
 	let db: PGlite;
 
 	beforeAll(async () => {
-		db = await migratedDatabase();
+		db = await createTestDatabase();
+		await applyMigration(db, MIGRATION);
 	});
 
 	it('trägt Name, Kontakt, Notizen und die beiden Wunsch-Arrays', async () => {
@@ -274,21 +299,19 @@ describe('Fan-out der Bestandsdaten', () => {
 	let legacy: LegacyData;
 
 	beforeAll(async () => {
-		db = await createTestDatabase();
-		legacy = await seedLegacyData(db);
-		await applyMigration(db, MIGRATION);
+		({ db, legacy } = await migratedDatabaseWithLegacyData());
 	});
 
 	it('gibt einem vergangenen Fest genau die Members mit echter Spur', async () => {
-		expect(await helperNamesOf(db, legacy.festivals.vergangen)).toEqual(['Anna', 'Bert', 'Cilli', 'Dora']);
+		expect(await helperNamesOf(db, legacy.festivals.past)).toEqual(['Anna', 'Bert', 'Cilli', 'Dora']);
 	});
 
 	it('lässt ein vergangenes Fest ohne Spur leer', async () => {
-		expect(await helperNamesOf(db, legacy.festivals.vergangenLeer)).toEqual([]);
+		expect(await helperNamesOf(db, legacy.festivals.pastWithoutTrace)).toEqual([]);
 	});
 
 	it('gibt einem Fest in Planung den ganzen aktiven Pool, plus Spuren inaktiver Members', async () => {
-		expect(await helperNamesOf(db, legacy.festivals.planung)).toEqual([
+		expect(await helperNamesOf(db, legacy.festivals.planned)).toEqual([
 			'Anna',
 			'Bert',
 			'Cilli',
@@ -299,18 +322,11 @@ describe('Fan-out der Bestandsdaten', () => {
 	});
 
 	it('überspringt gelöschte Feste', async () => {
-		expect(await helperNamesOf(db, legacy.festivals.geloescht)).toEqual([]);
+		expect(await helperNamesOf(db, legacy.festivals.deleted)).toEqual([]);
 	});
 
 	it('macht aus mehreren Spuren derselben Person eine Zeile', async () => {
-		const annaRows = await db.query<{ count: number }>(
-			`SELECT count(*)::int AS count FROM festival_helpers fh
-			   JOIN members m ON m.id = fh.source_member_id
-			  WHERE fh.festival_id = $1 AND m.first_name = 'Anna'`,
-			[legacy.festivals.vergangen]
-		);
-
-		expect(annaRows.rows[0].count).toBe(1);
+		expect(await helperIdsOf(db, legacy.festivals.past, 'Anna')).toHaveLength(1);
 	});
 
 	it('übernimmt Name, Kontakt und Notizen des Members', async () => {
@@ -323,7 +339,7 @@ describe('Fan-out der Bestandsdaten', () => {
 		}>(
 			`SELECT first_name, last_name, email, phone, notes FROM festival_helpers
 			  WHERE festival_id = $1 AND last_name = 'Bichler'`,
-			[legacy.festivals.vergangen]
+			[legacy.festivals.past]
 		);
 
 		expect(helper.rows[0]).toEqual({
@@ -336,28 +352,28 @@ describe('Fan-out der Bestandsdaten', () => {
 	});
 
 	it('übernimmt die Wünsche des Fests als uuid[]', async () => {
-		expect(await preferencesOf(db, legacy.festivals.vergangen, 'Dora')).toEqual({
+		expect(await preferencesOf(db, legacy.festivals.past, 'Dora')).toEqual({
 			station_preferences: [legacy.stations.bar],
-			shift_preferences: [legacy.shifts.barAbend]
+			shift_preferences: [legacy.shifts.barEvening]
 		});
 	});
 
 	it('trägt die Wünsche eines Fests nicht in ein anderes', async () => {
-		expect(await preferencesOf(db, legacy.festivals.planung, 'Dora')).toEqual({
+		expect(await preferencesOf(db, legacy.festivals.planned, 'Dora')).toEqual({
 			station_preferences: [],
 			shift_preferences: []
 		});
 	});
 
 	it('übernimmt die tote Legacy-Spalte members.station_preferences nicht', async () => {
-		expect(await preferencesOf(db, legacy.festivals.vergangen, 'Anna')).toEqual({
+		expect(await preferencesOf(db, legacy.festivals.past, 'Anna')).toEqual({
 			station_preferences: [],
 			shift_preferences: []
 		});
 	});
 
 	it('lässt eine nicht als uuid lesbare Karteileiche im Wunsch fallen', async () => {
-		expect(await preferencesOf(db, legacy.festivals.planung, 'Emil')).toEqual({
+		expect(await preferencesOf(db, legacy.festivals.planned, 'Emil')).toEqual({
 			station_preferences: [legacy.stations.grill],
 			shift_preferences: []
 		});
@@ -369,9 +385,7 @@ describe('Zeiger auf die neue Helfer-Zeile', () => {
 	let legacy: LegacyData;
 
 	beforeAll(async () => {
-		db = await createTestDatabase();
-		legacy = await seedLegacyData(db);
-		await applyMigration(db, MIGRATION);
+		({ db, legacy } = await migratedDatabaseWithLegacyData());
 	});
 
 	it('ergänzt die drei Spalten nullable und additiv', async () => {
@@ -407,9 +421,9 @@ describe('Zeiger auf die neue Helfer-Zeile', () => {
 	});
 
 	it('zeigt auf den Helfer desselben Fests', async () => {
-		const paare = await db.query<{ table_name: string; passt: boolean }>(
+		const pairs = await db.query<{ table_name: string; matches: boolean }>(
 			`SELECT 'station_members' AS table_name,
-			        bool_and(fh.festival_id = sm.festival_id AND fh.source_member_id = sm.member_id) AS passt
+			        bool_and(fh.festival_id = sm.festival_id AND fh.source_member_id = sm.member_id) AS matches
 			   FROM station_members sm JOIN festival_helpers fh ON fh.id = sm.helper_id
 			 UNION ALL
 			 SELECT 'shift_assignments',
@@ -421,16 +435,16 @@ describe('Zeiger auf die neue Helfer-Zeile', () => {
 			   FROM stations s JOIN festival_helpers fh ON fh.id = s.responsible_helper_id`
 		);
 
-		expect(paare.rows).toEqual([
-			{ table_name: 'station_members', passt: true },
-			{ table_name: 'shift_assignments', passt: true },
-			{ table_name: 'stations', passt: true }
+		expect(pairs.rows).toEqual([
+			{ table_name: 'station_members', matches: true },
+			{ table_name: 'shift_assignments', matches: true },
+			{ table_name: 'stations', matches: true }
 		]);
 	});
 
 	it('lässt keine Zeile eines lebenden Fests ohne helper_id zurück', async () => {
-		const luecken = await db.query<{ table_name: string; anzahl: number }>(
-			`SELECT 'station_members' AS table_name, count(*)::int AS anzahl
+		const gaps = await db.query<{ table_name: string; count: number }>(
+			`SELECT 'station_members' AS table_name, count(*)::int AS count
 			   FROM station_members sm JOIN festivals f ON f.id = sm.festival_id
 			  WHERE f.deleted_at IS NULL AND sm.member_id IS NOT NULL AND sm.helper_id IS NULL
 			 UNION ALL
@@ -443,50 +457,44 @@ describe('Zeiger auf die neue Helfer-Zeile', () => {
 			  WHERE f.deleted_at IS NULL AND s.responsible_member_id IS NOT NULL AND s.responsible_helper_id IS NULL`
 		);
 
-		expect(luecken.rows).toEqual([
-			{ table_name: 'station_members', anzahl: 0 },
-			{ table_name: 'shift_assignments', anzahl: 0 },
-			{ table_name: 'stations', anzahl: 0 }
+		expect(gaps.rows).toEqual([
+			{ table_name: 'station_members', count: 0 },
+			{ table_name: 'shift_assignments', count: 0 },
+			{ table_name: 'stations', count: 0 }
 		]);
 	});
 
 	it('lässt die Zeilen gelöschter Feste leer — dort gibt es keinen Helfer', async () => {
-		const geloescht = await db.query<{ helper_id: string | null }>(
+		const rows = await db.query<{ helper_id: string | null }>(
 			`SELECT helper_id FROM station_members WHERE festival_id = $1`,
-			[legacy.festivals.geloescht]
+			[legacy.festivals.deleted]
 		);
 
-		expect(geloescht.rows).toEqual([{ helper_id: null }]);
+		expect(rows.rows).toEqual([{ helper_id: null }]);
 	});
+});
 
-	it('nimmt Zuteilungen und Stationsmitgliedschaft mit, wenn der Helfer geht', async () => {
-		const opfer = await db.query<{ id: string }>(
-			`SELECT fh.id FROM festival_helpers fh
-			   JOIN members m ON m.id = fh.source_member_id
-			  WHERE fh.festival_id = $1 AND m.first_name = 'Anna'`,
-			[legacy.festivals.vergangen]
-		);
+describe('Entfernen eines Helfers', () => {
+	it('nimmt Zuteilungen und Stationsmitgliedschaft mit', async () => {
+		const { db, legacy } = await migratedDatabaseWithLegacyData();
+		const [annaId] = await helperIdsOf(db, legacy.festivals.past, 'Anna');
 
-		await db.query(`DELETE FROM festival_helpers WHERE id = $1`, [opfer.rows[0].id]);
+		await db.query(`DELETE FROM festival_helpers WHERE id = $1`, [annaId]);
 
 		const rest = await db.query<{ station_members: number; shift_assignments: number }>(
 			`SELECT (SELECT count(*)::int FROM station_members WHERE helper_id = $1) AS station_members,
 			        (SELECT count(*)::int FROM shift_assignments WHERE helper_id = $1) AS shift_assignments`,
-			[opfer.rows[0].id]
+			[annaId]
 		);
 
 		expect(rest.rows[0]).toEqual({ station_members: 0, shift_assignments: 0 });
 	});
 
-	it('vergisst nur den Verweis, wenn der verantwortliche Helfer geht', async () => {
-		const opfer = await db.query<{ id: string }>(
-			`SELECT fh.id FROM festival_helpers fh
-			   JOIN members m ON m.id = fh.source_member_id
-			  WHERE fh.festival_id = $1 AND m.first_name = 'Cilli'`,
-			[legacy.festivals.vergangen]
-		);
+	it('vergisst beim Verantwortlichen nur den Verweis', async () => {
+		const { db, legacy } = await migratedDatabaseWithLegacyData();
+		const [cilliId] = await helperIdsOf(db, legacy.festivals.past, 'Cilli');
 
-		await db.query(`DELETE FROM festival_helpers WHERE id = $1`, [opfer.rows[0].id]);
+		await db.query(`DELETE FROM festival_helpers WHERE id = $1`, [cilliId]);
 
 		const station = await db.query<{ responsible_helper_id: string | null; responsible_member_id: string | null }>(
 			`SELECT responsible_helper_id, responsible_member_id FROM stations WHERE name = 'Kassa'`
@@ -499,27 +507,13 @@ describe('Zeiger auf die neue Helfer-Zeile', () => {
 
 describe('Zweiter Durchlauf', () => {
 	it('legt nichts doppelt an und wirft nicht', async () => {
-		const db = await createTestDatabase();
-		await seedLegacyData(db);
-		await applyMigration(db, MIGRATION);
-		const nachDemErsten = await db.query<{ helfer: number; zeiger: number }>(
-			`SELECT (SELECT count(*)::int FROM festival_helpers) AS helfer,
-			        (SELECT count(*)::int FROM station_members WHERE helper_id IS NOT NULL)
-			      + (SELECT count(*)::int FROM shift_assignments WHERE helper_id IS NOT NULL)
-			      + (SELECT count(*)::int FROM stations WHERE responsible_helper_id IS NOT NULL) AS zeiger`
-		);
+		const { db } = await migratedDatabaseWithLegacyData();
+		const afterFirstRun = await countsOf(db);
 
 		await applyMigration(db, MIGRATION);
 
-		const nachDemZweiten = await db.query<{ helfer: number; zeiger: number }>(
-			`SELECT (SELECT count(*)::int FROM festival_helpers) AS helfer,
-			        (SELECT count(*)::int FROM station_members WHERE helper_id IS NOT NULL)
-			      + (SELECT count(*)::int FROM shift_assignments WHERE helper_id IS NOT NULL)
-			      + (SELECT count(*)::int FROM stations WHERE responsible_helper_id IS NOT NULL) AS zeiger`
-		);
-
-		expect(nachDemErsten.rows[0].helfer).toBeGreaterThan(0);
-		expect(nachDemZweiten.rows[0]).toEqual(nachDemErsten.rows[0]);
+		expect(afterFirstRun.helpers).toBeGreaterThan(0);
+		expect(await countsOf(db)).toEqual(afterFirstRun);
 	});
 });
 
@@ -527,10 +521,10 @@ describe('Grenze der Planung', () => {
 	it('zählt ein heute beginnendes Fest noch zur Planung', async () => {
 		const db = await createTestDatabase();
 		await seedLegacyData(db);
-		const heute = await insertFestival(db, 'Heute los', isoDate(0));
+		const startingToday = await insertFestival(db, 'Heute los', isoDate(0));
 
 		await applyMigration(db, MIGRATION);
 
-		expect(await helperNamesOf(db, heute)).toEqual(['Anna', 'Bert', 'Cilli', 'Dora', 'Emil']);
+		expect(await helperNamesOf(db, startingToday)).toEqual(['Anna', 'Bert', 'Cilli', 'Dora', 'Emil']);
 	});
 });

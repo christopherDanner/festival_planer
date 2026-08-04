@@ -53,30 +53,31 @@ CREATE POLICY "shared_delete" ON festival_helpers
 --   2. zusätzlich, wenn es noch in Planung ist, den kompletten aktiven Pool.
 -- Gelöschte Feste (deleted_at) bleiben außen vor: sie sind in der App nicht
 -- mehr erreichbar, und ein Rückweg existiert nicht.
-WITH wunsch_werte AS (
+WITH preference_values AS (
   -- Beide Wunsch-Arrays flach, damit der uuid-Filter nur einmal dasteht.
-  SELECT p.festival_id, p.member_id, 'station' AS art, w.wert, w.pos
+  SELECT p.festival_id, p.member_id, 'station' AS kind, w.value, w.pos
     FROM festival_member_preferences p
-    CROSS JOIN LATERAL unnest(COALESCE(p.station_preferences, '{}')) WITH ORDINALITY AS w(wert, pos)
+    CROSS JOIN LATERAL unnest(COALESCE(p.station_preferences, '{}')) WITH ORDINALITY AS w(value, pos)
   UNION ALL
-  SELECT p.festival_id, p.member_id, 'shift' AS art, w.wert, w.pos
+  SELECT p.festival_id, p.member_id, 'shift' AS kind, w.value, w.pos
     FROM festival_member_preferences p
-    CROSS JOIN LATERAL unnest(COALESCE(p.shift_preferences, '{}')) WITH ORDINALITY AS w(wert, pos)
+    CROSS JOIN LATERAL unnest(COALESCE(p.shift_preferences, '{}')) WITH ORDINALITY AS w(value, pos)
 ),
-wunsch AS (
-  -- text[] -> uuid[]. Was keine uuid ist, fällt weg statt die Migration zu
-  -- sprengen; unbekannte IDs sind laut ADR 0005 ohnehin nur Karteileichen.
+preferences AS (
+  -- text[] -> uuid[]. Was nicht als uuid lesbar ist, fällt weg statt die
+  -- Migration zu sprengen; unbekannte IDs im Wunsch sind laut ADR 0005 ohnehin
+  -- nur Karteileichen.
   SELECT festival_id,
          member_id,
-         COALESCE(array_agg(wert::uuid ORDER BY pos) FILTER (WHERE art = 'station'), '{}'::uuid[])
+         COALESCE(array_agg(value::uuid ORDER BY pos) FILTER (WHERE kind = 'station'), '{}'::uuid[])
            AS station_preferences,
-         COALESCE(array_agg(wert::uuid ORDER BY pos) FILTER (WHERE art = 'shift'), '{}'::uuid[])
+         COALESCE(array_agg(value::uuid ORDER BY pos) FILTER (WHERE kind = 'shift'), '{}'::uuid[])
            AS shift_preferences
-    FROM wunsch_werte
-   WHERE wert ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    FROM preference_values
+   WHERE value ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
    GROUP BY festival_id, member_id
 ),
-spur AS (
+traces AS (
   SELECT festival_id, member_id FROM shift_assignments WHERE member_id IS NOT NULL
   UNION
   SELECT festival_id, member_id FROM station_members
@@ -94,25 +95,25 @@ INSERT INTO festival_helpers (
   festival_id, first_name, last_name, email, phone, notes,
   station_preferences, shift_preferences, source_member_id
 )
-SELECT spur.festival_id,
+SELECT t.festival_id,
        m.first_name,
        m.last_name,
        m.email,
        m.phone,
        m.notes,
-       COALESCE(w.station_preferences, '{}'::uuid[]),
-       COALESCE(w.shift_preferences, '{}'::uuid[]),
+       COALESCE(pref.station_preferences, '{}'::uuid[]),
+       COALESCE(pref.shift_preferences, '{}'::uuid[]),
        m.id
-  FROM spur
-  JOIN festivals f ON f.id = spur.festival_id AND f.deleted_at IS NULL
-  JOIN members m ON m.id = spur.member_id
-  LEFT JOIN wunsch w ON w.festival_id = spur.festival_id AND w.member_id = spur.member_id
+  FROM traces t
+  JOIN festivals f ON f.id = t.festival_id AND f.deleted_at IS NULL
+  JOIN members m ON m.id = t.member_id
+  LEFT JOIN preferences pref ON pref.festival_id = t.festival_id AND pref.member_id = t.member_id
   -- Zweiter Durchlauf legt nichts doppelt an; die Brücke source_member_id sagt,
   -- wer schon da ist.
  WHERE NOT EXISTS (
    SELECT 1 FROM festival_helpers fh
-    WHERE fh.festival_id = spur.festival_id
-      AND fh.source_member_id = spur.member_id
+    WHERE fh.festival_id = t.festival_id
+      AND fh.source_member_id = t.member_id
  );
 
 -- Zeiger umlegen (additiv, nullable)
