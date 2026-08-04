@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Festival } from '@/lib/festivalService';
-import {
-	arrangeFestivalWall,
-	festivalCountLine,
-	festivalTitle,
-	festivalYear
-} from './festivalRanks';
+import { arrangeFestivalWall, festivalCountLine, festivalTitle } from './festivalList';
 
 function fest(over: Partial<Festival> & { id: string; start_date: string }): Festival {
 	return {
@@ -98,12 +93,5 @@ describe('festivalTitle', () => {
 		expect(festivalTitle(fest({ id: 'f1', start_date: '2026-07-24', name: 'Stadlfest' }))).toBe(
 			'Stadlfest'
 		);
-	});
-});
-
-describe('festivalYear', () => {
-	it('liest das Jahr aus dem Startdatum, tagesgenau und lokal', () => {
-		expect(festivalYear(fest({ id: 'f1', start_date: '2026-01-01' }))).toBe(2026);
-		expect(festivalYear(fest({ id: 'f1', start_date: '2025-12-31' }))).toBe(2025);
 	});
 });

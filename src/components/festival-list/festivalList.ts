@@ -1,3 +1,4 @@
+import { festDayStart } from '@/lib/festDates';
 import type { Festival } from '@/lib/festivalService';
 
 /** Die drei Plakat-Ränge der Wand (Fächer-Variante A, Issue #64/#90). */
@@ -12,13 +13,6 @@ export interface FestivalWallRanks {
 	upcomingCount: number;
 }
 
-/** Datums-Strings sind tagesgenau; als lokale Mitternacht lesen, nicht als UTC. */
-function startOfDay(date: string | Date): number {
-	const d = typeof date === 'string' ? new Date(`${date}T00:00:00`) : new Date(date);
-	d.setHours(0, 0, 0, 0);
-	return d.getTime();
-}
-
 /**
  * Räumt die Feste auf die drei Ränge der Plakatwand ein. Ein heute startendes
  * Fest zählt als bevorstehend; kein Cap — es sind wenige Feste.
@@ -27,13 +21,10 @@ export function arrangeFestivalWall(
 	festivals: Festival[],
 	today: Date = new Date()
 ): FestivalWallRanks {
-	const now = startOfDay(today);
-	const upcoming = festivals
-		.filter((f) => startOfDay(f.start_date) >= now)
-		.sort((a, b) => startOfDay(a.start_date) - startOfDay(b.start_date));
-	const past = festivals
-		.filter((f) => startOfDay(f.start_date) < now)
-		.sort((a, b) => startOfDay(b.start_date) - startOfDay(a.start_date));
+	const day = (festival: Festival) => festDayStart(festival.start_date).getTime();
+	const now = festDayStart(today).getTime();
+	const upcoming = festivals.filter((f) => day(f) >= now).sort((a, b) => day(a) - day(b));
+	const past = festivals.filter((f) => day(f) < now).sort((a, b) => day(b) - day(a));
 
 	return {
 		next: upcoming[0] ?? null,
@@ -46,11 +37,6 @@ export function arrangeFestivalWall(
 /** Plakat-Titel; `name` ist am Fest optional. */
 export function festivalTitle(festival: Festival): string {
 	return festival.name || 'Fest';
-}
-
-/** Jahr-Zeile des Plakats. */
-export function festivalYear(festival: Festival): number {
-	return new Date(`${festival.start_date}T00:00:00`).getFullYear();
 }
 
 /** Zählzeile des Masts („7 Feste · 3 bevorstehend"); ohne Feste entfällt sie. */

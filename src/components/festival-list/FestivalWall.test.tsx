@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { Festival } from '@/lib/festivalService';
 import FestivalWall from './FestivalWall';
+import { arrangeFestivalWall } from './festivalList';
 
 function fest(over: Partial<Festival> & { id: string; start_date: string }): Festival {
 	return {
@@ -35,7 +36,7 @@ const PAST = fest({
 const render = (festivals: Festival[]) =>
 	renderToStaticMarkup(
 		<FestivalWall
-			festivals={festivals}
+			ranks={arrangeFestivalWall(festivals, today)}
 			today={today}
 			onOpen={noop}
 			onUseAsTemplate={noop}
@@ -60,16 +61,15 @@ describe('FestivalWall', () => {
 		expect(html).not.toContain('Vergangene Feste');
 	});
 
-	it('trägt das nächste Fest als großes grünes Plakat über zwei Spalten', () => {
+	it('trägt das nächste Fest mit Datumszeile, Countdown und Öffnen-Knopf', () => {
 		const html = render([NEXT, SOON, PAST]);
 		expect(html).toContain('NÄCHSTES FEST');
 		expect(html).toContain('Musikfest Steinbach 2026');
 		expect(html).toContain('FR 24. – SO 26. JULI');
 		expect(html).toContain('NOCH 4 TAGE');
 		expect(html).toContain('FEST ÖFFNEN');
-		// Halftone-Plakatfläche + Versatz-Schatten + Spann über zwei Spalten
-		expect(html).toContain('poster');
-		expect(html).toContain('min-[900px]:col-span-2');
+		// Das große Plakat trägt kein „ALS VORLAGE" — nur die kleinen (Spec #90).
+		expect(html.slice(0, html.indexOf('Weitere bevorstehende'))).not.toContain('ALS VORLAGE');
 	});
 
 	it('stempelt weitere bevorstehende Feste mit ihrem groben Countdown', () => {
@@ -82,14 +82,24 @@ describe('FestivalWall', () => {
 	it('tönt vergangene Feste und stempelt sie mit ERLEDIGT', () => {
 		const html = render([PAST]);
 		expect(html).toContain('ERLEDIGT');
-		expect(html).toContain('oklch(0.93_0.015_100)');
+		expect(html).toContain('bg-papier-getoent');
 		expect(html).toContain('ALS VORLAGE');
 	});
 
+	// Die zwei folgenden Auflagen sind reine CSS-Verträge (Stempel-Rotation des
+	// Toolkits, Vision-Breakpoint 900px) — im statischen Markup sind sie nur an
+	// den Klassen ablesbar, deshalb hier ausnahmsweise darauf geprüft.
 	it('dreht Countdown-Stempel und ERLEDIGT-Stempel gegenläufig', () => {
 		const html = render([NEXT, SOON, PAST]);
 		expect(html).toContain('stamp--tilt-left');
 		expect(html).toContain('stamp--tilt-right');
+	});
+
+	it('fällt unter 900px auf eine Spalte und gibt dem nächsten Fest sonst zwei', () => {
+		const html = render([NEXT, SOON, PAST]);
+		expect(html).toContain('grid-cols-1');
+		expect(html).toContain('min-[900px]:grid-cols-');
+		expect(html).toContain('min-[900px]:col-span-2');
 	});
 
 	it('gibt jedem Plakat ein dauerhaft sichtbares ⋮-Menü', () => {
@@ -97,14 +107,6 @@ describe('FestivalWall', () => {
 		expect(html).toContain('aria-label="Menü für Musikfest Steinbach 2026"');
 		expect(html).toContain('aria-label="Menü für Herbstkonzert"');
 		expect(html).toContain('aria-label="Menü für Stadlfest"');
-		// kein hover-abhängiger Papierkorb mehr
-		expect(html).not.toContain('group-hover:opacity');
-	});
-
-	it('fällt unter 900px auf eine Spalte', () => {
-		const html = render([NEXT, SOON, PAST]);
-		expect(html).toContain('grid-cols-1');
-		expect(html).toContain('min-[900px]:grid-cols-');
 	});
 
 	it('zeigt ohne Feste einen gestrichelten Plakat-Umriss statt der Ränge', () => {

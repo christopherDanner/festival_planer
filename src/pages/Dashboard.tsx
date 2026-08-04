@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/components/AuthProvider';
 import FestivalWizard from '@/components/FestivalWizard';
-import FestListMast from '@/components/festival-list/FestListMast';
+import FestivalListMast from '@/components/festival-list/FestivalListMast';
 import FestivalWall from '@/components/festival-list/FestivalWall';
-import { arrangeFestivalWall, festivalTitle } from '@/components/festival-list/festivalRanks';
+import { arrangeFestivalWall, festivalTitle } from '@/components/festival-list/festivalList';
 import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,8 @@ import {
 	deleteFestival,
 	getUserFestivals,
 	updateFestival,
-	type Festival
+	type Festival,
+	type FestivalEdits
 } from '@/lib/festivalService';
 
 /**
@@ -32,9 +33,10 @@ export default function Dashboard() {
 	const navigate = useNavigate();
 	const isMobile = useIsMobile();
 	const { toast } = useToast();
+	const today = useMemo(() => new Date(), []);
 
 	const reportError = useCallback(
-		(title: string, error: unknown) => {
+		(error: unknown, title = 'Fehler') => {
 			toast({
 				title,
 				description:
@@ -49,7 +51,7 @@ export default function Dashboard() {
 		try {
 			setFestivals(await getUserFestivals());
 		} catch (error: unknown) {
-			reportError('Fehler', error);
+			reportError(error);
 		} finally {
 			setLoading(false);
 		}
@@ -74,24 +76,14 @@ export default function Dashboard() {
 		navigate('/auth');
 	};
 
-	const handleSave = async (updates: {
-		name: string;
-		start_date: string;
-		end_date: string | null;
-		location: string | null;
-	}) => {
+	const handleSave = async (edits: FestivalEdits) => {
 		if (!editing) return;
 		try {
-			await updateFestival(editing.id, {
-				name: updates.name,
-				start_date: updates.start_date,
-				end_date: updates.end_date ?? undefined,
-				location: updates.location ?? undefined
-			});
+			await updateFestival(editing.id, edits);
 			await loadFestivals();
 			toast({ title: 'Fest aktualisiert' });
 		} catch (error: unknown) {
-			reportError('Fehler beim Speichern', error);
+			reportError(error, 'Fehler beim Speichern');
 		}
 	};
 
@@ -104,7 +96,7 @@ export default function Dashboard() {
 			});
 			await loadFestivals();
 		} catch (error: unknown) {
-			reportError('Fehler', error);
+			reportError(error);
 		}
 	};
 
@@ -125,7 +117,9 @@ export default function Dashboard() {
 		return null;
 	}
 
-	const { upcomingCount } = arrangeFestivalWall(festivals);
+	// Ein Bezugstag für Ränge, Zählzeile und Countdown-Stempel — sonst rechnen
+	// Mast und Wand über Mitternacht hinweg mit verschiedenen Tagen.
+	const ranks = arrangeFestivalWall(festivals, today);
 
 	return (
 		<div className="min-h-screen">
@@ -136,9 +130,9 @@ export default function Dashboard() {
 						? 'mx-auto max-w-[1180px] px-3 pb-16 pt-3'
 						: 'mx-auto max-w-[1180px] px-[22px] pb-20 pt-[18px]'
 				}>
-				<FestListMast
+				<FestivalListMast
 					festivalCount={festivals.length}
-					upcomingCount={upcomingCount}
+					upcomingCount={ranks.upcomingCount}
 					compact={isMobile}
 					onNewFestival={() => openWizard()}
 					onSponsors={() => navigate('/sponsors')}
@@ -154,7 +148,8 @@ export default function Dashboard() {
 						</div>
 					) : (
 						<FestivalWall
-							festivals={festivals}
+							ranks={ranks}
+							today={today}
 							onOpen={(festival) => navigate(`/festival-results?id=${festival.id}`)}
 							onUseAsTemplate={(festival) => openWizard(festival.id)}
 							onEdit={setEditing}
@@ -173,7 +168,9 @@ export default function Dashboard() {
 					}}
 					festival={{
 						id: editing.id,
-						name: festivalTitle(editing),
+						// Kein Ersatzname: ein namenloses Fest soll das Feld leer zeigen,
+						// nicht das Wort „Fest" zum echten Namen machen.
+						name: editing.name ?? '',
 						start_date: editing.start_date,
 						end_date: editing.end_date,
 						location: editing.location

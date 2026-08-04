@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import type { Festival } from '@/lib/festivalService';
 import FestivalPoster from './FestivalPoster';
 import NextFestivalPoster from './NextFestivalPoster';
-import { arrangeFestivalWall } from './festivalRanks';
+import type { FestivalWallRanks } from './festivalList';
 
 interface FestivalWallProps {
-	festivals: Festival[];
-	/** Bezugstag für die Ränge und die Countdown-Stempel. */
-	today?: Date;
+	/** Eingeräumte Ränge — der Mast braucht dieselbe Rechnung für die Zählzeile. */
+	ranks: FestivalWallRanks;
+	/** Bezugstag der Countdown-Stempel; derselbe, mit dem die Ränge gerechnet wurden. */
+	today: Date;
 	onOpen: (festival: Festival) => void;
 	onUseAsTemplate: (festival: Festival) => void;
 	onEdit: (festival: Festival) => void;
@@ -29,19 +30,19 @@ const TRIO_GRID =
  * Papier-Plakate, vergangene getönt. Kein Cap — es sind wenige Feste.
  */
 export default function FestivalWall({
-	festivals,
-	today = new Date(),
+	ranks,
+	today,
 	onOpen,
 	onUseAsTemplate,
 	onEdit,
 	onDelete,
 	onNewFestival
 }: FestivalWallProps) {
-	if (festivals.length === 0) {
+	const { next, soon, past } = ranks;
+
+	if (!next && soon.length === 0 && past.length === 0) {
 		return <EmptyWall onNewFestival={onNewFestival} />;
 	}
-
-	const { next, soon, past } = arrangeFestivalWall(festivals, today);
 
 	return (
 		<div className="space-y-6">
@@ -107,7 +108,9 @@ export default function FestivalWall({
 function EmptyWall({ onNewFestival }: { onNewFestival: () => void }) {
 	return (
 		<div className={LEAD_GRID}>
-			<div className="border-2.5 border-dashed border-tinte-soft px-5 pb-6 pt-7 text-center min-[900px]:col-span-2">
+			{/* Plakat-Format: derselbe Rahmen und dieselbe Höhe wie das große Plakat,
+			nur gestrichelt — es ist der Platz, den das erste Fest einnehmen wird. */}
+			<div className="flex min-h-[220px] flex-col items-center justify-center border-2.5 border-dashed border-tinte-soft px-5 py-7 text-center min-[900px]:col-span-2">
 				<Stamp tone="red" size="lg" tilt="right">
 					NOCH KEIN FEST
 				</Stamp>

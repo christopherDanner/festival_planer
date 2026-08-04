@@ -16,7 +16,7 @@ import { ValueTag } from '@/components/toolkit/ValueTag';
 function Abschnitt({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<section className="mb-10">
-			<SectionHeading className="mb-3 text-sm tracking-[.08em] text-tinte">{title}</SectionHeading>
+			<SectionHeading className="mb-3">{title}</SectionHeading>
 			{children}
 		</section>
 	);

@@ -74,7 +74,19 @@ export async function getFestival(festivalId: string): Promise<Festival | null> 
 	return data;
 }
 
-export async function updateFestival(id: string, updates: Partial<Pick<Festival, 'name' | 'start_date' | 'end_date' | 'location'>>): Promise<Festival> {
+/**
+ * Die Felder des Bearbeiten-Dialogs. `null` heißt „Feld leeren" — darum nullable
+ * und nicht optional: `undefined` fiele aus dem Update heraus und das Leeren
+ * würde stillschweigend nichts tun.
+ */
+export interface FestivalEdits {
+	name: string;
+	start_date: string;
+	end_date: string | null;
+	location: string | null;
+}
+
+export async function updateFestival(id: string, updates: Partial<FestivalEdits>): Promise<Festival> {
 	const { data, error } = await supabase
 		.from('festivals')
 		.update({ ...updates, updated_at: new Date().toISOString() })

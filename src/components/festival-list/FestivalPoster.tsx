@@ -1,10 +1,10 @@
 import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
-import { festCountdownCoarse, formatFestDateRange } from '@/lib/festDates';
+import { festCountdownCoarse, festYear, formatFestDateRange } from '@/lib/festDates';
 import type { Festival } from '@/lib/festivalService';
 import { cn } from '@/lib/utils';
 import PosterMenu from './PosterMenu';
-import { festivalTitle, festivalYear } from './festivalRanks';
+import { festivalTitle } from './festivalList';
 
 interface FestivalPosterProps {
 	festival: Festival;
@@ -33,16 +33,15 @@ export default function FestivalPoster({
 	onDelete
 }: FestivalPosterProps) {
 	const title = festivalTitle(festival);
-	const year = festivalYear(festival);
+	const year = festYear(festival.start_date);
 	const dateLine = `${formatFestDateRange(festival.start_date, festival.end_date).toUpperCase()} ${year}`;
 
 	return (
 		<div
 			className={cn(
-				'relative border-2.5 px-3.5 pb-3.5 pt-[18px] text-center',
-				variant === 'past'
-					? 'border-tinte-soft bg-[oklch(0.93_0.015_100)]'
-					: 'border-tinte bg-white'
+				// pt-11 hält die Zeile frei, in der links das ⋮ und rechts der Stempel sitzen
+				'relative border-2.5 px-3.5 pb-3.5 pt-11 text-center',
+				variant === 'past' ? 'border-tinte-soft bg-papier-getoent' : 'border-tinte bg-white'
 			)}>
 			<PosterMenu
 				festivalName={title}

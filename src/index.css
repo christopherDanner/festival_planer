@@ -14,6 +14,8 @@ oklch(var(--token) / <alpha-value>). Keine hsl()-Tokens mehr.
 	:root {
 		/* Werkzeug-Plakat-Farbrollen */
 		--papier: 0.97 0.008 95;
+		/* getöntes Papier: Grund der vergangenen Plakate (Issue #90) */
+		--papier-getoent: 0.93 0.015 100;
 		--tinte: 0.24 0.02 145;
 		--tinte-soft: 0.44 0.02 145;
 		--gruen: 0.4 0.1 160;

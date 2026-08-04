@@ -8,9 +8,10 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { festivalCountLine } from './festivalRanks';
+import { cn } from '@/lib/utils';
+import { festivalCountLine } from './festivalList';
 
-interface FestListMastProps {
+interface FestivalListMastProps {
 	festivalCount: number;
 	upcomingCount: number;
 	/** <900px: Kompakt-Mast, die ruhigen Aktionen wandern ins ⋮-Menü. */
@@ -26,18 +27,22 @@ interface FestListMastProps {
  * Wortmarken-Klick — wir sind schon auf der Festliste; keine Verein-Zeile
  * (`Festival` kennt kein solches Feld).
  */
-export default function FestListMast({
+export default function FestivalListMast({
 	festivalCount,
 	upcomingCount,
 	compact,
 	onNewFestival,
 	onSponsors,
 	onSignOut
-}: FestListMastProps) {
+}: FestivalListMastProps) {
 	const countLine = festivalCountLine(festivalCount, upcomingCount);
 
+	// Trefferflächen am Handy ≥ 40px (DESIGN-VISION §6, WCAG 2.5.8)
 	const newFestival = (
-		<Button size="sm" className="h-8 px-3.5 text-[12.5px]" onClick={onNewFestival}>
+		<Button
+			size="sm"
+			className={cn('px-3.5 text-[12.5px]', compact ? 'h-10' : 'h-8')}
+			onClick={onNewFestival}>
 			+ NEUES FEST
 		</Button>
 	);
@@ -67,7 +72,7 @@ export default function FestListMast({
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 text-white hover:bg-white/15 hover:text-white"
+									className="h-10 w-10 text-white hover:bg-white/15 hover:text-white"
 									aria-label="Menü">
 									<MoreVertical className="h-4 w-4" />
 								</Button>

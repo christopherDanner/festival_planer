@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import FestListMast from './FestListMast';
+import FestivalListMast from './FestivalListMast';
 
 const noop = () => {};
 
 const render = (props: { festivalCount: number; upcomingCount: number; compact?: boolean }) =>
 	renderToStaticMarkup(
-		<FestListMast
+		<FestivalListMast
 			compact={false}
 			onNewFestival={noop}
 			onSponsors={noop}
@@ -16,7 +16,7 @@ const render = (props: { festivalCount: number; upcomingCount: number; compact?:
 		/>
 	);
 
-describe('FestListMast', () => {
+describe('FestivalListMast', () => {
 	it('trägt Titel, Zählzeile und den gelben Neu-Knopf', () => {
 		const html = render({ festivalCount: 7, upcomingCount: 3 });
 		expect(html).toContain('Meine Feste');

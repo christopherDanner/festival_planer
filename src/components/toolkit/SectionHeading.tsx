@@ -8,14 +8,15 @@ interface SectionHeadingProps {
 }
 
 /**
- * Zwischenzeile: Versalien-Überschrift mit Punktraster-Linie als Sektionstrenner
- * (DESIGN-VISION.md §4, Master-Prototyp `h2::after`).
+ * Zwischenzeile: Versalien-Überschrift mit Punktraster-Linie als Sektionstrenner.
+ * Maße aus DESIGN-VISION.md §4 („Public Sans 700, 14px, Versalien,
+ * letter-spacing .08em"), Linie wie `h2::after` im Master-Prototyp.
  */
 export function SectionHeading({ children, className }: SectionHeadingProps) {
 	return (
 		<h2
 			className={cn(
-				'flex items-center gap-3 text-[13px] font-bold uppercase tracking-[.09em] text-tinte-soft',
+				'flex items-center gap-3 text-sm font-bold uppercase tracking-[.08em]',
 				className
 			)}>
 			{children}

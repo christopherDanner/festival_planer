@@ -1,11 +1,12 @@
 import { ArrowRight } from 'lucide-react';
 
+import { Poster } from '@/components/toolkit/Poster';
 import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
 import { festCountdown, formatFestDateRange } from '@/lib/festDates';
 import type { Festival } from '@/lib/festivalService';
 import PosterMenu from './PosterMenu';
-import { festivalTitle } from './festivalRanks';
+import { festivalTitle } from './festivalList';
 
 interface NextFestivalPosterProps {
 	festival: Festival;
@@ -30,7 +31,7 @@ export default function NextFestivalPoster({
 	const title = festivalTitle(festival);
 
 	return (
-		<div className="poster relative border-2.5 border-tinte px-5 pb-[18px] pt-[26px] text-center text-white shadow-versatz min-[900px]:col-span-2">
+		<Poster className="relative px-5 pb-[18px] pt-[26px] text-center shadow-versatz min-[900px]:col-span-2">
 			<PosterMenu
 				festivalName={title}
 				tone="white"
@@ -55,6 +56,6 @@ export default function NextFestivalPoster({
 				className="mt-3.5 h-10 w-full border-0 bg-white text-[12.5px] text-tinte hover:bg-white/90">
 				FEST ÖFFNEN <ArrowRight className="h-4 w-4" />
 			</Button>
-		</div>
+		</Poster>
 	);
 }
