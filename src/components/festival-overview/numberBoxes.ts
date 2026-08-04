@@ -9,7 +9,12 @@ import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
 import { festivalSponsoringTotal } from '@/lib/sponsoringTotals';
-import { consumedValue, orderedValue, toCents, withoutPrice } from '@/lib/materialCosts';
+import {
+	consumedDelta,
+	consumedValue,
+	orderedValue,
+	withoutPrice
+} from '@/lib/materialCosts';
 
 // --- Schichten besetzt -------------------------------------------------------
 
@@ -110,7 +115,7 @@ export function deriveMaterialConsumed(materials: FestivalMaterial[]): MaterialC
 	return {
 		consumed,
 		ordered,
-		delta: toCents(consumed - ordered),
+		delta: consumedDelta(materials),
 		recorded,
 		positions,
 		isEmpty: positions === 0

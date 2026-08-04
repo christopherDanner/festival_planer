@@ -138,12 +138,6 @@ function formatPrice(price: number | null): string {
 	return `${price.toFixed(2)} €`;
 }
 
-/** Netto/Brutto einer Position — beide aus der Geldrechnung (ADR 0006), damit
-die Zellen dieselben Zahlen zeigen, die in die Summen einfließen. */
-function calculatePrices(material: FestivalMaterialWithStation): { net: number | null; gross: number | null } {
-	return { net: netPrice(material), gross: grossPrice(material) };
-}
-
 function formatTotal(m: FestivalMaterialWithStation): string {
 	const total = rowTotal(m);
 	if (total == null) return '–';
@@ -257,7 +251,8 @@ const MaterialMobileCard: React.FC<{
 					</div>
 				</div>
 				{(() => {
-					const prices = calculatePrices(material);
+					const net = netPrice(material);
+					const gross = grossPrice(material);
 					const netIsSource = material.price_is_net || material.unit_price == null;
 					const grossIsSource = !material.price_is_net || material.unit_price == null;
 					return (
@@ -268,7 +263,7 @@ const MaterialMobileCard: React.FC<{
 								</span>
 								<div className="text-sm font-medium mt-0.5">
 									<InlineEditCell
-										value={prices.net != null ? prices.net.toFixed(2) : ''}
+										value={net != null ? net.toFixed(2) : ''}
 										onSave={(v) =>
 											onUpdateFields({
 												unit_price: v ? Number(v) : null,
@@ -288,7 +283,7 @@ const MaterialMobileCard: React.FC<{
 								</span>
 								<div className="text-sm font-medium mt-0.5">
 									<InlineEditCell
-										value={prices.gross != null ? prices.gross.toFixed(2) : ''}
+										value={gross != null ? gross.toFixed(2) : ''}
 										onSave={(v) =>
 											onUpdateFields({
 												unit_price: v ? Number(v) : null,
@@ -454,11 +449,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								</TableCell>
 								<TableCell className="text-right text-xs">
 									{(() => {
-										const prices = calculatePrices(m);
+										const net = netPrice(m);
 										const isSource = m.price_is_net || m.unit_price == null;
 										return (
 											<InlineEditCell
-												value={prices.net != null ? prices.net.toFixed(2) : ''}
+												value={net != null ? net.toFixed(2) : ''}
 												onSave={(v) =>
 													onUpdateFields(m.id, {
 														unit_price: v ? Number(v) : null,
@@ -475,11 +470,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								</TableCell>
 								<TableCell className="text-right text-xs">
 									{(() => {
-										const prices = calculatePrices(m);
+										const gross = grossPrice(m);
 										const isSource = !m.price_is_net || m.unit_price == null;
 										return (
 											<InlineEditCell
-												value={prices.gross != null ? prices.gross.toFixed(2) : ''}
+												value={gross != null ? gross.toFixed(2) : ''}
 												onSave={(v) =>
 													onUpdateFields(m.id, {
 														unit_price: v ? Number(v) : null,

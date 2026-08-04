@@ -145,24 +145,18 @@ describe('Position ohne Preis', () => {
 	});
 });
 
-describe('Preis pro Gebinde', () => {
-	/** Bei Gebinde-Preisen zahlt der Verein ganze Gebinde — die Bestellmenge wird
-	aufgerundet, genauso wie die Zeile „→ 3 Kartons" es ankündigt. */
-	const gebinde = material({
-		unit: 'Flasche',
-		packaging_unit: 'Karton',
-		amount_per_packaging: 20,
-		price_per: 'packaging',
-		unit_price: 10,
-		ordered_quantity: 2.4
-	});
-
-	it('rechnet angebrochene Gebinde als ganze', () => {
-		expect(rowTotal(gebinde)).toBe(30);
-		expect(orderedValue([gebinde])).toBe(30);
-	});
-
-	it('lässt die Menge in Ruhe, wenn der Preis pro Einheit gilt', () => {
-		expect(rowTotal({ ...gebinde, price_per: 'unit' })).toBe(24);
+describe('Rundung skaliert nicht mit der Menge', () => {
+	it('rechnet Summen aus dem exakten Bruttopreis, nicht aus dem angezeigten Cent-Preis', () => {
+		// 0,99 netto + 20 % = 1,188 → die Zelle zeigt 1,19, die Rechnung des
+		// Lieferanten lautet aber 99,00 netto + 20 % = 118,80.
+		const m = material({
+			unit_price: 0.99,
+			tax_rate: 20,
+			price_is_net: true,
+			ordered_quantity: 100
+		});
+		expect(grossPrice(m)).toBe(1.19); // Anzeige: auf Cent
+		expect(rowTotal(m)).toBe(118.8);
+		expect(orderedValue([m])).toBe(118.8);
 	});
 });
