@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #69, Bereich Sponsoring.
+     FRAGE: Wie sieht der Sponsoring-Bereich am Handy aus?
+     GEMESSEN im Spalten-Entscheid: bei 375 px braucht die Matrix 876 px (549 px Überhang),
+     selbst die schlanke Marken-Variante noch 660 px. Am Handy trägt keine Tabelle.
+     Abgenommen ist der Desktop: V2 klebende Ränder + D Zettel-Popover, Spaltenkopf bedienbar,
+     Vorjahr als graue Unterzeile bei Gesamt, Freibetrag als Tinte-Marke, ⋮ = Notiz/Firmendaten/Entfernen.
+     Drei Umsetzungen in 375-px-Rahmen, gleiche 14 Firmen, gleiche 6 Kategorien, alle bedienbar.
+     Vorbild-Entscheide: Material (#66) nahm KARTEN statt querscrollender Tabelle,
+     Schichtplan (#68) nahm die SCHUBLADE — beide bewusste Abweichungen von §6. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Sponsoring — Bereich am Handy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, input { font: inherit; } button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95); --ink: oklch(0.24 0.02 145); --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160); --yellow: oklch(0.86 0.15 92); --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: oklch(0.93 0.008 95); padding: 18px 22px 60px; }
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 23px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 14px 0 20px; font-size: 13px; line-height: 1.6; max-width: 1180px; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; width: 100%; }
+  .measure th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px 4px 0; border-bottom: 1.5px solid var(--ink); }
+  .measure th.n, .measure td.n { text-align: right; padding-right: 14px; }
+  .measure td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .measure .gut { color: var(--green); font-weight: 800; } .measure .schlecht { color: var(--red); font-weight: 800; }
+
+  /* ---- Handy-Rahmen ---- */
+  .reihe { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+  .phonewrap { width: 375px; flex: 0 0 auto; }
+  .phonewrap > h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .02em; margin-bottom: 3px; }
+  .phonewrap > .sub { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 9px; min-height: 56px; }
+  .phone { width: 375px; height: 700px; overflow-y: auto; overflow-x: hidden; border: 3px solid var(--ink); background: var(--paper); position: relative; }
+  .phone::-webkit-scrollbar { width: 6px; } .phone::-webkit-scrollbar-thumb { background: var(--ink-soft); }
+  .messzeile { font-size: 11.5px; margin-top: 7px; line-height: 1.5; border-left: 5px solid var(--ink); padding-left: 8px; }
+  .messzeile b { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13px; }
+
+  /* ---- Handy-Mast + Leiste ---- */
+  .mast { border-bottom: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; padding: 9px 12px; position: sticky; top: 0; z-index: 20; }
+  .mast .wm { font-family: "Oswald", sans-serif; font-size: 11px; letter-spacing: .09em; color: var(--yellow); }
+  .mast h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .015em; }
+  .kopf { border-bottom: 2.5px solid var(--ink); background: #fff; padding: 9px 12px; position: sticky; top: 47px; z-index: 19; }
+  .kopf .zeile1 { display: flex; align-items: center; gap: 9px; }
+  .kopf b { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+  .kopf .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; color: var(--green); }
+  .ruler { position: relative; height: 15px; border: 1.5px solid var(--ink); flex: 1; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px); background-size: 100% 40%;
+    background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -2px; bottom: -2px; width: 2.5px; background: var(--ink); }
+  .kopf .sub { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+  .werkz { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.955 0.01 100); flex-wrap: wrap; }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 6px 10px; font-weight: 700; font-size: 12px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); }
+  .btn.sm { padding: 3px 8px; font-size: 11.5px; border-width: 1.5px; }
+  .btn.del { border-color: var(--red); color: var(--red); }
+
+  /* ---- Marken ---- */
+  .kat { display: inline-block; padding: 3px 7px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; border: 1.5px solid var(--green); background: oklch(0.94 0.03 160); color: var(--green); }
+  .kat.ovr { border-color: var(--red); color: var(--red); background: oklch(0.97 0.02 30); }
+  .kat.off { border: 1.5px dashed oklch(0.78 0.02 120); background: #fff; color: oklch(0.7 0.02 120); font-weight: 600; }
+  .fb { display: inline-block; padding: 3px 7px; font-weight: 700; font-size: 12px; border: 1.5px solid var(--ink); background: oklch(0.955 0.01 100); color: var(--ink); }
+  .fb.off { border-style: dashed; border-color: oklch(0.78 0.02 120); color: oklch(0.7 0.02 120); background: #fff; }
+  .sach { display: inline-flex; align-items: baseline; gap: 5px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 11px; font-weight: 700; padding: 2px 7px; max-width: 100%; }
+  .sach .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sach .w { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11.5px; color: var(--ink); flex: 0 0 auto; }
+  .kebab { border: 0; background: none; font-size: 17px; color: var(--ink-soft); padding: 0 4px; line-height: 1; }
+
+  /* ---- M1: querscrollende Matrix ---- */
+  .tw { overflow-x: auto; }
+  .stable { border-collapse: collapse; background: #fff; font-size: 12.5px; }
+  .stable th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 7px 8px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .stable td { padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; height: 41px; }
+  .stable th .kw { display: block; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11px; color: var(--green); text-transform: none; }
+  .stable th.firma, .stable td.firma { position: sticky; left: 0; z-index: 3; background: #fff; box-shadow: 2px 0 0 var(--ink); max-width: 118px; }
+  .stable th.firma { background: oklch(0.93 0.02 105); }
+  .stable td.firma .fn { display: block; font-weight: 700; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .stable td.c { text-align: center; } .stable td.num { text-align: right; }
+  .stable tfoot td { border-top: 2px solid var(--ink); font-weight: 800; background: oklch(0.955 0.01 100); }
+  .vj { display: block; font-size: 10px; font-weight: 600; color: var(--ink-soft); margin-top: 1px; }
+
+  /* ---- M2: Karte je Firma ---- */
+  .karte { border-bottom: 2px solid var(--ink); background: #fff; padding: 10px 12px; }
+  .karte .k1 { display: flex; align-items: baseline; gap: 8px; }
+  .karte .fn { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; }
+  .karte .sum { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .karte .vjz { font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
+  .karte .marken { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .karte .leer { font-size: 11.5px; color: var(--ink-soft); }
+
+  /* ---- M3: Kompaktliste + Detailblatt ---- */
+  .zeileL { display: flex; align-items: center; gap: 9px; border-bottom: 1.5px solid var(--line); background: #fff; padding: 11px 12px; width: 100%; text-align: left; border-left: 0; border-right: 0; border-top: 0; }
+  .zeileL .fn { font-weight: 700; font-size: 13.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .zeileL .sum { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; }
+  .zeileL .vjz { font-size: 10.5px; color: var(--ink-soft); }
+  .zeileL .pfeil { color: var(--ink-soft); font-size: 15px; }
+  .zeileL .anz { font-size: 10.5px; color: var(--ink-soft); }
+  .blatt { position: absolute; inset: 0; background: var(--paper); z-index: 30; display: none; flex-direction: column; }
+  .blatt.on { display: flex; }
+  .blatt .bh { background: var(--green); background-image: var(--halftone); color: #fff; padding: 10px 12px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: center; gap: 10px; }
+  .blatt .bh .zur { background: none; border: 0; color: var(--yellow); font-weight: 800; font-size: 13px; }
+  .blatt .bh h2 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; }
+  .blatt .bb { flex: 1; overflow-y: auto; }
+  .brow { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-bottom: 1.5px solid var(--line); background: #fff; }
+  .brow .bn { flex: 1; font-size: 13px; } .brow .bstd { font-size: 11px; color: var(--ink-soft); }
+
+  /* ---- Zettel (D) am Handy ---- */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 3px solid var(--ink); z-index: 40; padding: 12px; display: none; box-shadow: 0 -6px 0 oklch(0.24 0.02 145 / .12); }
+  .sheet.on { display: block; }
+  .sheet .ph { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 6px; }
+  .sheet input { width: 100%; border: 2px solid var(--ink); padding: 9px; font-size: 15px; font-weight: 700; text-align: center; background: #fff; }
+  .sheet input.txt { text-align: left; font-weight: 500; margin-bottom: 7px; }
+  .sheet .std { font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; }
+  .sheet .sf { display: flex; gap: 7px; margin-top: 10px; } .sheet .sf .btn { flex: 1; text-align: center; padding: 9px; }
+</style>
+</head>
+<body>
+  <div class="titel">Sponsoring am Handy
+    <span>Entscheid-Prototyp · Wayfinder #69 · 375-px-Rahmen · gleiche 14 Firmen, gleiche 6 Kategorien · alle drei bedienbar</span>
+  </div>
+
+  <div class="measure">
+    <h4>Warum das eine eigene Frage ist</h4>
+    Im Spalten-Entscheid gemessen: bei 375 px braucht die volle Matrix <b>876 px</b> (549 px Überhang),
+    die schlanke Marken-Variante noch <b>660 px</b>. <b>Am Handy trägt keine Tabelle</b> — die
+    Entscheidung Desktop (V2 + D) sagt über das Handy nichts.
+    Die beiden Vorbild-Entscheide gingen verschiedene Wege:
+    <b>Material (#66)</b> nahm <b>Karten statt querscrollender Tabelle</b> („Querscrollen ist ein
+    No-Go“), <b>Schichtplan (#68)</b> nahm die <b>Schublade</b> — beide als bewusste, am Scrollweg
+    gemessene Abweichung von §6, das ja „Tabellen scrollen horizontal im eigenen Rahmen“ erlaubt.
+    <table>
+      <thead><tr><th>Umsetzung</th><th class="n">Höhe der Liste</th><th class="n">Scrollweg für alle 14</th><th class="n">Antippen: Kategorie zuweisen</th><th>Querscrollen</th></tr></thead>
+      <tbody id="mtab"></tbody>
+    </table>
+    <div id="fazit" style="margin-top:10px;padding-top:9px;border-top:1.5px dashed var(--line);line-height:1.65"></div>
+  </div>
+
+  <div class="reihe">
+    <!-- ============ M1 ============ -->
+    <div class="phonewrap">
+      <h3>M1 — Matrix querscrollend</h3>
+      <div class="sub">§6 wörtlich: die Tabelle scrollt im eigenen Rahmen, Firma klebt links.
+        Alle 6 Kategorien sind erreichbar — aber nur durch Wischen nach rechts.</div>
+      <div class="phone" id="p1"></div>
+      <div class="messzeile" id="m1"></div>
+    </div>
+
+    <!-- ============ M2 ============ -->
+    <div class="phonewrap">
+      <h3>M2 — Karte je Firma</h3>
+      <div class="sub">Muster wie Material (#66): kein Querscrollen, jede Firma ein Block mit
+        ihren Marken. Nicht gewählte Kategorien erscheinen als gestrichelte „+“-Marken.</div>
+      <div class="phone" id="p2"></div>
+      <div class="messzeile" id="m2"></div>
+    </div>
+
+    <!-- ============ M3 ============ -->
+    <div class="phonewrap">
+      <h3>M3 — Kompaktliste → Detailblatt</h3>
+      <div class="sub">Zwei Ebenen: eine Zeile je Firma mit Summe, Antippen öffnet das Blatt dieser
+        Firma mit allen 6 Kategorien als Liste. Firma antippen zum Ausprobieren.</div>
+      <div class="phone" id="p3"></div>
+      <div class="messzeile" id="m3"></div>
+    </div>
+  </div>
+
+<script>
+const KATS = [
+  { k:'transparent', n:'Transparent', v:300 },
+  { k:'plakat',      n:'Plakat',      v:200 },
+  { k:'speisekarte', n:'Speisekarte', v:150 },
+  { k:'social',      n:'Social',      v:100 },
+  { k:'durchsage',   n:'Durchsage',   v:80  },
+  { k:'festschrift', n:'Festschrift', v:120 },
+];
+const BASIS = [
+  { name:'Brauerei Wieselburger',   cells:{transparent:300, plakat:350, festschrift:120}, frei:200, sach:null, vj:900 },
+  { name:'Raiffeisenbank Scheibbs', cells:{transparent:300, speisekarte:150}, frei:null, sach:null, vj:450 },
+  { name:'Lagerhaus Steinbach',     cells:{plakat:200, social:100}, frei:100, sach:null, vj:500 },
+  { name:'Fleischerei Berger',      cells:{speisekarte:150, durchsage:80}, frei:250, sach:{t:'Geschenkkorb Tombola', v:80}, vj:400 },
+  { name:'Winzerhof Schmid',        cells:{speisekarte:150}, frei:150, sach:{t:'6 Fl. Wein Tombola', v:60}, vj:300 },
+  { name:'Elektro Pöchhacker',      cells:{plakat:200}, frei:null, sach:null, vj:200 },
+  { name:'Gasthaus Zur Linde',      cells:{}, frei:150, sach:{t:'3 Warengutscheine', v:90}, vj:null },
+  { name:'Autohaus Steiner',        cells:{plakat:200, social:100}, frei:100, sach:null, vj:450 },
+  { name:'Sparkasse Purgstall',     cells:{transparent:300, festschrift:120}, frei:200, sach:null, vj:500 },
+  { name:'Bäckerei Leitner',        cells:{speisekarte:150, durchsage:80}, frei:50, sach:{t:'Brotkorb Tombola', v:40}, vj:280 },
+  { name:'Tischlerei Auer',         cells:{plakat:200}, frei:null, sach:null, vj:null },
+  { name:'Apotheke Steinbach',      cells:{speisekarte:150, social:100}, frei:100, sach:null, vj:250 },
+  { name:'Friseur Haarmonie',       cells:{social:100}, frei:200, sach:null, vj:null },
+  { name:'Taxi Brandl',             cells:{}, frei:150, sach:null, vj:null },
+];
+const VORJAHR_FEST = 4400;
+const kopie = () => JSON.parse(JSON.stringify(BASIS));
+const R = { 1: kopie(), 2: kopie(), 3: kopie() };
+let detail = null;   /* offene Firma in M3 */
+
+const eur   = v => '€ ' + v.toLocaleString('de-AT');
+const total = s => KATS.reduce((a,k) => a + (s.cells[k.k] || 0), 0) + (s.frei || 0);
+const geld  = rows => rows.reduce((a,s) => a + total(s), 0);
+const sachS = rows => rows.reduce((a,s) => a + (s.sach ? s.sach.v : 0), 0);
+
+function kopfHtml(rows) {
+  const sum = geld(rows), scale = Math.max(VORJAHR_FEST, sum);
+  return `<div class="mast"><div class="wm">FESTMEISTER</div><h1>Musikfest Steinbach 2026</h1></div>
+    <div class="kopf">
+      <div class="zeile1"><b>Sponsoring</b><span class="val">${eur(sum)}</span>
+        <div class="ruler"><i style="width:${Math.round(sum/scale*100)}%"></i><em style="left:${Math.round(VORJAHR_FEST/scale*100)}%"></em></div></div>
+      <div class="sub">${rows.length} Sponsoren · Vorjahr ${eur(VORJAHR_FEST)} · + ${eur(sachS(rows))} Sachwert</div>
+    </div>
+    <div class="werkz"><button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn">PDF</button></div>`;
+}
+
+/* ---------------- M1 ---------------- */
+function renderM1() {
+  const rows = R[1];
+  document.getElementById('p1').innerHTML = kopfHtml(rows) + `<div class="tw"><table class="stable">
+    <thead><tr><th class="firma">Firma</th>
+      ${KATS.map(k => `<th style="text-align:center">${k.n}<span class="kw">€ ${k.v}</span></th>`).join('')}
+      <th style="text-align:right">Frei</th><th>Sachleistung</th><th style="text-align:right">Gesamt</th><th></th></tr></thead>
+    <tbody>${rows.map((s,i) => `<tr>
+      <td class="firma"><span class="fn">${s.name}</span></td>
+      ${KATS.map(k => { const v = s.cells[k.k];
+        return `<td class="c">${v != null ? `<span class="kat${v !== k.v ? ' ovr' : ''}" data-z="1|${i}|${k.k}">${v}</span>`
+          : `<span class="kat off" data-z="1|${i}|${k.k}">+</span>`}</td>`; }).join('')}
+      <td class="num"><span class="fb${s.frei == null ? ' off' : ''}" data-f="1|${i}">${s.frei != null ? s.frei : '+'}</span></td>
+      <td>${s.sach ? `<span class="sach" data-s="1|${i}"><span class="t">${s.sach.t}</span><span class="w">(${eur(s.sach.v)})</span></span>`
+        : `<span class="kat off" data-s="1|${i}">+</span>`}</td>
+      <td class="num"><b>${eur(total(s))}</b>${s.vj != null ? `<span class="vj">Vorjahr ${eur(s.vj)}</span>` : ''}</td>
+      <td><button class="kebab">⋮</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td class="firma">Σ</td>
+      ${KATS.map(k => `<td class="c">${eur(rows.reduce((a,s) => a + (s.cells[k.k] || 0), 0))}</td>`).join('')}
+      <td class="num">${eur(rows.reduce((a,s) => a + (s.frei || 0), 0))}</td>
+      <td>+ ${eur(sachS(rows))}</td><td class="num">${eur(geld(rows))}</td><td></td></tr></tfoot>
+  </table></div><div class="sheet" id="sh1"></div>`;
+}
+
+/* ---------------- M2 ---------------- */
+function renderM2() {
+  const rows = R[2];
+  document.getElementById('p2').innerHTML = kopfHtml(rows) + rows.map((s,i) => {
+    const gewaehlt = KATS.filter(k => s.cells[k.k] != null);
+    const offen    = KATS.filter(k => s.cells[k.k] == null);
+    return `<div class="karte">
+      <div class="k1"><span class="fn">${s.name}</span><span class="sum">${eur(total(s))}</span><button class="kebab">⋮</button></div>
+      ${s.vj != null ? `<div class="vjz">Vorjahr ${eur(s.vj)}</div>` : ''}
+      <div class="marken">
+        ${gewaehlt.map(k => `<span class="kat${s.cells[k.k] !== k.v ? ' ovr' : ''}" data-z="2|${i}|${k.k}">${k.n} ${s.cells[k.k]}</span>`).join('')}
+        <span class="fb${s.frei == null ? ' off' : ''}" data-f="2|${i}">Frei ${s.frei != null ? s.frei : '+'}</span>
+        ${s.sach ? `<span class="sach" data-s="2|${i}"><span class="t">${s.sach.t}</span><span class="w">(${eur(s.sach.v)})</span></span>`
+          : `<span class="kat off" data-s="2|${i}">+ Sachleistung</span>`}
+        ${offen.map(k => `<span class="kat off" data-z="2|${i}|${k.k}">+ ${k.n}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('') + `<div class="sheet" id="sh2"></div>`;
+}
+
+/* ---------------- M3 ---------------- */
+function renderM3() {
+  const rows = R[3];
+  const liste = kopfHtml(rows) + rows.map((s,i) => {
+    const n = KATS.filter(k => s.cells[k.k] != null).length;
+    return `<button class="zeileL" data-detail="${i}">
+      <span class="fn">${s.name}${s.vj != null ? `<span class="vjz"> · Vorjahr ${eur(s.vj)}</span>` : ''}</span>
+      <span class="anz">${n} Leist.</span><span class="sum">${eur(total(s))}</span><span class="pfeil">›</span></button>`;
+  }).join('');
+
+  let blatt = '';
+  if (detail != null) {
+    const s = rows[detail];
+    blatt = `<div class="blatt on">
+      <div class="bh"><button class="zur" data-zurueck="1">‹ ZURÜCK</button><h2>${s.name}</h2></div>
+      <div class="bb">
+        ${KATS.map(k => { const v = s.cells[k.k];
+          return `<div class="brow"><span class="bn">${k.n}<span class="bstd"> · Standard € ${k.v}</span></span>
+            ${v != null ? `<span class="kat${v !== k.v ? ' ovr' : ''}" data-z="3|${detail}|${k.k}">${v}</span>`
+              : `<span class="kat off" data-z="3|${detail}|${k.k}">+</span>`}</div>`; }).join('')}
+        <div class="brow"><span class="bn">Freibetrag</span><span class="fb${s.frei == null ? ' off' : ''}" data-f="3|${detail}">${s.frei != null ? s.frei : '+'}</span></div>
+        <div class="brow"><span class="bn">Sachleistung</span>${s.sach
+          ? `<span class="sach" data-s="3|${detail}"><span class="t">${s.sach.t}</span><span class="w">(${eur(s.sach.v)})</span></span>`
+          : `<span class="kat off" data-s="3|${detail}">+</span>`}</div>
+        <div class="brow"><span class="bn"><b>Gesamt</b></span><span class="sum" style="font-family:Oswald;font-weight:600;font-size:16px">${eur(total(s))}</span></div>
+        ${s.vj != null ? `<div class="brow"><span class="bn" style="color:var(--ink-soft)">Vorjahresbeitrag</span><span style="color:var(--ink-soft);font-weight:700">${eur(s.vj)}</span></div>` : ''}
+        <div style="padding:12px"><button class="btn" style="width:100%">NOTIZ · FIRMENDATEN · ENTFERNEN (⋮)</button></div>
+      </div></div>`;
+  }
+  document.getElementById('p3').innerHTML = liste + blatt + `<div class="sheet" id="sh3"></div>`;
+}
+
+/* ---------------- Zettel als Blatt von unten ---------------- */
+function sheet(v, html) {
+  const el = document.getElementById('sh' + v);
+  el.innerHTML = html; el.classList.add('on');
+  const f = el.querySelector('input'); if (f) setTimeout(() => f.select(), 0);
+}
+document.addEventListener('click', e => {
+  const z = e.target.closest('[data-z]');
+  if (z) { const [v, i, kk] = z.dataset.z.split('|'); const k = KATS.find(x => x.k === kk), cur = R[v][+i].cells[kk];
+    sheet(v, `<div class="ph">${k.n} · ${R[v][+i].name}</div><input value="${cur != null ? cur : k.v}" inputmode="decimal">
+      <div class="std">Standardwert € ${k.v}</div>
+      <div class="sf"><button class="btn primary" data-ok="${v}|${i}|${kk}">Übernehmen</button>
+        ${cur != null ? `<button class="btn del" data-rm="${v}|${i}|${kk}">Entfernen</button>` : ''}</div>`); return; }
+  const f = e.target.closest('[data-f]');
+  if (f) { const [v, i] = f.dataset.f.split('|'); const s = R[v][+i];
+    sheet(v, `<div class="ph">Freibetrag · ${s.name}</div><input value="${s.frei != null ? s.frei : ''}" placeholder="Betrag" inputmode="decimal">
+      <div class="std">Kein Standardwert — freier Betrag.</div>
+      <div class="sf"><button class="btn primary" data-okf="${v}|${i}">Übernehmen</button>
+        ${s.frei != null ? `<button class="btn del" data-rmf="${v}|${i}">Entfernen</button>` : ''}</div>`); return; }
+  const sa = e.target.closest('[data-s]');
+  if (sa) { const [v, i] = sa.dataset.s.split('|'); const s = R[v][+i];
+    sheet(v, `<div class="ph">Sachleistung · ${s.name}</div>
+      <input class="txt" value="${s.sach ? s.sach.t : ''}" placeholder="Bezeichnung">
+      <input value="${s.sach ? s.sach.v : ''}" placeholder="Schätzwert €" inputmode="decimal">
+      <div class="std">Zählt nie in die Geldsumme.</div>
+      <div class="sf"><button class="btn primary" data-oks="${v}|${i}">Übernehmen</button>
+        ${s.sach ? `<button class="btn del" data-rms="${v}|${i}">Entfernen</button>` : ''}</div>`); return; }
+
+  const ok = e.target.closest('[data-ok]');
+  if (ok) { const [v, i, kk] = ok.dataset.ok.split('|');
+    const raw = document.getElementById('sh' + v).querySelector('input').value.trim();
+    R[v][+i].cells[kk] = raw === '' ? KATS.find(x => x.k === kk).v : +raw.replace(',', '.') || 0; neu(v); return; }
+  const rm = e.target.closest('[data-rm]');
+  if (rm) { const [v, i, kk] = rm.dataset.rm.split('|'); delete R[v][+i].cells[kk]; neu(v); return; }
+  const okf = e.target.closest('[data-okf]');
+  if (okf) { const [v, i] = okf.dataset.okf.split('|');
+    const raw = document.getElementById('sh' + v).querySelector('input').value.trim();
+    R[v][+i].frei = raw === '' ? null : +raw.replace(',', '.') || 0; neu(v); return; }
+  const rmf = e.target.closest('[data-rmf]');
+  if (rmf) { const [v, i] = rmf.dataset.rmf.split('|'); R[v][+i].frei = null; neu(v); return; }
+  const oks = e.target.closest('[data-oks]');
+  if (oks) { const [v, i] = oks.dataset.oks.split('|');
+    const ins = document.getElementById('sh' + v).querySelectorAll('input');
+    const t = ins[0].value.trim(), w = ins[1].value.trim();
+    R[v][+i].sach = t === '' ? null : { t, v: w === '' ? 0 : +w.replace(',', '.') || 0 }; neu(v); return; }
+  const rms = e.target.closest('[data-rms]');
+  if (rms) { const [v, i] = rms.dataset.rms.split('|'); R[v][+i].sach = null; neu(v); return; }
+
+  const d = e.target.closest('[data-detail]');
+  if (d) { detail = +d.dataset.detail; renderM3(); return; }
+  if (e.target.closest('[data-zurueck]')) { detail = null; renderM3(); return; }
+  if (!e.target.closest('.sheet')) document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on'));
+});
+function neu(v) { ({ 1: renderM1, 2: renderM2, 3: renderM3 })[v](); messen(); }
+
+/* ---------------- Messen ---------------- */
+const TAPS = {
+  1: '2 — Zelle antippen (nach dem Wischen), Übernehmen',
+  2: '2 — „+ Plakat“ antippen, Übernehmen',
+  3: '4 — Firma, Kategorie, Übernehmen, Zurück',
+};
+const QUER = { 1: '<span class="schlecht">ja</span>', 2: '<span class="gut">nein</span>', 3: '<span class="gut">nein</span>' };
+function messen() {
+  const rows = [];
+  [1,2,3].forEach(v => {
+    const ph = document.getElementById('p' + v);
+    const inhalt = ph.scrollHeight, sicht = ph.clientHeight;
+    const tab = ph.querySelector('table');
+    const quer = tab ? Math.max(0, tab.scrollWidth - ph.querySelector('.tw').clientWidth) : 0;
+    rows.push(`<tr><td><b>M${v}</b> — ${({1:'Matrix querscrollend',2:'Karte je Firma',3:'Kompaktliste → Detailblatt'})[v]}</td>
+      <td class="n"><span class="px">${inhalt}</span> px</td>
+      <td class="n">${Math.max(0, inhalt - sicht)} px<span style="display:block;font-size:10.5px;color:var(--ink-soft)">${(inhalt / sicht).toFixed(1)} Bildschirme</span></td>
+      <td class="n">${TAPS[v]}</td>
+      <td>${QUER[v]}${quer ? ` (${quer} px)` : ''}</td></tr>`);
+    document.getElementById('m' + v).innerHTML =
+      `Inhalt <b>${inhalt} px</b> · sichtbar ${sicht} px · Scrollweg <b>${Math.max(0, inhalt - sicht)} px</b>` +
+      (quer ? ` · quer <b>${quer} px</b>` : '');
+  });
+  document.getElementById('mtab').innerHTML = rows.join('');
+}
+
+renderM1(); renderM2(); renderM3();
+document.fonts.ready.then(() => {
+  messen();
+  document.getElementById('fazit').innerHTML =
+    `<b>Was die Messung trennt:</b> M1 ist die kürzeste Liste, verlangt aber für jede Kategorie
+     außer der ersten ein Wischen nach rechts — und beim Wischen sieht man die Firma (klebt), aber
+     nicht mehr die Summe. M2 braucht am meisten Höhe, weil jede Firma alle nicht gewählten
+     Kategorien als „+“-Marken mitschleppt: das ist gleichzeitig der Vorteil (die Verkaufs-Lücke
+     ist am Handy sichtbar, genau wie am Desktop) und der Preis. M3 ist die kürzeste Übersicht,
+     versteckt aber alles Bearbeitbare eine Ebene tiefer und kostet zwei Antipper mehr pro Zuweisung.<br>
+     <b>Nicht messbar, aber entscheidend:</b> was tut man am Handy überhaupt? Wer beim Anruf zusagen
+     einträgt, braucht <i>eine</i> Firma schnell — dafür ist M3 gebaut. Wer den Überblick sucht
+     („wie viel haben wir schon?“), liest den Kopf und braucht die Liste gar nicht.`;
+});
+</script>
+</body>
+</html>

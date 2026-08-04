@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #69, Bereich Sponsoring.
+     FRAGE: Hält die Paket-Matrix (Vision §5, Variante C), wenn ein Fest mehr als
+     4 Sponsoring-Kategorien hat? Jede Kategorie ist eine SPALTE, und Kategorien
+     sind pro Fest frei anlegbar — es gibt keine Obergrenze im Datenmodell.
+     Nutzer-Angabe: 4 real, 6 realistischer Deckel, 10 = Worst Case.
+     Gleiche 14 Firmen in allen Varianten (echte Namenslängen, 5 Sachleistungen,
+     1 abweichender Wert). Umschaltbar: Kategorienzahl 4 / 6 / 10.
+     Gemessen wird gegen die echte Inhaltsbreite der App: .frame max-width 1180px
+     minus 2x22px Polster = 1136px. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Sponsoring — Hält die Matrix bei 6 und 10 Kategorien?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 160px; }
+
+  /* ---- Kopf / Messkasten ---- */
+  .board { max-width: 1136px; }
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 24px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 14px 0 4px; font-size: 13px; line-height: 1.55; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; }
+  .measure .fit { color: var(--green); font-weight: 800; }
+  .measure .nofit { color: var(--red); font-weight: 800; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; width: 100%; }
+  .measure th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px 4px 0; border-bottom: 1.5px solid var(--ink); }
+  .measure th.n, .measure td.n { text-align: right; padding-right: 14px; }
+  .measure td { padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .measure .fund { margin-top: 10px; padding-top: 9px; border-top: 1.5px dashed var(--line); font-size: 12.5px; line-height: 1.65; }
+
+  .seg { display: inline-flex; border: 2px solid var(--ink); background: #fff; margin: 16px 0 0; }
+  .seg button { background: none; border: 0; border-right: 1.5px solid var(--line); padding: 8px 15px; font-weight: 700; font-size: 12.5px; color: var(--ink-soft); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+  .seghint { font-size: 12px; color: var(--ink-soft); margin-left: 12px; }
+
+  h2.sect { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 30px 0 4px; display: flex; align-items: center; gap: 12px; }
+  h2.sect::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .verdikt { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 10px; line-height: 1.5; }
+  .verdikt b.ja { color: var(--green); } .verdikt b.nein { color: var(--red); }
+
+  /* ---- Bereichs-Rahmen (wie App) ---- */
+  .planbar { display: flex; align-items: center; gap: 14px; border: 2.5px solid var(--ink); background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 250px; flex: 1; flex-wrap: wrap; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .02em; color: var(--green); white-space: nowrap; }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 90px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .kasten { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .tablewrap { overflow-x: auto; }
+
+  /* ---- Matrix (Vision §5) ---- */
+  .stable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .stable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .stable td { padding: 8px 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: middle; }
+  .stable tr:hover td { background: oklch(0.965 0.012 100); }
+  .stable th.num, .stable td.num { text-align: right; }
+  .stable td.c, .stable tfoot td.c { text-align: center; }
+  .stable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); white-space: nowrap; }
+  .stable .total { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .02em; }
+  .stable th .kw { display: block; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--green); text-transform: none; }
+  .mcell { display: inline-block; min-width: 58px; padding: 3px 7px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; border: 1.5px solid transparent; }
+  .mcell.on { background: oklch(0.94 0.03 160); color: var(--green); border-color: var(--green); }
+  .mcell.on.ovr { color: var(--red); border-color: var(--red); background: oklch(0.97 0.02 30); }
+  .mcell.off { border: 1.5px dashed oklch(0.8 0.02 120); color: oklch(0.8 0.02 120); }
+  .sach { display: inline-flex; align-items: baseline; gap: 5px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 11px; font-weight: 700; padding: 2px 8px; white-space: nowrap; }
+  .sach .w { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11.5px; color: var(--ink); }
+
+  /* V2: Firma-Spalte klebt */
+  .v2 .stable th.firma, .v2 .stable td.firma { position: sticky; left: 0; z-index: 2; background: #fff; box-shadow: 2px 0 0 var(--ink); }
+  .v2 .stable th.firma { background: oklch(0.93 0.02 105); }
+  .v2 .stable tfoot td.firma { background: oklch(0.955 0.01 100); }
+  .v2 .stable tr:hover td.firma { background: oklch(0.965 0.012 100); }
+  .v2 .stable th.gesamt, .v2 .stable td.gesamt { position: sticky; right: 0; z-index: 2; background: #fff; box-shadow: -2px 0 0 var(--ink); }
+  .v2 .stable th.gesamt { background: oklch(0.93 0.02 105); }
+  .v2 .stable tfoot td.gesamt { background: oklch(0.955 0.01 100); }
+  .v2 .stable tr:hover td.gesamt { background: oklch(0.965 0.012 100); }
+
+  /* V3: Marken-Spalte statt Spalte je Kategorie */
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { display: inline-flex; align-items: baseline; gap: 5px; border: 1.5px solid var(--green); background: oklch(0.94 0.03 160); color: var(--green); font-size: 11.5px; font-weight: 700; padding: 2px 7px; white-space: nowrap; }
+  .chip .v { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11.5px; }
+  .chip.ovr { border-color: var(--red); color: var(--red); background: oklch(0.97 0.02 30); }
+  .chip.frei { border-color: var(--ink); color: var(--ink); background: oklch(0.955 0.01 100); }
+  .katfoot { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; font-weight: 700; }
+  .katfoot span em { font-style: normal; font-family: "Oswald", sans-serif; font-weight: 600; }
+
+  .warnstreif { border: 2px solid var(--red); border-left-width: 8px; background: oklch(0.98 0.015 30); color: var(--ink); padding: 9px 13px; font-size: 12.5px; margin-top: 10px; line-height: 1.5; }
+  .warnstreif b { color: var(--red); }
+  .oksstreif { border: 2px solid var(--green); border-left-width: 8px; background: oklch(0.97 0.02 160); padding: 9px 13px; font-size: 12.5px; margin-top: 10px; line-height: 1.5; }
+
+  .fixbar { position: fixed; bottom: 0; left: 0; right: 0; border-top: 2.5px solid var(--ink); background: #fff; padding: 9px 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 12.5px; z-index: 40; }
+  .fixbar b { font-family: "Oswald", sans-serif; font-weight: 600; }
+  .fixbar .pill { border: 1.5px solid var(--ink); padding: 2px 8px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fixbar .pill.bad { border-color: var(--red); color: var(--red); }
+  .fixbar .pill.good { border-color: var(--green); color: var(--green); }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="titel">Hält die Paket-Matrix bei 6 und 10 Kategorien?
+    <span>Entscheid-Prototyp · Wayfinder #69 · gleiche 14 Firmen, gleiche Beträge · gemessen gegen 1136 px Inhaltsbreite der App</span>
+  </div>
+
+  <div class="measure">
+    <h4>Was hier gemessen wird</h4>
+    Die Vision macht jede <b>Sponsoring-Kategorie zu einer Spalte</b>. Bei 4 Kategorien sind das 8 Spalten
+    (Firma · 4 Kategorien · Freibetrag · Sachleistung · Gesamt), bei 10 Kategorien 14. Kategorien sind
+    pro Fest frei anlegbar; nichts im Datenmodell begrenzt sie. Drei Umsetzungen derselben Daten:
+    <table>
+      <thead><tr><th>Variante</th><th class="n">Spalten</th><th class="n">Breite nötig</th><th class="n">Überhang</th><th class="n">Höhe</th><th>Querscrollen</th></tr></thead>
+      <tbody id="mtab"></tbody>
+    </table>
+    <div class="fund">
+      <b>Gemessener Kipppunkt: 7 Kategorien.</b> Bei 1132 px Inhaltsbreite passt die volle Matrix bis
+      <b>6 Kategorien</b> genau (1132 px, 0 Überhang) und reißt bei 7 (+85 px). Jede weitere Kategorie
+      kostet ~145 px. Der vom Nutzer genannte realistische Deckel ist 6 — die Matrix trägt ihn, aber
+      ohne Reserve.<br>
+      <b>Was beim Überhang zuerst verschwindet:</b> nicht die Kategorien, sondern <b>Freibetrag,
+      Sachleistung und Gesamt</b> — die Spalten stehen rechts. Bei 10 Kategorien sieht man in V1
+      Kategorie-Werte, aber keine Zeilensumme und keine Gesamtsumme.<br>
+      <b>Höhe ist kein Argument:</b> V1 639–739 px, V3 631–721 px — die Marken-Spalte ist bei 4 und 6
+      Kategorien sogar 8 px flacher als die Matrix, nicht höher.<br>
+      <b>Am Handy (375 px) trägt keine der drei.</b> V1 braucht 876 px (549 Überhang), V3 660 px
+      (333 Überhang). Die Handy-Ansicht ist damit eine <b>eigene Frage</b>, kein Nebeneffekt dieser
+      Entscheidung — genau wie beim Material und beim Schichtplan.<br>
+      Nicht gemessen, weil offensichtlich schlechter: <b>transponierte Matrix</b> (Kategorien als Zeilen,
+      Firmen als Spalten) — 14 Firmen wären 15 Spalten schon im Normalfall.
+    </div>
+  </div>
+
+  <div class="seg" id="segKat">
+    <button data-n="4" class="on">4 KATEGORIEN — echt</button>
+    <button data-n="6">6 — realistischer Deckel</button>
+    <button data-n="10">10 — Worst Case</button>
+  </div>
+  <span class="seghint">Umschalten wirkt auf alle drei Varianten gleichzeitig.</span>
+
+  <!-- ===================== V1 ===================== -->
+  <h2 class="sect">V1 — Matrix wie die Vision: alle Kategorien als Spalten</h2>
+  <p class="verdikt" id="v1verdikt"></p>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val" id="k1">–</span>
+      <div class="ruler"><i id="f1"></i><em id="m1"></em></div>
+      <span style="font-size:12px;color:var(--ink-soft)" id="n1"></span></div>
+    <button class="btn primary">+ SPONSOR</button>
+    <button class="btn">+ KATEGORIE</button>
+    <button class="btn quiet">PDF</button>
+  </div>
+  <div class="kasten"><div class="tablewrap" id="w1"><div id="t1"></div></div></div>
+  <div id="s1"></div>
+
+  <!-- ===================== V2 ===================== -->
+  <h2 class="sect">V2 — Matrix mit klebender Firma- und Gesamt-Spalte</h2>
+  <p class="verdikt" id="v2verdikt"></p>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val" id="k2">–</span>
+      <div class="ruler"><i id="f2"></i><em id="m2"></em></div>
+      <span style="font-size:12px;color:var(--ink-soft)" id="n2"></span></div>
+    <button class="btn primary">+ SPONSOR</button>
+    <button class="btn">+ KATEGORIE</button>
+    <button class="btn quiet">PDF</button>
+  </div>
+  <div class="kasten v2"><div class="tablewrap" id="w2"><div id="t2"></div></div></div>
+  <div id="s2"></div>
+
+  <!-- ===================== V3 ===================== -->
+  <h2 class="sect">V3 — Marken-Spalte statt einer Spalte je Kategorie</h2>
+  <p class="verdikt" id="v3verdikt"></p>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val" id="k3">–</span>
+      <div class="ruler"><i id="f3"></i><em id="m3"></em></div>
+      <span style="font-size:12px;color:var(--ink-soft)" id="n3"></span></div>
+    <button class="btn primary">+ SPONSOR</button>
+    <button class="btn">+ KATEGORIE</button>
+    <button class="btn quiet">PDF</button>
+  </div>
+  <div class="kasten"><div class="tablewrap" id="w3"><div id="t3"></div></div></div>
+  <div id="s3"></div>
+</div>
+
+<div class="fixbar">
+  <b>Verfügbar:</b> <span class="pill" id="avail">–</span>
+  <b>V1:</b> <span class="pill" id="p1">–</span>
+  <b>V2:</b> <span class="pill" id="p2">–</span>
+  <b>V3:</b> <span class="pill" id="p3">–</span>
+  <span style="color:var(--ink-soft)">Fenster verkleinern zeigt, wo jede Variante kippt.</span>
+</div>
+
+<script>
+/* ---------------- Daten: 10 Kategorien, erste 4 = die echten ---------------- */
+const KATS = [
+  { k:'transparent',  n:'Transparent',        v:300 },
+  { k:'plakat',       n:'Plakat',             v:200 },
+  { k:'speisekarte',  n:'Speisekarte',        v:150 },
+  { k:'social',       n:'Social',             v:100 },
+  { k:'durchsage',    n:'Durchsage',          v:80  },
+  { k:'festschrift',  n:'Festschrift',        v:120 },
+  { k:'banner',       n:'Bierzelt-Banner',    v:250 },
+  { k:'eintritt',     n:'Logo Eintrittskarte',v:60  },
+  { k:'tombola',      n:'Tombola-Partner',    v:180 },
+  { k:'buehne',       n:'Bühnen-Sponsor',     v:400 },
+];
+
+/* cells: Kategorie → gewählter Wert (abweichend vom Standardwert → rot).
+   frei: Freibetrag. sach: Sachleistung mit Schätzwert (zählt NIE ins Geld). */
+const SPONS = [
+  { name:'Brauerei Wieselburger', cells:{transparent:300, plakat:350, banner:250, buehne:400}, frei:200, sach:null },
+  { name:'Raiffeisenbank Scheibbs', cells:{transparent:300, speisekarte:150, festschrift:120}, frei:null, sach:null },
+  { name:'Lagerhaus Steinbach', cells:{plakat:200, social:100, banner:250}, frei:100, sach:null },
+  { name:'Fleischerei Berger', cells:{speisekarte:150, durchsage:80}, frei:250, sach:{t:'Geschenkkorb Tombola', v:80} },
+  { name:'Winzerhof Schmid', cells:{speisekarte:150, tombola:180}, frei:150, sach:{t:'6 Fl. Wein Tombola', v:60} },
+  { name:'Elektro Pöchhacker', cells:{plakat:200, eintritt:60}, frei:null, sach:null },
+  { name:'Gasthaus Zur Linde', cells:{}, frei:150, sach:{t:'3 Warengutscheine', v:90} },
+  { name:'Autohaus Steiner', cells:{plakat:200, social:100, buehne:400}, frei:100, sach:null },
+  { name:'Sparkasse Purgstall', cells:{transparent:300, festschrift:120}, frei:200, sach:null },
+  { name:'Bäckerei Leitner', cells:{speisekarte:150, durchsage:80}, frei:50, sach:{t:'Brotkorb Tombola', v:40} },
+  { name:'Tischlerei Auer', cells:{plakat:200}, frei:null, sach:null },
+  { name:'Apotheke Steinbach', cells:{speisekarte:150, social:100, eintritt:60}, frei:100, sach:null },
+  { name:'Friseur Haarmonie', cells:{social:100, durchsage:80}, frei:200, sach:null },
+  { name:'Taxi Brandl', cells:{}, frei:150, sach:{t:'2 Fahrt-Gutscheine', v:50} },
+];
+
+const VORJAHR = 4400;           /* Geld-Gesamtsumme des vorigen Fests (Maßband-Marke) */
+let katN = 4;
+const eur  = v => '€ ' + v.toLocaleString('de-AT');
+const kats = () => KATS.slice(0, katN);
+const total = s => kats().reduce((a,k) => a + (s.cells[k.k] || 0), 0) + (s.frei || 0);
+const sachSum = () => SPONS.reduce((a,s) => a + (s.sach ? s.sach.v : 0), 0);
+const geldSum = () => SPONS.reduce((a,s) => a + total(s), 0);
+
+/* ---------------- V1 / V2: volle Matrix ---------------- */
+function matrix(sticky) {
+  const K = kats();
+  const fc = sticky ? ' class="firma"' : '';
+  const gc = sticky ? ' class="num gesamt"' : ' class="num"';
+  return `<table class="stable">
+    <thead><tr>
+      <th${sticky ? ' class="firma"' : ''}>Firma</th>
+      ${K.map(k => `<th style="text-align:center">${k.n}<span class="kw">€ ${k.v}</span></th>`).join('')}
+      <th class="num">Freibetrag</th>
+      <th>Sachleistung</th>
+      <th${sticky ? ' class="num gesamt"' : ' class="num"'}>Gesamt</th>
+    </tr></thead>
+    <tbody>${SPONS.map(s => `<tr>
+      <td${fc}><b>${s.name}</b></td>
+      ${K.map(k => {
+        const v = s.cells[k.k];
+        return `<td class="c">${v != null
+          ? `<span class="mcell on${v !== k.v ? ' ovr' : ''}">${v}</span>`
+          : `<span class="mcell off">+</span>`}</td>`;
+      }).join('')}
+      <td class="num">${s.frei != null ? s.frei : '—'}</td>
+      <td>${s.sach ? `<span class="sach">${s.sach.t} <span class="w">(€ ${s.sach.v})</span></span>` : `<span class="mcell off" style="min-width:32px">+</span>`}</td>
+      <td${gc}><b>${eur(total(s))}</b></td>
+    </tr>`).join('')}</tbody>
+    <tfoot><tr>
+      <td${fc}>Σ je Kategorie</td>
+      ${K.map(k => `<td class="c">${eur(SPONS.reduce((a,s) => a + (s.cells[k.k] || 0), 0))}</td>`).join('')}
+      <td class="num">${eur(SPONS.reduce((a,s) => a + (s.frei || 0), 0))}</td>
+      <td>+ ${eur(sachSum())} Sachwert</td>
+      <td${gc}><span class="total">${eur(geldSum())}</span></td>
+    </tr></tfoot>
+  </table>`;
+}
+
+/* ---------------- V3: Marken-Spalte, immer 5 Spalten ---------------- */
+function markenTabelle() {
+  const K = kats();
+  return `<table class="stable">
+    <thead><tr>
+      <th>Firma</th>
+      <th>Gewählte Leistungen</th>
+      <th class="num">Freibetrag</th>
+      <th>Sachleistung</th>
+      <th class="num">Gesamt</th>
+    </tr></thead>
+    <tbody>${SPONS.map(s => {
+      const chips = K.filter(k => s.cells[k.k] != null).map(k => {
+        const v = s.cells[k.k];
+        return `<span class="chip${v !== k.v ? ' ovr' : ''}">${k.n} <span class="v">${v}</span></span>`;
+      }).join('');
+      return `<tr>
+        <td><b>${s.name}</b></td>
+        <td><div class="chips">${chips || '<span style="color:var(--ink-soft)">—</span>'}</div></td>
+        <td class="num">${s.frei != null ? s.frei : '—'}</td>
+        <td>${s.sach ? `<span class="sach">${s.sach.t} <span class="w">(€ ${s.sach.v})</span></span>` : '<span style="color:var(--ink-soft)">—</span>'}</td>
+        <td class="num"><b>${eur(total(s))}</b></td>
+      </tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr>
+      <td>Σ</td>
+      <td><div class="katfoot">${K.map(k => `<span>${k.n} <em>${eur(SPONS.reduce((a,s) => a + (s.cells[k.k] || 0), 0))}</em></span>`).join('')}</div></td>
+      <td class="num">${eur(SPONS.reduce((a,s) => a + (s.frei || 0), 0))}</td>
+      <td>+ ${eur(sachSum())} Sachwert</td>
+      <td class="num"><span class="total">${eur(geldSum())}</span></td>
+    </tr></tfoot>
+  </table>`;
+}
+
+/* ---------------- Maßband: gegen das VORIGE FEST, kein Zielbetrag ---------------- */
+function planbar(i) {
+  const sum = geldSum();
+  const pct = Math.min(100, Math.round(sum / Math.max(VORJAHR, sum) * 100));
+  const vpct = Math.round(VORJAHR / Math.max(VORJAHR, sum) * 100);
+  document.getElementById('k' + i).textContent = eur(sum);
+  document.getElementById('f' + i).style.width = pct + '%';
+  document.getElementById('m' + i).style.left = vpct + '%';
+  document.getElementById('n' + i).textContent =
+    SPONS.length + ' Sponsoren · Vorjahr ' + eur(VORJAHR) + ' · + ' + eur(sachSum()) + ' Sachwert';
+}
+
+/* ---------------- Messen ---------------- */
+function messen() {
+  const avail = document.getElementById('w1').clientWidth;
+  document.getElementById('avail').textContent = avail + ' px';
+  const rows = [];
+  const spaltenV12 = katN + 4, spaltenV3 = 5;
+
+  [[1, spaltenV12], [2, spaltenV12], [3, spaltenV3]].forEach(([i, cols]) => {
+    const wrap = document.getElementById('w' + i);
+    const tbl  = wrap.querySelector('table');
+    const need = tbl.scrollWidth;
+    const over = Math.max(0, need - wrap.clientWidth);
+    const h    = wrap.querySelector('table').getBoundingClientRect().height;
+    const pill = document.getElementById('p' + i);
+    pill.textContent = need + ' px' + (over ? ' (+' + over + ')' : ' ✓');
+    pill.className = 'pill ' + (over ? 'bad' : 'good');
+    rows.push(`<tr><td>V${i} — ${i === 3 ? 'Marken-Spalte' : (i === 2 ? 'Matrix, klebende Ränder' : 'Matrix voll')}</td>
+      <td class="n">${cols}</td><td class="n"><span class="px">${need}</span></td>
+      <td class="n">${over ? '<span class="nofit">+' + over + '</span>' : '<span class="fit">0</span>'}</td>
+      <td class="n">${Math.round(h)}</td>
+      <td>${over ? '<span class="nofit">ja</span>' : '<span class="fit">nein</span>'}</td></tr>`);
+  });
+  document.getElementById('mtab').innerHTML = rows.join('');
+
+  /* Verdikte + Streifen */
+  const o1 = Math.max(0, document.getElementById('w1').querySelector('table').scrollWidth - document.getElementById('w1').clientWidth);
+  const o2 = o1; /* gleiche Tabelle, nur klebende Ränder */
+  document.getElementById('v1verdikt').innerHTML = o1
+    ? `Bei ${katN} Kategorien <b class="nein">querscrollt die Tabelle</b> (${o1} px Überhang). Beim Scrollen nach rechts verschwindet die <b>Firma</b> — man sieht Zahlen ohne zu wissen, wessen. Genau der Fall, den §6 mit „Tabellen scrollen im eigenen Rahmen, nie die Seite" erlaubt, aber nicht angenehm macht.`
+    : `Bei ${katN} Kategorien <b class="ja">passt alles ohne Querscrollen</b>. Die Matrix leistet hier genau, was Variante C verspricht: man liest quer, wer was genommen hat, und der Fuß zeigt Σ je Kategorie.`;
+  document.getElementById('v2verdikt').innerHTML = o2
+    ? `Dieselbe Breite wie V1, aber <b>Firma links und Gesamt rechts kleben</b>. Beim Scrollen bleibt die Zeile zuordenbar. Preis: zwei Schatten-Kanten mitten im Papier, und am Handy kleben zwei von fünf sichtbaren Spalten.`
+    : `Ohne Überhang ist V2 <b>identisch zu V1</b> — das Kleben kostet nichts und fällt nicht auf. Es ist Versicherung für den Tag, an dem eine Kategorie dazukommt.`;
+  document.getElementById('v3verdikt').innerHTML =
+    `Immer <b>5 Spalten</b>, unabhängig von der Kategorienzahl — kein Querscrollen, egal wie viele Kategorien. Preis: <b class="nein">die Standardwerte im Spaltenkopf fallen weg</b> (€ 300 steht nirgends mehr), und man kann nicht mehr quer lesen, <i>wer die Kategorie nicht genommen hat</i> — die leeren „+“-Zellen waren die Verkaufs-Lücken. Σ je Kategorie wandert in eine Fußzeilen-Aufzählung.`;
+
+  document.getElementById('s1').innerHTML = o1
+    ? `<div class="warnstreif"><b>Gemessen:</b> ${katN} Kategorien = ${spaltenV12} Spalten, ${o1} px Überhang. Ab hier ist die Matrix nur noch mit Querscrollen vollständig lesbar.</div>`
+    : `<div class="oksstreif"><b>Gemessen:</b> ${katN} Kategorien = ${spaltenV12} Spalten, kein Überhang.</div>`;
+  document.getElementById('s2').innerHTML = '';
+  document.getElementById('s3').innerHTML =
+    `<div class="oksstreif"><b>Gemessen:</b> 5 Spalten, kein Überhang — auch bei 10 Kategorien. Die Kategorien-Summen im Fuß brauchen dann ${katN} Marken in einer umbrechenden Zeile.</div>`;
+}
+
+function render() {
+  document.getElementById('t1').innerHTML = matrix(false);
+  document.getElementById('t2').innerHTML = matrix(true);
+  document.getElementById('t3').innerHTML = markenTabelle();
+  [1,2,3].forEach(planbar);
+  messen();
+}
+
+document.getElementById('segKat').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  katN = +b.dataset.n;
+  document.querySelectorAll('#segKat button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+window.addEventListener('resize', messen);
+render();
+</script>
+</body>
+</html>

@@ -128,7 +128,16 @@ _Avoid_: Firma (als eigener Begriff — Firma und Sponsor sind hier dasselbe), G
 ## Sponsoring-Kategorie
 
 Eine benannte Sponsoring-Leistung mit einem Wert, z.B. "Werbeplakat", "Social-Media-Beitrag", "Logo in Speisekarte". **Pro Fest definiert** (Name + Wert), weil der Wert je Jahr variieren kann.
+
+Der Wert einer Kategorie ist ein **Standardwert**: eine Zuweisung ohne eigenen Wert erbt ihn. Den Standardwert zu ändern wirkt daher **rückwirkend** auf alle Zuweisungen, die ihn nicht überschrieben haben — die Oberfläche muss das beziffern, bevor sie es tut.
 _Avoid_: Paket, Leistung, Sponsoring-Stufe.
+
+## Preisliste
+
+Die *Sponsoring-Kategorien* eines Fests als Ganzes — was der Verein heuer anbietet und zu welchen Standardwerten. Der Begriff bezeichnet die Menge, nicht die einzelne Kategorie, und wird gebraucht, wo genau diese Menge das Objekt ist: die *Sponsor-Übernahme* im Kopierwerk übernimmt sie vollständig mit Werten (ADR 0008), und ein Fest ohne sie kann keinem Sponsor etwas zuweisen — sie ist der erste Schritt im Bereich, vor den Firmen.
+
+Sie ist das eigentliche Jahresgedächtnis des Bereichs: Firmen wechseln, die Preisliste wird fortgeschrieben.
+_Avoid_: Katalog, Leistungskatalog, Kategorienliste.
 
 ## Sponsoring
 

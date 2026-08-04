@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #69, Bereich Sponsoring.
+     FRAGE: Wie wird in der Paket-Matrix eingegeben?
+     Vision §5 spezifiziert GENAU EINE Interaktion: „Klick in leere Zelle weist die Kategorie zum
+     Standardwert zu, Klick auf eine volle entfernt sie." Damit ist von vier wertetragenden Spalten
+     nur eine bedienbar. Nicht spezifiziert: abweichender Wert (die rote Marke im Prototyp entsteht
+     durch keinen Klick), Freibetrag, Sachleistung (Auflage aus #63), Notizen (Spalte existiert in
+     der DB, hat in der Vision keinen Platz).
+     Vier Umsetzungen, gleiche 14 Firmen, gleiche 4 Kategorien, alle wirklich klickbar.
+     Gemessen: Klicks + Tastenanschläge für EINE echte Aufgabe, Zeilenhöhen-Sprung beim
+     Umschalten, und wie viele ungeschützte Klicks eine Zusage über € 300 vernichten. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Sponsoring — Wie wird in der Matrix eingegeben?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 150px; }
+  .board { max-width: 1136px; }
+
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 24px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 14px 0 4px; font-size: 13px; line-height: 1.55; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; width: 100%; }
+  .measure th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px 4px 0; border-bottom: 1.5px solid var(--ink); }
+  .measure th.n, .measure td.n { text-align: right; padding-right: 14px; }
+  .measure td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .measure .gut { color: var(--green); font-weight: 800; } .measure .schlecht { color: var(--red); font-weight: 800; }
+
+  .aufgabe { border: 2.5px solid var(--yellow); border-left-width: 9px; background: oklch(0.99 0.03 95); padding: 11px 14px; margin: 14px 0 0; font-size: 13px; line-height: 1.6; }
+  .aufgabe h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+  .aufgabe ol { margin: 5px 0 0 20px; } .aufgabe li { margin-bottom: 2px; }
+
+  h2.sect { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 32px 0 4px; display: flex; align-items: center; gap: 12px; }
+  h2.sect::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .verdikt { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 10px; line-height: 1.55; }
+  .verdikt b.ja { color: var(--green); } .verdikt b.nein { color: var(--red); }
+
+  .zaehler { display: flex; align-items: center; gap: 8px; border: 2px solid var(--ink); background: #fff; padding: 6px 11px; font-size: 12px; font-weight: 700; margin-bottom: 8px; flex-wrap: wrap; }
+  .zaehler .z { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; border: 1.5px solid var(--ink); padding: 1px 8px; font-variant-numeric: tabular-nums; }
+  .zaehler .rst { border: 0; background: none; color: var(--ink-soft); text-decoration: underline; font-weight: 600; font-size: 11.5px; margin-left: auto; }
+  .zaehler .tod { color: var(--red); }
+
+  .planbar { display: flex; align-items: center; gap: 14px; border: 2.5px solid var(--ink); background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 230px; flex: 1; flex-wrap: wrap; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; color: var(--green); white-space: nowrap; }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 80px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -1px; bottom: -1px; width: 2.5px; background: var(--ink); }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); }
+  .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.sm { padding: 3px 8px; font-size: 11.5px; border-width: 1.5px; }
+  .kasten { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .tablewrap { overflow-x: auto; }
+
+  /* ---- Matrix ---- */
+  .stable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; table-layout: fixed; }
+  .stable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); }
+  .stable td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: middle; height: 43px; }
+  .stable tr:hover td { background: oklch(0.965 0.012 100); }
+  .stable td.c, .stable th.c, .stable tfoot td.c { text-align: center; }
+  .stable td.num, .stable th.num, .stable tfoot td.num { text-align: right; }
+  .stable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .stable .total { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .stable th .kw { display: block; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12px; color: var(--green); text-transform: none; }
+  .stable .firm { font-weight: 700; }
+  .stable tr.edit td { background: oklch(0.99 0.035 95); }
+  .stable tr.edit:hover td { background: oklch(0.99 0.035 95); }
+
+  .mcell { display: inline-block; min-width: 54px; padding: 3px 6px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; border: 1.5px solid transparent; }
+  .mcell.on { background: oklch(0.94 0.03 160); color: var(--green); border-color: var(--green); }
+  .mcell.on.ovr { color: var(--red); border-color: var(--red); background: oklch(0.97 0.02 30); }
+  .mcell.off { border: 1.5px dashed oklch(0.8 0.02 120); color: oklch(0.8 0.02 120); }
+  .mcell.klick { cursor: pointer; }
+  .mcell.klick.off:hover { border-color: var(--green); color: var(--green); background: oklch(0.97 0.02 160); }
+  .mcell.klick.on:hover { border-style: dashed; opacity: .6; }
+  .sach { display: inline-flex; align-items: baseline; gap: 5px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 11px; font-weight: 700; padding: 2px 7px; }
+  .sach .w { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11.5px; color: var(--ink); }
+  .ci { width: 100%; max-width: 62px; border: 1.5px solid var(--ink); padding: 3px 5px; font-size: 12px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; background: #fff; }
+  .ci.wide { max-width: 100%; text-align: left; font-weight: 500; }
+  .ci:focus { outline: 2px solid var(--green); outline-offset: 1px; }
+  /* BEFUND aus dem Prototyp: mit fetter Standard-Schrift liest sich der Platzhalter wie ein
+     zugewiesener Wert — im ✎-Modus sahen leere und belegte Kategorien identisch aus.
+     Platzhalter deshalb leicht und blass, nie in Wertgewicht. */
+  .ci::placeholder { color: oklch(0.82 0.02 120); font-weight: 400; }
+  .rowbtns { display: flex; gap: 4px; justify-content: flex-end; }
+  .notizzeile td { background: oklch(0.99 0.035 95) !important; border-bottom: 1px solid var(--line); padding: 0 10px 8px; height: auto; }
+  .notizzeile label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); display: block; margin-bottom: 3px; }
+  .stift { border: 1.5px solid var(--ink); background: #fff; padding: 2px 7px; font-size: 12px; font-weight: 700; }
+  .stift.on { background: var(--yellow); }
+  .kebab { border: 0; background: none; font-size: 15px; line-height: 1; color: var(--ink-soft); padding: 2px 5px; }
+  .kebab:hover { color: var(--ink); }
+
+  .sammel { display: flex; align-items: center; gap: 10px; border-top: 2px solid var(--ink); background: var(--yellow); padding: 8px 14px; font-size: 12.5px; font-weight: 700; }
+  .sammel .btn { border-color: var(--ink); background: #fff; }
+
+  /* ---- Dialog (Variante A) ---- */
+  .backdrop { position: fixed; inset: 0; background: oklch(0.24 0.02 145 / .45); display: none; align-items: flex-start; justify-content: center; padding: 40px 20px; z-index: 60; overflow-y: auto; }
+  .backdrop.on { display: flex; }
+  .dlg { border: 2.5px solid var(--ink); background: var(--paper); width: 100%; max-width: 500px; box-shadow: 8px 8px 0 oklch(0.24 0.02 145 / .25); }
+  .dlg .dh { background: var(--green); background-image: var(--halftone); color: #fff; padding: 11px 16px; border-bottom: 2px solid var(--ink); font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; text-transform: uppercase; }
+  .dlg .db { padding: 15px 16px; display: flex; flex-direction: column; gap: 13px; }
+  .dlg label.f { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+  .dlg input.t { width: 100%; border: 2px solid var(--ink); padding: 6px 9px; font-size: 13px; background: #fff; }
+  .dlg .katrow { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .dlg .katrow .nm { flex: 1; font-size: 13px; }
+  .dlg .katrow .std { font-size: 11px; color: var(--ink-soft); font-family: "Oswald", sans-serif; font-weight: 600; }
+  .dlg .cbx { width: 18px; height: 18px; border: 2px solid var(--ink); background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--green); flex: 0 0 auto; }
+  .dlg .cbx.on { background: var(--yellow); }
+  .dlg .df { display: flex; justify-content: flex-end; gap: 8px; border-top: 2px solid var(--ink); padding: 11px 16px; background: #fff; }
+  .zwei { display: flex; gap: 9px; } .zwei > div:first-child { flex: 1; }
+
+  /* ---- Popover (Variante D) ---- */
+  .pop { position: absolute; border: 2.5px solid var(--ink); background: var(--paper); box-shadow: 5px 5px 0 oklch(0.24 0.02 145 / .22); padding: 10px; z-index: 70; width: 205px; display: none; }
+  .pop.on { display: block; }
+  .pop .ph { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 5px; }
+  .pop .prow { display: flex; gap: 6px; align-items: center; }
+  .pop input { width: 100%; border: 2px solid var(--ink); padding: 5px 7px; font-size: 13px; font-weight: 700; text-align: center; background: #fff; }
+  .pop .pf { display: flex; gap: 6px; margin-top: 8px; }
+  .pop .pf .btn { flex: 1; text-align: center; }
+  .pop .del { border-color: var(--red); color: var(--red); }
+  .pop .std { font-size: 11px; color: var(--ink-soft); margin-top: 5px; }
+
+  .fixbar { position: fixed; bottom: 0; left: 0; right: 0; border-top: 2.5px solid var(--ink); background: #fff; padding: 9px 22px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px; z-index: 50; }
+  .fixbar b { font-family: "Oswald", sans-serif; font-weight: 600; }
+  .fixbar .pill { border: 1.5px solid var(--ink); padding: 2px 8px; font-weight: 700; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="titel">Wie wird in der Paket-Matrix eingegeben?
+    <span>Entscheid-Prototyp · Wayfinder #69 · vier Umsetzungen, gleiche 14 Firmen, gleiche 4 Kategorien · alle wirklich klickbar</span>
+  </div>
+
+  <div class="measure">
+    <h4>Die Lücke, um die es geht</h4>
+    Vision §5 spezifiziert <b>genau eine</b> Interaktion: „Klick in leere Zelle weist die Kategorie zum
+    Standardwert zu, Klick auf eine volle entfernt sie." Von vier wertetragenden Spalten ist damit
+    eine bedienbar. Ohne Antwort bleiben:
+    <table>
+      <thead><tr><th>Was</th><th>Zustand in der Vision</th></tr></thead>
+      <tbody>
+        <tr><td><b>Abweichender Wert</b> (rote Marke)</td><td>Der Master-Prototyp <i>zeigt</i> Wieselburger mit 350 statt 200 — kein Klick erzeugt das.</td></tr>
+        <tr><td><b>Freibetrag</b></td><td>Reine Textspalte, nicht bedienbar.</td></tr>
+        <tr><td><b>Sachleistung</b></td><td>Gestrichelte Marke spezifiziert, Eingabe nicht (ausdrückliche Auflage aus #63).</td></tr>
+        <tr><td><b>Notizen</b></td><td><code>sponsorings.notes</code> existiert in der DB und im heutigen Dialog — in der Vision gibt es keinen Platz dafür.</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:9px;padding-top:8px;border-top:1.5px dashed var(--line)">
+      Gemessen wird pro Variante: <b>Klicks + Tastenanschläge</b> für die Aufgabe unten,
+      der <b>Zeilenhöhen-Sprung</b> beim Umschalten in den Bearbeiten-Zustand (beim Material war das
+      die Auflage <code>table-layout: fixed</code> + feste Zeilenhöhe, sonst springt die Zeile um 12 px),
+      und der <b>Zerstörungsfall</b>: wie viele ungeschützte Klicks eine Zusage über € 300 vernichten.
+    </div>
+  </div>
+
+  <div class="aufgabe">
+    <h4>Die Aufgabe — bitte in jeder Variante einmal durchführen</h4>
+    Anruf beim <b>Gasthaus Zur Linde</b>. Es hat heuer erstmals zugesagt:
+    <ol>
+      <li><b>Plakat</b> zuweisen — aber zum ausgehandelten Preis <b>180</b> statt Standard 200 (abweichender Wert).</li>
+      <li><b>Freibetrag</b> von 150 auf <b>200</b> ändern.</li>
+      <li><b>Sachleistung</b> eintragen: „Tombolapreis Gutschein" mit Schätzwert <b>50</b>.</li>
+    </ol>
+    Der Zähler über jeder Variante zählt mit. Danach in derselben Variante versuchen,
+    <b>versehentlich</b> die € 300-Zusage von <b>Sparkasse Purgstall</b> (Transparent) zu löschen.
+  </div>
+
+  <!-- =========================== A =========================== -->
+  <h2 class="sect">A — Dialog pro Sponsoring (heutiger Code, nur in die Handschrift gebracht)</h2>
+  <p class="verdikt">Die Tabelle ist <b class="ja">vollständig lesend</b>. Alles Bearbeiten passiert im Dialog hinter ✎ — Kategorien als Häkchenliste mit Wertfeld, Freibetrag, Sachleistung, Notizen. Das ist der einzige Weg, der heute schon existiert.</p>
+  <div data-vroot="A">
+  <div class="zaehler" id="zA"></div>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val" id="kA">–</span><div class="ruler"><i id="fA"></i><em id="mA"></em></div><span style="font-size:12px;color:var(--ink-soft)" id="nA"></span></div>
+    <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn quiet">PDF</button>
+  </div>
+  <div class="kasten"><div class="tablewrap" id="tA"></div></div>
+  </div>
+
+  <!-- =========================== B =========================== -->
+  <h2 class="sect">B — Zeilenmodus ✎ wie beim Material (Klick-Zuweisen gestrichen)</h2>
+  <p class="verdikt">Tabelle strikt lesend; ✎ macht die Felder <i>dieser Zeile</i> zu Eingaben — jede Kategorie ein Zahlenfeld (leer = nicht zugewiesen), dazu Freibetrag, Sachleistung und eine Notiz-Unterzeile. Mehrere Zeilen gleichzeitig offen, ein Sammel-Speichern. Dasselbe Muster wie <b>#66</b>.</p>
+  <div data-vroot="B">
+  <div class="zaehler" id="zB"></div>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val" id="kB">–</span><div class="ruler"><i id="fB"></i><em id="mB"></em></div><span style="font-size:12px;color:var(--ink-soft)" id="nB"></span></div>
+    <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn quiet">PDF</button>
+    <button class="btn" id="allB">ALLE ZEILEN BEARBEITEN</button>
+  </div>
+  <div class="kasten"><div class="tablewrap" id="tB"></div><div id="sammelB"></div></div>
+  </div>
+
+  <!-- =========================== C =========================== -->
+  <h2 class="sect">C — Zeilenmodus ✎ + Klick-Zuweisen nur in leeren Zellen</h2>
+  <p class="verdikt">Wie B, aber der Charme von Variante C bleibt: <b>Klick in eine leere Zelle</b> weist die Kategorie zum Standardwert zu und speichert sofort. <b class="ja">Volle Zellen sind klickfest</b> — ändern und entfernen geht nur im ✎-Modus. Der Ein-Klick-Weg bleibt, der Zerstörungsfall fällt weg.</p>
+  <div data-vroot="C">
+  <div class="zaehler" id="zC"></div>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val" id="kC">–</span><div class="ruler"><i id="fC"></i><em id="mC"></em></div><span style="font-size:12px;color:var(--ink-soft)" id="nC"></span></div>
+    <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn quiet">PDF</button>
+  </div>
+  <div class="kasten"><div class="tablewrap" id="tC"></div><div id="sammelC"></div></div>
+  </div>
+
+  <!-- =========================== D =========================== -->
+  <h2 class="sect">D — Reine Klick-Matrix, jede Zelle öffnet ein Zettel-Popover</h2>
+  <p class="verdikt">Die Vision wörtlich, aber der Klick öffnet einen kleinen Zettel statt sofort zu schalten: Wertfeld, „Standard 200 übernehmen", „Entfernen". Gilt auch für Freibetrag und Sachleistung. Notizen sitzen im ⋮.</p>
+  <div data-vroot="D">
+  <div class="zaehler" id="zD"></div>
+  <div class="planbar">
+    <div class="kpi"><b>Sponsoring</b><span class="val" id="kD">–</span><div class="ruler"><i id="fD"></i><em id="mD"></em></div><span style="font-size:12px;color:var(--ink-soft)" id="nD"></span></div>
+    <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn quiet">PDF</button>
+  </div>
+  <div class="kasten"><div class="tablewrap" id="tD"></div></div>
+  </div>
+
+  <div class="measure" style="margin-top:28px">
+    <h4>Live-Zähler — mitlaufend, während du oben klickst</h4>
+    <table>
+      <thead><tr><th>Variante</th><th class="n">Klicks</th><th class="n">Tasten</th><th class="n">Zeilensprung</th><th>Zerstörungsfall</th><th>Notizen</th></tr></thead>
+      <tbody id="erg"></tbody>
+    </table>
+  </div>
+
+  <div class="measure" style="border-left-color:var(--green)">
+    <h4>Gemessenes Ergebnis (Aufgabe automatisiert durchgespielt)</h4>
+    <table>
+      <thead><tr><th>Variante</th><th class="n">Aufgabe oben<br>Klicks / Tasten</th><th class="n">Nur zuweisen<br>zum Standardwert</th><th class="n">Zeilen-<br>sprung</th></tr></thead>
+      <tbody>
+        <tr><td><b>A</b> — Dialog</td><td class="n"><span class="px">7 / 31</span></td><td class="n">3 Klicks</td><td class="n">—</td></tr>
+        <tr><td><b>B</b> — Zeilenmodus ✎</td><td class="n"><span class="px">6 / 31</span></td><td class="n">3 Klicks + 3 Tasten</td><td class="n"><span class="gut">0 px</span></td></tr>
+        <tr><td><b>C</b> — Zeilenmodus + Klick</td><td class="n"><span class="px">6 / 31</span></td><td class="n"><span class="gut">1 Klick</span></td><td class="n"><span class="gut">0 px</span></td></tr>
+        <tr><td><b>D</b> — Klick + Popover</td><td class="n"><span class="px">7 / 31</span></td><td class="n">2 Klicks</td><td class="n">—</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px;padding-top:9px;border-top:1.5px dashed var(--line);line-height:1.65">
+      <b>Bei der komplizierten Aufgabe trennt der Aufwand die Varianten nicht</b> — 6 bis 7 Klicks,
+      31 Tastenanschläge in allen vier. Wer „Dialog ist umständlich“ oder „Popover ist schneller“
+      erwartet hat: gemessen stimmt beides nicht.<br>
+      <b>Getrennt wird beim häufigen Fall.</b> Eine Kategorie <i>zum Standardwert</i> zuweisen ist
+      1 Klick in C, 2 in D, 3 in A, und 3 Klicks + 3 Tasten in B — dort muss man den Betrag abtippen,
+      den das System längst kennt. Und dieser Fall ist der Normalfall:
+      in den 14 Beispiel-Firmen sind <b>16 von 17 Zuweisungen zum Standardwert</b>, genau eine weicht ab
+      (Wieselburger, Plakat 350 statt 200) — <b>94 %</b>.<br>
+      <b>Der Zeilensprung ist gelöst, nicht abwesend:</b> 0 px, weil hier von Anfang an
+      <code>table-layout: fixed</code> und eine feste Zeilenhöhe von 43 px stehen — die Auflage aus
+      dem Material-Entscheid (#66) trägt hier unverändert und kostet nichts.<br>
+      <b>Zum Zerstörungsfall:</b> D ist bereits eine <i>Härtung</i> der Vision. Die Vision selbst
+      („Klick auf eine volle entfernt sie“) vernichtet eine € 300-Zusage mit <b>einem</b> Klick;
+      D braucht zwei bewusste (Zelle, dann „Entfernen“) — aber weiterhin ohne Rückfrage und ohne Zurück.
+      In A, B und C ist der Fall <span class="gut">baulich unmöglich</span>.
+    </div>
+    <div style="margin-top:10px;padding-top:9px;border-top:1.5px dashed var(--line);line-height:1.65">
+      <b>Zwei Befunde, die erst am gebauten Prototyp sichtbar wurden:</b><br>
+      1. <b>Der Platzhalter log.</b> Im ✎-Modus stand in jeder leeren Kategorie-Zelle der Standardwert
+      als Platzhalter — in Wertschrift gesetzt sah eine <i>nicht</i> zugewiesene Kategorie genauso aus
+      wie eine zugewiesene. Behoben: Platzhalter blass und in normaler Stärke. Als Auflage für die
+      Umsetzung festhalten, das ist kein Kosmetikpunkt.<br>
+      2. <b>In D wird der Freibetrag zur fünften Kategorie.</b> Damit man ihn anklicken kann, braucht
+      er eine grüne Wertmarke wie eine Kategorie — und liest sich dann als eine. In A, B und C bleibt
+      er eine rechtsbündige Zahl und damit sichtbar etwas anderes.<br>
+      3. <b>Die Sachleistungs-Spalte trägt rund 22 Zeichen.</b> „Geschenkkorb Tombola (€ 80)“ bricht
+      bei 17 % Spaltenbreite auf zwei Zeilen und macht die Zeile höher. Entweder die Spalte wird
+      breiter, oder die Marke kürzt den Text mit Ellipse und zeigt das Ganze im Titel-Attribut.
+    </div>
+  </div>
+</div>
+
+<div class="backdrop" id="bd"><div class="dlg" id="dlg"></div></div>
+<div class="pop" id="pop"></div>
+
+<div class="fixbar">
+  <b>Klicks / Tasten:</b>
+  <span class="pill" id="pA">A –</span><span class="pill" id="pB">B –</span>
+  <span class="pill" id="pC">C –</span><span class="pill" id="pD">D –</span>
+  <span style="color:var(--ink-soft)">Jede Variante hat ihre eigenen Daten — Änderungen färben nicht ab.</span>
+</div>
+
+<script>
+/* ================= Daten ================= */
+const KATS = [
+  { k:'transparent', n:'Transparent', v:300 },
+  { k:'plakat',      n:'Plakat',      v:200 },
+  { k:'speisekarte', n:'Speisekarte', v:150 },
+  { k:'social',      n:'Social',      v:100 },
+];
+const BASIS = [
+  { name:'Brauerei Wieselburger',   cells:{transparent:300, plakat:350}, frei:200, sach:null, notiz:'Zusage per Mail 12.03., Kontakt Hr. Bauer' },
+  { name:'Raiffeisenbank Scheibbs', cells:{transparent:300, speisekarte:150}, frei:null, sach:null, notiz:'' },
+  { name:'Lagerhaus Steinbach',     cells:{plakat:200, social:100}, frei:100, sach:null, notiz:'' },
+  { name:'Fleischerei Berger',      cells:{speisekarte:150}, frei:250, sach:{t:'Geschenkkorb Tombola', v:80}, notiz:'Korb am Freitag abholen' },
+  { name:'Winzerhof Schmid',        cells:{speisekarte:150}, frei:150, sach:{t:'6 Fl. Wein Tombola', v:60}, notiz:'' },
+  { name:'Elektro Pöchhacker',      cells:{plakat:200}, frei:null, sach:null, notiz:'' },
+  { name:'Gasthaus Zur Linde',      cells:{}, frei:150, sach:null, notiz:'' },
+  { name:'Autohaus Steiner',        cells:{plakat:200, social:100}, frei:100, sach:null, notiz:'' },
+  { name:'Sparkasse Purgstall',     cells:{transparent:300}, frei:200, sach:null, notiz:'' },
+  { name:'Bäckerei Leitner',        cells:{speisekarte:150}, frei:50, sach:{t:'Brotkorb Tombola', v:40}, notiz:'' },
+  { name:'Tischlerei Auer',         cells:{plakat:200}, frei:null, sach:null, notiz:'' },
+  { name:'Apotheke Steinbach',      cells:{speisekarte:150, social:100}, frei:100, sach:null, notiz:'' },
+  { name:'Friseur Haarmonie',       cells:{social:100}, frei:200, sach:null, notiz:'' },
+  { name:'Taxi Brandl',             cells:{}, frei:150, sach:null, notiz:'' },
+];
+const VORJAHR = 4400;
+const eur = v => '€ ' + v.toLocaleString('de-AT');
+const kopie = () => JSON.parse(JSON.stringify(BASIS));
+
+/* Ein Zustand je Variante */
+const V = {
+  A: { rows: kopie(), edit: new Set(), klicks: 0, tasten: 0, sprung: null, tot: 0 },
+  B: { rows: kopie(), edit: new Set(), klicks: 0, tasten: 0, sprung: null, tot: 0 },
+  C: { rows: kopie(), edit: new Set(), klicks: 0, tasten: 0, sprung: null, tot: 0 },
+  D: { rows: kopie(), edit: new Set(), klicks: 0, tasten: 0, sprung: null, tot: 0 },
+};
+
+const total = s => KATS.reduce((a,k) => a + (s.cells[k.k] || 0), 0) + (s.frei || 0);
+const geld  = rows => rows.reduce((a,s) => a + total(s), 0);
+const sach  = rows => rows.reduce((a,s) => a + (s.sach ? s.sach.v : 0), 0);
+
+/* ================= Kopf / Maßband ================= */
+function planbar(id) {
+  const rows = V[id].rows, sum = geld(rows);
+  const scale = Math.max(VORJAHR, sum);
+  document.getElementById('k' + id).textContent = eur(sum);
+  document.getElementById('f' + id).style.width = Math.round(sum / scale * 100) + '%';
+  document.getElementById('m' + id).style.left  = Math.round(VORJAHR / scale * 100) + '%';
+  document.getElementById('n' + id).textContent =
+    rows.length + ' Sponsoren · Vorjahr ' + eur(VORJAHR) + (sach(rows) ? ' · + ' + eur(sach(rows)) + ' Sachwert' : '');
+}
+
+/* ================= Zähler ================= */
+function zaehler(id) {
+  const s = V[id];
+  document.getElementById('z' + id).innerHTML =
+    `<span>Klicks</span><span class="z">${s.klicks}</span>
+     <span>Tastenanschläge</span><span class="z">${s.tasten}</span>
+     ${s.tot ? `<span class="tod">Zusagen ungeschützt gelöscht: ${s.tot}</span>` : ''}
+     <button class="rst" data-rst="${id}">zurücksetzen</button>`;
+  document.getElementById('p' + id).textContent = `${id} ${s.klicks} / ${s.tasten}`;
+  ergebnis();
+}
+document.addEventListener('click', e => {
+  const r = e.target.closest('[data-rst]'); if (!r) return;
+  const id = r.dataset.rst;
+  V[id] = { rows: kopie(), edit: new Set(), klicks: 0, tasten: 0, sprung: V[id].sprung, tot: 0 };
+  render(id);
+});
+/* Gezählt wird GLOBAL pro Variante — jeder Klick im Bereich, auch der ins Eingabefeld.
+   Alles andere würde die Dialog- und Zeilenmodus-Varianten künstlich billig machen. */
+function zaehl(id) { zaehler(id); }
+function wessen(el) {
+  if (el.closest('#dlg')) return 'A';
+  if (el.closest('#pop')) return 'D';
+  const r = el.closest('[data-vroot]');
+  return r ? r.dataset.vroot : null;
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-rst]')) return;
+  const id = wessen(e.target); if (!id) return;
+  V[id].klicks++; zaehler(id);
+}, true);
+document.addEventListener('keydown', e => {
+  const id = wessen(e.target); if (!id) return;
+  if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Tab') {
+    V[id].tasten++; zaehler(id);
+  }
+}, true);
+
+/* ================= Gemeinsame Zellen ================= */
+function katZelle(id, i, k, modus) {
+  const s = V[id].rows[i], v = s.cells[k.k];
+  const klickbar = (modus === 'D') || (modus === 'C' && v == null);
+  const cls = v != null ? `mcell on${v !== k.v ? ' ovr' : ''}` : 'mcell off';
+  return `<span class="${cls}${klickbar ? ' klick' : ''}"
+            ${klickbar ? `data-zelle="${id}|${i}|${k.k}"` : ''}>${v != null ? v : '+'}</span>`;
+}
+function sachZelle(s, id, i, modus) {
+  if (s.sach) return `<span class="sach"${modus === 'D' ? ` data-sach="${id}|${i}"` : ''} ${modus === 'D' ? 'style="cursor:pointer"' : ''}>${s.sach.t} <span class="w">(${eur(s.sach.v)})</span></span>`;
+  return modus === 'D'
+    ? `<span class="mcell off klick" style="min-width:32px" data-sach="${id}|${i}">+</span>`
+    : `<span class="mcell off" style="min-width:32px">+</span>`;
+}
+function fuss(id, extra) {
+  const rows = V[id].rows;
+  return `<tfoot><tr>
+    <td>Σ je Kategorie</td>
+    ${KATS.map(k => `<td class="c">${eur(rows.reduce((a,s) => a + (s.cells[k.k] || 0), 0))}</td>`).join('')}
+    <td class="num">${eur(rows.reduce((a,s) => a + (s.frei || 0), 0))}</td>
+    <td>+ ${eur(sach(rows))} Sachwert</td>
+    <td class="num"><span class="total">${eur(geld(rows))}</span></td>
+    <td>${extra || ''}</td>
+  </tr></tfoot>`;
+}
+const KOPF = (aktion) => `<thead><tr>
+  <th style="width:19%">Firma</th>
+  ${KATS.map(k => `<th class="c">${k.n}<span class="kw">€ ${k.v}</span></th>`).join('')}
+  <th class="num" style="width:9%">Freibetrag</th>
+  <th style="width:17%">Sachleistung</th>
+  <th class="num" style="width:10%">Gesamt</th>
+  <th style="width:7%"></th>
+</tr></thead>`;
+
+/* ================= A — Dialog ================= */
+function renderA() {
+  const rows = V.A.rows;
+  document.getElementById('tA').innerHTML = `<table class="stable">${KOPF()}
+    <tbody>${rows.map((s,i) => `<tr>
+      <td class="firm">${s.name}</td>
+      ${KATS.map(k => `<td class="c">${katZelle('A', i, k, 'A')}</td>`).join('')}
+      <td class="num">${s.frei != null ? s.frei : '—'}</td>
+      <td>${sachZelle(s, 'A', i, 'A')}</td>
+      <td class="num"><b>${eur(total(s))}</b></td>
+      <td><div class="rowbtns"><button class="stift" data-dlg="${i}">✎</button><button class="kebab">⋮</button></div></td>
+    </tr>`).join('')}</tbody>
+    ${fuss('A')}</table>`;
+  planbar('A'); zaehler('A');
+}
+
+function oeffneDialog(i) {
+  const s = V.A.rows[i];
+  const d = document.getElementById('dlg');
+  d.innerHTML = `<div class="dh">Sponsoring bearbeiten</div>
+    <div class="db">
+      <div><label class="f">Firma</label><div style="font-weight:700;font-size:14px">${s.name}</div></div>
+      <div><label class="f">Kategorien</label>
+        ${KATS.map(k => {
+          const v = s.cells[k.k];
+          return `<div class="katrow">
+            <span class="cbx${v != null ? ' on' : ''}" data-dcb="${k.k}">${v != null ? '✓' : ''}</span>
+            <span class="nm">${k.n}</span><span class="std">Standard € ${k.v}</span>
+            <input class="ci" data-dv="${k.k}" value="${v != null && v !== k.v ? v : ''}" placeholder="${k.v}" ${v == null ? 'disabled style="opacity:.35"' : ''}>
+          </div>`;
+        }).join('')}
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:5px">Leer lassen = Standardwert gilt; eigener Wert überschreibt.</div>
+      </div>
+      <div><label class="f">Freibetrag (€)</label><input class="t" id="dFrei" value="${s.frei != null ? s.frei : ''}"></div>
+      <div class="zwei">
+        <div><label class="f">Sachleistung</label><input class="t" id="dSachT" value="${s.sach ? s.sach.t : ''}" placeholder="z. B. Geschenkkorb Tombola"></div>
+        <div style="width:110px"><label class="f">Schätzwert (€)</label><input class="t" id="dSachV" value="${s.sach ? s.sach.v : ''}"></div>
+      </div>
+      <div><label class="f">Notizen</label><input class="t" id="dNotiz" value="${s.notiz || ''}"></div>
+    </div>
+    <div class="df"><button class="btn" data-dx="1">Abbrechen</button><button class="btn primary" data-dsave="${i}">Speichern</button></div>`;
+  document.getElementById('bd').classList.add('on');
+}
+document.getElementById('bd').addEventListener('click', e => {
+  if (e.target.id === 'bd') { document.getElementById('bd').classList.remove('on'); zaehl('A'); }
+});
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-dlg]');
+  if (o) { zaehl('A'); oeffneDialog(+o.dataset.dlg); return; }
+  const cb = e.target.closest('[data-dcb]');
+  if (cb) {
+    zaehl('A'); cb.classList.toggle('on');
+    cb.textContent = cb.classList.contains('on') ? '✓' : '';
+    const inp = document.querySelector(`[data-dv="${cb.dataset.dcb}"]`);
+    inp.disabled = !cb.classList.contains('on');
+    inp.style.opacity = inp.disabled ? '.35' : '1';
+    return;
+  }
+  const x = e.target.closest('[data-dx]');
+  if (x) { zaehl('A'); document.getElementById('bd').classList.remove('on'); return; }
+  const sv = e.target.closest('[data-dsave]');
+  if (sv) {
+    const i = +sv.dataset.dsave, s = V.A.rows[i];
+    KATS.forEach(k => {
+      const on = document.querySelector(`[data-dcb="${k.k}"]`).classList.contains('on');
+      if (!on) { delete s.cells[k.k]; return; }
+      const raw = document.querySelector(`[data-dv="${k.k}"]`).value.trim();
+      s.cells[k.k] = raw === '' ? k.v : +raw.replace(',', '.');
+    });
+    const f = document.getElementById('dFrei').value.trim();
+    s.frei = f === '' ? null : +f.replace(',', '.');
+    const st = document.getElementById('dSachT').value.trim(), sw = document.getElementById('dSachV').value.trim();
+    s.sach = st === '' ? null : { t: st, v: sw === '' ? 0 : +sw.replace(',', '.') };
+    s.notiz = document.getElementById('dNotiz').value.trim();
+    document.getElementById('bd').classList.remove('on');
+    zaehl('A'); renderA();
+  }
+});
+
+/* ================= B / C — Zeilenmodus ================= */
+function renderBC(id) {
+  const st = V[id], rows = st.rows, modus = id;
+  const body = rows.map((s,i) => {
+    if (!st.edit.has(i)) {
+      return `<tr>
+        <td class="firm">${s.name}</td>
+        ${KATS.map(k => `<td class="c">${katZelle(id, i, k, modus)}</td>`).join('')}
+        <td class="num">${s.frei != null ? s.frei : '—'}</td>
+        <td>${sachZelle(s, id, i, modus)}</td>
+        <td class="num"><b>${eur(total(s))}</b></td>
+        <td><div class="rowbtns"><button class="stift" data-ed="${id}|${i}">✎</button><button class="kebab">⋮</button></div></td>
+      </tr>`;
+    }
+    return `<tr class="edit">
+      <td class="firm">${s.name}</td>
+      ${KATS.map(k => `<td class="c"><input class="ci" data-in="${id}|${i}|${k.k}" value="${s.cells[k.k] != null ? s.cells[k.k] : ''}" placeholder="${k.v}"></td>`).join('')}
+      <td class="c"><input class="ci" data-in="${id}|${i}|__frei" value="${s.frei != null ? s.frei : ''}" placeholder="0"></td>
+      <td><div style="display:flex;gap:4px"><input class="ci wide" data-in="${id}|${i}|__sachT" value="${s.sach ? s.sach.t : ''}" placeholder="Sachleistung"><input class="ci" style="max-width:48px" data-in="${id}|${i}|__sachV" value="${s.sach ? s.sach.v : ''}" placeholder="€"></div></td>
+      <td class="num"><b>${eur(total(s))}</b></td>
+      <td><div class="rowbtns"><button class="stift on" data-ed="${id}|${i}">✎</button></div></td>
+    </tr>
+    <tr class="notizzeile"><td colspan="${KATS.length + 4}"><label>Notiz</label><input class="ci wide" style="max-width:100%" data-in="${id}|${i}|__notiz" value="${s.notiz || ''}" placeholder="z. B. Zusage per Mail, Kontakt …"></td><td></td></tr>`;
+  }).join('');
+
+  document.getElementById('t' + id).innerHTML =
+    `<table class="stable">${KOPF()}<tbody>${body}</tbody>${fuss(id)}</table>`;
+  document.getElementById('sammel' + id).innerHTML = st.edit.size
+    ? `<div class="sammel"><span>${st.edit.size} Zeile${st.edit.size === 1 ? '' : 'n'} in Bearbeitung — ungespeichert</span>
+        <button class="btn" data-abbr="${id}">Verwerfen</button>
+        <button class="btn primary" data-save="${id}">${st.edit.size} Zeile${st.edit.size === 1 ? '' : 'n'} speichern</button></div>`
+    : '';
+  planbar(id); zaehler(id);
+  messeSprung(id);
+}
+
+document.addEventListener('click', e => {
+  const ed = e.target.closest('[data-ed]');
+  if (ed) {
+    const [id, i] = ed.dataset.ed.split('|'); const n = +i;
+    V[id].edit.has(n) ? V[id].edit.delete(n) : V[id].edit.add(n);
+    zaehl(id); renderBC(id); return;
+  }
+  const sv = e.target.closest('[data-save]');
+  if (sv) { const id = sv.dataset.save; V[id].edit.clear(); zaehl(id); renderBC(id); return; }
+  const ab = e.target.closest('[data-abbr]');
+  if (ab) { const id = ab.dataset.abbr; V[id].rows = kopie(); V[id].edit.clear(); zaehl(id); renderBC(id); return; }
+});
+document.getElementById('allB').addEventListener('click', () => {
+  V.B.rows.forEach((_, i) => V.B.edit.add(i)); zaehl('B'); renderBC('B');
+});
+
+/* Eingaben in B/C */
+document.addEventListener('input', e => {
+  const t = e.target.closest('[data-in]'); if (!t) return;
+  const [id, i, feld] = t.dataset.in.split('|');
+  const s = V[id].rows[+i], raw = t.value.trim();
+  if (feld === '__frei')       s.frei = raw === '' ? null : +raw.replace(',', '.') || 0;
+  else if (feld === '__notiz') s.notiz = raw;
+  else if (feld === '__sachT') s.sach = raw === '' ? null : { t: raw, v: s.sach ? s.sach.v : 0 };
+  else if (feld === '__sachV') { if (s.sach) s.sach.v = raw === '' ? 0 : +raw.replace(',', '.') || 0; }
+  else { if (raw === '') delete s.cells[feld]; else s.cells[feld] = +raw.replace(',', '.') || 0; }
+  /* nur die Summen neu schreiben, nicht neu rendern (Fokus behalten) */
+  const tbl = document.getElementById('t' + id).querySelector('table');
+  const tr = t.closest('tr.edit') || t.closest('tr.notizzeile').previousElementSibling;
+  tr.querySelector('td.num b').textContent = eur(total(s));
+  tbl.querySelector('tfoot').outerHTML = fuss(id);
+  planbar(id);
+});
+
+/* Klick-Zuweisen (C: nur leere Zellen; D: alle) */
+document.addEventListener('click', e => {
+  const z = e.target.closest('[data-zelle]'); if (!z) return;
+  const [id, i, kk] = z.dataset.zelle.split('|');
+  const s = V[id].rows[+i], k = KATS.find(x => x.k === kk);
+  if (id === 'C') { s.cells[kk] = k.v; zaehl('C'); renderBC('C'); return; }
+  if (id === 'D') { oeffnePop(z, id, +i, kk); zaehl('D'); }
+});
+
+/* ================= D — Popover ================= */
+function renderD() {
+  const rows = V.D.rows;
+  document.getElementById('tD').innerHTML = `<table class="stable">${KOPF()}
+    <tbody>${rows.map((s,i) => `<tr>
+      <td class="firm">${s.name}</td>
+      ${KATS.map(k => `<td class="c">${katZelle('D', i, k, 'D')}</td>`).join('')}
+      <td class="num"><span class="mcell ${s.frei != null ? 'on' : 'off'} klick" data-frei="D|${i}">${s.frei != null ? s.frei : '+'}</span></td>
+      <td>${sachZelle(s, 'D', i, 'D')}</td>
+      <td class="num"><b>${eur(total(s))}</b></td>
+      <td><div class="rowbtns"><button class="kebab">⋮</button></div></td>
+    </tr>`).join('')}</tbody>
+    ${fuss('D')}</table>`;
+  planbar('D'); zaehler('D');
+}
+const pop = document.getElementById('pop');
+function stelle(anker) {
+  const r = anker.getBoundingClientRect();
+  pop.style.left = Math.min(window.innerWidth - 215, r.left + scrollX - 60) + 'px';
+  pop.style.top  = (r.bottom + scrollY + 5) + 'px';
+  pop.classList.add('on');
+}
+function oeffnePop(anker, id, i, kk) {
+  const s = V.D.rows[i], k = KATS.find(x => x.k === kk), v = s.cells[kk];
+  pop.innerHTML = `<div class="ph">${k.n}</div>
+    <div class="prow"><input id="pv" value="${v != null ? v : k.v}" inputmode="decimal"></div>
+    <div class="std">Standardwert € ${k.v}</div>
+    <div class="pf"><button class="btn sm" data-pok="${i}|${kk}">Übernehmen</button>
+      ${v != null ? `<button class="btn sm del" data-pdel="${i}|${kk}">Entfernen</button>` : ''}</div>`;
+  stelle(anker);
+  setTimeout(() => document.getElementById('pv').select(), 0);
+}
+function oeffnePopFrei(anker, i) {
+  const s = V.D.rows[i];
+  pop.innerHTML = `<div class="ph">Freibetrag</div>
+    <div class="prow"><input id="pv" value="${s.frei != null ? s.frei : ''}" inputmode="decimal"></div>
+    <div class="pf"><button class="btn sm" data-pfrei="${i}">Übernehmen</button>
+      ${s.frei != null ? `<button class="btn sm del" data-pfreidel="${i}">Entfernen</button>` : ''}</div>`;
+  stelle(anker);
+  setTimeout(() => document.getElementById('pv').select(), 0);
+}
+function oeffnePopSach(anker, i) {
+  const s = V.D.rows[i];
+  pop.innerHTML = `<div class="ph">Sachleistung</div>
+    <div class="prow"><input id="pt" value="${s.sach ? s.sach.t : ''}" placeholder="Bezeichnung" style="text-align:left;font-weight:500"></div>
+    <div class="prow" style="margin-top:6px"><input id="pv" value="${s.sach ? s.sach.v : ''}" placeholder="Schätzwert €" inputmode="decimal"></div>
+    <div class="std">Zählt nie in die Geldsumme.</div>
+    <div class="pf"><button class="btn sm" data-psach="${i}">Übernehmen</button>
+      ${s.sach ? `<button class="btn sm del" data-psachdel="${i}">Entfernen</button>` : ''}</div>`;
+  stelle(anker);
+  setTimeout(() => document.getElementById('pt').select(), 0);
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-frei]');
+  if (f) { zaehl('D'); oeffnePopFrei(f, +f.dataset.frei.split('|')[1]); return; }
+  const sa = e.target.closest('[data-sach]');
+  if (sa) { zaehl('D'); oeffnePopSach(sa, +sa.dataset.sach.split('|')[1]); return; }
+  const ok = e.target.closest('[data-pok]');
+  if (ok) { const [i, kk] = ok.dataset.pok.split('|'); const raw = document.getElementById('pv').value.trim();
+    V.D.rows[+i].cells[kk] = raw === '' ? KATS.find(x => x.k === kk).v : +raw.replace(',', '.');
+    pop.classList.remove('on'); zaehl('D'); renderD(); return; }
+  const dl = e.target.closest('[data-pdel]');
+  if (dl) { const [i, kk] = dl.dataset.pdel.split('|'); delete V.D.rows[+i].cells[kk];
+    pop.classList.remove('on'); zaehl('D'); renderD(); return; }
+  const pf = e.target.closest('[data-pfrei]');
+  if (pf) { const raw = document.getElementById('pv').value.trim();
+    V.D.rows[+pf.dataset.pfrei].frei = raw === '' ? null : +raw.replace(',', '.');
+    pop.classList.remove('on'); zaehl('D'); renderD(); return; }
+  const pfd = e.target.closest('[data-pfreidel]');
+  if (pfd) { V.D.rows[+pfd.dataset.pfreidel].frei = null; pop.classList.remove('on'); zaehl('D'); renderD(); return; }
+  const ps = e.target.closest('[data-psach]');
+  if (ps) { const t = document.getElementById('pt').value.trim(), v = document.getElementById('pv').value.trim();
+    V.D.rows[+ps.dataset.psach].sach = t === '' ? null : { t, v: v === '' ? 0 : +v.replace(',', '.') };
+    pop.classList.remove('on'); zaehl('D'); renderD(); return; }
+  const psd = e.target.closest('[data-psachdel]');
+  if (psd) { V.D.rows[+psd.dataset.psachdel].sach = null; pop.classList.remove('on'); zaehl('D'); renderD(); return; }
+  if (!e.target.closest('#pop') && !e.target.closest('[data-zelle]') && !e.target.closest('[data-frei]') && !e.target.closest('[data-sach]')) pop.classList.remove('on');
+});
+
+/* ================= Zeilenhöhen-Sprung messen ================= */
+function messeSprung(id) {
+  const tbl = document.getElementById('t' + id).querySelector('table'); if (!tbl) return;
+  const les = [...tbl.querySelectorAll('tbody tr:not(.edit):not(.notizzeile)')][0];
+  const ed  = tbl.querySelector('tbody tr.edit');
+  if (les && ed) {
+    const a = les.getBoundingClientRect().height, b = ed.getBoundingClientRect().height;
+    V[id].sprung = Math.round(b - a);
+    ergebnis();
+  }
+}
+
+/* ================= Ergebnistabelle ================= */
+const NOTIZ = { A: 'Im Dialog, wie heute.', B: 'Unterzeile im ✎-Modus.', C: 'Unterzeile im ✎-Modus.', D: 'Nur über ⋮ → eigener Dialog.' };
+const TOD = {
+  A: '<span class="gut">unmöglich</span> — Tabelle ist lesend, Löschen nur im Dialog mit Speichern.',
+  B: '<span class="gut">unmöglich</span> — Tabelle ist lesend.',
+  C: '<span class="gut">unmöglich</span> — volle Zellen sind klickfest, nur leere reagieren.',
+  D: '<span class="schlecht">2 bewusste Klicks</span> — Zelle, dann „Entfernen“. Ohne Rückfrage, ohne Zurück. (Die Vision wörtlich wäre <b>1</b> Klick.)',
+};
+const VISION = { A: 'nein — Klick-Zuweisen fällt weg', B: 'nein — Klick-Zuweisen fällt weg', C: 'halb — Zuweisen per Klick bleibt', D: 'ja — jede Zelle klickbar' };
+function ergebnis() {
+  document.getElementById('erg').innerHTML = ['A','B','C','D'].map(id => {
+    const s = V[id];
+    return `<tr><td><b>${id}</b> — ${({A:'Dialog',B:'Zeilenmodus',C:'Zeilenmodus + Klick',D:'Klick + Popover'})[id]}
+      <span style="display:block;font-size:11px;color:var(--ink-soft)">Vision-Interaktion: ${VISION[id]}</span></td>
+      <td class="n"><span class="px">${s.klicks}</span></td>
+      <td class="n"><span class="px">${s.tasten}</span></td>
+      <td class="n">${s.sprung == null ? '—' : (s.sprung === 0 ? '<span class="gut">0 px</span>' : '<span class="schlecht">+' + s.sprung + ' px</span>')}</td>
+      <td>${TOD[id]}</td><td>${NOTIZ[id]}</td></tr>`;
+  }).join('');
+}
+
+/* ================= Start ================= */
+function render(id) { ({ A: renderA, B: () => renderBC('B'), C: () => renderBC('C'), D: renderD })[id](); }
+renderA(); renderBC('B'); renderBC('C'); renderD();
+</script>
+</body>
+</html>

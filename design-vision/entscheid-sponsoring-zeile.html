@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #69, Bereich Sponsoring.
+     Abgenommen ist bereits: V2 (Matrix mit klebender Firma- und Gesamt-Spalte)
+     + D (Klick-Matrix mit Zettel-Popover), ⋮ = Notiz / Firmendaten / Entfernen.
+     VIER RESTFRAGEN, die alle in derselben Zeile sitzen:
+       1. Wo steht der VORJAHRESBEITRAG? (⋮ ist raus — Nutzer-Entscheid)
+       2. Wie sieht das MASSBAND beim ersten Fest aus (kein Vorjahr, Auflage #63)?
+       3. Wie unterscheidet sich der FREIBETRAG optisch von einer Kategorie,
+          wenn er in D eine klickbare Marke braucht?
+       4. Was tut das POPOVER, das die Zeile darunter verdeckt?
+     Gemessen: Breite (die Matrix hat bei 6 Kategorien exakt 0 px Reserve) und Höhe. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Sponsoring — Vorjahr, Maßband-Leerfall, Freibetrag, Popover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; } button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95); --ink: oklch(0.24 0.02 145); --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160); --yellow: oklch(0.86 0.15 92); --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 150px; }
+  .board { max-width: 1136px; }
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 23px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 14px 0 4px; font-size: 13px; line-height: 1.6; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; width: 100%; }
+  .measure th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px 4px 0; border-bottom: 1.5px solid var(--ink); }
+  .measure th.n, .measure td.n { text-align: right; padding-right: 14px; }
+  .measure td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .measure .gut { color: var(--green); font-weight: 800; } .measure .schlecht { color: var(--red); font-weight: 800; }
+
+  h2.sect { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 30px 0 6px; display: flex; align-items: center; gap: 12px; }
+  h2.sect::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .frage { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 9px; line-height: 1.55; }
+
+  .seg { display: inline-flex; border: 2px solid var(--ink); background: #fff; flex-wrap: wrap; }
+  .seg button { background: none; border: 0; border-right: 1.5px solid var(--line); padding: 7px 13px; font-weight: 700; font-size: 12px; color: var(--ink-soft); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--yellow); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+  .segzeile { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .segzeile .lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+
+  .planbar { display: flex; align-items: center; gap: 14px; border: 2.5px solid var(--ink); background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 10px; min-width: 230px; flex: 1; flex-wrap: wrap; }
+  .planbar .kpi b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; color: var(--green); white-space: nowrap; }
+  .ruler { position: relative; height: 18px; border: 1.5px solid var(--ink); flex: 1; min-width: 80px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px),
+    repeating-linear-gradient(90deg, transparent 0 49px, var(--ink) 49px 50px);
+    background-size: 100% 38%, 100% 68%; background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -3px; bottom: -3px; width: 2.5px; background: var(--ink); }
+  .ruler em::after { content: attr(data-l); position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 9.5px; font-weight: 800; letter-spacing: .04em; color: var(--ink); white-space: nowrap; }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); } .btn.quiet { border-color: transparent; color: var(--ink-soft); }
+  .btn.sm { padding: 3px 8px; font-size: 11.5px; border-width: 1.5px; }
+  .kasten { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .tablewrap { overflow-x: auto; }
+
+  .stable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; table-layout: fixed; }
+  .stable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); }
+  .stable td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: middle; height: 43px; }
+  .stable tr:hover td { background: oklch(0.965 0.012 100); }
+  .stable td.c, .stable th.c, .stable tfoot td.c { text-align: center; }
+  .stable td.num, .stable th.num, .stable tfoot td.num { text-align: right; }
+  .stable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .stable .total { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .stable th .kw { display: block; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12px; color: var(--green); text-transform: none; }
+  .stable .firm { font-weight: 700; }
+  /* V2 — klebende Ränder (abgenommen) */
+  .stable th.firma, .stable td.firma { position: sticky; left: 0; z-index: 2; background: #fff; box-shadow: 2px 0 0 var(--ink); }
+  .stable th.firma { background: oklch(0.93 0.02 105); }
+  .stable tfoot td.firma { background: oklch(0.955 0.01 100); }
+  .stable tr:hover td.firma { background: oklch(0.965 0.012 100); }
+  .stable th.gesamt, .stable td.gesamt { position: sticky; right: 0; z-index: 2; background: #fff; box-shadow: -2px 0 0 var(--ink); }
+  .stable th.gesamt { background: oklch(0.93 0.02 105); }
+  .stable tfoot td.gesamt { background: oklch(0.955 0.01 100); }
+  .stable tr:hover td.gesamt { background: oklch(0.965 0.012 100); }
+
+  .mcell { display: inline-block; min-width: 54px; padding: 3px 6px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; border: 1.5px solid transparent; cursor: pointer; }
+  .mcell.on { background: oklch(0.94 0.03 160); color: var(--green); border-color: var(--green); }
+  .mcell.on.ovr { color: var(--red); border-color: var(--red); background: oklch(0.97 0.02 30); }
+  .mcell.off { border: 1.5px dashed oklch(0.8 0.02 120); color: oklch(0.8 0.02 120); }
+  .mcell.off:hover { border-color: var(--green); color: var(--green); background: oklch(0.97 0.02 160); }
+
+  /* Freibetrag-Optiken */
+  .fb-marke  { display:inline-block; min-width:54px; padding:3px 6px; font-weight:700; font-size:12px; border:1.5px solid var(--green); background:oklch(0.94 0.03 160); color:var(--green); cursor:pointer; }
+  .fb-tinte  { display:inline-block; min-width:54px; padding:3px 6px; font-weight:700; font-size:12px; border:1.5px solid var(--ink); background:oklch(0.955 0.01 100); color:var(--ink); cursor:pointer; }
+  .fb-zahl   { display:inline-flex; align-items:center; gap:5px; font-weight:700; font-size:13px; cursor:pointer; padding:3px 2px; }
+  .fb-zahl .st { font-size:11px; color:var(--ink-soft); }
+  .fb-zahl:hover .st { color: var(--ink); }
+  .fb-leer   { border-style: dashed !important; border-color: oklch(0.8 0.02 120) !important; background:#fff !important; color: oklch(0.8 0.02 120) !important; }
+
+  .sach { display: inline-flex; align-items: baseline; gap: 5px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 11px; font-weight: 700; padding: 2px 7px; cursor: pointer; max-width: 100%; }
+  .sach .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sach .w { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11.5px; color: var(--ink); flex: 0 0 auto; }
+  .kebab { border: 0; background: none; font-size: 15px; color: var(--ink-soft); padding: 2px 5px; }
+
+  /* Vorjahr-Darstellungen */
+  .vj { display: block; font-size: 10.5px; font-weight: 600; color: var(--ink-soft); margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .vj.hoch { color: var(--red); } .vj.tief { color: var(--green); }
+  .vjspalte { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  .warn { border: 2px solid var(--red); border-left-width: 8px; background: oklch(0.98 0.015 30); padding: 9px 13px; font-size: 12.5px; margin-top: 10px; line-height: 1.55; }
+  .ok   { border: 2px solid var(--green); border-left-width: 8px; background: oklch(0.97 0.02 160); padding: 9px 13px; font-size: 12.5px; margin-top: 10px; line-height: 1.55; }
+  .neut { border: 2px solid var(--ink); border-left-width: 8px; background: #fff; padding: 9px 13px; font-size: 12.5px; margin-top: 10px; line-height: 1.55; }
+
+  .pop { position: absolute; border: 2.5px solid var(--ink); background: var(--paper); box-shadow: 5px 5px 0 oklch(0.24 0.02 145 / .22); padding: 10px; z-index: 70; width: 205px; display: none; }
+  .pop.on { display: block; }
+  .pop .ph { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 5px; }
+  .pop input { width: 100%; border: 2px solid var(--ink); padding: 5px 7px; font-size: 13px; font-weight: 700; text-align: center; background: #fff; }
+  .pop .std { font-size: 11px; color: var(--ink-soft); margin-top: 5px; }
+  .pop .pf { display: flex; gap: 6px; margin-top: 8px; } .pop .pf .btn { flex: 1; text-align: center; }
+  .pop .del { border-color: var(--red); color: var(--red); }
+  /* Popover-Platzierung: seitlich statt darunter */
+  .pop.seit { width: 205px; }
+  /* Dritte Platzierung: der Zettel ist eine echte Zeile und schiebt, statt zu verdecken. */
+  tr.popzeile td { background: oklch(0.99 0.035 95) !important; border-bottom: 2px solid var(--ink); height: auto; padding: 9px 10px; }
+  .inlinezettel { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; }
+  .inlinezettel .ph { margin-bottom: 0; }
+  .inlinezettel input { border: 2px solid var(--ink); padding: 5px 7px; font-size: 13px; font-weight: 700; text-align: center; background: #fff; max-width: 110px; }
+  .inlinezettel input.txt { text-align: left; font-weight: 500; max-width: 230px; }
+  .inlinezettel .std { margin-top: 0; font-size: 11px; color: var(--ink-soft); }
+  .inlinezettel .pf { display: flex; gap: 6px; margin-left: auto; }
+  .inlinezettel .del { border-color: var(--red); color: var(--red); }
+
+  .zwei { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .zwei { grid-template-columns: 1fr; } }
+  .halb { border: 2.5px solid var(--ink); background: #fff; }
+  .halb .hh { background: var(--green); background-image: var(--halftone); color: #fff; padding: 8px 13px; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid var(--ink); }
+  .halb .hb { padding: 12px 13px; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="titel">Vorjahr · Maßband-Leerfall · Freibetrag · Popover
+    <span>Entscheid-Prototyp · Wayfinder #69 · auf dem abgenommenen Stand: V2 klebende Ränder + D Zettel-Popover, ⋮ = Notiz / Firmendaten / Entfernen</span>
+  </div>
+
+  <div class="measure">
+    <h4>Was hier offen ist</h4>
+    Vier Restfragen, die alle in derselben Zeile sitzen. Die harte Randbedingung aus dem
+    Spalten-Entscheid: bei 6 Kategorien hat die Matrix <b>exakt 0 px Reserve</b> (1132 von 1132 px).
+    Alles, was Breite kostet, verschiebt den Kipppunkt von 7 auf 6 Kategorien — <b>Höhe ist dagegen
+    billig</b> (die Tabelle ist 647 px hoch, die Seite scrollt sowieso).
+    <table>
+      <thead><tr><th>Frage</th><th>Woher</th></tr></thead>
+      <tbody>
+        <tr><td><b>Vorjahresbeitrag verorten</b></td><td>Auflage 4 aus #63. Das ⋮ ist raus (Nutzer-Entscheid), also braucht die Zahl einen Platz in der Zeile — oder keinen.</td></tr>
+        <tr><td><b>Maßband beim ersten Fest</b></td><td>Auflage 3 aus #63: <code>getPreviousFestivalTotal()</code> gibt <code>null</code> → „kein Balken, nur die Zahl“. Beim ersten Fest ist das der Normalfall, nicht der Fehler.</td></tr>
+        <tr><td><b>Freibetrag-Optik</b></td><td>Befund aus dem Bearbeiten-Prototyp: in D braucht der Freibetrag eine klickbare Marke — und liest sich dadurch als fünfte Kategorie.</td></tr>
+        <tr><td><b>Popover verdeckt</b></td><td>Befund aus dem Bearbeiten-Prototyp: der Zettel legt sich über die Zeile darunter.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 1. VORJAHR ============ -->
+  <h2 class="sect">1 — Wo steht der Vorjahresbeitrag?</h2>
+  <p class="frage">
+    <code>getPreviousSponsorings()</code> (#145) liefert je Sponsoring den Betrag aus dem <b>Quellfest</b>.
+    Er zählt in keine Summe — er ist die Verhandlungsbasis beim Anruf („letztes Jahr € 500“).
+    <b>Handeingetragene Sponsorings haben keinen</b> (hier: 4 von 14) — der Leerfall muss also
+    mitgestaltet sein, nicht nur der Normalfall.
+  </p>
+  <div class="segzeile">
+    <span class="lbl">Darstellung</span>
+    <div class="seg" id="segVj">
+      <button data-v="keine">gar nicht</button>
+      <button data-v="firma" class="on">Unterzeile bei der Firma</button>
+      <button data-v="gesamt">Unterzeile bei Gesamt</button>
+      <button data-v="spalte">eigene Spalte</button>
+    </div>
+  </div>
+  <div class="planbar" id="pb1"></div>
+  <div class="kasten"><div class="tablewrap" id="w1"></div></div>
+  <div id="s1"></div>
+
+  <!-- ============ 2. MASSBAND ============ -->
+  <h2 class="sect">2 — Maßband: mit Vorjahr und beim allerersten Fest</h2>
+  <p class="frage">
+    Links das normale Fest (Vorjahr € 4 400 als Marke, heuer € 4 850 → der Balken ist darüber
+    hinausgewachsen). Rechts das erste Fest überhaupt: es gibt kein Vorjahr, also
+    <b>keinen Balken und keine Marke</b> — nur die Zahl und ein Satz, der sagt, warum.
+  </p>
+  <div class="zwei">
+    <div class="halb"><div class="hh">Normalfall — Vorjahr bekannt</div><div class="hb">
+      <div class="planbar" style="border:0;padding:0" id="pbA"></div>
+    </div></div>
+    <div class="halb"><div class="hh">Erstes Fest — kein Vorjahr</div><div class="hb">
+      <div class="planbar" style="border:0;padding:0" id="pbB"></div>
+    </div></div>
+  </div>
+  <div class="ok">
+    <b>Entschieden:</b> beim ersten Fest steht <b>nur die Zahl</b> — kein Balken, keine Marke,
+    <b>kein erklärender Satz</b>. Begründung des Nutzers: ein „Kein Vorjahr zum Vergleich“ würde eine
+    Zeile belegen, die beim einzigen Fest für immer stehen bleibt. Auflage für die Umsetzung:
+    <code>getPreviousFestivalTotal() === null</code> heißt <i>Maßband weglassen</i>, nicht
+    <i>Maßband mit Hinweis</i>.
+  </div>
+
+  <!-- ============ 3. FREIBETRAG ============ -->
+  <h2 class="sect">3 — Freibetrag: wie unterscheidet er sich von einer Kategorie?</h2>
+  <p class="frage">
+    In D muss der Freibetrag anklickbar sein. Gibt man ihm dieselbe grüne Wertmarke wie einer
+    Kategorie, liest er sich als fünfte Kategorie — obwohl er fachlich etwas anderes ist
+    (eine Kategorie ist eine <i>Leistung mit Standardwert</i>, der Freibetrag ist ein freier Betrag
+    ohne Standard). Drei Optiken an denselben Daten:
+  </p>
+  <div class="segzeile">
+    <span class="lbl">Freibetrag</span>
+    <div class="seg" id="segFb">
+      <button data-v="marke">grüne Marke wie Kategorie</button>
+      <button data-v="tinte" class="on">Tinte-Marke (andere Farbe)</button>
+      <button data-v="zahl">Zahl mit ✎ beim Überfahren</button>
+    </div>
+  </div>
+  <div class="kasten" style="border-top:2.5px solid var(--ink)"><div class="tablewrap" id="w3"></div></div>
+  <div id="s3"></div>
+
+  <!-- ============ 4. POPOVER ============ -->
+  <h2 class="sect">4 — Popover: darunter oder daneben?</h2>
+  <p class="frage">
+    Im Bearbeiten-Prototyp legt sich der Zettel <b>über die Zeile darunter</b>. Beim Sponsoring ist
+    das mehr als kosmetisch: man vergleicht beim Telefonieren die Zeile mit der darunter
+    („die Bäckerei hat auch € 150 gezahlt“). Zwei Platzierungen — klick eine Zelle an.
+  </p>
+  <div class="segzeile">
+    <span class="lbl">Platzierung</span>
+    <div class="seg" id="segPop">
+      <button data-v="unten" class="on">schwebend unter der Zelle</button>
+      <button data-v="zeile">eigene Zeile darunter (schiebt)</button>
+      <button data-v="seite">am rechten Rand der Zeile</button>
+    </div>
+  </div>
+  <div class="kasten" style="border-top:2.5px solid var(--ink)"><div class="tablewrap" id="w4"></div></div>
+  <div class="neut" id="s4"></div>
+
+  <div class="measure" style="margin-top:28px;border-left-color:var(--green)">
+    <h4>Gemessen</h4>
+    <table>
+      <thead><tr><th>Vorjahr-Darstellung</th><th class="n">Breite nötig</th><th class="n">Überhang bei 6 Kat.</th><th class="n">Höhe</th><th>Folge</th></tr></thead>
+      <tbody id="mtab"></tbody>
+    </table>
+    <div id="fazit" style="margin-top:10px;padding-top:9px;border-top:1.5px dashed var(--line);line-height:1.65"></div>
+  </div>
+</div>
+<div class="pop" id="pop"></div>
+
+<script>
+/* ---- 6 Kategorien: der beschlossene realistische Deckel ---- */
+const KATS = [
+  { k:'transparent', n:'Transparent', v:300 },
+  { k:'plakat',      n:'Plakat',      v:200 },
+  { k:'speisekarte', n:'Speisekarte', v:150 },
+  { k:'social',      n:'Social',      v:100 },
+  { k:'durchsage',   n:'Durchsage',   v:80  },
+  { k:'festschrift', n:'Festschrift', v:120 },
+];
+/* vj = Vorjahresbeitrag aus dem Quellfest; null = handeingetragen, hat keinen (#145). */
+const SPONS = [
+  { name:'Brauerei Wieselburger',   cells:{transparent:300, plakat:350, festschrift:120}, frei:200, sach:null, vj:900 },
+  { name:'Raiffeisenbank Scheibbs', cells:{transparent:300, speisekarte:150}, frei:null, sach:null, vj:450 },
+  { name:'Lagerhaus Steinbach',     cells:{plakat:200, social:100}, frei:100, sach:null, vj:500 },
+  { name:'Fleischerei Berger',      cells:{speisekarte:150, durchsage:80}, frei:250, sach:{t:'Geschenkkorb Tombola', v:80}, vj:400 },
+  { name:'Winzerhof Schmid',        cells:{speisekarte:150}, frei:150, sach:{t:'6 Fl. Wein Tombola', v:60}, vj:300 },
+  { name:'Elektro Pöchhacker',      cells:{plakat:200}, frei:null, sach:null, vj:200 },
+  { name:'Gasthaus Zur Linde',      cells:{}, frei:150, sach:{t:'3 Warengutscheine', v:90}, vj:null },
+  { name:'Autohaus Steiner',        cells:{plakat:200, social:100}, frei:100, sach:null, vj:450 },
+  { name:'Sparkasse Purgstall',     cells:{transparent:300, festschrift:120}, frei:200, sach:null, vj:500 },
+  { name:'Bäckerei Leitner',        cells:{speisekarte:150, durchsage:80}, frei:50, sach:{t:'Brotkorb Tombola', v:40}, vj:280 },
+  { name:'Tischlerei Auer',         cells:{plakat:200}, frei:null, sach:null, vj:null },
+  { name:'Apotheke Steinbach',      cells:{speisekarte:150, social:100}, frei:100, sach:null, vj:250 },
+  { name:'Friseur Haarmonie',       cells:{social:100}, frei:200, sach:null, vj:null },
+  { name:'Taxi Brandl',             cells:{}, frei:150, sach:null, vj:null },
+];
+const VORJAHR_FEST = 4400;
+
+/* ENTSCHIEDENE Ausgangsstellung (Nutzer, diese Session):
+   vjModus 'gesamt'  — Vorjahr als graue Unterzeile unter der Zeilensumme
+   fbModus 'tinte'   — Freibetrag als Tinte-Marke, damit er keine Kategorie vortäuscht
+   popModus 'unten'  — Zettel schwebt unter der Zelle; das kurze Verdecken der Folgezeile
+                       ist ausdrücklich akzeptiert (die schiebende Variante 'zeile' bleibt
+                       nur zum Vergleich im Prototyp, sie ist verworfen) */
+let vjModus = 'gesamt', fbModus = 'tinte', popModus = 'unten';
+const eur   = v => '€ ' + v.toLocaleString('de-AT');
+const total = s => KATS.reduce((a,k) => a + (s.cells[k.k] || 0), 0) + (s.frei || 0);
+const geld  = () => SPONS.reduce((a,s) => a + total(s), 0);
+const sachS = () => SPONS.reduce((a,s) => a + (s.sach ? s.sach.v : 0), 0);
+
+/* ---------- Bausteine ---------- */
+function katZelle(i, k) {
+  const v = SPONS[i].cells[k.k];
+  return `<span class="mcell ${v != null ? 'on' + (v !== k.v ? ' ovr' : '') : 'off'}" data-z="${i}|${k.k}">${v != null ? v : '+'}</span>`;
+}
+function freiZelle(i) {
+  const s = SPONS[i], leer = s.frei == null;
+  if (fbModus === 'marke') return `<span class="fb-marke${leer ? ' fb-leer' : ''}" data-f="${i}">${leer ? '+' : s.frei}</span>`;
+  if (fbModus === 'tinte') return `<span class="fb-tinte${leer ? ' fb-leer' : ''}" data-f="${i}">${leer ? '+' : s.frei}</span>`;
+  return `<span class="fb-zahl" data-f="${i}">${leer ? '<span class="st">—</span>' : s.frei}<span class="st">✎</span></span>`;
+}
+function sachZelle(i) {
+  const s = SPONS[i];
+  return s.sach
+    ? `<span class="sach" data-s="${i}"><span class="t">${s.sach.t}</span><span class="w">(${eur(s.sach.v)})</span></span>`
+    : `<span class="mcell off" style="min-width:32px" data-s="${i}">+</span>`;
+}
+/* ENTSCHIEDEN: immer grau, keine Rot/Grün-Färbung. Rot neben einer korrekt erfassten Zusage
+   liest sich als Fehler, und es gibt keinen Anspruch, den ein Sponsor verletzt hätte —
+   der Vergleich gegens Vorjahr gehört ins Maßband, wo er fürs ganze Fest gilt. */
+function vjUnter(s) {
+  if (s.vj == null) return '';
+  return `<span class="vj">Vorjahr ${eur(s.vj)}</span>`;
+}
+
+function kopf() {
+  const vjSp = vjModus === 'spalte' ? '<th class="num" style="width:8%">Vorjahr</th>' : '';
+  return `<thead><tr>
+    <th class="firma" style="width:17%">Firma</th>
+    ${KATS.map(k => `<th class="c">${k.n}<span class="kw">€ ${k.v}</span></th>`).join('')}
+    <th class="num" style="width:8%">Freibetrag</th>
+    <th style="width:15%">Sachleistung</th>
+    ${vjSp}
+    <th class="num gesamt" style="width:9%">Gesamt</th>
+    <th style="width:4%"></th>
+  </tr></thead>`;
+}
+function tabelle() {
+  const spalten = KATS.length + 4 + (vjModus === 'spalte' ? 1 : 0);
+  return `<table class="stable">${kopf()}
+    <tbody>${SPONS.map((s,i) => `<tr>
+      <td class="firma"><span class="firm">${s.name}</span>${vjModus === 'firma' ? vjUnter(s) : ''}</td>
+      ${KATS.map(k => `<td class="c">${katZelle(i, k)}</td>`).join('')}
+      <td class="num">${freiZelle(i)}</td>
+      <td>${sachZelle(i)}</td>
+      ${vjModus === 'spalte' ? `<td class="num vjspalte">${s.vj != null ? eur(s.vj) : '—'}</td>` : ''}
+      <td class="num gesamt"><b>${eur(total(s))}</b>${vjModus === 'gesamt' ? vjUnter(s) : ''}</td>
+      <td><button class="kebab">⋮</button></td>
+    </tr>`).join('')}</tbody>
+    <tfoot><tr>
+      <td class="firma">Σ je Kategorie</td>
+      ${KATS.map(k => `<td class="c">${eur(SPONS.reduce((a,s) => a + (s.cells[k.k] || 0), 0))}</td>`).join('')}
+      <td class="num">${eur(SPONS.reduce((a,s) => a + (s.frei || 0), 0))}</td>
+      <td>+ ${eur(sachS())} Sachwert</td>
+      ${vjModus === 'spalte' ? `<td class="num vjspalte">${eur(SPONS.reduce((a,s) => a + (s.vj || 0), 0))}</td>` : ''}
+      <td class="num gesamt"><span class="total">${eur(geld())}</span></td>
+      <td></td>
+    </tr></tfoot></table>`;
+}
+
+/* ---------- Maßband ---------- */
+function planbarHtml(mitVorjahr, summe) {
+  /* ENTSCHIEDEN: kein Vorjahr → kein Balken, keine Marke und AUCH KEIN SATZ.
+     Nur die Zahl. Ein „Kein Vorjahr zum Vergleich“ hätte eine Zeile belegt, die beim
+     einzigen Fest für immer stehen bleibt. */
+  if (!mitVorjahr) {
+    return `<div class="kpi"><b>Sponsoring</b><span class="val">${eur(summe)}</span>
+      <span style="font-size:12px;color:var(--ink-soft)">14 Sponsoren · + ${eur(sachS())} Sachwert</span></div>`;
+  }
+  const scale = Math.max(VORJAHR_FEST, summe);
+  return `<div class="kpi"><b>Sponsoring</b><span class="val">${eur(summe)}</span>
+    <div class="ruler"><i style="width:${Math.round(summe / scale * 100)}%"></i>
+      <em data-l="VORJAHR" style="left:${Math.round(VORJAHR_FEST / scale * 100)}%"></em></div>
+    <span style="font-size:12px;color:var(--ink-soft)">14 Sponsoren · Vorjahr ${eur(VORJAHR_FEST)} · + ${eur(sachS())} Sachwert</span></div>`;
+}
+
+/* ---------- Popover ---------- */
+const pop = document.getElementById('pop');
+function zeige(anker, html) {
+  /* Dritte Platzierung: echte Zeile unter der angeklickten — verdeckt nichts, schiebt. */
+  if (popModus === 'zeile') {
+    pop.classList.remove('on');
+    const tr = anker.closest('tr'), tab = tr.closest('table');
+    tab.querySelectorAll('tr.popzeile').forEach(x => x.remove());
+    const spalten = tr.querySelectorAll('td').length;
+    const neu = document.createElement('tr');
+    neu.className = 'popzeile';
+    neu.innerHTML = `<td colspan="${spalten}"><div class="inlinezettel">${html}</div></td>`;
+    tr.after(neu);
+    const f = neu.querySelector('input'); if (f) setTimeout(() => f.select(), 0);
+    return;
+  }
+  document.querySelectorAll('tr.popzeile').forEach(x => x.remove());
+  pop.innerHTML = html;
+  const r = anker.getBoundingClientRect();
+  if (popModus === 'unten') {
+    pop.style.left = Math.min(innerWidth - 215, r.left + scrollX - 60) + 'px';
+    pop.style.top  = (r.bottom + scrollY + 5) + 'px';
+  } else {
+    const zeile = anker.closest('tr').getBoundingClientRect();
+    const tab = anker.closest('.tablewrap').getBoundingClientRect();
+    pop.style.left = Math.min(innerWidth - 215, tab.right + scrollX + 8) + 'px';
+    pop.style.top  = (zeile.top + scrollY - 6) + 'px';
+  }
+  pop.classList.add('on');
+  const f = pop.querySelector('input'); if (f) setTimeout(() => f.select(), 0);
+}
+document.addEventListener('click', e => {
+  const z = e.target.closest('[data-z]');
+  if (z) { const [i, kk] = z.dataset.z.split('|'); const k = KATS.find(x => x.k === kk), v = SPONS[+i].cells[kk];
+    zeige(z, `<div class="ph">${k.n}</div><input value="${v != null ? v : k.v}">
+      <div class="std">Standardwert € ${k.v}</div>
+      <div class="pf"><button class="btn sm">Übernehmen</button>${v != null ? '<button class="btn sm del">Entfernen</button>' : ''}</div>`); return; }
+  const f = e.target.closest('[data-f]');
+  if (f) { const s = SPONS[+f.dataset.f];
+    zeige(f, `<div class="ph">Freibetrag</div><input value="${s.frei != null ? s.frei : ''}" placeholder="Betrag">
+      <div class="std">Kein Standardwert — freier Betrag.</div>
+      <div class="pf"><button class="btn sm">Übernehmen</button>${s.frei != null ? '<button class="btn sm del">Entfernen</button>' : ''}</div>`); return; }
+  const sa = e.target.closest('[data-s]');
+  if (sa) { const s = SPONS[+sa.dataset.s];
+    zeige(sa, `<div class="ph">Sachleistung</div>
+      <input class="txt" value="${s.sach ? s.sach.t : ''}" placeholder="Bezeichnung" style="text-align:left;font-weight:500">
+      <input value="${s.sach ? s.sach.v : ''}" placeholder="Schätzwert €" style="margin-top:6px">
+      <div class="std">Zählt nie in die Geldsumme.</div>
+      <div class="pf"><button class="btn sm">Übernehmen</button>${s.sach ? '<button class="btn sm del">Entfernen</button>' : ''}</div>`); return; }
+  if (!e.target.closest('#pop') && !e.target.closest('tr.popzeile')) {
+    pop.classList.remove('on');
+    document.querySelectorAll('tr.popzeile').forEach(x => x.remove());
+  }
+});
+
+/* ---------- Messen ---------- */
+const FOLGE = {
+  keine:  'Nichts kostet nichts — die Verhandlungszahl fehlt dann aber im Bereich ganz und lebt nur im Übernahme-Dialog.',
+  firma:  'Kostet nur Höhe. Steht neben dem Namen, den man anruft — aber weit weg von der Zahl, mit der sie verglichen wird.',
+  gesamt: 'Kostet nur Höhe. Steht direkt unter der Zeilensumme, also unmittelbar am Vergleich.',
+  spalte: 'Läuft NICHT über (table-layout: fixed staucht statt zu überlaufen) — presst aber die Kategorie-Spalten von <b>89 auf 74 px</b>. 74 px ist exakt das Minimum der Wertmarke (54 px Marke + 20 px Polster): danach ist kein Spielraum mehr für eine 7. Kategorie oder einen vierstelligen Betrag.',
+};
+function messen() {
+  const rows = [];
+  const alt = vjModus;
+  ['keine','firma','gesamt','spalte'].forEach(m => {
+    vjModus = m;
+    document.getElementById('w1').innerHTML = tabelle();
+    const w = document.getElementById('w1'), t = w.querySelector('table');
+    const need = t.scrollWidth, over = Math.max(0, need - w.clientWidth), h = Math.round(t.getBoundingClientRect().height);
+    rows.push(`<tr><td><b>${({keine:'gar nicht',firma:'Unterzeile bei der Firma',gesamt:'Unterzeile bei Gesamt',spalte:'eigene Spalte'})[m]}</b></td>
+      <td class="n"><span class="px">${need}</span></td>
+      <td class="n">${over ? '<span class="schlecht">+' + over + '</span>' : '<span class="gut">0</span>'}</td>
+      <td class="n">${h}</td><td>${FOLGE[m]}</td></tr>`);
+  });
+  vjModus = alt;
+  document.getElementById('mtab').innerHTML = rows.join('');
+  render();
+}
+
+function render() {
+  document.getElementById('w1').innerHTML = tabelle();
+  document.getElementById('w3').innerHTML = tabelle();
+  document.getElementById('w4').innerHTML = tabelle();
+  document.getElementById('pb1').innerHTML = planbarHtml(true, geld());
+  document.getElementById('pbA').innerHTML = planbarHtml(true, geld());
+  document.getElementById('pbB').innerHTML = planbarHtml(false, geld());
+
+  const w = document.getElementById('w1'), t = w.querySelector('table');
+  const over = Math.max(0, t.scrollWidth - w.clientWidth);
+  document.getElementById('s1').innerHTML = over
+    ? `<div class="warn"><b>Gemessen:</b> ${t.scrollWidth} px nötig, ${over} px Überhang — diese Darstellung kostet die Reserve, die bei 6 Kategorien nicht da ist.</div>`
+    : `<div class="ok"><b>Gemessen:</b> ${t.scrollWidth} px, kein Überhang. Höhe ${Math.round(t.getBoundingClientRect().height)} px.</div>`;
+
+  const fbTexte = {
+    marke: '<div class="warn"><b>Der Freibetrag sieht aus wie eine siebte Kategorie.</b> Gleiche Farbe, gleiche Form, gleiche Größe — nur der Spaltenkopf verrät den Unterschied, und der trägt bei Kategorien einen Standardwert, hier nicht.</div>',
+    tinte: '<div class="ok"><b>Unterscheidbar, ohne aus der Handschrift zu fallen.</b> Tinte-Rahmen auf Papiergrund statt Grün: erkennbar klickbar, erkennbar keine Kategorie. Grün bleibt für „Leistung mit Standardwert“ reserviert.</div>',
+    zahl:  '<div class="neut"><b>Am ruhigsten, am unauffindbarsten.</b> Die Zahl bleibt rechtsbündige Zahl; das ✎ erscheint erst beim Überfahren — am Handy gibt es kein Überfahren, dort fehlt jeder Hinweis, dass hier etwas zu tippen ist.</div>'
+  };
+  document.getElementById('s3').innerHTML = fbTexte[fbModus];
+  document.getElementById('s4').innerHTML = ({
+    unten: '<b>Schwebend unter der Zelle:</b> steht direkt am Klick, verdeckt aber die nächste Zeile — bei „Bäckerei Leitner“ genau die, mit der man vergleicht. Bei der letzten Zeile hängt der Zettel unter der Tabelle und legt sich über den Fuß.',
+    zeile: '<b>Eigene Zeile darunter:</b> verdeckt <b>nichts</b> — die Tabelle schiebt die folgenden Zeilen nach unten, wie die Notiz-Unterzeile im Zeilenmodus. Der Zettel läuft dabei über die ganze Breite, also liegen Feld und Knöpfe waagrecht statt gestapelt. Preis: die Tabelle springt beim Öffnen und Schließen um eine Zeilenhöhe; wer zwei Zellen nacheinander bearbeitet, sieht die Zeilen wandern.',
+    seite: '<b>Am rechten Rand der Zeile:</b> verdeckt keine Zeile, die Zeile bleibt vollständig lesbar. Preis: der Zettel steht weit weg von der angeklickten Zelle — bei „Transparent“ ganz links sind das über 900 px Blicksprung. Und am Handy ist rechts kein Platz.'
+  })[popModus];
+}
+
+document.getElementById('segVj').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  vjModus = b.dataset.v;
+  document.querySelectorAll('#segVj button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+document.getElementById('segFb').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  fbModus = b.dataset.v;
+  document.querySelectorAll('#segFb button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+document.getElementById('segPop').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  popModus = b.dataset.v;
+  document.querySelectorAll('#segPop button').forEach(x => x.classList.toggle('on', x === b));
+  pop.classList.remove('on'); render();
+});
+window.addEventListener('resize', () => { pop.classList.remove('on'); render(); });
+/* WICHTIG: erst messen, wenn Oswald und Public Sans da sind. Vor dem Font-Load misst der
+   Fallback andere Zeilenhöhen — die Tabelle kam auf 734 statt 694 px, und der Messkasten
+   hätte über den eigenen Prototyp falsch berichtet. */
+/* Schalterstellung aus den Modus-Variablen setzen, damit Markup und Entscheid nicht auseinanderlaufen. */
+[['segVj', () => vjModus], ['segFb', () => fbModus], ['segPop', () => popModus]].forEach(([id, get]) => {
+  document.querySelectorAll('#' + id + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === get()));
+});
+render();
+document.fonts.ready.then(messen);
+document.fonts.ready.then(() => { document.getElementById('fazit').innerHTML = FAZIT; });
+const FAZIT =
+  `<b>Korrektur meiner Vermutung:</b> mit <code>table-layout: fixed</code> läuft <i>keine</i> der vier
+   Darstellungen über — auch die eigene Spalte nicht. Die Tabelle staucht, statt zu scrollen.
+   Der Preis der Spalte ist deshalb kein Überhang, sondern <b>Enge</b>: die Kategorie-Spalten fallen
+   von 89 auf 74 px, und 74 px ist genau das Minimum der Wertmarke — die Reserve für eine
+   7. Kategorie ist damit aufgebraucht.<br>
+   <b>Und die Unterzeilen sind fast gratis:</b> gemessen 693 px ohne, <b>694 px</b> mit — ein Pixel.
+   Der Firmenname (13 px) plus Unterzeile (10,5 px) bleibt unter der ohnehin festen Zeilenhöhe
+   von 43 px, die Zeile wächst also gar nicht.<br>
+   <b>Nebenbefund:</b> die Sachleistung kürzt bei 170 px hart — „Geschenkkorb Tombola“ wird zu
+   „Geschenkkorb T…“. Lesbar bleibt der Wert, nicht die Sache. Entweder die Spalte wird breiter
+   (auf Kosten der Kategorien) oder es braucht ein <code>title</code>-Attribut.`;
+</script>
+</body>
+</html>

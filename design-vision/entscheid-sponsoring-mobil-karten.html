@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #69, Bereich Sponsoring.
+     STAND: Handy = KARTE JE FIRMA (Nutzer-Entscheid, Muster wie Material #66).
+     OFFENE FRAGE: die Karte darf die nicht gewählten Kategorien NICHT als Feld grauer
+     „+“-Marken mitschleppen — gemessen 2012 px / 2,9 Bildschirme für 14 Firmen, und fast
+     die ganze Höhe kommt aus diesen Marken.
+     Drei Wege, die Karte zu behalten und das Graufeld loszuwerden. Alle bedienbar.
+     Gemessen gegen die Referenz 2012 px. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Sponsoring — Karte ohne Graufeld</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, input { font: inherit; } button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95); --ink: oklch(0.24 0.02 145); --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160); --yellow: oklch(0.86 0.15 92); --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: oklch(0.93 0.008 95); padding: 18px 22px 60px; }
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 23px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 14px 0 20px; font-size: 13px; line-height: 1.6; max-width: 1180px; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; width: 100%; }
+  .measure th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px 4px 0; border-bottom: 1.5px solid var(--ink); }
+  .measure th.n, .measure td.n { text-align: right; padding-right: 14px; }
+  .measure td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .measure .px { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .measure .gut { color: var(--green); font-weight: 800; } .measure .schlecht { color: var(--red); font-weight: 800; }
+
+  .reihe { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+  .phonewrap { width: 375px; flex: 0 0 auto; }
+  .phonewrap > h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .02em; margin-bottom: 3px; }
+  .phonewrap > .sub { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 9px; min-height: 72px; }
+  .phone { width: 375px; height: 700px; overflow-y: auto; overflow-x: hidden; border: 3px solid var(--ink); background: var(--paper); position: relative; }
+  .messzeile { font-size: 11.5px; margin-top: 7px; line-height: 1.5; border-left: 5px solid var(--ink); padding-left: 8px; }
+  .messzeile b { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13px; }
+
+  .mast { border-bottom: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; padding: 9px 12px; position: sticky; top: 0; z-index: 20; }
+  .mast .wm { font-family: "Oswald", sans-serif; font-size: 11px; letter-spacing: .09em; color: var(--yellow); }
+  .mast h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .015em; }
+  .kopf { border-bottom: 2.5px solid var(--ink); background: #fff; padding: 9px 12px; position: sticky; top: 47px; z-index: 19; }
+  .kopf .zeile1 { display: flex; align-items: center; gap: 9px; }
+  .kopf b { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+  .kopf .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; color: var(--green); }
+  .ruler { position: relative; height: 15px; border: 1.5px solid var(--ink); flex: 1; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px); background-size: 100% 40%;
+    background-repeat: repeat-x; background-position: bottom; }
+  .ruler i { position: absolute; inset: 0 auto 0 0; background: var(--yellow); opacity: .55; }
+  .ruler em { position: absolute; top: -2px; bottom: -2px; width: 2.5px; background: var(--ink); }
+  .kopf .sub { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+  .werkz { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.955 0.01 100); flex-wrap: wrap; }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 6px 10px; font-weight: 700; font-size: 12px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); }
+  .btn.del { border-color: var(--red); color: var(--red); }
+
+  .kat { display: inline-block; padding: 3px 7px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; border: 1.5px solid var(--green); background: oklch(0.94 0.03 160); color: var(--green); }
+  .kat.ovr { border-color: var(--red); color: var(--red); background: oklch(0.97 0.02 30); }
+  .kat.off { border: 1.5px dashed oklch(0.78 0.02 120); background: #fff; color: oklch(0.68 0.02 120); font-weight: 600; }
+  .fb { display: inline-block; padding: 3px 7px; font-weight: 700; font-size: 12px; border: 1.5px solid var(--ink); background: oklch(0.955 0.01 100); color: var(--ink); }
+  .fb.off { border-style: dashed; border-color: oklch(0.78 0.02 120); color: oklch(0.68 0.02 120); background: #fff; }
+  .sach { display: inline-flex; align-items: baseline; gap: 5px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 11px; font-weight: 700; padding: 2px 7px; max-width: 100%; }
+  .sach .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sach .w { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 11.5px; color: var(--ink); flex: 0 0 auto; }
+  .kebab { border: 0; background: none; font-size: 17px; color: var(--ink-soft); padding: 0 4px; line-height: 1; }
+
+  .karte { border-bottom: 2px solid var(--ink); background: #fff; padding: 10px 12px; }
+  .karte .k1 { display: flex; align-items: baseline; gap: 8px; }
+  .karte .fn { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; }
+  .karte .sum { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .karte .vjz { font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
+  .karte .marken { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; align-items: center; }
+
+  /* K1 — Plus-Knopf */
+  .plus { border: 1.5px solid var(--ink); background: var(--yellow); font-weight: 800; font-size: 12px; padding: 3px 9px; color: var(--ink); }
+  /* K5 — nur das Symbol; bewusst mind. 40px Trefferfläche (§6: Ziele ≥ 40px am Handy) */
+  .plus.nur { min-width: 40px; min-height: 26px; font-size: 15px; line-height: 1; padding: 4px 10px; }
+  .gruppe { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); padding: 9px 2px 4px; }
+  /* K2 — Offen-Zeile als Text */
+  .offen { margin-top: 7px; font-size: 11.5px; color: var(--ink-soft); background: none; border: 0; border-top: 1.5px dashed var(--line); padding: 6px 0 0; width: 100%; text-align: left; line-height: 1.45; }
+  .offen b { color: var(--ink); font-weight: 800; }
+  .offen .liste { color: var(--ink-soft); }
+  /* K3 — Aufklappen */
+  .klapp { margin-top: 7px; font-size: 11.5px; font-weight: 700; color: var(--ink); background: none; border: 0; border-top: 1.5px dashed var(--line); padding: 6px 0 0; width: 100%; text-align: left; }
+  .klapp .pf { color: var(--ink-soft); }
+
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 3px solid var(--ink); z-index: 40; padding: 12px; display: none; box-shadow: 0 -6px 0 oklch(0.24 0.02 145 / .12); max-height: 78%; overflow-y: auto; }
+  .sheet.on { display: block; }
+  .sheet .ph { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 7px; }
+  .sheet input { width: 100%; border: 2px solid var(--ink); padding: 9px; font-size: 15px; font-weight: 700; text-align: center; background: #fff; }
+  .sheet input.txt { text-align: left; font-weight: 500; margin-bottom: 7px; }
+  .sheet .std { font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; }
+  .sheet .sf { display: flex; gap: 7px; margin-top: 10px; } .sheet .sf .btn { flex: 1; text-align: center; padding: 9px; }
+  .wahl { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: #fff; border: 0; border-bottom: 1.5px solid var(--line); padding: 11px 10px; }
+  .wahl .wn { flex: 1; font-size: 13.5px; font-weight: 600; }
+  .wahl .wv { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14px; color: var(--green); }
+</style>
+</head>
+<body>
+  <div class="titel">Karte je Firma — ohne das Graufeld
+    <span>Entscheid-Prototyp · Wayfinder #69 · Karte ist entschieden, die grauen „+“-Marken sind das Problem · 375-px-Rahmen</span>
+  </div>
+
+  <div class="measure">
+    <h4>Woher die Höhe kommt</h4>
+    Die Karten-Variante misst <b>2012 px</b> für 14 Firmen (2,9 Bildschirme). Der Grund ist nicht die
+    Karte, sondern dass jede Karte <b>alle nicht gewählten Kategorien</b> als gestrichelte Marken
+    mitschleppt — bei 6 Kategorien und im Schnitt 2 gewählten sind das 4 graue Marken je Firma,
+    die zusätzlich meist auf eine zweite Zeile umbrechen.
+    Drei Wege, die Karte zu behalten und das Feld loszuwerden:
+    <table>
+      <thead><tr><th>Umsetzung</th><th class="n">Höhe</th><th class="n">Bildschirme</th><th class="n">gespart</th><th class="n">Antippen: zuweisen</th><th>Verkaufs-Lücke sichtbar?</th></tr></thead>
+      <tbody id="mtab"></tbody>
+    </table>
+    <div id="fazit" style="margin-top:10px;padding-top:9px;border-top:1.5px dashed var(--line);line-height:1.65"></div>
+  </div>
+
+  <div class="reihe">
+    <div class="phonewrap">
+      <h3 style="color:var(--green)">K5 — ENTSCHIEDEN: ein „+“ je Sponsor</h3>
+      <div class="sub">Die Karte zeigt <b>ausschließlich, was die Firma hat</b> — keine leere
+        „Frei +“-Marke, keine „+ Sachleistung“. Ein einzelnes <b>„+“</b> am Ende der Markenzeile
+        öffnet <i>eine</i> Liste mit allem Hinzufügbaren: offene Kategorien, Freibetrag,
+        Sachleistung. Probier’s aus.</div>
+      <div class="phone" id="p5"></div>
+      <div class="messzeile" id="m5"></div>
+    </div>
+
+    <div class="phonewrap">
+      <h3>K1 — nur ein gelber „+“</h3>
+      <div class="sub">Die Karte zeigt ausschließlich, was die Firma <i>hat</i>. Ein gelber
+        „+ LEISTUNG“ am Ende der Markenzeile öffnet ein Blatt mit den offenen Kategorien samt
+        Standardwert — Antippen weist zu.</div>
+      <div class="phone" id="p1"></div>
+      <div class="messzeile" id="m1"></div>
+    </div>
+
+    <div class="phonewrap">
+      <h3>K2 — Offen-Zeile als Text</h3>
+      <div class="sub">Wie K1, aber statt eines Knopfs steht darunter eine ruhige Textzeile:
+        „<b>4 offen</b> · Speisekarte · Social · Durchsage · Festschrift“. Sie ist antippbar und
+        hält die Verkaufs-Lücke <i>lesbar</i>, ohne sie als Marken-Gitter zu zeichnen.</div>
+      <div class="phone" id="p2"></div>
+      <div class="messzeile" id="m2"></div>
+    </div>
+
+    <div class="phonewrap">
+      <h3>K4 — gelber „+“ mit Anzahl</h3>
+      <div class="sub">Wie K1, aber der Knopf heißt „<b>+ 4 OFFEN</b>“ statt „+ LEISTUNG“. Er bleibt
+        <i>in</i> der Markenzeile, kostet also keine eigene Zeile — nennt aber die Größe der
+        Verkaufs-Lücke. Die Namen der offenen Kategorien stehen im Blatt dahinter.</div>
+      <div class="phone" id="p4"></div>
+      <div class="messzeile" id="m4"></div>
+    </div>
+
+    <div class="phonewrap">
+      <h3>K3 — offene Marken aufklappbar</h3>
+      <div class="sub">Die grauen Marken sind nicht weg, nur zugeklappt: „<b>+ 4 offene</b> ⌄“
+        klappt sie in der Karte auf. Wer verkaufen will, klappt auf; wer liest, nicht.
+        Probier’s an einer Karte aus.</div>
+      <div class="phone" id="p3"></div>
+      <div class="messzeile" id="m3"></div>
+    </div>
+  </div>
+
+<script>
+const KATS = [
+  { k:'transparent', n:'Transparent', v:300 },
+  { k:'plakat',      n:'Plakat',      v:200 },
+  { k:'speisekarte', n:'Speisekarte', v:150 },
+  { k:'social',      n:'Social',      v:100 },
+  { k:'durchsage',   n:'Durchsage',   v:80  },
+  { k:'festschrift', n:'Festschrift', v:120 },
+];
+const BASIS = [
+  { name:'Brauerei Wieselburger',   cells:{transparent:300, plakat:350, festschrift:120}, frei:200, sach:null, vj:900 },
+  { name:'Raiffeisenbank Scheibbs', cells:{transparent:300, speisekarte:150}, frei:null, sach:null, vj:450 },
+  { name:'Lagerhaus Steinbach',     cells:{plakat:200, social:100}, frei:100, sach:null, vj:500 },
+  { name:'Fleischerei Berger',      cells:{speisekarte:150, durchsage:80}, frei:250, sach:{t:'Geschenkkorb Tombola', v:80}, vj:400 },
+  { name:'Winzerhof Schmid',        cells:{speisekarte:150}, frei:150, sach:{t:'6 Fl. Wein Tombola', v:60}, vj:300 },
+  { name:'Elektro Pöchhacker',      cells:{plakat:200}, frei:null, sach:null, vj:200 },
+  { name:'Gasthaus Zur Linde',      cells:{}, frei:150, sach:{t:'3 Warengutscheine', v:90}, vj:null },
+  { name:'Autohaus Steiner',        cells:{plakat:200, social:100}, frei:100, sach:null, vj:450 },
+  { name:'Sparkasse Purgstall',     cells:{transparent:300, festschrift:120}, frei:200, sach:null, vj:500 },
+  { name:'Bäckerei Leitner',        cells:{speisekarte:150, durchsage:80}, frei:50, sach:{t:'Brotkorb Tombola', v:40}, vj:280 },
+  { name:'Tischlerei Auer',         cells:{plakat:200}, frei:null, sach:null, vj:null },
+  { name:'Apotheke Steinbach',      cells:{speisekarte:150, social:100}, frei:100, sach:null, vj:250 },
+  { name:'Friseur Haarmonie',       cells:{social:100}, frei:200, sach:null, vj:null },
+  { name:'Taxi Brandl',             cells:{}, frei:150, sach:null, vj:null },
+];
+const VORJAHR_FEST = 4400, REFERENZ = 2012;
+const kopie = () => JSON.parse(JSON.stringify(BASIS));
+const R = { 1: kopie(), 2: kopie(), 3: kopie(), 4: kopie(), 5: kopie() };
+const offenAuf = new Set();   /* K3: aufgeklappte Karten */
+
+const eur   = v => '€ ' + v.toLocaleString('de-AT');
+const total = s => KATS.reduce((a,k) => a + (s.cells[k.k] || 0), 0) + (s.frei || 0);
+const geld  = rows => rows.reduce((a,s) => a + total(s), 0);
+const sachS = rows => rows.reduce((a,s) => a + (s.sach ? s.sach.v : 0), 0);
+const offene = s => KATS.filter(k => s.cells[k.k] == null);
+
+function kopfHtml(rows) {
+  const sum = geld(rows), scale = Math.max(VORJAHR_FEST, sum);
+  return `<div class="mast"><div class="wm">FESTMEISTER</div><h1>Musikfest Steinbach 2026</h1></div>
+    <div class="kopf">
+      <div class="zeile1"><b>Sponsoring</b><span class="val">${eur(sum)}</span>
+        <div class="ruler"><i style="width:${Math.round(sum/scale*100)}%"></i><em style="left:${Math.round(VORJAHR_FEST/scale*100)}%"></em></div></div>
+      <div class="sub">${rows.length} Sponsoren · Vorjahr ${eur(VORJAHR_FEST)} · + ${eur(sachS(rows))} Sachwert</div>
+    </div>
+    <div class="werkz"><button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn">PDF</button></div>`;
+}
+
+/* gemeinsamer Karten-Kopf + gewählte Marken */
+function kartenRumpf(v, s, i) {
+  const gewaehlt = KATS.filter(k => s.cells[k.k] != null);
+  return `<div class="k1"><span class="fn">${s.name}</span><span class="sum">${eur(total(s))}</span><button class="kebab">⋮</button></div>
+    ${s.vj != null ? `<div class="vjz">Vorjahr ${eur(s.vj)}</div>` : ''}
+    <div class="marken">
+      ${gewaehlt.map(k => `<span class="kat${s.cells[k.k] !== k.v ? ' ovr' : ''}" data-z="${v}|${i}|${k.k}">${k.n} ${s.cells[k.k]}</span>`).join('')}
+      <span class="fb${s.frei == null ? ' off' : ''}" data-f="${v}|${i}">Frei ${s.frei != null ? s.frei : '+'}</span>
+      ${s.sach ? `<span class="sach" data-s="${v}|${i}"><span class="t">${s.sach.t}</span><span class="w">(${eur(s.sach.v)})</span></span>` : ''}
+      __ZUSATZ__
+    </div>`;
+}
+
+/* ---- K1: gelber Plus-Knopf in der Markenzeile ---- */
+function renderK1() {
+  const rows = R[1];
+  document.getElementById('p1').innerHTML = kopfHtml(rows) + rows.map((s,i) => {
+    const off = offene(s);
+    const zusatz = (off.length || !s.sach)
+      ? `<button class="plus" data-wahl="1|${i}">+ LEISTUNG</button>` : '';
+    return `<div class="karte">${kartenRumpf('1', s, i).replace('__ZUSATZ__', zusatz)}</div>`;
+  }).join('') + `<div class="sheet" id="sh1"></div>`;
+}
+
+/* ---- K2: Offen-Zeile als Text ---- */
+function renderK2() {
+  const rows = R[2];
+  document.getElementById('p2').innerHTML = kopfHtml(rows) + rows.map((s,i) => {
+    const off = offene(s);
+    const zeile = off.length
+      ? `<button class="offen" data-wahl="2|${i}"><b>${off.length} offen</b> <span class="liste">· ${off.map(k => k.n).join(' · ')}</span></button>`
+      : `<button class="offen" data-wahl="2|${i}"><b>alle Kategorien vergeben</b></button>`;
+    const zusatz = !s.sach ? `<span class="kat off" data-s="2|${i}">+ Sachleistung</span>` : '';
+    return `<div class="karte">${kartenRumpf('2', s, i).replace('__ZUSATZ__', zusatz)}${zeile}</div>`;
+  }).join('') + `<div class="sheet" id="sh2"></div>`;
+}
+
+/* ---- K5 (ENTSCHIEDEN): Karte zeigt nur Vorhandenes, ein „+“ führt zu allem Hinzufügbaren ---- */
+function renderK5() {
+  const rows = R[5];
+  document.getElementById('p5').innerHTML = kopfHtml(rows) + rows.map((s,i) => {
+    const gewaehlt = KATS.filter(k => s.cells[k.k] != null);
+    const nochWas = offene(s).length || s.frei == null || !s.sach;
+    return `<div class="karte">
+      <div class="k1"><span class="fn">${s.name}</span><span class="sum">${eur(total(s))}</span><button class="kebab">⋮</button></div>
+      ${s.vj != null ? `<div class="vjz">Vorjahr ${eur(s.vj)}</div>` : ''}
+      <div class="marken">
+        ${gewaehlt.map(k => `<span class="kat${s.cells[k.k] !== k.v ? ' ovr' : ''}" data-z="5|${i}|${k.k}">${k.n} ${s.cells[k.k]}</span>`).join('')}
+        ${s.frei != null ? `<span class="fb" data-f="5|${i}">Frei ${s.frei}</span>` : ''}
+        ${s.sach ? `<span class="sach" data-s="5|${i}"><span class="t">${s.sach.t}</span><span class="w">(${eur(s.sach.v)})</span></span>` : ''}
+        ${nochWas ? `<button class="plus nur" data-wahl5="${i}" aria-label="Leistung, Freibetrag oder Sachleistung hinzufügen">+</button>` : ''}
+      </div>
+    </div>`;
+  }).join('') + `<div class="sheet" id="sh5"></div>`;
+}
+
+/* Eine Liste für alles Hinzufügbare — Kategorien, Freibetrag, Sachleistung. */
+function wahlblatt5(i) {
+  const s = R[5][i], off = offene(s);
+  sheet(5, `<div class="ph">Hinzufügen · ${s.name}</div>
+    ${off.length ? `<div class="gruppe">Kategorien</div>` + off.map(k => `<button class="wahl" data-direkt="5|${i}|${k.k}">
+        <span class="wn">${k.n}</span><span class="wv">€ ${k.v}</span></button>`).join('') : ''}
+    ${(s.frei == null || !s.sach) ? `<div class="gruppe">Sonstiges</div>` : ''}
+    ${s.frei == null ? `<button class="wahl" data-f2="${i}"><span class="wn">Freibetrag</span><span class="wv" style="color:var(--ink-soft)">freier Betrag</span></button>` : ''}
+    ${!s.sach ? `<button class="wahl" data-s2="5|${i}"><span class="wn">Sachleistung</span><span class="wv" style="color:var(--ink-soft)">kein Geld</span></button>` : ''}
+    <div class="sf"><button class="btn" data-zu="1">Schließen</button></div>`);
+}
+
+/* ---- K4: wie K1, aber der Knopf nennt die Anzahl — bleibt IN der Markenzeile ---- */
+function renderK4() {
+  const rows = R[4];
+  document.getElementById('p4').innerHTML = kopfHtml(rows) + rows.map((s,i) => {
+    const off = offene(s);
+    const zusatz = off.length
+      ? `<button class="plus" data-wahl="4|${i}">+ ${off.length} OFFEN</button>`
+      : (!s.sach ? `<button class="plus" data-wahl="4|${i}">+ SACHLEISTUNG</button>` : '');
+    return `<div class="karte">${kartenRumpf('4', s, i).replace('__ZUSATZ__', zusatz)}</div>`;
+  }).join('') + `<div class="sheet" id="sh4"></div>`;
+}
+
+/* ---- K3: offene Marken aufklappbar ---- */
+function renderK3() {
+  const rows = R[3];
+  document.getElementById('p3').innerHTML = kopfHtml(rows) + rows.map((s,i) => {
+    const off = offene(s), auf = offenAuf.has(i);
+    const zusatz = !s.sach ? `<span class="kat off" data-s="3|${i}">+ Sachleistung</span>` : '';
+    const knopf = off.length
+      ? `<button class="klapp" data-klapp="${i}">+ ${off.length} offene <span class="pf">${auf ? '⌃' : '⌄'}</span></button>` : '';
+    const feld = (auf && off.length)
+      ? `<div class="marken">${off.map(k => `<span class="kat off" data-z="3|${i}|${k.k}">+ ${k.n} <span style="font-family:Oswald;font-weight:600">${k.v}</span></span>`).join('')}</div>` : '';
+    return `<div class="karte">${kartenRumpf('3', s, i).replace('__ZUSATZ__', zusatz)}${knopf}${feld}</div>`;
+  }).join('') + `<div class="sheet" id="sh3"></div>`;
+}
+
+/* ---- Blätter ---- */
+function sheet(v, html) {
+  const el = document.getElementById('sh' + v);
+  el.innerHTML = html; el.classList.add('on');
+  const f = el.querySelector('input'); if (f) setTimeout(() => f.select(), 0);
+}
+function wahlblatt(v, i) {
+  const s = R[v][+i], off = offene(s);
+  sheet(v, `<div class="ph">Leistung zuweisen · ${s.name}</div>
+    ${off.length ? off.map(k => `<button class="wahl" data-direkt="${v}|${i}|${k.k}">
+        <span class="wn">${k.n}</span><span class="wv">€ ${k.v}</span></button>`).join('')
+      : '<div style="font-size:12.5px;color:var(--ink-soft);padding:4px 0 8px">Alle Kategorien sind vergeben.</div>'}
+    ${!s.sach ? `<button class="wahl" data-s2="${v}|${i}"><span class="wn">Sachleistung erfassen</span><span class="wv">–</span></button>` : ''}
+    <div class="sf"><button class="btn" data-zu="1">Schließen</button></div>`);
+}
+document.addEventListener('click', e => {
+  const w5 = e.target.closest('[data-wahl5]');
+  if (w5) { wahlblatt5(+w5.dataset.wahl5); return; }
+  const f2 = e.target.closest('[data-f2]');
+  if (f2) { const i = +f2.dataset.f2;
+    sheet(5, `<div class="ph">Freibetrag · ${R[5][i].name}</div><input value="" placeholder="Betrag" inputmode="decimal">
+      <div class="std">Kein Standardwert — freier Betrag.</div>
+      <div class="sf"><button class="btn primary" data-okf="5|${i}">Übernehmen</button></div>`); return; }
+  const w = e.target.closest('[data-wahl]');
+  if (w) { const [v, i] = w.dataset.wahl.split('|'); wahlblatt(v, i); return; }
+  const kl = e.target.closest('[data-klapp]');
+  if (kl) { const i = +kl.dataset.klapp; offenAuf.has(i) ? offenAuf.delete(i) : offenAuf.add(i); renderK3(); messen(); return; }
+  const dk = e.target.closest('[data-direkt]');
+  if (dk) { const [v, i, kk] = dk.dataset.direkt.split('|');
+    R[v][+i].cells[kk] = KATS.find(x => x.k === kk).v; document.getElementById('sh' + v).classList.remove('on'); neu(v); return; }
+  const s2 = e.target.closest('[data-s2]');
+  if (s2) { const [v, i] = s2.dataset.s2.split('|'); sachblatt(v, i); return; }
+  const z = e.target.closest('[data-z]');
+  if (z) { const [v, i, kk] = z.dataset.z.split('|'); const k = KATS.find(x => x.k === kk), cur = R[v][+i].cells[kk];
+    sheet(v, `<div class="ph">${k.n} · ${R[v][+i].name}</div><input value="${cur != null ? cur : k.v}" inputmode="decimal">
+      <div class="std">Standardwert € ${k.v}</div>
+      <div class="sf"><button class="btn primary" data-ok="${v}|${i}|${kk}">Übernehmen</button>
+        ${cur != null ? `<button class="btn del" data-rm="${v}|${i}|${kk}">Entfernen</button>` : ''}</div>`); return; }
+  const f = e.target.closest('[data-f]');
+  if (f) { const [v, i] = f.dataset.f.split('|'); const s = R[v][+i];
+    sheet(v, `<div class="ph">Freibetrag · ${s.name}</div><input value="${s.frei != null ? s.frei : ''}" placeholder="Betrag" inputmode="decimal">
+      <div class="std">Kein Standardwert — freier Betrag.</div>
+      <div class="sf"><button class="btn primary" data-okf="${v}|${i}">Übernehmen</button>
+        ${s.frei != null ? `<button class="btn del" data-rmf="${v}|${i}">Entfernen</button>` : ''}</div>`); return; }
+  const sa = e.target.closest('[data-s]');
+  if (sa) { const [v, i] = sa.dataset.s.split('|'); sachblatt(v, i); return; }
+
+  const ok = e.target.closest('[data-ok]');
+  if (ok) { const [v, i, kk] = ok.dataset.ok.split('|');
+    const raw = document.getElementById('sh' + v).querySelector('input').value.trim();
+    R[v][+i].cells[kk] = raw === '' ? KATS.find(x => x.k === kk).v : +raw.replace(',', '.') || 0; neu(v); return; }
+  const rm = e.target.closest('[data-rm]');
+  if (rm) { const [v, i, kk] = rm.dataset.rm.split('|'); delete R[v][+i].cells[kk]; neu(v); return; }
+  const okf = e.target.closest('[data-okf]');
+  if (okf) { const [v, i] = okf.dataset.okf.split('|');
+    const raw = document.getElementById('sh' + v).querySelector('input').value.trim();
+    R[v][+i].frei = raw === '' ? null : +raw.replace(',', '.') || 0; neu(v); return; }
+  const rmf = e.target.closest('[data-rmf]');
+  if (rmf) { const [v, i] = rmf.dataset.rmf.split('|'); R[v][+i].frei = null; neu(v); return; }
+  const oks = e.target.closest('[data-oks]');
+  if (oks) { const [v, i] = oks.dataset.oks.split('|');
+    const ins = document.getElementById('sh' + v).querySelectorAll('input');
+    const t = ins[0].value.trim(), wv = ins[1].value.trim();
+    R[v][+i].sach = t === '' ? null : { t, v: wv === '' ? 0 : +wv.replace(',', '.') || 0 }; neu(v); return; }
+  const rms = e.target.closest('[data-rms]');
+  if (rms) { const [v, i] = rms.dataset.rms.split('|'); R[v][+i].sach = null; neu(v); return; }
+  if (e.target.closest('[data-zu]')) { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on')); return; }
+  if (!e.target.closest('.sheet')) document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on'));
+});
+function sachblatt(v, i) {
+  const s = R[v][+i];
+  sheet(v, `<div class="ph">Sachleistung · ${s.name}</div>
+    <input class="txt" value="${s.sach ? s.sach.t : ''}" placeholder="Bezeichnung">
+    <input value="${s.sach ? s.sach.v : ''}" placeholder="Schätzwert €" inputmode="decimal">
+    <div class="std">Zählt nie in die Geldsumme.</div>
+    <div class="sf"><button class="btn primary" data-oks="${v}|${i}">Übernehmen</button>
+      ${s.sach ? `<button class="btn del" data-rms="${v}|${i}">Entfernen</button>` : ''}</div>`);
+}
+function neu(v) { ({ 1: renderK1, 2: renderK2, 3: renderK3, 4: renderK4, 5: renderK5 })[v](); messen(); }
+
+/* ---- Messen ---- */
+const TAPS = { 1: '3 — „+ LEISTUNG“, Kategorie', 2: '3 — Offen-Zeile, Kategorie', 3: '3 — aufklappen, Marke, Übernehmen', 4: '3 — „+ 4 OFFEN“, Kategorie', 5: '3 — „+“, Kategorie' };
+const LUECKE = {
+  1: '<span class="schlecht">nein</span> — der Knopf sagt nicht, dass etwas offen ist',
+  2: '<span class="gut">ja, mit Namen</span> — als Text in der Karte',
+  3: '<span class="schlecht">nur die Anzahl</span> — im Klapp-Knopf',
+  4: '<span class="gut">ja, als Anzahl</span> — im Knopf, Namen im Blatt',
+  5: '<span class="schlecht">nein</span> — bewusst: die Karte zeigt nur Vorhandenes',
+};
+const NAME = { 1: 'nur ein gelber „+“', 2: 'Offen-Zeile als Text', 3: 'offene Marken aufklappbar', 4: 'gelber „+“ mit Anzahl',
+  5: '<span style="color:var(--green)">ein „+“ je Sponsor (entschieden)</span>' };
+function messen() {
+  const rows = [];
+  rows.push(`<tr><td style="color:var(--ink-soft)">Referenz — Karte mit allen grauen Marken</td>
+    <td class="n"><span class="px">${REFERENZ}</span> px</td><td class="n">2,9</td><td class="n">—</td>
+    <td class="n">2</td><td><span class="gut">ja, als Marken</span></td></tr>`);
+  [5,1,4,2,3].forEach(v => {
+    const ph = document.getElementById('p' + v);
+    const h = ph.scrollHeight;
+    rows.push(`<tr><td><b>K${v}</b> — ${NAME[v]}</td>
+      <td class="n"><span class="px">${h}</span> px</td>
+      <td class="n">${(h / ph.clientHeight).toFixed(1)}</td>
+      <td class="n"><span class="gut">−${REFERENZ - h} px</span></td>
+      <td class="n">${TAPS[v]}</td><td>${LUECKE[v]}</td></tr>`);
+    document.getElementById('m' + v).innerHTML =
+      `Inhalt <b>${h} px</b> · sichtbar ${ph.clientHeight} px · Scrollweg <b>${Math.max(0, h - ph.clientHeight)} px</b> · gegenüber Referenz <b>−${REFERENZ - h} px</b>`;
+  });
+  document.getElementById('mtab').innerHTML = rows.join('');
+}
+
+renderK1(); renderK2(); renderK3(); renderK4(); renderK5();
+document.fonts.ready.then(() => {
+  messen();
+  document.getElementById('fazit').innerHTML =
+    `<b>Der gemessene Befund ist unerwartet und eindeutig:</b> es kommt nicht darauf an, <i>wie viel</i>
+     man weglässt, sondern ob man der Karte eine <b>eigene Zeile</b> hinzufügt. Eine zusätzliche Zeile
+     kostet rund 27 px, mal 14 Firmen ≈ 380 px — und frisst damit fast die gesamte Ersparnis von 486 px.<br>
+     Deshalb spart <b>K2 exakt null</b> (die Offen-Textzeile ist so hoch wie die Marken, die sie
+     ersetzt, weil vier Kategorienamen ohnehin umbrechen), und <b>K3 nur 107 px</b> (der Klapp-Knopf
+     ist selbst die neue Zeile). Und deshalb gewinnen K1 und K4: ihr Knopf sitzt <i>in</i> der
+     bestehenden Markenzeile.<br>
+     <b>K3 ist zusätzlich instabil:</b> ein einziges Aufklappen bringt die Höhe auf 1968 px,
+     alle aufgeklappt auf <b>2757 px</b> — schlechter als die Referenz, gegen die K3 antritt.<br>
+     Zwischen K1 und K4 entscheidet nur die Aufschrift: <b>„+ LEISTUNG“ verschweigt die Lücke,
+     „+ 4 OFFEN“ nennt sie</b> — bei identischer Höhe und identischem Antipp-Aufwand.<br><br>
+     <b>K5 ist die vom Nutzer gewählte Fassung</b> und mit <b>1498 px</b> die knappste von allen
+     (−514 px): die Karte zeigt nur Vorhandenes, ein einzelnes „+“ führt in <i>eine</i> Liste mit
+     offenen Kategorien, Freibetrag und Sachleistung. Das räumt zugleich die Unstimmigkeit auf,
+     dass der leere Freibetrag als Marke sichtbar war, die leere Sachleistung aber nicht —
+     ADR 0008 nennt beide ausdrücklich gleichkörnig.<br><br>
+     <b class="schlecht">Offener Befund — Trefferflächen:</b> die Marken sind gemessen
+     <b>22 px</b> hoch, das „+“ 26 px. §6 der Vision verlangt <b>≥ 40 px</b> am Handy,
+     WCAG 2.2 (2.5.8, Stufe AA) verlangt mindestens <b>24 × 24</b>. Die heutige Karte reißt beides.
+     Gemessene Kosten der Behebung:
+     <b>24 px = −7 px</b> (gratis, weil <code>inline-flex</code> zugleich Zeilenschlacke entfernt),
+     <b>32 px = +123 px</b>, <b>40 px = +267 px</b> (K5 landet dann auf 1765 px, immer noch
+     247 px unter der Referenz).`;
+});
+</script>
+</body>
+</html>

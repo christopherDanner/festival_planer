@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #69, Bereich Sponsoring.
+     FRAGE: Was zeigt der Bereich, solange nichts da ist?
+     Die Vision (§5) zeichnet ausschließlich den vollen Zustand: 14 Firmen, 4 Kategorien.
+     Eine Paket-Matrix hat aber DREI leere Formen, und alle drei sind erreichbar:
+       L1  keine Kategorien, keine Sponsoren  — neues Fest ohne Kopie
+       L2  Kategorien da, keine Sponsoren     — Kopierwerk Schritt 5, nur „Preisliste übernehmen“ (#146)
+       L3  Sponsoren da, keine Kategorien     — Kopierwerk Schritt 5, nur „Sponsoren übernehmen“ (#146)
+     L3 ist der unangenehme: 14 Zeilen, KEINE Kategorie-Spalten, alles € 0 — und laut #146
+     ein ausdrücklich gewollter Zustand („nackte Verknüpfung, Beträge kommen beim Zusagen“).
+     Je Zustand zwei Fassungen: nackt (so fällt die Matrix von selbst aus) und geführt. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid Sponsoring — Leerzustände</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, input { font: inherit; } button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95); --ink: oklch(0.24 0.02 145); --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160); --yellow: oklch(0.86 0.15 92); --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: oklch(0.93 0.008 95); padding: 18px 22px 60px; }
+  .board { max-width: 1180px; }
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 23px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 14px 0 22px; font-size: 13px; line-height: 1.6; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; width: 100%; }
+  .measure th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px 4px 0; border-bottom: 1.5px solid var(--ink); }
+  .measure td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .measure code { background: oklch(0.94 0.01 100); padding: 1px 4px; font-size: 11.5px; }
+  .measure .schlecht { color: var(--red); font-weight: 800; } .measure .gut { color: var(--green); font-weight: 800; }
+
+  h2.sect { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; text-transform: uppercase; letter-spacing: .02em; margin: 30px 0 3px; }
+  h2.sect .wo { font-family: "Public Sans"; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); }
+  /* minmax(0, 1fr), NICHT 1fr — sonst sprengt die breite Tabelle das Grid, statt im .tw zu scrollen.
+     Genau die Regel aus DESIGN-VISION §6; dieser Prototyp ist erst hineingelaufen und dann korrigiert. */
+  .paar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 12px; }
+  @media (max-width: 1000px) { .paar { grid-template-columns: minmax(0, 1fr); } }
+  .fach > h3 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+  .fach.a > h3 { color: var(--red); } .fach.b > h3 { color: var(--green); }
+
+  .planbar { display: flex; align-items: center; gap: 12px; border: 2.5px solid var(--ink); background: #fff; padding: 9px 13px; flex-wrap: wrap; }
+  .planbar .kpi { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 190px; flex-wrap: wrap; }
+  .planbar .kpi b { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planbar .kpi .val { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; color: var(--green); }
+  .planbar .kpi .sub { font-size: 11.5px; color: var(--ink-soft); }
+  .ruler { position: relative; height: 16px; border: 1.5px solid var(--ink); flex: 1; min-width: 70px; background:
+    repeating-linear-gradient(90deg, transparent 0 9px, oklch(0.82 0.01 100) 9px 10px); background-size: 100% 40%;
+    background-repeat: repeat-x; background-position: bottom; }
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 6px 10px; font-weight: 700; font-size: 12px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); }
+  .kasten { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .tw { overflow-x: auto; }
+
+  .stable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; table-layout: fixed; }
+  /* Diese Seite stellt zwei Fassungen nebeneinander, jede also auf ~630 px statt der echten
+     1136 px Inhaltsbreite. Ohne Mindestbreite quetschten die Spaltenköpfe ineinander — das wäre
+     ein Artefakt dieses Vergleichs, kein Befund über den Bereich. Darum: Mindestbreite + Querscroll. */
+  /* Mindestbreite = die echte Inhaltsbreite der App (1136 px), damit die Spaltenköpfe hier
+     genau so brechen wie im Bereich und nicht enger. */
+  .stable.breit { min-width: 1136px; }
+  .stable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); }
+  /* BEFUND: bei 6 Kategorien ist eine Kategorie-Spalte 91 px breit, „TRANSPARENT“ braucht ~95 px.
+     Ein einzelnes langes Wort kann nicht umbrechen und sprengt die Zelle. Auflage für die
+     Umsetzung: Kategorienamen im Kopf müssen trennen dürfen. */
+  .stable th.c { hyphens: auto; overflow-wrap: break-word; letter-spacing: .02em; }
+  .stable td { padding: 7px 10px; border-bottom: 1px solid var(--line); height: 43px; font-variant-numeric: tabular-nums; }
+  .stable td.c, .stable th.c { text-align: center; } .stable td.num, .stable th.num { text-align: right; }
+  .stable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 800; background: oklch(0.955 0.01 100); }
+  .stable th .kw { display: block; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12px; color: var(--green); text-transform: none; }
+  .stable .firm { font-weight: 700; }
+  .stable .total { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; }
+  .mcell.off { display: inline-block; min-width: 54px; padding: 3px 6px; border: 1.5px dashed oklch(0.8 0.02 120); color: oklch(0.78 0.02 120); font-weight: 600; font-size: 12px; }
+  .nix { padding: 30px 16px; text-align: center; color: var(--ink-soft); font-size: 13px; }
+
+  /* geführter Leerzustand — Werkzeug-Plakat: Stempel + Anleitung, kein Illustrations-Kitsch */
+  .anleit { padding: 26px 22px; text-align: center; }
+  .anleit .stempel { display: inline-block; border: 2.5px dashed var(--ink-soft); color: var(--ink-soft); font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; padding: 7px 16px; transform: rotate(-2.2deg); }
+  .anleit h4 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 19px; text-transform: uppercase; letter-spacing: .02em; margin: 14px 0 6px; }
+  .anleit p { font-size: 13px; color: var(--ink-soft); line-height: 1.6; max-width: 430px; margin: 0 auto; }
+  .anleit .knoepfe { display: flex; gap: 9px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .anleit .wege { margin-top: 16px; padding-top: 13px; border-top: 1.5px dashed var(--line); font-size: 12px; color: var(--ink-soft); line-height: 1.65; max-width: 470px; margin-left: auto; margin-right: auto; }
+  .anleit .wege b { color: var(--ink); }
+
+  .hinweisstreif { display: flex; align-items: center; gap: 11px; border-top: 2px solid var(--ink); background: var(--yellow); padding: 9px 13px; font-size: 12.5px; }
+  .hinweisstreif b { font-weight: 800; }
+  .hinweisstreif .btn { margin-left: auto; border-color: var(--ink); background: #fff; white-space: nowrap; }
+
+  .urteil { border: 2px solid var(--ink); border-left-width: 8px; background: #fff; padding: 9px 12px; font-size: 12.5px; margin-top: 9px; line-height: 1.55; }
+  .urteil.schlecht { border-color: var(--red); background: oklch(0.98 0.015 30); }
+  .urteil.gut { border-color: var(--green); background: oklch(0.97 0.02 160); }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="titel">Was zeigt der Bereich, solange nichts da ist?
+    <span>Entscheid-Prototyp · Wayfinder #69 · drei Leerzustände, je links wie die Matrix von selbst ausfällt, rechts geführt</span>
+  </div>
+
+  <div class="measure">
+    <h4>Warum das drei Fragen sind, nicht eine</h4>
+    Die Vision zeichnet nur den vollen Zustand (14 Firmen, 4 Kategorien). Eine Matrix hat aber
+    zwei Achsen, also <b>drei</b> leere Formen — und alle drei sind im fertigen Produkt erreichbar:
+    <table>
+      <thead><tr><th style="width:16%">Zustand</th><th style="width:34%">Wie man hinkommt</th><th>Was die Matrix dann von selbst tut</th></tr></thead>
+      <tbody>
+        <tr><td><b>L1</b> — nichts</td><td>Neues Fest ohne Kopierwerk.</td>
+          <td>Tabelle ohne Zeilen <i>und</i> ohne Kategorie-Spalten: übrig bleiben Firma, Freibetrag, Sachleistung, Gesamt. Ein Gerippe, das nichts erklärt.</td></tr>
+        <tr><td><b>L2</b> — Preisliste, keine Firmen</td><td>Kopierwerk Schritt 5, nur „Sponsoring-Kategorien übernehmen“ (#146). Laut #146 <i>der wertvollere</i> der beiden Schalter.</td>
+          <td>Alle Spaltenköpfe mit Standardwerten stehen da, darunter keine einzige Zeile. Sieht wie ein Ladefehler aus, ist aber der gewollte Zustand.</td></tr>
+        <tr><td><b>L3</b> — Firmen, keine Preisliste</td><td>Kopierwerk Schritt 5, nur „Sponsoren übernehmen“ (#146).</td>
+          <td><span class="schlecht">Der unangenehme.</span> 14 Zeilen, <b>keine</b> Kategorie-Spalte, jede Zeile € 0. Nach #146 ausdrücklich gewollt („nackte Verknüpfung, Beträge kommen beim Zusagen“) — sieht aber aus wie 14 kaputte Datensätze.</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px;padding-top:9px;border-top:1.5px dashed var(--line)">
+      Dazu passt die schon getroffene Entscheidung: <b>kein Vorjahr → kein Balken, kein Satz, nur die Zahl.</b>
+      Beim allerersten Fest steht also auch im Kopf nur „€ 0“ — der Leerzustand betrifft Kopf <i>und</i> Tabelle.
+    </div>
+  </div>
+
+  <!-- ================= L1 ================= -->
+  <h2 class="sect">L1 — nichts da <span class="wo">· neues Fest, nicht kopiert</span></h2>
+  <div class="paar">
+    <div class="fach a"><h3>So fällt es von selbst aus</h3>
+      <div class="planbar">
+        <div class="kpi"><b>Sponsoring</b><span class="val">€ 0</span><span class="sub">0 Sponsoren</span></div>
+        <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn">PDF</button>
+      </div>
+      <div class="kasten"><div class="tw"><table class="stable">
+        <thead><tr><th style="width:30%">Firma</th><th class="num" style="width:16%">Freibetrag</th><th style="width:28%">Sachleistung</th><th class="num" style="width:18%">Gesamt</th><th style="width:8%"></th></tr></thead>
+        <tbody><tr><td colspan="5" class="nix">Noch keine Sponsorings erfasst</td></tr></tbody>
+      </table></div></div>
+      <div class="urteil schlecht">Ein Tabellenkopf ohne Kategorien ist keine Paket-Matrix mehr — die Spalten,
+        die den Bereich ausmachen, fehlen genau dann, wenn man nicht weiß, was zu tun ist. Und der Satz
+        „Noch keine Sponsorings erfasst“ nennt das falsche Problem: fehlen tun <i>zuerst</i> die Kategorien.</div>
+    </div>
+    <div class="fach b"><h3>Geführt</h3>
+      <div class="planbar">
+        <div class="kpi"><b>Sponsoring</b><span class="val">€ 0</span><span class="sub">Noch nichts erfasst</span></div>
+        <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button>
+      </div>
+      <div class="kasten"><div class="anleit">
+        <span class="stempel">Nichts erfasst</span>
+        <h4>Zuerst die Preisliste</h4>
+        <p>Sponsoring-Kategorien sind die Leistungen, die der Verein anbietet — „Transparent € 300“,
+          „Plakat € 200“. Sie werden die Spalten dieser Tabelle. Danach kommen die Firmen dazu.</p>
+        <div class="knoepfe">
+          <button class="btn primary">+ ERSTE KATEGORIE</button>
+          <button class="btn">AUS EINEM FRÜHEREN FEST ÜBERNEHMEN</button>
+        </div>
+        <div class="wege">Beide Wege führen zum Ziel: <b>Übernehmen</b> holt die Preisliste eines
+          vergangenen Fests mit ihren Werten — das ist meist schneller, weil die Werte stehen.
+          <b>Neu anlegen</b> lohnt beim ersten Fest überhaupt.</div>
+      </div></div>
+      <div class="urteil gut">Sagt in der richtigen Reihenfolge, was zu tun ist, und nennt den
+        Übernahme-Weg, der sonst nur im Kopierwerk bei der Fest-Anlage auftaucht — also genau dort,
+        wo man ihn verpasst hat, wenn man hier leer landet.</div>
+    </div>
+  </div>
+
+  <!-- ================= L2 ================= -->
+  <h2 class="sect">L2 — Preisliste da, keine Firmen <span class="wo">· Kopierwerk, nur Kategorien übernommen</span></h2>
+  <div class="paar">
+    <div class="fach a"><h3>So fällt es von selbst aus</h3>
+      <div class="planbar">
+        <div class="kpi"><b>Sponsoring</b><span class="val">€ 0</span><span class="sub">0 Sponsoren</span></div>
+        <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn">PDF</button>
+      </div>
+      <div class="kasten"><div class="tw" id="l2a"></div></div>
+      <div class="urteil schlecht">Die Spaltenköpfe mit Werten stehen vollständig da, darunter eine
+        einzige graue Zeile. Der Fuß rechnet „Σ je Kategorie € 0“ sechsmal — sechs Nullen, die
+        korrekt sind und trotzdem wie ein Fehler aussehen.</div>
+    </div>
+    <div class="fach b"><h3>Geführt</h3>
+      <div class="planbar">
+        <div class="kpi"><b>Sponsoring</b><span class="val">€ 0</span><span class="sub">6 Kategorien · noch keine Firma</span></div>
+        <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button>
+      </div>
+      <div class="kasten"><div class="tw" id="l2b"></div>
+        <div class="hinweisstreif"><b>Preisliste steht.</b> Jetzt die Firmen dazu — einzeln oder aus
+          einem früheren Fest.<button class="btn">SPONSOREN ÜBERNEHMEN</button></div></div>
+      <div class="urteil gut">Kopf und Streifen sagen, dass die Hälfte schon erledigt ist
+        („6 Kategorien · noch keine Firma“) — der Zustand liest sich als Fortschritt statt als Panne.
+        Der Σ-Fuß entfällt, solange es nichts zu summieren gibt.</div>
+    </div>
+  </div>
+
+  <!-- ================= L3 ================= -->
+  <h2 class="sect">L3 — Firmen da, keine Preisliste <span class="wo">· Kopierwerk, nur Sponsoren übernommen — der unangenehme</span></h2>
+  <div class="paar">
+    <div class="fach a"><h3>So fällt es von selbst aus</h3>
+      <div class="planbar">
+        <div class="kpi"><b>Sponsoring</b><span class="val">€ 0</span><span class="sub">14 Sponsoren</span></div>
+        <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button><button class="btn">PDF</button>
+      </div>
+      <div class="kasten"><div class="tw" id="l3a"></div></div>
+      <div class="urteil schlecht">14 Firmen, jede € 0, und keine einzige Kategorie-Spalte, in der man
+        etwas zuweisen könnte. Der Bereich zeigt eine vollständige Liste und bietet keinen Weg,
+        sie zu füllen — das „+“ je Zeile hätte nichts anzubieten. Dass die Vorjahres-Unterzeilen
+        (€ 900, € 450 …) neben lauter Nullen stehen, macht es schlimmer, nicht besser.</div>
+    </div>
+    <div class="fach b"><h3>Geführt</h3>
+      <div class="planbar">
+        <div class="kpi"><b>Sponsoring</b><span class="val">€ 0</span><span class="sub">14 Sponsoren · keine Kategorien</span></div>
+        <button class="btn primary">+ SPONSOR</button><button class="btn">+ KATEGORIE</button>
+      </div>
+      <div class="kasten">
+        <div class="hinweisstreif"><b>Es fehlt die Preisliste.</b> Ohne Kategorien lässt sich keiner
+          dieser 14 Firmen etwas zuweisen.<button class="btn">KATEGORIEN ÜBERNEHMEN</button></div>
+        <div class="tw" id="l3b"></div>
+      </div>
+      <div class="urteil gut">Derselbe Datenbestand, aber der Streifen steht <b>über</b> der Tabelle und
+        benennt die Ursache, nicht das Symptom. Die Firmen bleiben sichtbar — sie sind ja richtig
+        angelegt, und die Vorjahreszahlen sind bereits nützlich fürs Telefonieren.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const KATS = [
+  { n:'Transparent', v:300 }, { n:'Plakat', v:200 }, { n:'Speisekarte', v:150 },
+  { n:'Social', v:100 }, { n:'Durchsage', v:80 }, { n:'Festschrift', v:120 },
+];
+const FIRMEN = [
+  ['Brauerei Wieselburger', 900], ['Raiffeisenbank Scheibbs', 450], ['Lagerhaus Steinbach', 500],
+  ['Fleischerei Berger', 400], ['Winzerhof Schmid', 300], ['Elektro Pöchhacker', 200],
+  ['Gasthaus Zur Linde', null], ['Autohaus Steiner', 450], ['Sparkasse Purgstall', 500],
+  ['Bäckerei Leitner', 280], ['Tischlerei Auer', null], ['Apotheke Steinbach', 250],
+  ['Friseur Haarmonie', null], ['Taxi Brandl', null],
+];
+const eur = v => '€ ' + v.toLocaleString('de-AT');
+
+/* L2: Spalten da, keine Zeilen */
+function l2(mitFuss) {
+  return `<table class="stable breit">
+    <thead><tr><th style="width:17%">Firma</th>
+      ${KATS.map(k => `<th class="c">${k.n}<span class="kw">€ ${k.v}</span></th>`).join('')}
+      <th class="num" style="width:8%">Freibetrag</th><th style="width:14%">Sachleistung</th>
+      <th class="num" style="width:9%">Gesamt</th><th style="width:4%"></th></tr></thead>
+    <tbody><tr><td colspan="${KATS.length + 4}" class="nix">Noch keine Sponsorings erfasst</td></tr></tbody>
+    ${mitFuss ? `<tfoot><tr><td>Σ je Kategorie</td>
+      ${KATS.map(() => `<td class="c">€ 0</td>`).join('')}
+      <td class="num">€ 0</td><td>+ € 0 Sachwert</td><td class="num"><span class="total">€ 0</span></td><td></td></tr></tfoot>` : ''}
+  </table>`;
+}
+/* L3: Zeilen da, keine Kategorie-Spalten */
+function l3(mitFuss) {
+  return `<table class="stable">
+    <thead><tr><th style="width:34%">Firma</th><th class="num" style="width:16%">Freibetrag</th>
+      <th style="width:26%">Sachleistung</th><th class="num" style="width:18%">Gesamt</th><th style="width:6%"></th></tr></thead>
+    <tbody>${FIRMEN.map(([n, vj]) => `<tr>
+      <td class="firm">${n}</td>
+      <td class="num"><span class="mcell off">+</span></td>
+      <td><span class="mcell off" style="min-width:32px">+</span></td>
+      <td class="num"><b>€ 0</b>${vj != null ? `<span style="display:block;font-size:10.5px;font-weight:600;color:var(--ink-soft);margin-top:1px">Vorjahr ${eur(vj)}</span>` : ''}</td>
+      <td><button style="border:0;background:none;font-size:15px;color:var(--ink-soft)">⋮</button></td></tr>`).join('')}</tbody>
+    ${mitFuss ? `<tfoot><tr><td>Σ</td><td class="num">€ 0</td><td>+ € 0 Sachwert</td>
+      <td class="num"><span class="total">€ 0</span></td><td></td></tr></tfoot>` : ''}
+  </table>`;
+}
+document.getElementById('l2a').innerHTML = l2(true);
+document.getElementById('l2b').innerHTML = l2(false);
+document.getElementById('l3a').innerHTML = l3(true);
+document.getElementById('l3b').innerHTML = l3(true);
+</script>
+</body>
+</html>
