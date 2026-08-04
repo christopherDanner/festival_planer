@@ -132,12 +132,31 @@ _Avoid_: Paket, Leistung, Sponsoring-Stufe.
 
 ## Sponsoring
 
-Die Verknüpfung *eines* Sponsors mit *einem* Fest — was diese Firma bei diesem Fest beiträgt. Besteht aus beliebig vielen zugewiesenen *Sponsoring-Kategorien* (der Wert je Zuweisung ist pro Sponsor überschreibbar, Default = Kategorie-Wert) plus optional **einem** freien Betrag. Gesamtbeitrag = Summe der Kategorie-Werte + Freibetrag. **Kein Status/Lebenszyklus** — ein Sponsor ist bei einem Fest entweder erfasst oder nicht.
+Die Verknüpfung *eines* Sponsors mit *einem* Fest — was diese Firma bei diesem Fest beiträgt. Besteht aus beliebig vielen zugewiesenen *Sponsoring-Kategorien* (der Wert je Zuweisung ist pro Sponsor überschreibbar, Default = Kategorie-Wert), optional **einem** freien Betrag und optional **einer** *Sachleistung*. Gesamtbeitrag = Summe der Kategorie-Werte + Freibetrag — die Sachleistung zählt **nicht** hinein (siehe *Sachwert*). **Kein Status/Lebenszyklus** — ein Sponsor ist bei einem Fest entweder erfasst oder nicht; erfasst heißt zugesagt.
 _Avoid_: Sponsoren-Beitrag, Deal.
+
+## Sachleistung
+
+Was ein Sponsor **nicht in Geld** beiträgt: eine Sachspende mit geschätztem Wert, z.B. "Geschenkkorb Tombola (€ 80)". Gehört zum *Sponsoring*, nicht zum globalen *Sponsor* — der Tombolapreis ist eine Jahresentscheidung. Höchstens **eine** je Sponsoring, dieselbe Körnung wie der Freibetrag. Gegenrichtung zur *Sponsoring-Kategorie*: die Kategorie ist eine Leistung, die der Verein anbietet, die Sachleistung ist, was die Firma gibt — deshalb hat sie keinen wiederverwendbaren Standardwert.
+_Avoid_: Sachspende, Naturalleistung, Sponsoring in Naturalien.
+
+## Sachwert
+
+Die Summe der geschätzten Werte aller *Sachleistungen* eines Fests. **Zweite, eigene Zahl neben dem Geld** — wird nie zum Gesamtbeitrag oder zur Sponsoring-Gesamtsumme addiert, weil Geld und geschätzter Sachwert nicht dieselbe Einheit sind. Wird überall separat ausgewiesen ("+ € 270 Sachwert").
+_Avoid_: Sachleistungssumme (zu lang), Naturalwert.
+
+## Vorjahresbeitrag
+
+Der Gesamtbeitrag desselben *Sponsors* beim **Quellfest** einer *Sponsor-Übernahme* — die Verhandlungsbasis beim Anruf ("letztes Jahr € 500"). Rein informativ: zählt in keine Summe des aktuellen Fests. Nur sichtbar, wo ein Quellfest bekannt ist; ein von Hand eingetragenes Sponsoring hat keinen Vorjahresbeitrag.
+_Avoid_: Vorjahreswert (heißt beim *Sponsoring-Kategorie*-Vorschlag schon etwas anderes), historischer Beitrag.
 
 ## Sponsor-Übernahme
 
-Vorgang, Sponsoren eines vergangenen Fests (Quellfest) in ein neues Fest (Zielfest) zu übernehmen. Weil *Sponsoren* global sind, wird der Sponsor selbst nur verknüpft, nicht kopiert. *Sponsoring-Kategorien* werden per Namen gemappt (gleichnamige Kategorie im Zielfest wird verknüpft, fehlende wird mit dem Vorjahreswert als Vorschlag neu angelegt) — analog zur *Material-Übernahme*. Freibetrag wird mitübernommen.
+Vorgang, Sponsoren eines vergangenen Fests (Quellfest) in ein neues Fest (Zielfest) zu übernehmen. Weil *Sponsoren* global sind, wird der Sponsor selbst nur verknüpft, nicht kopiert. Es gibt **zwei Wege mit bewusst verschiedener Semantik** (ADR 0008):
+
+- **Einzeln, während der Planung** — pro Firma entschieden; Kategorie-Zuweisungen und Freibetrag dürfen mitwandern, weil in diesem Moment eine echte Zusage vorliegt. *Sponsoring-Kategorien* werden per Namen gemappt (gleichnamige Kategorie im Zielfest wird verknüpft, fehlende wird mit dem Vorjahreswert als Vorschlag neu angelegt) — analog zur *Material-Übernahme*.
+- **Im Kopierwerk bei der Fest-Anlage** — Massenvorgang; die Sponsoren kommen als **nackte Verknüpfung** ohne Beträge, die Preisliste (*Sponsoring-Kategorien*) dagegen vollständig mit Werten. Getrennte Schalter.
+
 _Avoid_: Reaktivierung.
 
 ## Wiederkontaktierung
@@ -151,5 +170,5 @@ Die wiederkehrenden UI-Bausteine der Werkzeug-Plakat-Handschrift (`design-vision
 
 ## Sponsoring-Übersicht
 
-Auswertung pro Fest: alle erfassten *Sponsoren* mit ihren Kategorien/Freibeträgen und die Gesamtsumme des Sponsorings für dieses Fest.
-_Avoid_: Sponsorenliste (mehrdeutig — kann auch die globalen Stammdaten meinen).
+Auswertung pro Fest: alle erfassten *Sponsoren* mit ihren Kategorien/Freibeträgen/*Sachleistungen*, die Geld-Gesamtsumme und daneben der *Sachwert*. Verglichen wird gegen die Geld-Gesamtsumme des vorigen Fests, nicht gegen einen gesetzten Zielbetrag — ein Sponsoring-Ziel gibt es bewusst nicht.
+_Avoid_: Sponsorenliste (mehrdeutig — kann auch die globalen Stammdaten meinen), Sponsoring-Ziel.
