@@ -107,3 +107,40 @@ SELECT spur.festival_id,
   JOIN festivals f ON f.id = spur.festival_id AND f.deleted_at IS NULL
   JOIN members m ON m.id = spur.member_id
   LEFT JOIN wunsch w ON w.festival_id = spur.festival_id AND w.member_id = spur.member_id;
+
+-- Zeiger umlegen (additiv, nullable)
+--
+-- Die bestehenden Zeilen zeigen auf globale Member-IDs. Sie bekommen daneben
+-- einen Weg zur fest-eigenen Helfer-Zeile; die alten member_id-Spalten bleiben
+-- unverändert und werden weiter vom Code benutzt, bis #98 umschaltet.
+-- Löschregeln wie bisher bei member_id: die Zuordnung geht mit, der
+-- Verantwortliche-Verweis wird nur vergessen.
+ALTER TABLE station_members
+  ADD COLUMN IF NOT EXISTS helper_id UUID REFERENCES festival_helpers(id) ON DELETE CASCADE;
+ALTER TABLE shift_assignments
+  ADD COLUMN IF NOT EXISTS helper_id UUID REFERENCES festival_helpers(id) ON DELETE CASCADE;
+ALTER TABLE stations
+  ADD COLUMN IF NOT EXISTS responsible_helper_id UUID REFERENCES festival_helpers(id) ON DELETE SET NULL;
+
+-- Backfill über die Brücke source_member_id + festival_id. Zeilen gelöschter
+-- Feste bleiben leer, weil es dort keinen Helfer gibt.
+UPDATE station_members sm
+   SET helper_id = fh.id
+  FROM festival_helpers fh
+ WHERE fh.festival_id = sm.festival_id
+   AND fh.source_member_id = sm.member_id
+   AND sm.helper_id IS NULL;
+
+UPDATE shift_assignments sa
+   SET helper_id = fh.id
+  FROM festival_helpers fh
+ WHERE fh.festival_id = sa.festival_id
+   AND fh.source_member_id = sa.member_id
+   AND sa.helper_id IS NULL;
+
+UPDATE stations s
+   SET responsible_helper_id = fh.id
+  FROM festival_helpers fh
+ WHERE fh.festival_id = s.festival_id
+   AND fh.source_member_id = s.responsible_member_id
+   AND s.responsible_helper_id IS NULL;

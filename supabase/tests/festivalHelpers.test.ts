@@ -364,3 +364,136 @@ describe('Fan-out der Bestandsdaten', () => {
 		});
 	});
 });
+
+describe('Zeiger auf die neue Helfer-Zeile', () => {
+	let db: PGlite;
+	let legacy: LegacyData;
+
+	beforeAll(async () => {
+		db = await createTestDatabase();
+		legacy = await seedLegacyData(db);
+		await applyMigration(db, MIGRATION);
+	});
+
+	it('ergänzt die drei Spalten nullable und additiv', async () => {
+		const stationMembers = await columnsOf(db, 'station_members');
+		const shiftAssignments = await columnsOf(db, 'shift_assignments');
+		const stations = await columnsOf(db, 'stations');
+
+		expect(stationMembers.get('helper_id')).toMatchObject({ data_type: 'uuid', is_nullable: 'YES' });
+		expect(shiftAssignments.get('helper_id')).toMatchObject({ data_type: 'uuid', is_nullable: 'YES' });
+		expect(stations.get('responsible_helper_id')).toMatchObject({ data_type: 'uuid', is_nullable: 'YES' });
+
+		// Die alten Spalten bleiben in diesem Slice unverändert stehen.
+		expect(stationMembers.get('member_id')).toMatchObject({ is_nullable: 'NO' });
+		expect(shiftAssignments.get('member_id')).toMatchObject({ is_nullable: 'YES' });
+		expect(stations.has('responsible_member_id')).toBe(true);
+	});
+
+	it('räumt beim Entfernen eines Helfers auf wie beim Member', async () => {
+		const rules = await db.query<{ table_name: string; column_name: string; confdeltype: string }>(
+			`SELECT c.conrelid::regclass::text AS table_name,
+			        a.attname AS column_name,
+			        c.confdeltype
+			   FROM pg_constraint c
+			   JOIN unnest(c.conkey) AS k(attnum) ON true
+			   JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+			  WHERE c.contype = 'f' AND c.confrelid = 'public.festival_helpers'::regclass`
+		);
+		const byColumn = new Map(rules.rows.map((row) => [`${row.table_name}.${row.column_name}`, row.confdeltype]));
+
+		expect(byColumn.get('station_members.helper_id')).toBe('c');
+		expect(byColumn.get('shift_assignments.helper_id')).toBe('c');
+		expect(byColumn.get('stations.responsible_helper_id')).toBe('n');
+	});
+
+	it('zeigt auf den Helfer desselben Fests', async () => {
+		const paare = await db.query<{ table_name: string; passt: boolean }>(
+			`SELECT 'station_members' AS table_name,
+			        bool_and(fh.festival_id = sm.festival_id AND fh.source_member_id = sm.member_id) AS passt
+			   FROM station_members sm JOIN festival_helpers fh ON fh.id = sm.helper_id
+			 UNION ALL
+			 SELECT 'shift_assignments',
+			        bool_and(fh.festival_id = sa.festival_id AND fh.source_member_id = sa.member_id)
+			   FROM shift_assignments sa JOIN festival_helpers fh ON fh.id = sa.helper_id
+			 UNION ALL
+			 SELECT 'stations',
+			        bool_and(fh.festival_id = s.festival_id AND fh.source_member_id = s.responsible_member_id)
+			   FROM stations s JOIN festival_helpers fh ON fh.id = s.responsible_helper_id`
+		);
+
+		expect(paare.rows).toEqual([
+			{ table_name: 'station_members', passt: true },
+			{ table_name: 'shift_assignments', passt: true },
+			{ table_name: 'stations', passt: true }
+		]);
+	});
+
+	it('lässt keine Zeile eines lebenden Fests ohne helper_id zurück', async () => {
+		const luecken = await db.query<{ table_name: string; anzahl: number }>(
+			`SELECT 'station_members' AS table_name, count(*)::int AS anzahl
+			   FROM station_members sm JOIN festivals f ON f.id = sm.festival_id
+			  WHERE f.deleted_at IS NULL AND sm.member_id IS NOT NULL AND sm.helper_id IS NULL
+			 UNION ALL
+			 SELECT 'shift_assignments', count(*)::int
+			   FROM shift_assignments sa JOIN festivals f ON f.id = sa.festival_id
+			  WHERE f.deleted_at IS NULL AND sa.member_id IS NOT NULL AND sa.helper_id IS NULL
+			 UNION ALL
+			 SELECT 'stations', count(*)::int
+			   FROM stations s JOIN festivals f ON f.id = s.festival_id
+			  WHERE f.deleted_at IS NULL AND s.responsible_member_id IS NOT NULL AND s.responsible_helper_id IS NULL`
+		);
+
+		expect(luecken.rows).toEqual([
+			{ table_name: 'station_members', anzahl: 0 },
+			{ table_name: 'shift_assignments', anzahl: 0 },
+			{ table_name: 'stations', anzahl: 0 }
+		]);
+	});
+
+	it('lässt die Zeilen gelöschter Feste leer — dort gibt es keinen Helfer', async () => {
+		const geloescht = await db.query<{ helper_id: string | null }>(
+			`SELECT helper_id FROM station_members WHERE festival_id = $1`,
+			[legacy.festivals.geloescht]
+		);
+
+		expect(geloescht.rows).toEqual([{ helper_id: null }]);
+	});
+
+	it('nimmt Zuteilungen und Stationsmitgliedschaft mit, wenn der Helfer geht', async () => {
+		const opfer = await db.query<{ id: string }>(
+			`SELECT fh.id FROM festival_helpers fh
+			   JOIN members m ON m.id = fh.source_member_id
+			  WHERE fh.festival_id = $1 AND m.first_name = 'Anna'`,
+			[legacy.festivals.vergangen]
+		);
+
+		await db.query(`DELETE FROM festival_helpers WHERE id = $1`, [opfer.rows[0].id]);
+
+		const rest = await db.query<{ station_members: number; shift_assignments: number }>(
+			`SELECT (SELECT count(*)::int FROM station_members WHERE helper_id = $1) AS station_members,
+			        (SELECT count(*)::int FROM shift_assignments WHERE helper_id = $1) AS shift_assignments`,
+			[opfer.rows[0].id]
+		);
+
+		expect(rest.rows[0]).toEqual({ station_members: 0, shift_assignments: 0 });
+	});
+
+	it('vergisst nur den Verweis, wenn der verantwortliche Helfer geht', async () => {
+		const opfer = await db.query<{ id: string }>(
+			`SELECT fh.id FROM festival_helpers fh
+			   JOIN members m ON m.id = fh.source_member_id
+			  WHERE fh.festival_id = $1 AND m.first_name = 'Cilli'`,
+			[legacy.festivals.vergangen]
+		);
+
+		await db.query(`DELETE FROM festival_helpers WHERE id = $1`, [opfer.rows[0].id]);
+
+		const station = await db.query<{ responsible_helper_id: string | null; responsible_member_id: string | null }>(
+			`SELECT responsible_helper_id, responsible_member_id FROM stations WHERE name = 'Kassa'`
+		);
+
+		expect(station.rows[0].responsible_helper_id).toBeNull();
+		expect(station.rows[0].responsible_member_id).not.toBeNull();
+	});
+});
