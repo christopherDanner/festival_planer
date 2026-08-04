@@ -12,6 +12,7 @@ import type {
 } from '@/lib/shiftService';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
+import { withoutPrice } from '@/lib/materialCosts';
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
@@ -155,7 +156,7 @@ function deriveOpenTaskGap(days: ScheduleDayWithPhases[]): OpenTaskGap | null {
 export function deriveGapBoard(input: GapBoardInput): GapBoard {
 	const stationGaps = deriveStationGaps(input);
 	const openTasks = deriveOpenTaskGap(input.scheduleDays);
-	const materialsWithoutPrice = input.materials.filter((m) => m.unit_price == null).length;
+	const materialsWithoutPrice = withoutPrice(input.materials);
 
 	return {
 		stationGaps,

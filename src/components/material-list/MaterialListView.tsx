@@ -9,6 +9,7 @@ import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
 import OrderListExportDialog from './dialogs/OrderListExportDialog';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
+import { sumTotals } from '@/lib/materialCosts';
 
 type DialogState =
 	| { type: null }
@@ -80,17 +81,10 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 		}
 	};
 
-	const totalCost = useMemo(() => {
-		return materials.reduce((sum, m) => {
-			if (m.unit_price == null) return sum;
-			let grossPrice = m.unit_price;
-			if (m.tax_rate != null && m.price_is_net) {
-				grossPrice = Math.round(m.unit_price * (1 + m.tax_rate / 100) * 100) / 100;
-			}
-			const qty = m.actual_quantity ?? m.ordered_quantity;
-			return sum + qty * grossPrice;
-		}, 0);
-	}, [materials]);
+	// Kopf-Kasten „Gesch. Kosten": Σ der Zeilenkosten über alle Positionen
+	// (die gefilterte Summe steht im Tabellenfuß). Gerechnet wird brutto, in
+	// `materialCosts` — hier steht keine Geldformel mehr (ADR 0006).
+	const totalCost = useMemo(() => sumTotals(materials), [materials]);
 
 	const categoryCount = categories.length;
 	const stationCount = new Set(materials.map(m => m.station_id).filter(Boolean)).size;
