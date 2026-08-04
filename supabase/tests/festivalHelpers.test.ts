@@ -12,9 +12,14 @@
 // Der Slice hat keine öffentliche Schnittstelle in src/ — die Datenbank *ist*
 // die Schnittstelle, auf die der Code-Slice #98 danach zugreift.
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
 import { applyMigration, createTestDatabase } from './testDatabase';
+
+// Jeder Test hier startet ein echtes Postgres (WASM) und spielt die Migration
+// ab. Das dauert Sekunden statt Millisekunden — die 5s/10s der übrigen Suite
+// reißen, sobald die Testdateien parallel laufen.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 const MIGRATION = '20260804000001_create_festival_helpers.sql';
 
