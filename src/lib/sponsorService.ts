@@ -145,9 +145,26 @@ export interface Sponsoring {
 	sponsor_id: string;
 	free_amount: number | null;
 	notes: string | null;
+	/** Sachleistung: was die Firma nicht in Geld gibt (ADR 0008). Höchstens eine je Sponsoring. */
+	in_kind_description: string | null;
+	/** Geschätzter Sachwert der Sachleistung — zweite Zahl, zählt nie ins Geld (ADR 0008). */
+	in_kind_value: number | null;
+	/** Quellfest einer Sponsor-Übernahme; Grundlage des Vorjahresbeitrags (ADR 0008). */
+	copied_from_festival_id: string | null;
 	created_at: string;
 	updated_at: string;
 }
+
+/** Sachleistung eines Sponsorings — beide Spalten oder keine. */
+export type SponsoringInKind = Pick<Sponsoring, 'in_kind_description' | 'in_kind_value'>;
+
+/**
+ * Spalten, die nicht jede Anlage setzt: die Sachleistung und der
+ * Quellfest-Zeiger. Letzteren setzt **nur** die Sponsor-Übernahme — bei der
+ * normalen Anlage gibt es kein Quellfest, und ohne eines gibt es auch keinen
+ * Vorjahresbeitrag (ADR 0008).
+ */
+export type SponsoringExtras = Partial<SponsoringInKind & Pick<Sponsoring, 'copied_from_festival_id'>>;
 
 export interface SponsoringCategoryAssignment {
 	id: string;
@@ -194,11 +211,20 @@ export const createSponsoring = async (
 	sponsorId: string,
 	freeAmount: number | null,
 	assignments: SponsoringAssignmentInput[],
-	notes: string | null = null
+	notes: string | null = null,
+	extras: SponsoringExtras = {}
 ): Promise<string> => {
 	const { data, error } = await supabase
 		.from('sponsorings')
-		.insert({ festival_id: festivalId, sponsor_id: sponsorId, free_amount: freeAmount, notes })
+		.insert({
+			festival_id: festivalId,
+			sponsor_id: sponsorId,
+			free_amount: freeAmount,
+			notes,
+			in_kind_description: extras.in_kind_description ?? null,
+			in_kind_value: extras.in_kind_value ?? null,
+			copied_from_festival_id: extras.copied_from_festival_id ?? null
+		})
 		.select('id')
 		.single();
 
@@ -214,9 +240,11 @@ export const createSponsoring = async (
 };
 
 // Update a sponsoring; the assignments replace the existing ones entirely.
+// Der Quellfest-Zeiger ist bewusst nicht änderbar: er hält fest, woher das
+// Sponsoring übernommen wurde, und das ändert sich beim Bearbeiten nicht.
 export const updateSponsoring = async (
 	sponsoringId: string,
-	updates: Partial<Pick<Sponsoring, 'free_amount' | 'notes'>>,
+	updates: Partial<Pick<Sponsoring, 'free_amount' | 'notes'> & SponsoringInKind>,
 	assignments: SponsoringAssignmentInput[]
 ): Promise<void> => {
 	const { error } = await supabase
