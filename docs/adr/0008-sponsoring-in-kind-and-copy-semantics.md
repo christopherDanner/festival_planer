@@ -28,7 +28,7 @@ Entschieden (Wayfinder-Ticket #63):
 ## Consequences
 
 - `sponsorings` bekommt drei Spalten: `in_kind_description TEXT`, `in_kind_value NUMERIC`, `copied_from_festival_id UUID REFERENCES festivals(id) **ON DELETE SET NULL**`. Nicht CASCADE — das Löschen des Vorjahresfests darf die diesjährigen Sponsorings nicht mitreißen.
-- Der globale **Sponsor-Stammsatz bleibt unangetastet** (ADR 0002): die Sachleistung ist eine Jahresentscheidung und gehört ans Sponsoring.
+- Der globale **Sponsor-Stammsatz bleibt unangetastet** (ADR 0011): die Sachleistung ist eine Jahresentscheidung und gehört ans Sponsoring.
 - Ein neuer, festübergreifender **Leseweg** entsteht (`getPreviousSponsorings`) — bisher gab es nur `getSponsorings(festivalId)`. Er trägt auch den fest-weiten Vorjahres-Gesamtbetrag fürs Maßband.
 - Der **Dashboard-Kasten** zeigt den Sachwert als Unterzeile („+ € 270 Sachwert"), nur wenn er > 0 ist — sonst widerspräche er dem Tabellenfuß des Bereichs, und die Trennung sähe wie ein Rechenfehler aus.
 - `CopyFestivalOptions` bekommt `copySponsoringCategories` und `copySponsorings`; das Kopierwerk erhält sie als **Schritt 5** (Ablaufplan ist Schritt 4, ADR 0007 / #127).

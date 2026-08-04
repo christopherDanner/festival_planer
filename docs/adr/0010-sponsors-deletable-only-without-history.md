@@ -1,6 +1,6 @@
 # Ein Sponsor ist nur löschbar, solange er keine Historie hat
 
-Ein *Sponsor* (globaler Firmen-Stammsatz, ADR 0002-sponsors) darf **nur gelöscht werden, wenn kein einziges *Sponsoring* auf ihn zeigt** — also solange er bei keinem Fest erfasst war. Sobald er einmal gesponsert hat, ist er unlöschbar. Durchgesetzt wird das in der Datenbank: `sponsorings.sponsor_id` steht auf **`ON DELETE RESTRICT`** statt wie bisher auf `CASCADE` (Wayfinder-Ticket #101).
+Ein *Sponsor* (globaler Firmen-Stammsatz, ADR 0011) darf **nur gelöscht werden, wenn kein einziges *Sponsoring* auf ihn zeigt** — also solange er bei keinem Fest erfasst war. Sobald er einmal gesponsert hat, ist er unlöschbar. Durchgesetzt wird das in der Datenbank: `sponsorings.sponsor_id` steht auf **`ON DELETE RESTRICT`** statt wie bisher auf `CASCADE` (Wayfinder-Ticket #101).
 
 Der Grund ist die Reichweite des alten Cascades. Ein `DELETE` auf `sponsors` hat **jedes Sponsoring dieser Firma in jedem Fest** mitgerissen — auch in abgeschlossenen. Damit änderte sich die Sponsoring-Gesamtsumme eines vergangenen Fests rückwirkend, ohne dass dieses Fest überhaupt geöffnet worden wäre. Es gibt keinen Soft-Delete auf `sponsors` und kein Undo. Und die einzige Oberfläche, die dieses `DELETE` auslösen kann, ist die Sponsoren-Stammdaten-Seite, wo eine Firma als *Kontakt* gelöscht wird — niemand denkt dort an die Geldsumme von 2023.
 

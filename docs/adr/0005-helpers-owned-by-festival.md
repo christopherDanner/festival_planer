@@ -26,7 +26,7 @@ Folgeentscheidungen, die daran hängen:
 ## Konsequenzen
 
 - **Keine festübergreifende Identität.** „War Hans letztes Jahr an der Bar?" ist nicht mehr per Query beantwortbar, und ein Tippfehler erzeugt zwei Hansen. Bewusst in Kauf genommen: die Wiedererkennung leistet das Kopierwerk, und ein unsichtbarer Bestand voller Dubletten wäre schlechter als gar keiner.
-- **Bewusste Abweichung von ADR 0002 (Sponsoren als globale Stammdaten).** Sponsoren bleiben global, Helfer nicht — die Analogie in CONTEXT.md ist damit hinfällig. Der Unterschied ist die *Wiederkontaktierung*: bei einem Sponsor ist die Historie über Feste hinweg der fachliche Zweck, ein Helfer wird pro Fest neu eingeteilt. Außerdem behalten Sponsoren ihre Stammdaten-Seite, Helfer verlieren ihre.
+- **Bewusste Abweichung von ADR 0011 (Sponsoren als globale Stammdaten).** Sponsoren bleiben global, Helfer nicht — die Analogie in CONTEXT.md ist damit hinfällig. Der Unterschied ist die *Wiederkontaktierung*: bei einem Sponsor ist die Historie über Feste hinweg der fachliche Zweck, ein Helfer wird pro Fest neu eingeteilt. Außerdem behalten Sponsoren ihre Stammdaten-Seite, Helfer verlieren ihre.
 - **Wünsche haben keine Fremdschlüssel.** Wird eine Station gelöscht, bleibt ihre ID als Karteileiche im Array. Schaden ist kosmetisch — Gruppierung und Auto-Zuteilung ignorieren unbekannte IDs; sauber hält es ein Filtern beim Lesen.
 - **`members` wird nicht gedroppt**, sondern bleibt nach der Migration als toter Rückweg stehen.
 
