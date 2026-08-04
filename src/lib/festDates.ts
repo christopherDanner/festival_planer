@@ -28,6 +28,19 @@ export function formatFestDateRange(startDate: string, endDate?: string | null):
 	return `${formatDay(start, !sameMonth)} – ${formatDay(end, true)}`;
 }
 
+/**
+ * Gröberer Countdown für weit entfernte Feste („in 3 Monaten") — der Stempel auf
+ * den kleinen Plakaten der Festliste, wo Tagesgenauigkeit nichts sagt. Innerhalb
+ * des ersten Monats bleibt es bei Tagen.
+ */
+export function festCountdownCoarse(startDate: string, today: Date = new Date()): string {
+	const days = Math.round((atMidnight(startDate).getTime() - atMidnight(today).getTime()) / 86400000);
+	if (days <= 0) return 'heute!';
+	if (days === 1) return 'morgen!';
+	const months = Math.round(days / 30);
+	return months >= 2 ? `in ${months} Monaten` : `in ${days} Tagen`;
+}
+
 /** „noch 4 Tage" / „morgen!" / „heute!" / „läuft gerade" / „vorbei" */
 export function festCountdown(
 	startDate: string,
