@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { festCountdown, formatFestDateRange } from './festDates';
+import { festCountdown, festCountdownCoarse, festYear, formatFestDateRange } from './festDates';
+
+describe('festYear', () => {
+	it('liest das Jahr tagesgenau und lokal, nicht als UTC', () => {
+		expect(festYear('2026-01-01')).toBe(2026);
+		expect(festYear('2025-12-31')).toBe(2025);
+	});
+});
 
 describe('formatFestDateRange', () => {
 	it('lässt den Monat am Start weg, wenn beide Tage im selben Monat liegen', () => {
@@ -32,5 +39,27 @@ describe('festCountdown', () => {
 	it('meldet laufende und vergangene Feste', () => {
 		expect(festCountdown('2026-07-18', '2026-07-21', today)).toBe('läuft gerade');
 		expect(festCountdown('2026-07-10', '2026-07-12', today)).toBe('vorbei');
+	});
+});
+
+describe('festCountdownCoarse', () => {
+	const today = new Date('2026-07-20T15:30:00');
+
+	it('rechnet weit entfernte Feste in Monate um', () => {
+		expect(festCountdownCoarse('2026-10-24', today)).toBe('in 3 Monaten');
+		expect(festCountdownCoarse('2026-12-04', today)).toBe('in 5 Monaten');
+	});
+
+	it('bleibt im ersten Monat bei Tagen', () => {
+		expect(festCountdownCoarse('2026-08-10', today)).toBe('in 21 Tagen');
+		expect(festCountdownCoarse('2026-07-21', today)).toBe('morgen!');
+		expect(festCountdownCoarse('2026-07-20', today)).toBe('heute!');
+	});
+
+	it('wechselt monoton von Tagen auf Monate — nie zurück', () => {
+		expect(festCountdownCoarse('2026-08-18', today)).toBe('in 29 Tagen');
+		expect(festCountdownCoarse('2026-08-19', today)).toBe('in 1 Monat');
+		expect(festCountdownCoarse('2026-08-29', today)).toBe('in 1 Monat');
+		expect(festCountdownCoarse('2026-09-03', today)).toBe('in 2 Monaten');
 	});
 });

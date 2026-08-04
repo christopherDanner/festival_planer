@@ -13,7 +13,7 @@ import { Pencil, LayoutDashboard, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/AuthProvider';
-import { Festival, getFestival, updateFestival } from '@/lib/festivalService';
+import { Festival, FestivalEdits, getFestival, updateFestival } from '@/lib/festivalService';
 
 export default function FestivalResults() {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -81,15 +81,10 @@ export default function FestivalResults() {
 		}
 	};
 
-	const handleSaveFestival = async (updates: { name: string; start_date: string; end_date: string | null; location: string | null }) => {
+	const handleSaveFestival = async (edits: FestivalEdits) => {
 		if (!festivalId) return;
 		try {
-			await updateFestival(festivalId, {
-				name: updates.name,
-				start_date: updates.start_date,
-				end_date: updates.end_date ?? undefined,
-				location: updates.location ?? undefined
-			});
+			await updateFestival(festivalId, edits);
 			await loadFestivalData();
 			toast({ title: 'Fest aktualisiert' });
 		} catch (error: unknown) {

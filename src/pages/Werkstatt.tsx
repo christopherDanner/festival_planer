@@ -7,6 +7,7 @@ import { ModeToggle } from '@/components/toolkit/ModeToggle';
 import { NameChip } from '@/components/toolkit/NameChip';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import { Ruler } from '@/components/toolkit/Ruler';
+import { SectionHeading } from '@/components/toolkit/SectionHeading';
 import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
 import { Stamp } from '@/components/toolkit/Stamp';
 import { StatusBar } from '@/components/toolkit/StatusBar';
@@ -15,17 +16,7 @@ import { ValueTag } from '@/components/toolkit/ValueTag';
 function Abschnitt({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<section className="mb-10">
-			<h2 className="mb-3 flex items-center gap-3 text-sm font-bold uppercase tracking-[.08em]">
-				{title}
-				<span
-					aria-hidden
-					className="h-[7px] flex-1"
-					style={{
-						backgroundImage: 'radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px)',
-						backgroundSize: '8px 8px',
-					}}
-				/>
-			</h2>
+			<SectionHeading className="mb-3">{title}</SectionHeading>
 			{children}
 		</section>
 	);

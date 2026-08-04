@@ -3,12 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { FestivalEdits } from '@/lib/festivalService';
 
 interface FestivalEditDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	festival: { id: string; name: string; start_date: string; end_date?: string; location?: string };
-	onSave: (updates: { name: string; start_date: string; end_date: string | null; location: string | null }) => void;
+	onSave: (updates: FestivalEdits) => void;
 }
 
 const FestivalEditDialog: React.FC<FestivalEditDialogProps> = ({

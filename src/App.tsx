@@ -7,7 +7,6 @@ import { Suspense, lazy } from 'react';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
-import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
 import Sponsors from './pages/Sponsors';

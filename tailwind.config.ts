@@ -18,7 +18,10 @@ export default {
         display: ['"Oswald Variable"', '"Public Sans Variable"', "sans-serif"],
       },
       colors: {
-        papier: "oklch(var(--papier) / <alpha-value>)",
+        papier: {
+          DEFAULT: "oklch(var(--papier) / <alpha-value>)",
+          getoent: "oklch(var(--papier-getoent) / <alpha-value>)",
+        },
         tinte: {
           DEFAULT: "oklch(var(--tinte) / <alpha-value>)",
           soft: "oklch(var(--tinte-soft) / <alpha-value>)",

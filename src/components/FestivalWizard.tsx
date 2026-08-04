@@ -19,11 +19,17 @@ import TemplateSelectionStep from '@/components/festival-wizard/TemplateSelectio
 import { Calendar } from 'lucide-react';
 
 interface FestivalWizardProps {
+	/** Vorbelegte Vorlage — „ALS VORLAGE" am Plakat springt damit herein (#90). */
+	initialTemplateId?: string;
 	onClose: () => void;
 	onComplete: () => void;
 }
 
-export default function FestivalWizard({ onClose, onComplete }: FestivalWizardProps) {
+export default function FestivalWizard({
+	initialTemplateId,
+	onClose,
+	onComplete
+}: FestivalWizardProps) {
 	const [step, setStep] = useState(1);
 	const [festivalName, setFestivalName] = useState('');
 	const [startDate, setStartDate] = useState('');
@@ -32,7 +38,7 @@ export default function FestivalWizard({ onClose, onComplete }: FestivalWizardPr
 
 	// Template state
 	const [festivals, setFestivals] = useState<Festival[]>([]);
-	const [templateId, setTemplateId] = useState<string>('');
+	const [templateId, setTemplateId] = useState<string>(initialTemplateId ?? '');
 	const [templateData, setTemplateData] = useState<{
 		stations: Station[];
 		shifts: StationShift[];

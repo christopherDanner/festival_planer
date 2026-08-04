@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import { formatFestDateRange, festCountdown } from '@/lib/festDates';
+import { Poster } from '@/components/toolkit/Poster';
 import { Stamp } from '@/components/toolkit/Stamp';
 import { getProgramByDay, countProgramRows } from './programBoard';
 
@@ -32,7 +33,7 @@ const Festplakat: React.FC<FestplakatProps> = ({ festival, scheduleDays, onOpenS
 	const hasProgram = programCount > 0;
 
 	return (
-		<div className="poster border-2.5 border-tinte px-5 pb-5 pt-6 text-center text-white">
+		<Poster className="px-5 pb-5 pt-6 text-center">
 			<h3 className="font-display text-3xl font-semibold uppercase leading-tight tracking-[.02em]">
 				{festival.name}
 			</h3>
@@ -83,7 +84,7 @@ const Festplakat: React.FC<FestplakatProps> = ({ festival, scheduleDays, onOpenS
 				className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[.04em] text-gelb hover:underline">
 				Ablaufplan <ArrowRight className="h-4 w-4" />
 			</button>
-		</div>
+		</Poster>
 	);
 };
 
