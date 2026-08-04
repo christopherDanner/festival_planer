@@ -81,7 +81,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
 		// One iteration is enough: the planner just needs to read and reason,
 		// not write code. (Structured output requires maxIterations: 1.)
 		maxIterations: 1,
-		agent: sandcastle.claudeCode('claude-opus-4-8', { effort: 'high' }),
+		agent: sandcastle.claudeCode('claude-opus-5', { effort: 'high' }),
 		promptFile: './.sandcastle/plan-prompt.md',
 		output: sandcastle.Output.object({ tag: 'plan', schema: planSchema })
 	});
@@ -124,7 +124,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
 				const implement = await sandbox.run({
 					name: 'implementer',
 					maxIterations: 100,
-					agent: sandcastle.claudeCode('claude-opus-4-8', { effort: 'high' }),
+					agent: sandcastle.claudeCode('claude-opus-5', { effort: 'medium' }),
 					promptFile: './.sandcastle/implement-prompt.md',
 					promptArgs: {
 						TASK_ID: issue.id,
