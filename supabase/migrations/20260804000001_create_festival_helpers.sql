@@ -106,7 +106,14 @@ SELECT spur.festival_id,
   FROM spur
   JOIN festivals f ON f.id = spur.festival_id AND f.deleted_at IS NULL
   JOIN members m ON m.id = spur.member_id
-  LEFT JOIN wunsch w ON w.festival_id = spur.festival_id AND w.member_id = spur.member_id;
+  LEFT JOIN wunsch w ON w.festival_id = spur.festival_id AND w.member_id = spur.member_id
+  -- Zweiter Durchlauf legt nichts doppelt an; die Brücke source_member_id sagt,
+  -- wer schon da ist.
+ WHERE NOT EXISTS (
+   SELECT 1 FROM festival_helpers fh
+    WHERE fh.festival_id = spur.festival_id
+      AND fh.source_member_id = spur.member_id
+ );
 
 -- Zeiger umlegen (additiv, nullable)
 --

@@ -59,8 +59,8 @@ function isoDate(offsetDays: number): string {
 
 type LegacyData = {
 	festivals: Record<'vergangen' | 'vergangenLeer' | 'planung' | 'geloescht', string>;
-	stations: Record<'bar' | 'kassa' | 'grill' | 'zelt', string>;
-	shifts: Record<'barAbend' | 'grillMittag', string>;
+	stations: Record<'bar' | 'grill', string>;
+	shifts: Record<'barAbend', string>;
 };
 
 /**
@@ -111,7 +111,7 @@ async function seedLegacyData(db: PGlite): Promise<LegacyData> {
 	await db.query(`UPDATE festivals SET deleted_at = now() WHERE id = $1`, [geloescht]);
 
 	const bar = await stationId(vergangen, 'Bar', null);
-	const kassa = await stationId(vergangen, 'Kassa', cilli);
+	await stationId(vergangen, 'Kassa', cilli);
 	const barAbend = await shiftId(vergangen, bar, 'Abendschicht');
 	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [
 		vergangen,
@@ -132,7 +132,7 @@ async function seedLegacyData(db: PGlite): Promise<LegacyData> {
 	await stationId(vergangenLeer, 'Lager', null);
 
 	const grill = await stationId(planung, 'Grill', null);
-	const grillMittag = await shiftId(planung, grill, 'Mittagsschicht');
+	await shiftId(planung, grill, 'Mittagsschicht');
 	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3)`, [
 		planung,
 		grill,
@@ -144,17 +144,16 @@ async function seedLegacyData(db: PGlite): Promise<LegacyData> {
 		[planung, emil, grill]
 	);
 
-	const zelt = await stationId(geloescht, 'Zelt', null);
 	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3)`, [
 		geloescht,
-		zelt,
+		await stationId(geloescht, 'Zelt', null),
 		anna
 	]);
 
 	return {
 		festivals: { vergangen, vergangenLeer, planung, geloescht },
-		stations: { bar, kassa, grill, zelt },
-		shifts: { barAbend, grillMittag }
+		stations: { bar, grill },
+		shifts: { barAbend }
 	};
 }
 
@@ -495,5 +494,43 @@ describe('Zeiger auf die neue Helfer-Zeile', () => {
 
 		expect(station.rows[0].responsible_helper_id).toBeNull();
 		expect(station.rows[0].responsible_member_id).not.toBeNull();
+	});
+});
+
+describe('Zweiter Durchlauf', () => {
+	it('legt nichts doppelt an und wirft nicht', async () => {
+		const db = await createTestDatabase();
+		await seedLegacyData(db);
+		await applyMigration(db, MIGRATION);
+		const nachDemErsten = await db.query<{ helfer: number; zeiger: number }>(
+			`SELECT (SELECT count(*)::int FROM festival_helpers) AS helfer,
+			        (SELECT count(*)::int FROM station_members WHERE helper_id IS NOT NULL)
+			      + (SELECT count(*)::int FROM shift_assignments WHERE helper_id IS NOT NULL)
+			      + (SELECT count(*)::int FROM stations WHERE responsible_helper_id IS NOT NULL) AS zeiger`
+		);
+
+		await applyMigration(db, MIGRATION);
+
+		const nachDemZweiten = await db.query<{ helfer: number; zeiger: number }>(
+			`SELECT (SELECT count(*)::int FROM festival_helpers) AS helfer,
+			        (SELECT count(*)::int FROM station_members WHERE helper_id IS NOT NULL)
+			      + (SELECT count(*)::int FROM shift_assignments WHERE helper_id IS NOT NULL)
+			      + (SELECT count(*)::int FROM stations WHERE responsible_helper_id IS NOT NULL) AS zeiger`
+		);
+
+		expect(nachDemErsten.rows[0].helfer).toBeGreaterThan(0);
+		expect(nachDemZweiten.rows[0]).toEqual(nachDemErsten.rows[0]);
+	});
+});
+
+describe('Grenze der Planung', () => {
+	it('zählt ein heute beginnendes Fest noch zur Planung', async () => {
+		const db = await createTestDatabase();
+		await seedLegacyData(db);
+		const heute = await insertFestival(db, 'Heute los', isoDate(0));
+
+		await applyMigration(db, MIGRATION);
+
+		expect(await helperNamesOf(db, heute)).toEqual(['Anna', 'Bert', 'Cilli', 'Dora', 'Emil']);
 	});
 });
