@@ -125,6 +125,20 @@ _Avoid_: Programmliste, Aushangplan.
 Firma/Person, die ein Fest finanziell oder als Sachleistung unterstützt. **Globale, wiederverwendbare Stammdaten** (anders als der *Helfer*, der pro Fest lebt) — eine Firma wird einmal angelegt und über Feste hinweg verknüpft. Felder: Firmenname, Ansprechpartner, Email, Telefon, Adresse, Website, Notizen. Dass ein Sponsor global lebt, ermöglicht die *Wiederkontaktierung* ohne Kopieren.
 _Avoid_: Firma (als eigener Begriff — Firma und Sponsor sind hier dasselbe), Gönner.
 
+Ein Sponsor ist **nur löschbar, solange keine *Sponsoren-Historie* an ihm hängt** (ADR 0010): sobald er bei einem Fest erfasst war, würde sein Löschen die Sponsoring-Summe eines vergangenen Fests rückwirkend ändern.
+
+## Sponsorenbestand
+
+Alle *Sponsoren* als Menge — das Objekt der Sponsoren-Stammdaten-Seite (`/sponsors`), der einzigen Ansicht über Feste hinweg. Er wächst praktisch **monoton**, weil ein Sponsor mit *Sponsoren-Historie* nicht mehr löschbar ist (ADR 0010); beherrschbar bleibt er durch Suche und Filter, nicht durch Löschen. In der Oberfläche heißt der einzelne Eintrag „Firma" — der Fachbegriff bleibt *Sponsor*.
+_Avoid_: Sponsorenliste (mehrdeutig, siehe *Sponsoring-Übersicht*), Firmenstamm.
+
+## Sponsoren-Historie
+
+Was ein *Sponsor* über alle Feste hinweg beigetragen hat, reduziert auf zwei Angaben: **Jahr des letzten Sponsorings** und **Anzahl der Feste** ("Zuletzt 2025 · 3 Feste", ohne alles: "noch nie"). **Rein informativ** — zählt in keine Summe, wie *Vorjahresbeitrag* und *Sachwert*.
+
+Sie ist die einzige festübergreifende Antwort auf die *Wiederkontaktierung*: die Sponsoring-Matrix zeigt nur das aktuelle Fest, und der *Vorjahresbeitrag* nur das Quellfest einer *Sponsor-Übernahme* — eine Firma, die vor drei Jahren gesponsert hat und nie mitkopiert wurde, ist sonst nirgends sichtbar. Dieselbe Zahl trägt die Löschregel aus ADR 0010: keine Historie = löschbar.
+_Avoid_: Sponsoring-Verlauf, Firmen-Historie.
+
 ## Sponsoring-Kategorie
 
 Eine benannte Sponsoring-Leistung mit einem Wert, z.B. "Werbeplakat", "Social-Media-Beitrag", "Logo in Speisekarte". **Pro Fest definiert** (Name + Wert), weil der Wert je Jahr variieren kann.
@@ -170,7 +184,7 @@ _Avoid_: Reaktivierung.
 
 ## Wiederkontaktierung
 
-Fachliches Ziel hinter der *Sponsor-Übernahme*: vergangene Sponsoren fürs neue Fest erneut anfragen. Der **automatisierte Email-Versand ist bewusst (noch) nicht Teil des Funktionsumfangs** — es gibt keine Versand-Infrastruktur (siehe AI_INTEGRATION.md: nur client-seitiges Mistral, keine Edge Functions). Aktuell deckt die *Sponsor-Übernahme* den Vorgang ab; Mailversand kann später andocken.
+Fachliches Ziel hinter der *Sponsor-Übernahme*: vergangene Sponsoren fürs neue Fest erneut anfragen. Der **automatisierte Email-Versand ist bewusst (noch) nicht Teil des Funktionsumfangs** — es gibt keine Versand-Infrastruktur (siehe AI_INTEGRATION.md: nur client-seitiges Mistral, keine Edge Functions). Aktuell deckt die *Sponsor-Übernahme* den Vorgang ab; Mailversand kann später andocken. Wen man anfragen *soll*, beantwortet der *Sponsorenbestand* über die *Sponsoren-Historie* — sie ist die einzige Ansicht, die auch Firmen zeigt, die seit Jahren nicht mehr dabei waren.
 _Avoid_: Follow-up.
 
 ## Werkzeug-Bausteine (Toolkit)

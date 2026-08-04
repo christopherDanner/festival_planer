@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #101, Seiten außerhalb der fünf Tabs.
+     FRAGE 1: Wie sieht die Anmeldemaske (/auth) in Werkzeug-Plakat-Handschrift aus?
+     Randbedingungen aus dem Code: nur signIn (Email + Passwort), KEINE Selbst-
+     registrierung, KEIN Passwort-Zurücksetzen (AuthProvider kennt nur signIn/signOut),
+     Index.tsx (Marketing-Landingpage) ist mit #90 gelöscht — /auth ist also das
+     erste und einzige Bild vor dem Login. Vision §2: „kein Marketing-Auftritt".
+     FRAGE 2: Wie sieht NotFound aus? Vision §4 kennt ein Leerzustands-Rezept
+     (gestrichelter Rahmen + roter Stempelton + ein Satz).
+     Jede Variante zweimal: Desktop-Rahmen und 375-px-Handy-Rahmen — angemeldet
+     wird auch am Handy während des Fests. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid #101 — Anmeldung & NotFound</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --green-deep: oklch(0.33 0.09 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 60px; }
+  .board { max-width: 1136px; }
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 24px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+  h2.sect { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 34px 0 4px; display: flex; align-items: center; gap: 12px; }
+  h2.sect::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .verdikt { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 10px; line-height: 1.55; max-width: 900px; }
+  .verdikt b { color: var(--ink); }
+
+  .paar { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 8px; }
+  .rahmen { border: 3px solid var(--ink); background: var(--paper); overflow: hidden; position: relative; }
+  .desk { width: 720px; height: 440px; }
+  .phone { width: 375px; height: 440px; }
+  .rlabel { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 4px; }
+
+  /* ---- Bausteine der Handschrift ---- */
+  .halbton { background: var(--green); background-image: var(--halftone); color: #fff; }
+  .wm { font-family: "Oswald", sans-serif; font-weight: 600; letter-spacing: .04em; color: var(--yellow); }
+  .zettel { background: #fff; border: 2.5px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+  .feld { margin-bottom: 11px; }
+  .feld label { display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 3px; }
+  .feld input { width: 100%; border: 2px solid var(--ink); background: #fff; padding: 8px 10px; font-size: 13.5px; }
+  .knopf { width: 100%; background: var(--yellow); border: 2px solid var(--ink); padding: 10px; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+  .fuss { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; margin-top: 10px; }
+  .stempel { display: inline-block; font-family: "Oswald", sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; border: 2px solid var(--red); color: var(--red); background: #fff; padding: 3px 10px; transform: rotate(-4deg); }
+  .stempel.gruen { border-color: var(--green); color: var(--green); transform: rotate(5deg); }
+  .gestrichelt { border: 2.5px dashed oklch(0.78 0.02 120); background: transparent; }
+
+  /* A1 — Anmeldezettel auf Papier */
+  .a1 { height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .a1 .box { width: 340px; }
+  .a1 .kopf { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 2.5px solid var(--ink); }
+  .a1 .kopf .wm { font-size: 15px; }
+  .a1 .kopf b { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13px; text-transform: uppercase; color: #fff; letter-spacing: .02em; }
+  .a1 .leib { padding: 15px 16px 16px; }
+
+  /* A2 — ganzflächiges Plakat */
+  .a2 { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 20px; }
+  .a2 .marke { text-align: center; }
+  .a2 .marke .wm { font-size: 34px; display: block; line-height: 1; }
+  .a2 .marke .claim { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: oklch(0.93 0.02 110); margin-top: 5px; }
+  .a2 .box { width: 330px; padding: 16px; }
+
+  /* A3 — zweigeteilt: Plakatwange + Formular */
+  .a3 { height: 100%; display: grid; grid-template-columns: 1.1fr 1fr; }
+  .a3 .wange { padding: 24px; display: flex; flex-direction: column; justify-content: center; gap: 12px; border-right: 2.5px solid var(--ink); }
+  .a3 .wange .wm { font-size: 30px; line-height: 1; }
+  .a3 .wange p { font-size: 12.5px; color: oklch(0.94 0.02 110); line-height: 1.6; }
+  .a3 .wange .liste { font-size: 12px; color: #fff; display: grid; gap: 5px; }
+  .a3 .wange .liste span::before { content: "✓ "; color: var(--yellow); font-weight: 800; }
+  .a3 .form { padding: 24px 22px; display: flex; flex-direction: column; justify-content: center; background: var(--paper); }
+  .a3 .form h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; text-transform: uppercase; margin-bottom: 12px; }
+  .phone .a3 { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .phone .a3 .wange { border-right: 0; border-bottom: 2.5px solid var(--ink); padding: 16px; gap: 7px; }
+  .phone .a3 .wange .wm { font-size: 24px; }
+  .phone .a3 .wange .liste { display: none; }
+  .phone .a3 .form { padding: 16px; }
+
+  /* N1 — Stempel-Zettel */
+  .n1 { height: 100%; display: flex; align-items: center; justify-content: center; padding: 22px; }
+  .n1 .box { width: 380px; padding: 20px; text-align: center; }
+  .n1 .code { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 46px; line-height: 1; }
+  .n1 p { font-size: 12.5px; color: var(--ink-soft); margin: 9px 0 14px; line-height: 1.5; }
+
+  /* N2 — Leerzustands-Rezept (§4) */
+  .n2 { height: 100%; display: flex; align-items: center; justify-content: center; padding: 22px; }
+  .n2 .box { width: 400px; padding: 26px 20px; text-align: center; }
+  .n2 p { font-size: 12.5px; color: var(--ink-soft); margin: 12px 0 14px; line-height: 1.5; }
+
+  /* N3 — Mast + Zettel */
+  .n3 { height: 100%; display: flex; flex-direction: column; }
+  .n3 .mast { display: flex; align-items: center; gap: 16px; border-bottom: 2.5px solid var(--ink); padding: 11px 16px; }
+  .n3 .mast .wm { font-size: 15px; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+  .n3 .mast h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 19px; text-transform: uppercase; }
+  .n3 .leib { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .n3 .box { width: 380px; padding: 20px; text-align: center; }
+  .n3 p { font-size: 12.5px; color: var(--ink-soft); margin: 10px 0 14px; line-height: 1.5; }
+  .knopf.inline { width: auto; padding: 9px 16px; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="titel">Anmeldung &amp; Seite-nicht-gefunden
+    <span>Entscheid-Prototyp zu Wayfinder #101 · je Variante Desktop 720 px und Handy 375 px · nur signIn, keine Registrierung, kein Passwort-Zurücksetzen</span></div>
+
+  <h2 class="sect">Anmeldung A1 — Anmeldezettel auf Papier</h2>
+  <p class="verdikt">Papier-Grund wie die ganze App, mittig ein Zettel mit Versatz-Schatten. Grün kommt nur als <b>schmaler Halftone-Kopf</b> auf dem Zettel vor — dasselbe Zitat wie der Mast, nur klein. Ruhig; der erste Eindruck ist „Werkzeug", nicht „Auftritt".</p>
+  <div class="paar" id="a1"></div>
+
+  <h2 class="sect">Anmeldung A2 — ganzflächiges Plakat</h2>
+  <p class="verdikt">Der ganze Bildschirm ist grünes Halftone-Plakat, der Wordmark groß in Gelb, das Formular als weißer Zettel darauf. Stärkster Wiedererkennungswert, und die einzige Fläche der App, die sich das leisten kann — dahinter beginnt sofort die Arbeit. Risiko: wirkt wie der Marketing-Auftritt, den Vision §2 ausschließt.</p>
+  <div class="paar" id="a2"></div>
+
+  <h2 class="sect">Anmeldung A3 — zweigeteilt: Plakatwange + Formular</h2>
+  <p class="verdikt">Links eine grüne Wange mit Wordmark und drei Stichworten, rechts das Formular. Am Handy stapelt die Wange über das Formular. Das ist das klassische SaaS-Login-Layout — und die Stichworte sind Werbetext für Leute, die die App längst benutzen.</p>
+  <div class="paar" id="a3"></div>
+
+  <h2 class="sect">Nicht gefunden N1 — Stempel-Zettel</h2>
+  <p class="verdikt">404 groß in Akzentschrift, roter Stempel „SEITE NICHT GEFUNDEN", ein Satz, gelber Knopf zurück zu den Festen. Kein Kopf — die Seite kann überall auftreten, auch ohne Fest-Kontext.</p>
+  <div class="paar" id="n1"></div>
+
+  <h2 class="sect">Nicht gefunden N2 — Leerzustands-Rezept aus §4</h2>
+  <p class="verdikt">Genau das Rezept, das die App für jeden Leerzustand benutzt: <b>gestrichelter Rahmen, roter Stempelton, ein Satz</b>. Keine Zahl 404 (die sagt Ehrenamtlichen nichts), dafür konsistent mit „NOCH KEIN FEST" und den drei Sponsoring-Leerzuständen.</p>
+  <div class="paar" id="n2"></div>
+
+  <h2 class="sect">Nicht gefunden N3 — Mast über dem Zettel</h2>
+  <p class="verdikt">Wie N1, aber mit Mast darüber: man ist nie „nirgendwo", der Wordmark führt zurück. Preis: der Mast braucht einen Titel ohne Fest — und suggeriert eine Seite, die es nicht gibt.</p>
+  <div class="paar" id="n3"></div>
+</div>
+
+<script>
+const form = (kompakt) => `
+<div class="feld"><label for="e">Email</label><input id="e" value="obmann@musikverein-steinbach.at"></div>
+<div class="feld"><label for="p">Passwort</label><input id="p" type="password" value="········"></div>
+<button class="knopf">Anmelden</button>
+${kompakt ? "" : '<p class="fuss">Zugänge legt die Festleitung an. Passwort vergessen? Bei der Festleitung melden.</p>'}`;
+
+const A1 = `<div class="a1"><div class="box zettel">
+  <div class="kopf halbton"><span class="wm">FESTMEISTER</span><b>Anmelden</b></div>
+  <div class="leib">${form(false)}</div>
+</div></div>`;
+
+const A2 = `<div class="a2 halbton">
+  <div class="marke"><span class="wm">FESTMEISTER</span><span class="claim">Werkzeug für das Vereinsfest</span></div>
+  <div class="box zettel">${form(false)}</div>
+</div>`;
+
+const A3 = `<div class="a3">
+  <div class="wange halbton">
+    <span class="wm">FESTMEISTER</span>
+    <p>Schichten, Material, Ablauf und Sponsoring eines Vereinsfests in einer Hand.</p>
+    <div class="liste"><span>Vorjahr als Vorlage kopieren</span><span>Lücken sehen und schließen</span><span>Einsatzplan als Aushang</span></div>
+  </div>
+  <div class="form"><h3>Anmelden</h3>${form(true)}<p class="fuss">Zugänge legt die Festleitung an.</p></div>
+</div>`;
+
+const N1 = `<div class="n1"><div class="box zettel">
+  <div class="code">404</div>
+  <span class="stempel">Seite nicht gefunden</span>
+  <p>Die Adresse gibt es nicht — vielleicht ein alter Link.</p>
+  <button class="knopf inline">Zu meinen Festen</button>
+</div></div>`;
+
+const N2 = `<div class="n2"><div class="box gestrichelt">
+  <span class="stempel">Diese Seite gibt es nicht</span>
+  <p>Der Link führt ins Leere. Zurück zur Festliste, dort steht alles.</p>
+  <button class="knopf inline">Zu meinen Festen</button>
+</div></div>`;
+
+const N3 = `<div class="n3">
+  <div class="mast halbton"><span class="wm">FESTMEISTER</span><h1>Nicht gefunden</h1></div>
+  <div class="leib"><div class="box zettel">
+    <span class="stempel">Seite nicht gefunden</span>
+    <p>Die Adresse gibt es nicht — vielleicht ein alter Link.</p>
+    <button class="knopf inline">Zu meinen Festen</button>
+  </div></div>
+</div>`;
+
+const paar = (id, inhalt) => {
+  document.getElementById(id).innerHTML =
+    `<div><div class="rlabel">Desktop 720 px</div><div class="rahmen desk">${inhalt}</div></div>
+     <div><div class="rlabel">Handy 375 px</div><div class="rahmen phone">${inhalt}</div></div>`;
+};
+paar("a1", A1); paar("a2", A2); paar("a3", A3);
+paar("n1", N1); paar("n2", N2); paar("n3", N3);
+</script>
+</body>
+</html>

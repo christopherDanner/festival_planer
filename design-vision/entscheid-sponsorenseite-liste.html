@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<!-- ENTSCHEID-PROTOTYP (wegwerfbar) — Wayfinder #101, Seiten außerhalb der fünf Tabs.
+     FRAGE: Wie sieht die globale Sponsoren-Stammdaten-Seite (/sponsors) aus, wenn der
+     Firmenbestand über Jahre wächst? #153 nennt „nach fünf Festen leicht 40 Firmen".
+     Der Sponsor trägt 7 Felder (Firma, Ansprechpartner, Email, Telefon, Adresse,
+     Website, Notizen); die Seite von heute zeigt 3 davon in der Tabelle. Dazu neu
+     (Entscheid #101): die Historie „Zuletzt 2025 · 3 Feste" — Zweck ist
+     Wiederkontaktierung, und die Matrix kann sie nicht zeigen.
+     Gleiche 40 Firmen in allen Varianten, echte Namenslängen, echte Lücken
+     (ohne Ansprechpartner / ohne Email / ohne Website / nie gesponsert).
+     Gemessen gegen die echte Inhaltsbreite: .frame 1180px − 2×22px = 1136px,
+     Handy in 375px-Rahmen (Muster: entscheid-sponsoring-mobil-karten.html). -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entscheid #101 — Sponsoren-Stammdaten: Liste bei 40 Firmen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+  :root {
+    --paper: oklch(0.97 0.008 95);
+    --ink: oklch(0.24 0.02 145);
+    --ink-soft: oklch(0.44 0.02 145);
+    --green: oklch(0.4 0.1 160);
+    --yellow: oklch(0.86 0.15 92);
+    --red: oklch(0.55 0.18 30);
+    --line: oklch(0.87 0.012 100);
+    --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ccircle cx='3' cy='3' r='1.15' fill='white' opacity='0.12'/%3E%3Ccircle cx='10' cy='10' r='1.15' fill='white' opacity='0.12'/%3E%3C/svg%3E");
+  }
+  body { font-family: "Public Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); padding: 18px 22px 150px; }
+
+  .board { max-width: 1136px; }
+  .titel { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 24px; text-transform: uppercase; letter-spacing: .02em; }
+  .titel span { display: block; font-family: "Public Sans"; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
+
+  .measure { border: 2.5px solid var(--ink); border-left-width: 9px; background: #fff; padding: 11px 14px; margin: 14px 0 4px; font-size: 13px; line-height: 1.55; }
+  .measure h4 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .measure table { border-collapse: collapse; margin-top: 8px; font-size: 12.5px; width: 100%; }
+  .measure th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px 4px 0; border-bottom: 1.5px solid var(--ink); }
+  .measure th.n, .measure td.n { text-align: right; padding-right: 14px; }
+  .measure td { padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .measure .fit { color: var(--green); font-weight: 800; }
+  .measure .nofit { color: var(--red); font-weight: 800; }
+  .measure .fund { margin-top: 10px; padding-top: 9px; border-top: 1.5px dashed var(--line); font-size: 12.5px; line-height: 1.65; }
+  .measure .fund b.ja { color: var(--green); } .measure .fund b.nein { color: var(--red); }
+
+  h2.sect { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 34px 0 4px; display: flex; align-items: center; gap: 12px; }
+  h2.sect::after { content: ""; flex: 1; height: 7px; background-image: radial-gradient(oklch(0.75 0.02 120) 1.1px, transparent 1.3px); background-size: 8px 8px; }
+  .verdikt { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 10px; line-height: 1.5; }
+  .verdikt b.ja { color: var(--green); } .verdikt b.nein { color: var(--red); }
+
+  /* ---- Mast (Entscheid #101: eigener Mast, PageHeader fällt) ---- */
+  .mast { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; border: 2.5px solid var(--ink); background: var(--green); background-image: var(--halftone); color: #fff; padding: 12px 20px; }
+  .mast .wm { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .04em; color: var(--yellow); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+  .mast h1 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 22px; text-transform: uppercase; letter-spacing: .015em; }
+  .mast .when { font-size: 13px; color: oklch(0.92 0.02 110); }
+  .mast .end { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+  .mast.compact { gap: 10px; padding: 9px 13px; }
+  .mast.compact .wm { font-size: 13px; }
+  .mast.compact h1 { font-size: 17px; }
+  .mast.compact .when { font-size: 12px; }
+
+  .btn { background: #fff; border: 2px solid var(--ink); padding: 7px 12px; font-weight: 700; font-size: 12.5px; color: var(--ink); }
+  .btn.primary { background: var(--yellow); }
+  .btn.quiet { background: transparent; border-color: oklch(0.75 0.04 160); color: #fff; }
+
+  .werkleiste { display: flex; align-items: center; gap: 12px; border: 2.5px solid var(--ink); border-top: 0; background: #fff; padding: 10px 16px; flex-wrap: wrap; }
+  .suche { border: 2px solid var(--ink); padding: 7px 11px; font-size: 13px; min-width: 260px; }
+  .werkleiste .zaehl { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  .kasten { border: 2.5px solid var(--ink); border-top: 0; background: #fff; }
+  .tablewrap { overflow-x: auto; }
+
+  /* ---- Tabelle ---- */
+  .stable { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  .stable th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 9px 12px; border-bottom: 2px solid var(--ink); background: oklch(0.93 0.02 105); white-space: nowrap; }
+  .stable td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .stable tr:hover td { background: oklch(0.965 0.012 100); }
+  .stable td.firma { font-weight: 700; }
+  .stable td .sub { display: block; font-size: 11.5px; font-weight: 500; color: var(--ink-soft); }
+  .stable td.hist { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stable .jahr { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 13.5px; letter-spacing: .02em; }
+  .nie { font-size: 11px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: .04em; border: 1.5px dashed var(--red); padding: 1px 6px; white-space: nowrap; }
+  .stable td.akt { text-align: right; white-space: nowrap; }
+  .kebab { width: 40px; height: 40px; border: 0; background: none; font-size: 17px; line-height: 1; color: var(--ink); }
+  .fehlt { color: oklch(0.72 0.02 120); }
+  .stable td.kontakt div { white-space: nowrap; }
+
+  /* ---- Kartei (Desktop-Variante V3) ---- */
+  .kartei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 16px; }
+  .karte { border: 2px solid var(--ink); background: #fff; padding: 10px 12px; position: relative; }
+  .karte .kfirma { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .015em; padding-right: 40px; line-height: 1.15; }
+  .karte .kkeb { position: absolute; top: 3px; right: 1px; }
+  .karte dl { margin-top: 7px; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 12px; }
+  .karte dt { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); padding-top: 2px; }
+  .karte dd { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .karte .khist { margin-top: 8px; padding-top: 7px; border-top: 1.5px dashed var(--line); font-size: 12px; }
+
+  /* ---- Handy-Rahmen (Muster entscheid-sponsoring-mobil-karten.html) ---- */
+  .phones { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 12px; }
+  .phonewrap { width: 375px; flex: 0 0 auto; }
+  .phonewrap > h3 { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .02em; margin-bottom: 3px; }
+  .phonewrap > .sub { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 9px; min-height: 86px; }
+  .phone { width: 375px; height: 700px; overflow-y: auto; overflow-x: hidden; border: 3px solid var(--ink); background: var(--paper); }
+  .phone .kasten { border-width: 0; }
+  .mkarten { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 13px; }
+  .mkarte { border: 2px solid var(--ink); background: #fff; padding: 8px 10px; position: relative; }
+  .mkarte .mfirma { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 14.5px; text-transform: uppercase; letter-spacing: .015em; line-height: 1.15; padding-right: 42px; }
+  .mkarte .map { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .mkarte .mzeile { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 4px; font-size: 12.5px; }
+  .mkarte .mzeile .tel { font-variant-numeric: tabular-nums; }
+  .mkarte .mkeb { position: absolute; top: 1px; right: 0; }
+  .mkarte dl { margin-top: 6px; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 12px; }
+  .mkarte dt { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); padding-top: 2px; }
+  .mkarte dd { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .mkarte .khist { margin-top: 7px; padding-top: 6px; border-top: 1.5px dashed var(--line); font-size: 12px; }
+
+  .fixbar { position: fixed; bottom: 0; left: 0; right: 0; border-top: 2.5px solid var(--ink); background: #fff; padding: 9px 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 12.5px; z-index: 40; }
+  .fixbar b { font-family: "Oswald", sans-serif; font-weight: 600; }
+  .fixbar .ok { color: var(--green); font-weight: 800; }
+  .fixbar .bad { color: var(--red); font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="titel">Sponsoren-Stammdaten bei 40 Firmen
+    <span>Entscheid-Prototyp zu Wayfinder #101 · dieselben 40 Firmen in jeder Variante · Messung live gegen 1136 px Inhaltsbreite und 375 px Handy</span></div>
+
+  <div class="measure" id="mess"><h4>Messung</h4><div>wird nach dem Laden der Schriften eingetragen …</div></div>
+
+  <h2 class="sect">V1 — Frachtbrief breit: alle Kontaktfelder als Spalten</h2>
+  <p class="verdikt">Firma (+ Website), Ansprechpartner, Telefon, Email, Adresse, Zuletzt, ⋮ — sieben Spalten. Man sieht jede Firma vollständig, ohne etwas zu öffnen.</p>
+  <div id="v1"></div>
+
+  <h2 class="sect">V2 — Kontakt gestapelt, Adresse weg</h2>
+  <p class="verdikt">Fünf Spalten: Firma (+ Website), Ansprechpartner, Kontakt (Telefon über Email), Zuletzt, ⋮. Die <b>Adresse fällt aus der Liste</b> und lebt nur im Formular — die Vermutung war, dass das Höhe kostet und Ruhe gewinnt.</p>
+  <div id="v2"></div>
+
+  <h2 class="sect">V3 — Kartei: eine Karte je Firma, alle sieben Felder</h2>
+  <p class="verdikt">Adressbuch-Optik, drei Karten je Reihe. 40 Firmen sind 14 Reihen statt 40 Zeilen.</p>
+  <div id="v3"></div>
+
+  <h2 class="sect">Handy (375 px) — drei Karten-Zuschnitte gegen die querscrollende Tabelle</h2>
+  <p class="verdikt">Am Handy scrollt die Tabelle quer (Material-Entscheid #66: „Querscrollen ist ein No-Go"). Also Karten — aber wie viel muss auf der Karte stehen? Gleiche 40 Firmen, gleicher Rahmen, gescrollt wird in den Kästen.</p>
+  <div class="phones">
+    <div class="phonewrap">
+      <h3>M1 — volle Karte</h3>
+      <p class="sub">Alle sieben Felder wie in V3. Nichts muss geöffnet werden; die Karte ist ein vollständiger Stammsatz.</p>
+      <div class="phone" id="m1"></div>
+    </div>
+    <div class="phonewrap">
+      <h3>M2 — Firma · Ansprechpartner · Telefon · Zuletzt</h3>
+      <p class="sub">Was man zum Anrufen braucht: wen man verlangt und welche Nummer. Email, Adresse, Website und Notizen stehen im Firmendaten-Formular hinter dem ⋮ (dasselbe Formular wie #150).</p>
+      <div class="phone" id="m2"></div>
+    </div>
+    <div class="phonewrap">
+      <h3>M3 — Firma · Telefon · Zuletzt</h3>
+      <p class="sub">Eine Zeile weniger: der Ansprechpartner wandert auch ins Formular. Test der #69-Erkenntnis, dass nicht die Menge zählt, sondern die Anzahl der Zeilen.</p>
+      <div class="phone" id="m3"></div>
+    </div>
+  </div>
+</div>
+
+<div class="fixbar" id="bar"><b>Messung läuft …</b></div>
+
+<script>
+// 40 Firmen — echte Längen, echte Lücken. Nach fünf Festen (#153).
+// [Firma, Ansprechpartner, Telefon, Email, Adresse, Website, zuletzt, Anzahl Feste]
+const F = [
+ ["Bäckerei Grünsteidl","Maria Grünsteidl","07412 52318","office@gruensteidl.at","Hauptstraße 14, 3252 Petzenkirchen","gruensteidl.at",2025,5],
+ ["Raiffeisenbank Region Erlauftal","Dir. Josef Hinterhölzl","07412 53100","erlauftal@raiffeisen.at","Bahnhofstraße 2, 3252 Petzenkirchen","raiffeisen-erlauftal.at",2025,5],
+ ["Autohaus Wieselburg GmbH","Ing. Karl Aigner","07416 52244","verkauf@autohaus-wieselburg.at","Industriestraße 8, 3250 Wieselburg","autohaus-wieselburg.at",2025,4],
+ ["Elektro Pichler e.U.","Thomas Pichler","0664 3382914","t.pichler@elektro-pichler.at","Feldweg 3, 3252 Petzenkirchen","",2025,4],
+ ["Gasthaus zur Post Familie Ebner","Andrea Ebner","07412 52007","","Kirchenplatz 1, 3252 Petzenkirchen","",2025,5],
+ ["Landtechnik Steinbauer","Franz Steinbauer","07416 52890","office@steinbauer-landtechnik.at","Gewerbepark 12, 3250 Wieselburg","steinbauer-landtechnik.at",2025,3],
+ ["Fleischerei Hochreiter","Michael Hochreiter","07412 52145","","Hauptstraße 31, 3252 Petzenkirchen","",2025,5],
+ ["Brau Union Österreich AG","Regionalvertretung Mostviertel","0732 6902000","mostviertel@brauunion.com","Poschacherstraße 35, 4020 Linz","brauunion.at",2025,5],
+ ["Installationen Wagner & Söhne","Christoph Wagner","07412 54221","office@wagner-install.at","Mühlweg 7, 3252 Petzenkirchen","wagner-install.at",2025,3],
+ ["Malerei Brandstetter","Susanne Brandstetter","0676 7712340","","Am Anger 22, 3251 Purgstall","",2025,2],
+ ["Tischlerei Leitner GmbH","Johannes Leitner","07489 2260","tischlerei@leitner-holz.at","Zaubertal 4, 3253 Erlauf","leitner-holz.at",2024,3],
+ ["Sparkasse Scheibbs","Mag. Petra Zöchling","07482 42320","scheibbs@sparkasse.at","Rathausplatz 6, 3270 Scheibbs","sparkasse.at",2024,4],
+ ["Baumeister Ing. Hubert Deim","Ing. Hubert Deim","07412 53845","office@deim-bau.at","Wiesenstraße 19, 3252 Petzenkirchen","deim-bau.at",2024,3],
+ ["Blumen Kerschbaumer","Elisabeth Kerschbaumer","07416 52677","","Marktplatz 9, 3250 Wieselburg","",2024,2],
+ ["Kfz-Werkstätte Reisinger","Gerhard Reisinger","0664 1123877","werkstatt@reisinger-kfz.at","Industriestraße 21, 3250 Wieselburg","",2024,2],
+ ["Mostheuriger Familie Kalteis","Hermann Kalteis","07412 52560","","Bergstraße 8, 3252 Petzenkirchen","",2024,4],
+ ["Zimmerei Holzinger","DI Markus Holzinger","07489 2718","buero@zimmerei-holzinger.at","Sägeweg 2, 3253 Erlauf","zimmerei-holzinger.at",2024,2],
+ ["Trafik Wehrberger","Ingrid Wehrberger","07412 52099","","Hauptstraße 8, 3252 Petzenkirchen","",2024,3],
+ ["Erdbau Schagerl GmbH","Andreas Schagerl","07482 43155","office@erdbau-schagerl.at","Gresten Landstraße 44, 3264 Gresten","erdbau-schagerl.at",2023,2],
+ ["Optik Fahrngruber","Mag. Daniel Fahrngruber","07416 52412","optik@fahrngruber.at","Marktplatz 3, 3250 Wieselburg","fahrngruber-optik.at",2023,1],
+ ["Getränkehandel Pöchhacker","Rudolf Pöchhacker","07412 53390","","Gewerbestraße 5, 3252 Petzenkirchen","",2023,3],
+ ["Physiotherapie Mostviertel OG","Julia Redl, MSc","0676 9038221","praxis@physio-mostviertel.at","Bahnhofstraße 17, 3250 Wieselburg","physio-mostviertel.at",2023,1],
+ ["Dachdeckerei Grasserbauer","Ernst Grasserbauer","07489 2934","","Hoher Weg 11, 3253 Erlauf","",2023,2],
+ ["Gärtnerei Ledermüller","Sabine Ledermüller","07412 52788","gaertnerei@ledermueller.at","Gartenweg 6, 3252 Petzenkirchen","",2023,2],
+ ["Steuerberatung Hausleitner & Partner","Mag. Robert Hausleitner","07482 42890","office@hausleitner-stb.at","Hauptplatz 12, 3270 Scheibbs","hausleitner-stb.at",2023,1],
+ ["Fahrschule Mostland","Wolfgang Fürst","07416 53007","info@fahrschule-mostland.at","Bahnhofstraße 30, 3250 Wieselburg","fahrschule-mostland.at",2022,2],
+ ["Schlosserei Hangweyrer","Alois Hangweyrer","07412 52233","","Schmiedgasse 4, 3252 Petzenkirchen","",2022,2],
+ ["Friseursalon Haarmonie","Nicole Weichselbaum","0664 4471209","","Hauptstraße 22, 3252 Petzenkirchen","",2022,1],
+ ["Spar-Markt Zeitlberger","Christian Zeitlberger","07412 52401","spar.zeitlberger@spar.at","Marktstraße 2, 3252 Petzenkirchen","",2022,3],
+ ["Versicherungsbüro Donauwald","Klaus Aichinger","0664 8112277","k.aichinger@donauwald-vers.at","Ringstraße 15, 3250 Wieselburg","",2022,1],
+ ["Reifen Sturm GmbH","","07416 52950","office@reifen-sturm.at","Industriestraße 33, 3250 Wieselburg","reifen-sturm.at",2022,1],
+ ["Bauunternehmung Traunfellner","","07482 42611","office@traunfellner.at","Gresten Landstraße 2, 3264 Gresten","traunfellner.at",2021,1],
+ ["Café Konditorei Stadlmann","Josefa Stadlmann","07412 52170","","Kirchenplatz 5, 3252 Petzenkirchen","",2021,2],
+ ["Holzbau Zarl","","07489 2455","","Waldrandweg 9, 3253 Erlauf","",2021,1],
+ ["Immobilien Mostviertel Consulting GmbH","Mag. Sandra Pfeiffer","0664 2298043","s.pfeiffer@immo-mostviertel.at","Hauptplatz 4, 3270 Scheibbs","immo-mostviertel.at",2021,1],
+ ["Metallbau Vorlaufer","Erich Vorlaufer","07412 54008","","Gewerbepark 3, 3252 Petzenkirchen","",2021,1],
+ ["Musikhaus Klangwerk","Bernhard Stubauer","07416 52515","office@klangwerk-wieselburg.at","Marktplatz 14, 3250 Wieselburg","klangwerk-wieselburg.at",null,0],
+ ["Taxi Mostviertel Nachtexpress","Ferdinand Buchberger","0664 5530912","","Bahnhofstraße 41, 3250 Wieselburg","",null,0],
+ ["Wäscherei Reinlich e.U.","","07412 52944","","Bleichweg 1, 3252 Petzenkirchen","",null,0],
+ ["Zeltverleih Festkultur GmbH","Martin Kollersberger","07482 43700","verleih@festkultur.at","Gewerbestraße 22, 3264 Gresten","festkultur.at",null,0]
+];
+
+const esc = (s) => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const fehlt = '<span class="fehlt">–</span>';
+const hist = (j, n) => j === null
+  ? '<span class="nie">Noch nie</span>'
+  : '<span class="jahr">' + j + '</span> <span style="font-size:11.5px;color:var(--ink-soft)">· ' + n + (n === 1 ? " Fest" : " Feste") + '</span>';
+
+const mast = (compact) => `
+<header class="mast${compact ? " compact" : ""}">
+  <span class="wm">FESTMEISTER</span>
+  <h1>Sponsoren</h1>
+  <span class="when">${F.length} Firmen · 11 sponsern 2026</span>
+  <div class="end">${compact
+    ? '<button class="btn primary">+ FIRMA</button><button class="kebab" style="color:#fff">⋮</button>'
+    : '<button class="btn primary">+ FIRMA</button><button class="btn quiet">Abmelden</button>'}</div>
+</header>
+<div class="werkleiste">
+  <input class="suche" placeholder="Firma suchen …"${compact ? ' style="min-width:0;flex:1"' : ""}>
+  <span class="zaehl">${F.length} von ${F.length}</span>
+</div>`;
+
+document.getElementById("v1").innerHTML = mast(false) + `
+<div class="kasten"><div class="tablewrap"><table class="stable" id="t1">
+<thead><tr><th>Firma</th><th>Ansprechpartner</th><th>Telefon</th><th>Email</th><th>Adresse</th><th>Zuletzt</th><th></th></tr></thead>
+<tbody>` + F.map(f => `<tr>
+<td class="firma">${esc(f[0])}${f[5] ? `<span class="sub">${esc(f[5])}</span>` : ""}</td>
+<td>${f[1] ? esc(f[1]) : fehlt}</td>
+<td style="white-space:nowrap">${esc(f[2])}</td>
+<td>${f[3] ? esc(f[3]) : fehlt}</td>
+<td>${esc(f[4])}</td>
+<td class="hist">${hist(f[6], f[7])}</td>
+<td class="akt"><button class="kebab">⋮</button></td></tr>`).join("") + `</tbody></table></div></div>`;
+
+document.getElementById("v2").innerHTML = mast(false) + `
+<div class="kasten"><div class="tablewrap"><table class="stable" id="t2">
+<thead><tr><th>Firma</th><th>Ansprechpartner</th><th>Kontakt</th><th>Zuletzt</th><th></th></tr></thead>
+<tbody>` + F.map(f => `<tr>
+<td class="firma">${esc(f[0])}${f[5] ? `<span class="sub">${esc(f[5])}</span>` : ""}</td>
+<td>${f[1] ? esc(f[1]) : fehlt}</td>
+<td class="kontakt"><div>${esc(f[2])}</div>${f[3] ? `<div class="sub">${esc(f[3])}</div>` : ""}</td>
+<td class="hist">${hist(f[6], f[7])}</td>
+<td class="akt"><button class="kebab">⋮</button></td></tr>`).join("") + `</tbody></table></div></div>`;
+
+document.getElementById("v3").innerHTML = mast(false) + `
+<div class="kasten"><div class="kartei" id="t3">` + F.map(f => `<article class="karte">
+<div class="kfirma">${esc(f[0])}</div><button class="kebab kkeb">⋮</button>
+<dl><dt>Kontakt</dt><dd>${f[1] ? esc(f[1]) : fehlt}</dd>
+<dt>Tel</dt><dd>${esc(f[2])}</dd>
+<dt>Email</dt><dd>${f[3] ? esc(f[3]) : fehlt}</dd>
+<dt>Adresse</dt><dd>${esc(f[4])}</dd>
+<dt>Web</dt><dd>${f[5] ? esc(f[5]) : fehlt}</dd></dl>
+<div class="khist">${hist(f[6], f[7])}</div></article>`).join("") + `</div></div>`;
+
+// ---- Handy: drei Zuschnitte ----
+const mVoll = (f) => `<article class="mkarte"><div class="mfirma">${esc(f[0])}</div><button class="kebab mkeb">⋮</button>
+<dl><dt>Kontakt</dt><dd>${f[1] ? esc(f[1]) : fehlt}</dd>
+<dt>Tel</dt><dd>${esc(f[2])}</dd>
+<dt>Email</dt><dd>${f[3] ? esc(f[3]) : fehlt}</dd>
+<dt>Adresse</dt><dd>${esc(f[4])}</dd>
+<dt>Web</dt><dd>${f[5] ? esc(f[5]) : fehlt}</dd></dl>
+<div class="khist">${hist(f[6], f[7])}</div></article>`;
+
+const mMittel = (f) => `<article class="mkarte"><div class="mfirma">${esc(f[0])}</div><button class="kebab mkeb">⋮</button>
+<div class="map">${f[1] ? esc(f[1]) : fehlt}</div>
+<div class="mzeile"><span class="tel">${esc(f[2])}</span><span>${hist(f[6], f[7])}</span></div></article>`;
+
+const mSchlank = (f) => `<article class="mkarte"><div class="mfirma">${esc(f[0])}</div><button class="kebab mkeb">⋮</button>
+<div class="mzeile"><span class="tel">${esc(f[2])}</span><span>${hist(f[6], f[7])}</span></div></article>`;
+
+const phone = (id, tpl) => {
+  document.getElementById(id).innerHTML = mast(true) +
+    `<div class="kasten"><div class="mkarten">` + F.map(tpl).join("") + `</div></div>`;
+};
+phone("m1", mVoll);
+phone("m2", mMittel);
+phone("m3", mSchlank);
+
+// ---- Messung (nach Schriftladen, sonst messen wir die Fallback-Schrift) ----
+const messen = () => {
+  const tabelle = (id) => {
+    const el = document.getElementById(id);
+    const wrap = el.closest(".tablewrap");
+    const rows = [...el.tBodies[0].rows].map(r => r.getBoundingClientRect().height);
+    return {
+      hoehe: Math.round(el.closest(".kasten").getBoundingClientRect().height),
+      ueber: Math.round(Math.max(0, el.scrollWidth - wrap.clientWidth)),
+      zeile: Math.round(Math.min(...rows) * 10) / 10,
+      hoch: rows.filter(h => h > Math.min(...rows) + 2).length
+    };
+  };
+  const t1 = tabelle("t1"), t2 = tabelle("t2");
+  const k3 = document.getElementById("t3");
+  const v3 = {
+    hoehe: Math.round(k3.closest(".kasten").getBoundingClientRect().height),
+    ueber: 0,
+    zeile: Math.round(k3.querySelector(".karte").getBoundingClientRect().height * 10) / 10,
+    hoch: 0
+  };
+  const handy = (id) => {
+    const el = document.getElementById(id);
+    const inner = el.querySelector(".mkarten");
+    return {
+      scroll: Math.round(inner.getBoundingClientRect().height),
+      karte: Math.round(inner.firstElementChild.getBoundingClientRect().height * 10) / 10,
+      quer: Math.round(Math.max(0, el.scrollWidth - el.clientWidth))
+    };
+  };
+  const m1 = handy("m1"), m2 = handy("m2"), m3 = handy("m3");
+  const spalten = [...document.getElementById("t1").tHead.rows[0].cells]
+    .map(c => Math.round(c.getBoundingClientRect().width));
+
+  const zeilen = [["V1 Frachtbrief · 7 Spalten", t1], ["V2 Kontakt gestapelt · 5 Spalten", t2], ["V3 Kartei · 3 je Reihe", v3]];
+  const min = Math.min(...zeilen.map(z => z[1].hoehe));
+
+  document.getElementById("mess").innerHTML =
+    `<h4>Messung — 40 Firmen · Inhaltsbreite ${document.querySelector(".board").clientWidth} px</h4>
+    <table><thead><tr><th>Desktop-Variante</th><th class="n">Höhe</th><th class="n">Querscroll</th><th class="n">je Firma</th><th class="n">brechende Zeilen</th><th class="n">vs. schmalste</th></tr></thead><tbody>` +
+    zeilen.map(([n, v]) => `<tr><td>${n}</td><td class="n">${v.hoehe} px</td>
+      <td class="n ${v.ueber > 0 ? "nofit" : "fit"}">${v.ueber > 0 ? "+" + v.ueber + " px" : "0 px"}</td>
+      <td class="n">${v.zeile} px</td><td class="n">${v.hoch}</td>
+      <td class="n">${v.hoehe === min ? "—" : "+" + (v.hoehe - min) + " px"}</td></tr>`).join("") +
+    `</tbody></table>
+    <table><thead><tr><th>Handy 375 px</th><th class="n">Scrollweg</th><th class="n">je Karte</th><th class="n">Querscroll</th><th class="n">vs. schlank</th></tr></thead><tbody>` +
+    [["M1 volle Karte", m1], ["M2 mit Ansprechpartner", m2], ["M3 schlank", m3]].map(([n, v]) =>
+      `<tr><td>${n}</td><td class="n">${v.scroll} px</td><td class="n">${v.karte} px</td>
+      <td class="n ${v.quer > 0 ? "nofit" : "fit"}">${v.quer} px</td>
+      <td class="n">${v.scroll === m3.scroll ? "—" : "+" + (v.scroll - m3.scroll) + " px"}</td></tr>`).join("") +
+    `</tbody></table>
+    <div class="fund">
+      <b>Spaltenbreiten V1:</b> ${spalten.join(" · ")} px — Summe ${spalten.reduce((a, b) => a + b, 0)} px von ${document.querySelector("#t1").closest(".tablewrap").clientWidth} px verfügbar.<br>
+      <b>Befund 1:</b> die sieben Spalten <b class="ja">passen</b> — kein Querscroll, nur ${t1.hoch} von 40 Zeilen brechen (die längsten Firmennamen).<br>
+      <b>Befund 2:</b> V2 spart gegenüber V1 nur <b>${t1.hoehe - t2.hoehe} px auf 40 Firmen</b>. Die Zeilenhöhe steht schon durch die Website-Subzeile in der Firma-Spalte auf zwei Zeilen — Telefon und Email darin zu stapeln kostet also nichts, und die Adresse wegzulassen bringt nichts.<br>
+      <b>Befund 3:</b> die Kartei ist <b>nicht</b> teurer als die Tabelle (${v3.hoehe} px vs. ${t1.hoehe} px) — 14 Reihen à ${v3.zeile} px gegen 40 Zeilen à ${t1.zeile} px. Die Entscheidung Tabelle/Kartei ist keine Höhenfrage, sondern eine des Suchens: eine Spalte lässt sich mit dem Auge abfahren, ein Raster nicht.<br>
+      <b>Befund 4:</b> am Handy kostet die volle Karte <b>${m1.scroll} px</b>, mit Ansprechpartner <b>${m2.scroll} px</b>, schlank <b>${m3.scroll} px</b> — die Zeilenzahl entscheidet, genau wie bei #69.
+    </div>`;
+
+  document.getElementById("bar").innerHTML =
+    `<span><b>V1</b> ${t1.hoehe} px · Querscroll <span class="${t1.ueber ? "bad" : "ok"}">${t1.ueber} px</span></span>
+     <span><b>V2</b> ${t2.hoehe} px · nur ${t1.hoehe - t2.hoehe} px schmäler</span>
+     <span><b>V3</b> ${v3.hoehe} px</span>
+     <span><b>Handy</b> M1 ${m1.scroll} · M2 ${m2.scroll} · M3 ${m3.scroll} px</span>`;
+};
+
+// Doppelt gesichert: Schriftwechsel verändert jede Höhe, ein hängendes
+// fonts.ready darf die Messung aber nicht verschlucken.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(messen));
+window.addEventListener("load", () => requestAnimationFrame(messen));
+setTimeout(messen, 600);
+window.addEventListener("resize", () => requestAnimationFrame(messen));
+</script>
+</body>
+</html>
