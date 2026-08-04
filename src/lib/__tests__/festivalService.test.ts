@@ -29,14 +29,9 @@ describe('createFestival', () => {
 		mocks.getUser.mockReset();
 	});
 
-	it('behauptet weder einen Fest-Typ noch eine Besucherzahl', async () => {
-		await createFestival({ name: 'Stadlfest 2026', location: 'Steinbach', startDate: '2026-08-01' }, 'user-1');
-
-		expect(mocks.insertArg).not.toHaveProperty('type');
-		expect(mocks.insertArg).not.toHaveProperty('visitor_count');
-	});
-
-	it('legt das Fest mit Name, Ort und Zeitraum an und gibt seine id zurück', async () => {
+	// Exakte Gleichheit ist hier Absicht: das Fest wird aus Ersteller, Name, Ort und
+	// Zeitraum angelegt — und behauptet weder einen Fest-Typ noch eine Besucherzahl.
+	it('legt das Fest allein aus Ersteller, Name, Ort und Zeitraum an und gibt seine id zurück', async () => {
 		const id = await createFestival(
 			{ name: 'Stadlfest 2026', location: 'Steinbach', startDate: '2026-08-01', endDate: '2026-08-03' },
 			'user-1'
