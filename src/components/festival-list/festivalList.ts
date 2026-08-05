@@ -1,7 +1,7 @@
-import { formatEuro } from '@/components/festival-overview/numberBoxes';
 import { festDayStart } from '@/lib/festDates';
 import type { FestivalMetrics } from '@/lib/festivalMetrics';
 import type { Festival } from '@/lib/festivalService';
+import { formatEuro } from '@/lib/money';
 
 /** Die drei Plakat-Ränge der Wand (Fächer-Variante A, Issue #64/#90). */
 export interface FestivalWallRanks {
