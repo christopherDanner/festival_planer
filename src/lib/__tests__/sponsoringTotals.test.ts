@@ -158,6 +158,14 @@ describe('buildSponsoringOverviewRows', () => {
 		expect(byId[gleich.category_id].overridden).toBe(false);
 	});
 
+	it('meldet keine Abweichung, wo die Kategorie gar keinen Standardwert hat', () => {
+		const ohneStandardwert = makeAssignment({ categoryName: 'Durchsage', categoryValue: null, value: 80 });
+		const rows = buildSponsoringOverviewRows([
+			makeSponsoring({ assignments: [ohneStandardwert] })
+		]);
+		expect(rows[0].positionsByCategoryId[ohneStandardwert.category_id].overridden).toBe(false);
+	});
+
 	it('trägt die Sachleistung als Beschreibung mit Schätzwert, ohne sie in die Summe zu nehmen', () => {
 		const rows = buildSponsoringOverviewRows([
 			makeSponsoring({

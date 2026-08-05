@@ -21,7 +21,6 @@ oklch(var(--token) / <alpha-value>). Keine hsl()-Tokens mehr.
 		--gelb: 0.86 0.15 92;
 		--rot: 0.55 0.18 30;
 		--linie: 0.87 0.012 100;
-		--kopfzeile: 0.93 0.02 105;
 		--fusszeile: 0.955 0.01 100;
 		--weiss: 1 0 0;
 

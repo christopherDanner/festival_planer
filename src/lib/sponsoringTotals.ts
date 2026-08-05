@@ -87,7 +87,8 @@ export function buildSponsoringOverviewRows(
 			categoryId: a.category_id,
 			label: a.category.name,
 			value: assignmentValue(a),
-			overridden: a.value != null && a.value !== a.category.value
+			/* Ohne Standardwert gibt es nichts, wovon der Wert abweichen könnte. */
+			overridden: a.category.value != null && a.value != null && a.value !== a.category.value
 		}));
 		return {
 			sponsoringId: s.id,

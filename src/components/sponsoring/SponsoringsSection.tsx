@@ -42,14 +42,12 @@ import {
 	festivalSponsoringTotal
 } from '@/lib/sponsoringTotals';
 import { exportSponsoringOverviewPdf } from '@/lib/sponsoringExportService';
+import { formatEuro } from '@/lib/money';
 
 interface SponsoringsSectionProps {
 	festivalId: string;
 	festivalName: string;
 }
-
-const formatEuro = (value: number): string =>
-	value.toLocaleString('de-AT', { style: 'currency', currency: 'EUR' });
 
 const NEW_SPONSOR_VALUE = '__new__';
 
@@ -224,11 +222,6 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 	const footer = buildSponsoringOverviewFooter(rows, categories);
 	const total = festivalSponsoringTotal(sponsorings);
 
-	const openEditById = (sponsoringId: string) => {
-		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
-		if (sponsoring) openEdit(sponsoring);
-	};
-
 	const handleDeleteById = (sponsoringId: string) => {
 		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
 		if (sponsoring) handleDelete(sponsoring);
@@ -345,11 +338,10 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 					categories={categories}
 					rows={rows}
 					footer={footer}
-					onEdit={openEditById}
 					onDelete={handleDeleteById}
 				/>
 				{rows.length === 0 && (
-					<p className="border-2.5 border-t-0 border-tinte bg-white py-8 text-center text-sm text-tinte-soft">
+					<p className="border bg-card py-8 text-center text-sm text-muted-foreground">
 						Noch keine Sponsorings erfasst
 					</p>
 				)}

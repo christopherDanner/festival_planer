@@ -30,7 +30,6 @@ export default {
         gelb: "oklch(var(--gelb) / <alpha-value>)",
         rot: "oklch(var(--rot) / <alpha-value>)",
         linie: "oklch(var(--linie) / <alpha-value>)",
-        kopfzeile: "oklch(var(--kopfzeile) / <alpha-value>)",
         fusszeile: "oklch(var(--fusszeile) / <alpha-value>)",
         border: "oklch(var(--border) / <alpha-value>)",
         input: "oklch(var(--input) / <alpha-value>)",
@@ -84,6 +83,10 @@ export default {
       },
       boxShadow: {
         versatz: "4px 4px 0 oklch(var(--tinte))",
+        // Tinte-Kante klebender Tabellenspalten — als Schatten, damit sie
+        // keine Spaltenbreite kostet.
+        "kante-links": "2px 0 0 oklch(var(--tinte))",
+        "kante-rechts": "-2px 0 0 oklch(var(--tinte))",
       },
       borderWidth: {
         "1.5": "1.5px",

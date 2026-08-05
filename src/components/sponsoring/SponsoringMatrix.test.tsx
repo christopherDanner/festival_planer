@@ -22,7 +22,6 @@ function render(rows: SponsoringOverviewRow[], categories: SponsoringCategory[])
 			categories={categories}
 			rows={rows}
 			footer={buildSponsoringOverviewFooter(rows, categories)}
-			onEdit={() => {}}
 			onDelete={() => {}}
 		/>
 	);
@@ -32,6 +31,19 @@ describe('SponsoringMatrix — Gerüst', () => {
 	it('rahmt die Tabelle so, dass sie bei Überhang im eigenen Rahmen scrollt', () => {
 		const html = render([], preisliste([['Plakat', 200]]));
 		expect(html).toContain('overflow-x-auto');
+	});
+
+	it('passt bei 4 und 6 Kategorien in 1132 px und reißt erst bei 7 aus', () => {
+		// gemessene Referenzbreite des Bereichs (#69)
+		const inhaltsbreite = 1132;
+		const mindestbreite = (anzahl: number) => {
+			const html = render([], preisliste(Array.from({ length: anzahl }, (_, i) => [`K${i}`, 100])));
+			return Number(html.match(/min-width:(\d+)px/)![1]);
+		};
+
+		expect(mindestbreite(4)).toBeLessThanOrEqual(inhaltsbreite);
+		expect(mindestbreite(6)).toBeLessThanOrEqual(inhaltsbreite);
+		expect(mindestbreite(7)).toBeGreaterThan(inhaltsbreite);
 	});
 
 	it('legt die Spaltenbreiten fest, statt sie vom Inhalt bestimmen zu lassen', () => {
@@ -44,6 +56,8 @@ describe('SponsoringMatrix — Gerüst', () => {
 		const rows = buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
 		const html = render(rows, preisliste([['Plakat', 200]]));
 		expect(html).toContain('sticky left-0');
+		// Gesamt klebt neben der ⋮-Spalte, nicht unter ihr
+		expect(html).toContain('sticky right-11');
 		expect(html).toContain('sticky right-0');
 	});
 
