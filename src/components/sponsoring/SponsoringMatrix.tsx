@@ -11,6 +11,7 @@ import { formatEuro } from '@/lib/money';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
 	sponsoringFooterLabel,
+	sponsoringNoMatchNotice,
 	type SponsoringOverviewFooter,
 	type SponsoringOverviewRow
 } from '@/lib/sponsoringTotals';
@@ -190,14 +191,16 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 				))}
 
 				{/* Kein Treffer: eine Hinweiszeile statt einer leeren Tabelle — die
-				Kategorie-Spalten bleiben dabei vollständig stehen (#151). */}
-				{rows.length === 0 && searchTerm.trim() !== '' && (
+				Kategorie-Spalten bleiben dabei vollständig stehen (#151). Ein Fest
+				ohne Sponsoring (`totalRowCount === 0`) ist kein Suchergebnis und
+				behält seinen eigenen Satz. */}
+				{rows.length === 0 && totalRowCount > 0 && searchTerm.trim() !== '' && (
 					<tr className="border-b border-linie">
 						<td
 							colSpan={categories.length + 5}
 							className="px-2.5 py-8 text-center text-tinte-soft"
 						>
-							Keine Firma passt zu „{searchTerm.trim()}"
+							{sponsoringNoMatchNotice(searchTerm)}
 						</td>
 					</tr>
 				)}

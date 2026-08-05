@@ -107,6 +107,14 @@ describe('SponsoringOverview — ADR 0006: Kennzahl über alle, Fuß über die s
 		expect(html).not.toContain('Gesamtsumme ·');
 	});
 
+	it('behält am leeren Fest denselben Satz, ob getippt wird oder nicht', () => {
+		for (const searchTerm of ['', 'bau']) {
+			const html = render({ sponsorings: [], searchTerm });
+			expect(html).toContain('Noch keine Sponsorings erfasst');
+			expect(html).not.toContain('Keine Firma passt zu');
+		}
+	});
+
 	it('lässt bei jedem Filter alle Kategorie-Spalten stehen', () => {
 		for (const searchTerm of ['', 'bäckerei', 'gibtsnicht']) {
 			const html = render({ searchTerm });

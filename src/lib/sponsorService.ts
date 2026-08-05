@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { matchesCompanyName } from '@/lib/companySearch';
 
 export interface Sponsor {
 	id: string;
@@ -14,12 +15,9 @@ export interface Sponsor {
 	updated_at: string;
 }
 
-// Filter sponsors by company name (case-insensitive, trimmed substring match).
-export const filterSponsors = (sponsors: Sponsor[], searchTerm: string): Sponsor[] => {
-	const term = searchTerm.trim().toLowerCase();
-	if (!term) return sponsors;
-	return sponsors.filter((s) => s.company_name.toLowerCase().includes(term));
-};
+// Filter sponsors by company name (Regel in `matchesCompanyName`).
+export const filterSponsors = (sponsors: Sponsor[], searchTerm: string): Sponsor[] =>
+	sponsors.filter((s) => matchesCompanyName(s.company_name, searchTerm));
 
 // Parse a user-entered category value, accepting German decimal comma
 // ("200,50") as well as plain numbers ("200", "200.50"). Returns null for

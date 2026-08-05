@@ -11,7 +11,8 @@ import {
 	festivalInKindTotal,
 	festivalSponsoringTotal,
 	filterSponsoringOverviewRows,
-	sponsoringFooterLabel
+	sponsoringFooterLabel,
+	sponsoringNoMatchNotice
 } from '@/lib/sponsoringTotals';
 import { formatEuro } from '@/lib/money';
 
@@ -60,7 +61,6 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	const rows = filterSponsoringOverviewRows(allRows, searchTerm);
 	const footer = buildSponsoringOverviewFooter(rows, categories);
 	const total = festivalSponsoringTotal(sponsorings);
-	const filtering = searchTerm.trim() !== '';
 
 	return (
 		<div className="space-y-4">
@@ -116,7 +116,7 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 					</div>
 				) : rows.length === 0 ? (
 					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
-						Keine Firma passt zu „{searchTerm.trim()}"
+						{sponsoringNoMatchNotice(searchTerm)}
 					</div>
 				) : (
 					<>
@@ -179,9 +179,10 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 					searchTerm={searchTerm}
 					onDelete={onDelete}
 				/>
-				{/* Ein Fest ohne Sponsoring ist kein Suchergebnis — die Hinweiszeile
-				bei keinem Treffer steht in der Matrix selbst. */}
-				{allRows.length === 0 && !filtering && (
+				{/* Ein Fest ohne Sponsoring ist kein Suchergebnis — es behält diesen
+				Satz auch bei getipptem Begriff. Die Hinweiszeile bei keinem Treffer
+				steht in der Matrix selbst. */}
+				{allRows.length === 0 && (
 					<p className="border bg-card py-8 text-center text-sm text-muted-foreground">
 						Noch keine Sponsorings erfasst
 					</p>

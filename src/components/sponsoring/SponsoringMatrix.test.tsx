@@ -285,4 +285,10 @@ describe('SponsoringMatrix — gefilterter Fuß (ADR 0006)', () => {
 	it('schweigt ohne Suchbegriff — ein Fest ohne Sponsoring ist kein Suchergebnis', () => {
 		expect(render([], preise)).not.toContain('Keine Firma passt zu');
 	});
+
+	it('schweigt auch mit Suchbegriff, solange das Fest überhaupt keine Firma hat', () => {
+		// sonst stünde am leeren Fest je nach Breite ein anderer Satz
+		const html = render([], preise, { totalRowCount: 0, searchTerm: 'bau' });
+		expect(html).not.toContain('Keine Firma passt zu');
+	});
 });

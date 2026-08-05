@@ -17,7 +17,7 @@ const render = (props: Partial<SponsoringSearchProps> = {}) =>
 	);
 
 describe('SponsoringSearch', () => {
-	it('bietet ein Suchfeld für den Firmennamen — die Beschriftung der Vision (§5)', () => {
+	it('bietet ein Suchfeld für den Firmennamen — die Beschriftung der Variante C', () => {
 		expect(render()).toContain('Firma suchen');
 	});
 
@@ -35,7 +35,10 @@ describe('SponsoringSearch', () => {
 		);
 	});
 
-	it('bietet ohne Suchbegriff kein Rücksetzen an — es gäbe nichts zurückzusetzen', () => {
-		expect(render()).not.toContain('Suche zurücksetzen');
+	it('hält sich ohne Suchbegriff zurück: kein Zähler, kein Rücksetzen', () => {
+		const html = render();
+		expect(html).not.toContain('Suche zurücksetzen');
+		// „14 von 14" als ständiges Beiwerk zeigt keinen aktiven Filter an
+		expect(html).not.toContain('14 von 14');
 	});
 });

@@ -13,11 +13,14 @@ export interface SponsoringSearchProps {
 }
 
 /**
- * Suchfeld „Firma suchen …" der Sponsoring-Werkzeugleiste (DESIGN-VISION §5).
+ * Suchfeld „Firma suchen …" der Sponsoring-Werkzeugleiste, so beschriftet wie
+ * in der abgenommenen Variante C (`design-vision/bereich-sponsoring-faecher.html`,
+ * Werkzeugleiste) — der §5-Abschnitt der DESIGN-VISION nennt nur die Matrix.
  *
- * Trägt den Trefferzähler und das Rücksetzen, damit ein aktiver Filter nicht
- * nur am Tabellenfuß zu sehen ist (#151). Gefiltert wird nichts hier —
- * gerechnet und gefiltert wird in `sponsoringTotals`.
+ * Zähler und Rücksetzen erscheinen erst mit einem Suchbegriff: sie sollen
+ * zeigen, dass ein Filter **aktiv** ist (#151), nicht als ständiges Beiwerk
+ * dastehen — wie viele Sponsoren das Fest hat, sagt der Bereichskopf.
+ * Gefiltert wird hier nichts; das rechnet `sponsoringTotals`.
  */
 const SponsoringSearch: React.FC<SponsoringSearchProps> = ({
 	searchTerm,
@@ -37,17 +40,19 @@ const SponsoringSearch: React.FC<SponsoringSearchProps> = ({
 				className="h-9 pl-9 text-[13px]"
 			/>
 		</div>
-		<span className="whitespace-nowrap text-xs font-bold uppercase tracking-[.06em] text-tinte-soft">
-			{shown} von {total}
-		</span>
 		{searchTerm.trim() !== '' && (
-			<button
-				type="button"
-				onClick={onReset}
-				aria-label="Suche zurücksetzen"
-				className="text-tinte-soft hover:text-tinte">
-				<X className="h-4 w-4" />
-			</button>
+			<>
+				<span className="whitespace-nowrap text-xs font-bold uppercase tracking-[.06em] text-tinte-soft">
+					{shown} von {total}
+				</span>
+				<button
+					type="button"
+					onClick={onReset}
+					aria-label="Suche zurücksetzen"
+					className="text-tinte-soft hover:text-tinte">
+					<X className="h-4 w-4" />
+				</button>
+			</>
 		)}
 	</div>
 );
