@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
+import MastPanel from '@/components/sponsors/MastPanel';
 import SponsorsMast from '@/components/sponsors/SponsorsMast';
 import SponsorsView from '@/components/sponsors/SponsorsView';
 import {
@@ -54,11 +55,7 @@ const Sponsors = () => {
 	const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
 	const [formData, setFormData] = useState(emptyForm);
 
-	useEffect(() => {
-		loadSponsors();
-	}, []);
-
-	const loadSponsors = async () => {
+	const loadSponsors = useCallback(async () => {
 		try {
 			const data = await getSponsors();
 			setSponsors(data);
@@ -71,7 +68,11 @@ const Sponsors = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [toast]);
+
+	useEffect(() => {
+		loadSponsors();
+	}, [loadSponsors]);
 
 	const handleSignOut = async () => {
 		await signOut();
@@ -170,9 +171,9 @@ const Sponsors = () => {
 							onAddSponsor={openAddSponsor}
 							onSignOut={handleSignOut}
 						/>
-						<div className="border-2.5 border-t-0 border-tinte bg-white px-4 py-16 text-center text-[13px] text-tinte-soft">
+						<MastPanel className="px-4 py-16 text-center text-[13px] text-tinte-soft">
 							Lade Sponsoren …
-						</div>
+						</MastPanel>
 					</>
 				) : (
 					<SponsorsView

@@ -19,7 +19,7 @@ function sponsor(name: string, id = name): Sponsor {
 	};
 }
 
-const BESTAND = [
+const SPONSORS = [
 	sponsor('Baumeister Deim'),
 	sponsor('Elektro Pichler'),
 	sponsor('Zeltverleih Festkultur')
@@ -30,7 +30,7 @@ const noop = () => {};
 const render = (props: Partial<SponsorsViewProps> = {}) =>
 	renderToStaticMarkup(
 		<SponsorsView
-			sponsors={BESTAND}
+			sponsors={SPONSORS}
 			searchTerm=""
 			onSearchChange={noop}
 			onOpenFestivalList={noop}
@@ -71,6 +71,13 @@ describe('SponsorsView', () => {
 		expect(html).toContain('NOCH KEINE FIRMA');
 		expect(html).not.toContain('Keine Firma gefunden');
 		expect(html).not.toContain('<table');
+	});
+
+	it('gibt der Werkzeugleiste und dem Tabellenkopf dieselbe Höhe vor', () => {
+		const html = render();
+		expect(html).toContain('--sponsors-toolbar-h:59px');
+		expect(html).toContain('min-[900px]:h-[var(--sponsors-toolbar-h)]');
+		expect(html).toContain('min-[900px]:top-[var(--sponsors-toolbar-h)]');
 	});
 
 	it('bleibt ohne runde Ecken', () => {

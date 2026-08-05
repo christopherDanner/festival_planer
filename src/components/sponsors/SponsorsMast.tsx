@@ -1,5 +1,6 @@
 import { LogOut, MoreVertical } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
 import { Mast } from '@/components/toolkit/Mast';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +25,7 @@ export interface SponsorsMastProps {
  * Zählzeile des Sponsorenbestands. Der Historie-Slice (#158) hängt hier
  * „· {m} sponsern {Jahr}" an; bis dahin steht nur die Bestandsgröße.
  */
-const bestandsZeile = (count: number) => `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
+const sponsorCountLine = (count: number) => `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
 
 /**
  * Mast der Sponsoren-Stammdaten (#101 Entscheid 2): eigener Kopf statt
@@ -38,11 +39,16 @@ export default function SponsorsMast({
 	onAddSponsor,
 	onSignOut
 }: SponsorsMastProps) {
+	// Am Handy sind 40px Pflicht (DESIGN-VISION §6), am Desktop reicht die
+	// gedrängte Mast-Höhe.
 	const addButton = (
 		<Button
 			size="sm"
 			onClick={onAddSponsor}
-			className="h-8 border-tinte px-3 text-[12.5px] uppercase tracking-[.04em]">
+			className={cn(
+				'border-tinte px-3 text-[12.5px] uppercase tracking-[.04em]',
+				compact ? 'h-10' : 'h-8'
+			)}>
 			+ FIRMA
 		</Button>
 	);
@@ -50,7 +56,7 @@ export default function SponsorsMast({
 	return (
 		<Mast
 			title="Sponsoren"
-			when={sponsorCount === null ? undefined : bestandsZeile(sponsorCount)}
+			when={sponsorCount === null ? undefined : sponsorCountLine(sponsorCount)}
 			compact={compact}
 			onWordmarkClick={onOpenFestivalList}
 			end={
@@ -62,7 +68,7 @@ export default function SponsorsMast({
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 text-white hover:bg-white/15 hover:text-white"
+									className="h-10 w-10 text-white hover:bg-white/15 hover:text-white"
 									aria-label="Menü">
 									<MoreVertical className="h-4 w-4" />
 								</Button>

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Sponsor } from '@/lib/sponsorService';
-import SponsorTable from './SponsorTable';
+import SponsorsTable from './SponsorsTable';
 
 function sponsor(over: Partial<Sponsor> = {}): Sponsor {
 	return {
@@ -21,17 +21,15 @@ function sponsor(over: Partial<Sponsor> = {}): Sponsor {
 }
 
 const render = (sponsors: Sponsor[]) =>
-	renderToStaticMarkup(
-		<SponsorTable sponsors={sponsors} headerOffsetPx={59} onSelect={() => {}} />
-	);
+	renderToStaticMarkup(<SponsorsTable sponsors={sponsors} onSelect={() => {}} />);
 
-describe('SponsorTable', () => {
+describe('SponsorsTable', () => {
 	it('trägt die sieben Frachtbrief-Spalten', () => {
-		const html = render([sponsor()]);
+		// Sechs beschriftete plus die leere ⋮-Spalte.
 		for (const kopf of ['Firma', 'Ansprechpartner', 'Telefon', 'Email', 'Adresse', 'Zuletzt']) {
-			expect(html).toContain(kopf);
+			expect(render([sponsor()])).toContain(kopf);
 		}
-		expect(html.match(/<th[ >]/g)).toHaveLength(7);
+		expect(render([sponsor()]).match(/<th[ >]/g)).toHaveLength(7);
 	});
 
 	it('zeigt je Firma alle Kontaktfelder, die Website als Subzeile', () => {
@@ -68,7 +66,7 @@ describe('SponsorTable', () => {
 	it('klebt den Tabellenkopf am Desktop unter der Werkzeugleiste', () => {
 		const html = render([sponsor()]);
 		expect(html).toContain('min-[900px]:sticky');
-		expect(html).toContain('top:59px');
+		expect(html).toContain('min-[900px]:top-[var(--sponsors-toolbar-h)]');
 	});
 
 	it('scrollt unter 900px im eigenen Rahmen, am Desktop gar nicht', () => {

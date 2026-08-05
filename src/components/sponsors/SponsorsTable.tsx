@@ -2,43 +2,34 @@ import { type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 import type { Sponsor } from '@/lib/sponsorService';
+import MastPanel from './MastPanel';
 
-export interface SponsorTableProps {
+export interface SponsorsTableProps {
 	/** Bereits gefilterter Ausschnitt des Sponsorenbestands, alphabetisch. */
 	sponsors: Sponsor[];
-	/**
-	 * Höhe der klebenden Werkzeugleiste — der Tabellenkopf klebt am Desktop
-	 * genau darunter.
-	 */
-	headerOffsetPx?: number;
 	/** Zeilenklick — Übergangsweg ins Firmendaten-Formular, bis #159 das ⋮ bringt. */
 	onSelect: (sponsor: Sponsor) => void;
 }
 
 /** Fehlender Wert: graues „–" statt einer leeren Zelle. */
-const Fehlt = () => <span className="text-tinte-soft/60">–</span>;
+const MissingValue = () => <span className="text-tinte-soft/60">–</span>;
 
-const Wert = ({ children }: { children: string | null }) =>
-	children ? <>{children}</> : <Fehlt />;
+const CellValue = ({ children }: { children: string | null }) =>
+	children ? <>{children}</> : <MissingValue />;
 
-function Kopf({
-	children,
-	offsetPx,
-	className
-}: {
-	children?: ReactNode;
-	offsetPx: number;
-	className?: string;
-}) {
+/**
+ * Spaltenkopf: Versalien auf getönter Fläche. Klebt am Desktop unter der
+ * Werkzeugleiste — deren Höhe steht in `--sponsors-toolbar-h`.
+ */
+function HeaderCell({ children, className }: { children?: ReactNode; className?: string }) {
 	return (
 		<th
-			style={{ top: offsetPx }}
 			className={cn(
 				'z-10 whitespace-nowrap bg-fusszeile px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-[.05em] text-tinte',
 				// Der 2px-Kopfstrich als inset-Schatten: ein Zellenrahmen verschwindet
 				// bei `border-collapse: collapse`, sobald der Kopf klebt.
 				'shadow-[inset_0_-2px_0_oklch(var(--tinte))]',
-				'min-[900px]:sticky',
+				'min-[900px]:sticky min-[900px]:top-[var(--sponsors-toolbar-h)]',
 				className
 			)}>
 			{children}
@@ -50,28 +41,29 @@ function Kopf({
  * Frachtbrief-Tabelle der Sponsoren-Stammdaten (#101, Variante V1): sieben
  * Spalten, nur lesend. Gemessen brauchen sie mindestens 895 px und passen
  * damit in die 1132 px Inhaltsbreite. Unter 900px scrollt die Tabelle im
- * eigenen Rahmen (DESIGN-VISION §6), am Desktop gar nicht — deshalb kann der
- * Kopf dort kleben.
+ * eigenen Rahmen (DESIGN-VISION §6), am Desktop gar nicht — nur deshalb kann
+ * der Kopf dort kleben: ein Scroll-Container würde das Kleben am Fenster
+ * aushebeln.
  */
-export default function SponsorTable({
-	sponsors,
-	headerOffsetPx = 0,
-	onSelect
-}: SponsorTableProps) {
+export default function SponsorsTable({ sponsors, onSelect }: SponsorsTableProps) {
+	// Am Handy ist die Zeile das Trefferfeld — DESIGN-VISION §6 will dafür
+	// 40px, deshalb dort mehr Luft als am Desktop.
+	const cell = 'px-3 py-3 align-middle min-[900px]:py-2';
+
 	return (
-		<div className="border-2.5 border-t-0 border-tinte bg-white">
+		<MastPanel>
 			<div className="overflow-x-auto min-[900px]:overflow-x-visible">
 				<table className="w-full border-collapse text-[13px]">
 					<thead>
 						<tr>
-							<Kopf offsetPx={headerOffsetPx}>Firma</Kopf>
-							<Kopf offsetPx={headerOffsetPx}>Ansprechpartner</Kopf>
-							<Kopf offsetPx={headerOffsetPx}>Telefon</Kopf>
-							<Kopf offsetPx={headerOffsetPx}>Email</Kopf>
-							<Kopf offsetPx={headerOffsetPx}>Adresse</Kopf>
-							<Kopf offsetPx={headerOffsetPx}>Zuletzt</Kopf>
-							{/* ⋮-Spalte: bleibt leer, bis #159 das Menü bringt. */}
-							<Kopf offsetPx={headerOffsetPx} className="w-10" />
+							<HeaderCell>Firma</HeaderCell>
+							<HeaderCell>Ansprechpartner</HeaderCell>
+							<HeaderCell>Telefon</HeaderCell>
+							<HeaderCell>Email</HeaderCell>
+							<HeaderCell>Adresse</HeaderCell>
+							<HeaderCell>Zuletzt</HeaderCell>
+							{/* Siebte Spalte: das ⋮ bleibt leer, bis #159 das Menü bringt. */}
+							<HeaderCell className="w-10" />
 						</tr>
 					</thead>
 					<tbody>
@@ -87,7 +79,9 @@ export default function SponsorTable({
 									key={sponsor.id}
 									onClick={() => onSelect(sponsor)}
 									className="cursor-pointer border-b border-linie hover:bg-fusszeile">
-									<td className="px-3 py-2 align-middle font-bold">
+									<td className={cn(cell, 'font-bold')}>
+										{/* Der Firmenname ist zusätzlich ein echter Knopf, damit der
+										Zeilenklick auch mit der Tastatur erreichbar ist. */}
 										<button
 											type="button"
 											onClick={(e) => {
@@ -103,27 +97,27 @@ export default function SponsorTable({
 											</span>
 										)}
 									</td>
-									<td className="px-3 py-2 align-middle">
-										<Wert>{sponsor.contact_person}</Wert>
+									<td className={cell}>
+										<CellValue>{sponsor.contact_person}</CellValue>
 									</td>
-									<td className="whitespace-nowrap px-3 py-2 align-middle">
-										<Wert>{sponsor.phone}</Wert>
+									<td className={cn(cell, 'whitespace-nowrap')}>
+										<CellValue>{sponsor.phone}</CellValue>
 									</td>
-									<td className="px-3 py-2 align-middle">
-										<Wert>{sponsor.email}</Wert>
+									<td className={cell}>
+										<CellValue>{sponsor.email}</CellValue>
 									</td>
-									<td className="px-3 py-2 align-middle">
-										<Wert>{sponsor.address}</Wert>
+									<td className={cell}>
+										<CellValue>{sponsor.address}</CellValue>
 									</td>
 									{/* „Zuletzt" und ⋮ füllt der Historie- bzw. ⋮-Slice (#158/#159). */}
-									<td className="whitespace-nowrap px-3 py-2 align-middle" />
-									<td className="w-10 px-3 py-2 align-middle" />
+									<td className={cn(cell, 'whitespace-nowrap')} />
+									<td className={cn(cell, 'w-10')} />
 								</tr>
 							))
 						)}
 					</tbody>
 				</table>
 			</div>
-		</div>
+		</MastPanel>
 	);
 }

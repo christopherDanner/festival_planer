@@ -1,5 +1,6 @@
 import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
+import MastPanel from './MastPanel';
 
 export interface SponsorsEmptyStateProps {
 	onAddSponsor: () => void;
@@ -11,7 +12,7 @@ export interface SponsorsEmptyStateProps {
  */
 export default function SponsorsEmptyState({ onAddSponsor }: SponsorsEmptyStateProps) {
 	return (
-		<div className="border-2.5 border-t-0 border-tinte bg-white p-4">
+		<MastPanel className="p-4">
 			<div className="border-2 border-dashed border-linie px-4 py-12 text-center">
 				<Stamp tone="red" size="lg" tilt="left">
 					NOCH KEINE FIRMA
@@ -23,6 +24,6 @@ export default function SponsorsEmptyState({ onAddSponsor }: SponsorsEmptyStateP
 					+ ERSTE FIRMA ANLEGEN
 				</Button>
 			</div>
-		</div>
+		</MastPanel>
 	);
 }

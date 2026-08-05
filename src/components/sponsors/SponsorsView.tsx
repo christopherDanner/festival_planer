@@ -1,8 +1,17 @@
+import { type CSSProperties } from 'react';
+
 import { filterSponsors, type Sponsor } from '@/lib/sponsorService';
 import SponsorsEmptyState from './SponsorsEmptyState';
 import SponsorsMast from './SponsorsMast';
-import SponsorTable from './SponsorTable';
-import SponsorsToolbar, { WERKLEISTE_HOEHE_PX } from './SponsorsToolbar';
+import SponsorsTable from './SponsorsTable';
+import SponsorsToolbar from './SponsorsToolbar';
+
+/**
+ * Höhe der klebenden Werkzeugleiste am Desktop. Steht hier einmal und geht
+ * als CSS-Variable an beide: die Leiste setzt darauf ihre Höhe, der
+ * Tabellenkopf klebt genau darunter.
+ */
+const TOOLBAR_HEIGHT_PX = 59;
 
 export interface SponsorsViewProps {
 	/** Der ganze Sponsorenbestand, alphabetisch (so liefert ihn `getSponsors`). */
@@ -32,11 +41,11 @@ export default function SponsorsView({
 	onSignOut,
 	onSelectSponsor
 }: SponsorsViewProps) {
-	const treffer = filterSponsors(sponsors, searchTerm);
-	const bestandLeer = sponsors.length === 0;
+	const matches = filterSponsors(sponsors, searchTerm);
 
 	return (
-		<>
+		<div
+			style={{ '--sponsors-toolbar-h': `${TOOLBAR_HEIGHT_PX}px` } as CSSProperties}>
 			<SponsorsMast
 				sponsorCount={sponsors.length}
 				compact={compact}
@@ -44,23 +53,17 @@ export default function SponsorsView({
 				onAddSponsor={onAddSponsor}
 				onSignOut={onSignOut}
 			/>
-			{bestandLeer ? (
+			<SponsorsToolbar
+				searchTerm={searchTerm}
+				onSearchChange={onSearchChange}
+				shown={matches.length}
+				total={sponsors.length}
+			/>
+			{sponsors.length === 0 ? (
 				<SponsorsEmptyState onAddSponsor={onAddSponsor} />
 			) : (
-				<>
-					<SponsorsToolbar
-						searchTerm={searchTerm}
-						onSearchChange={onSearchChange}
-						shown={treffer.length}
-						total={sponsors.length}
-					/>
-					<SponsorTable
-						sponsors={treffer}
-						headerOffsetPx={WERKLEISTE_HOEHE_PX}
-						onSelect={onSelectSponsor}
-					/>
-				</>
+				<SponsorsTable sponsors={matches} onSelect={onSelectSponsor} />
 			)}
-		</>
+		</div>
 	);
 }
