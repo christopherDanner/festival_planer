@@ -50,6 +50,24 @@ describe('MaterialTable — Gesamtkosten', () => {
 		expect(html).toContain('39.00 €'); // 2 netto → 2,40 brutto × 10, plus 3 × 5
 	});
 
+	/** Fertig-Kriterium aus Issue #112: dieselben vier Positionen stehen in
+	`numberBoxes.test.ts` („Dashboard gegen Material-Bereich") mit denselben 51 €
+	als Literal. Beide Seiten sind einzeln festgeschrieben — rechnet eine wieder
+	selbst, fällt genau ihr Test. */
+	it('zeigt für dasselbe Fest dieselbe Zahl wie das Dashboard', () => {
+		const html = renderTable([
+			// netto erfasst, 20 % → 2,40 × 10 = 24
+			material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true }),
+			// brutto erfasst, 10 % → bleibt 3,30 × 5 = 16,50
+			material({ id: 'b', ordered_quantity: 5, unit_price: 3.3, tax_rate: 10, price_is_net: false }),
+			// ohne Steuersatz → 1,50 × 7 = 10,50
+			material({ id: 'c', ordered_quantity: 7, unit_price: 1.5, tax_rate: null }),
+			// ohne Preis → zählt nicht mit
+			material({ id: 'd', ordered_quantity: 4, unit_price: null })
+		]);
+		expect(html).toContain('51.00 €');
+	});
+
 	it('läuft nicht gegen die Zeilensummen auseinander (drei Positionen à 0,105 €)', () => {
 		const html = renderTable([
 			material({ id: 'a', unit_price: 0.105, ordered_quantity: 1 }),

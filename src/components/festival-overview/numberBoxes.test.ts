@@ -10,7 +10,6 @@ import {
 	formatDeltaEuro
 } from './numberBoxes';
 import { formatEuro } from '@/lib/money';
-import { sumTotals } from '@/lib/materialCosts';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
 
@@ -194,14 +193,15 @@ describe('deriveShiftsMetric', () => {
 // --- Material bestellt -------------------------------------------------------
 
 describe('deriveMaterialOrdered', () => {
-	it('summiert € (ordered × unit_price), zählt Positionen und ohne-Preis', () => {
+	it('summiert Bestellt-Menge × Bruttopreis, zählt Positionen und ohne-Preis', () => {
 		const materials = [
-			material({ id: 'a', ordered_quantity: 10, unit_price: 2 }), // 20
+			// netto erfasst: 2 → 2,40 brutto × 10 = 24 (mit der alten Formel wären es 20)
+			material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true }),
 			material({ id: 'b', ordered_quantity: 5, unit_price: 3 }), // 15
 			material({ id: 'c', ordered_quantity: 4, unit_price: null }) // ohne Preis
 		];
 		const m = deriveMaterialOrdered(materials);
-		expect(m.total).toBe(35);
+		expect(m.total).toBe(39);
 		expect(m.positions).toBe(3);
 		expect(m.withoutPrice).toBe(1);
 		expect(m.withPrice).toBe(2);
@@ -236,14 +236,22 @@ describe('deriveMaterialOrdered', () => {
 describe('deriveMaterialConsumed', () => {
 	it('summiert Verbrauch €, bestellt €, Δ und erfasst-Zähler', () => {
 		const materials = [
-			material({ id: 'a', ordered_quantity: 10, actual_quantity: 8, unit_price: 2 }), // ord 20, ist 16
+			// netto erfasst: 2 → 2,40 brutto; ord 24, ist 19,20 (alte Formel: 20 / 16)
+			material({
+				id: 'a',
+				ordered_quantity: 10,
+				actual_quantity: 8,
+				unit_price: 2,
+				tax_rate: 20,
+				price_is_net: true
+			}),
 			material({ id: 'b', ordered_quantity: 5, actual_quantity: null, unit_price: 3 }), // ord 15, ist 0 (nicht erfasst)
 			material({ id: 'c', ordered_quantity: 4, actual_quantity: 4, unit_price: null }) // kein Preis → 0/0
 		];
 		const m = deriveMaterialConsumed(materials);
-		expect(m.ordered).toBe(35);
-		expect(m.consumed).toBe(16);
-		expect(m.delta).toBe(16 - 35); // −19, unter Plan
+		expect(m.ordered).toBe(39);
+		expect(m.consumed).toBe(19.2);
+		expect(m.delta).toBe(-19.8); // unter Plan
 		expect(m.recorded).toBe(2); // a und c haben actual_quantity gesetzt
 		expect(m.positions).toBe(3);
 	});
@@ -287,36 +295,31 @@ describe('deriveMaterialConsumed', () => {
 	});
 });
 
-// --- Dashboard gegen Material-Bereich ----------------------------------------
+// --- Dasselbe Fest, dieselbe Zahl wie der Material-Bereich -------------------
 
 /** Fertig-Kriterium aus Issue #112: für dasselbe Fest nennen Dashboard und
-Material-Bereich denselben Betrag. Beide rechnen über `materialCosts`; sobald
-eine der beiden Seiten wieder eine eigene Formel bekäme, driften sie
-auseinander — deshalb steht der Vergleich hier als Test. Der Material-Bereich
-summiert die Zeilenkosten (Verbraucht ?? Bestellt), deckt sich also mit dem
-Bestellwert, solange nichts nachgetragen ist, und mit dem Verbrauchswert,
-sobald überall nachgetragen ist (ADR 0006). */
-describe('Dashboard und Material-Bereich', () => {
-	/** Netto und brutto erfasst, mit und ohne Steuersatz, eine ohne Preis. */
-	const positionen = [
-		material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true }),
-		material({ id: 'b', ordered_quantity: 5, unit_price: 3.3, tax_rate: 10, price_is_net: false }),
-		material({ id: 'c', ordered_quantity: 7, unit_price: 1.5, tax_rate: null }),
-		material({ id: 'd', ordered_quantity: 4, unit_price: null })
-	];
+Material-Bereich denselben Betrag. Die Gegenprobe steht in
+`MaterialTable.test.tsx` („dieselbe Zahl wie das Dashboard") — dieselben vier
+Positionen, dieselben 51 € als Literal, dort durch die gerenderte Tabelle
+gelesen. Beide Seiten sind einzeln festgeschrieben, keine gegen die andere
+gerechnet: bekäme eine wieder eine eigene Formel, fällt genau ihr Test.
+Nichts ist nachgetragen, deshalb fällt die Zeilenkosten-Summe des Bereichs
+hier mit dem Bestellwert zusammen — im gemischten Fall tut sie das laut
+ADR 0006 bewusst nicht. */
+const festPositionen = [
+	// netto erfasst, 20 % → 2,40 × 10 = 24
+	material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true }),
+	// brutto erfasst, 10 % → bleibt 3,30 × 5 = 16,50
+	material({ id: 'b', ordered_quantity: 5, unit_price: 3.3, tax_rate: 10, price_is_net: false }),
+	// ohne Steuersatz → 1,50 × 7 = 10,50
+	material({ id: 'c', ordered_quantity: 7, unit_price: 1.5, tax_rate: null }),
+	// ohne Preis → zählt nicht mit
+	material({ id: 'd', ordered_quantity: 4, unit_price: null })
+];
 
-	it('nennen denselben Bestellwert, solange nichts nachgetragen ist', () => {
-		const dashboard = deriveMaterialOrdered(positionen).total;
-		expect(dashboard).toBe(24 + 16.5 + 10.5); // 51 — brutto, ohne die Position ohne Preis
-		expect(dashboard).toBe(sumTotals(positionen));
-	});
-
-	it('nennen denselben Verbrauchswert, sobald überall nachgetragen ist', () => {
-		const nachgetragen = positionen.map((m) => ({ ...m, actual_quantity: m.ordered_quantity }));
-		const dashboard = deriveMaterialConsumed(nachgetragen);
-		expect(dashboard.consumed).toBe(51);
-		expect(dashboard.consumed).toBe(sumTotals(nachgetragen));
-		expect(dashboard.delta).toBe(0); // gleiche Mengen, gleiche Preise
+describe('Dashboard gegen Material-Bereich', () => {
+	it('nennt den Bestellwert, den der Material-Bereich für dasselbe Fest zeigt', () => {
+		expect(deriveMaterialOrdered(festPositionen).total).toBe(51);
 	});
 });
 
