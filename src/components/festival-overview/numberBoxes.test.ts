@@ -204,6 +204,13 @@ describe('deriveMaterialOrdered', () => {
 		expect(m.isEmpty).toBe(false);
 	});
 
+	it('rechnet brutto — Nettopreis plus Steuersatz (ADR 0006)', () => {
+		const materials = [
+			material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true })
+		];
+		expect(deriveMaterialOrdered(materials).total).toBe(24); // 2 netto → 2,40 brutto
+	});
+
 	it('keine Positionen → isEmpty, alles 0', () => {
 		const m = deriveMaterialOrdered([]);
 		expect(m.total).toBe(0);
@@ -236,6 +243,30 @@ describe('deriveMaterialConsumed', () => {
 		];
 		const m = deriveMaterialConsumed(materials);
 		expect(m.delta).toBe(30);
+	});
+
+	it('rechnet brutto — Nettopreis plus Steuersatz (ADR 0006)', () => {
+		const materials = [
+			material({
+				id: 'a',
+				ordered_quantity: 10,
+				actual_quantity: 5,
+				unit_price: 2,
+				tax_rate: 20,
+				price_is_net: true
+			})
+		];
+		const m = deriveMaterialConsumed(materials); // 2,40 brutto → ord 24, ist 12
+		expect(m.ordered).toBe(24);
+		expect(m.consumed).toBe(12);
+	});
+
+	it('hält Δ auf Cent — keine Fließkomma-Reste', () => {
+		const materials = [
+			material({ id: 'a', ordered_quantity: 3, actual_quantity: 1, unit_price: 0.01 })
+		];
+		const m = deriveMaterialConsumed(materials); // ord 0,03, ist 0,01
+		expect(m.delta).toBe(-0.02);
 	});
 
 	it('keine Positionen → isEmpty', () => {

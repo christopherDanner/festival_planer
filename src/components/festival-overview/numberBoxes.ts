@@ -9,6 +9,12 @@ import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
 import { festivalSponsoringTotal } from '@/lib/sponsoringTotals';
+import {
+	consumedDelta,
+	consumedValue,
+	orderedValue,
+	withoutPrice
+} from '@/lib/materialCosts';
 
 // --- Schichten besetzt -------------------------------------------------------
 
@@ -64,7 +70,7 @@ export function deriveShiftsMetric(
 // --- Material bestellt -------------------------------------------------------
 
 export interface MaterialOrderedMetric {
-	/** Bestellwert € = Σ(ordered_quantity × unit_price) über bepreiste Positionen. */
+	/** Bestellwert € = Σ(Bestellt-Menge × Bruttopreis) über bepreiste Positionen. */
 	total: number;
 	positions: number;
 	/** Positionen ohne Preis (rot, wenn > 0). */
@@ -75,21 +81,13 @@ export interface MaterialOrderedMetric {
 }
 
 export function deriveMaterialOrdered(materials: FestivalMaterial[]): MaterialOrderedMetric {
-	let total = 0;
-	let withoutPrice = 0;
-	for (const m of materials) {
-		if (m.unit_price == null) {
-			withoutPrice += 1;
-			continue;
-		}
-		total += m.unit_price * m.ordered_quantity;
-	}
 	const positions = materials.length;
+	const gaps = withoutPrice(materials);
 	return {
-		total,
+		total: orderedValue(materials),
 		positions,
-		withoutPrice,
-		withPrice: positions - withoutPrice,
+		withoutPrice: gaps,
+		withPrice: positions - gaps,
 		isEmpty: positions === 0
 	};
 }
@@ -97,9 +95,9 @@ export function deriveMaterialOrdered(materials: FestivalMaterial[]): MaterialOr
 // --- Verbraucht (Ist) --------------------------------------------------------
 
 export interface MaterialConsumedMetric {
-	/** Verbrauchswert € = Σ(actual_quantity × unit_price) über erfasste Positionen. */
+	/** Verbrauchswert € = Σ(Verbraucht-Menge × Bruttopreis) über erfasste Positionen. */
 	consumed: number;
-	/** Bestellwert € (Referenz für Δ) — gleiche Formel wie „Material bestellt". */
+	/** Bestellwert € (Referenz für Δ) — dieselbe Zahl wie „Material bestellt". */
 	ordered: number;
 	/** Δ = verbraucht − bestellt (negativ = unter Plan, positiv = über Plan). */
 	delta: number;
@@ -110,17 +108,18 @@ export interface MaterialConsumedMetric {
 }
 
 export function deriveMaterialConsumed(materials: FestivalMaterial[]): MaterialConsumedMetric {
-	let consumed = 0;
-	let ordered = 0;
-	let recorded = 0;
-	for (const m of materials) {
-		if (m.actual_quantity != null) recorded += 1;
-		if (m.unit_price == null) continue;
-		ordered += m.unit_price * m.ordered_quantity;
-		if (m.actual_quantity != null) consumed += m.unit_price * m.actual_quantity;
-	}
+	const consumed = consumedValue(materials);
+	const ordered = orderedValue(materials);
+	const recorded = materials.filter((m) => m.actual_quantity != null).length;
 	const positions = materials.length;
-	return { consumed, ordered, delta: consumed - ordered, recorded, positions, isEmpty: positions === 0 };
+	return {
+		consumed,
+		ordered,
+		delta: consumedDelta(materials),
+		recorded,
+		positions,
+		isEmpty: positions === 0
+	};
 }
 
 // --- Sponsoring --------------------------------------------------------------

@@ -20,6 +20,7 @@ import {
 	formatPackaging,
 	formatRequiredPackaging
 } from '@/lib/materialQuantity';
+import { grossPrice, netPrice, rowTotal, sumTotals } from '@/lib/materialCosts';
 
 /* ------------------------------------------------------------------ */
 /*  Generic inline-editable cell (text / number)                      */
@@ -137,42 +138,10 @@ function formatPrice(price: number | null): string {
 	return `${price.toFixed(2)} €`;
 }
 
-function calculatePrices(material: FestivalMaterialWithStation): { net: number | null; gross: number | null } {
-	if (material.unit_price == null) return { net: null, gross: null };
-	if (material.tax_rate == null) return { net: material.unit_price, gross: material.unit_price };
-	if (material.price_is_net) {
-		return {
-			net: material.unit_price,
-			gross: Math.round(material.unit_price * (1 + material.tax_rate / 100) * 100) / 100
-		};
-	} else {
-		return {
-			net: Math.round(material.unit_price / (1 + material.tax_rate / 100) * 100) / 100,
-			gross: material.unit_price
-		};
-	}
-}
-
-function billableQuantity(m: FestivalMaterialWithStation): number {
-	const raw = m.actual_quantity ?? m.ordered_quantity;
-	if (m.price_per === 'packaging' && m.packaging_unit && m.amount_per_packaging) {
-		return Math.ceil(raw);
-	}
-	return raw;
-}
-
 function formatTotal(m: FestivalMaterialWithStation): string {
-	if (m.unit_price == null) return '–';
-	const prices = calculatePrices(m);
-	const grossPrice = prices.gross ?? m.unit_price;
-	return `${(billableQuantity(m) * grossPrice).toFixed(2)} €`;
-}
-
-function getTotalValue(m: FestivalMaterialWithStation): number {
-	if (m.unit_price == null) return 0;
-	const prices = calculatePrices(m);
-	const grossPrice = prices.gross ?? m.unit_price;
-	return billableQuantity(m) * grossPrice;
+	const total = rowTotal(m);
+	if (total == null) return '–';
+	return `${total.toFixed(2)} €`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -282,7 +251,8 @@ const MaterialMobileCard: React.FC<{
 					</div>
 				</div>
 				{(() => {
-					const prices = calculatePrices(material);
+					const net = netPrice(material);
+					const gross = grossPrice(material);
 					const netIsSource = material.price_is_net || material.unit_price == null;
 					const grossIsSource = !material.price_is_net || material.unit_price == null;
 					return (
@@ -293,7 +263,7 @@ const MaterialMobileCard: React.FC<{
 								</span>
 								<div className="text-sm font-medium mt-0.5">
 									<InlineEditCell
-										value={prices.net != null ? prices.net.toFixed(2) : ''}
+										value={net != null ? net.toFixed(2) : ''}
 										onSave={(v) =>
 											onUpdateFields({
 												unit_price: v ? Number(v) : null,
@@ -313,7 +283,7 @@ const MaterialMobileCard: React.FC<{
 								</span>
 								<div className="text-sm font-medium mt-0.5">
 									<InlineEditCell
-										value={prices.gross != null ? prices.gross.toFixed(2) : ''}
+										value={gross != null ? gross.toFixed(2) : ''}
 										onSave={(v) =>
 											onUpdateFields({
 												unit_price: v ? Number(v) : null,
@@ -348,9 +318,7 @@ const MaterialMobileCard: React.FC<{
 const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
 	const isMobile = useIsMobile();
 
-	const totalCost = materials.reduce((sum, m) => {
-		return sum + getTotalValue(m);
-	}, 0);
+	const totalCost = sumTotals(materials);
 
 	const hasCosts = materials.some((m) => m.unit_price != null);
 
@@ -481,11 +449,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								</TableCell>
 								<TableCell className="text-right text-xs">
 									{(() => {
-										const prices = calculatePrices(m);
+										const net = netPrice(m);
 										const isSource = m.price_is_net || m.unit_price == null;
 										return (
 											<InlineEditCell
-												value={prices.net != null ? prices.net.toFixed(2) : ''}
+												value={net != null ? net.toFixed(2) : ''}
 												onSave={(v) =>
 													onUpdateFields(m.id, {
 														unit_price: v ? Number(v) : null,
@@ -502,11 +470,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 								</TableCell>
 								<TableCell className="text-right text-xs">
 									{(() => {
-										const prices = calculatePrices(m);
+										const gross = grossPrice(m);
 										const isSource = !m.price_is_net || m.unit_price == null;
 										return (
 											<InlineEditCell
-												value={prices.gross != null ? prices.gross.toFixed(2) : ''}
+												value={gross != null ? gross.toFixed(2) : ''}
 												onSave={(v) =>
 													onUpdateFields(m.id, {
 														unit_price: v ? Number(v) : null,
