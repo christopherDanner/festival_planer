@@ -118,6 +118,34 @@ export function buildSponsoringOverviewRows(
 	return rows;
 }
 
+/**
+ * Firmennamen-Suche über die Zeilen der Übersicht: getrimmt, case-insensitive,
+ * Teiltreffer — dieselbe Matching-Regel wie `filterSponsors` und die
+ * Material-Übernahme (#151). Filtert ausschließlich **Zeilen**; die Preisliste
+ * und damit die Spalten bleiben unberührt, sonst springt das Layout beim Tippen.
+ */
+export function filterSponsoringOverviewRows(
+	rows: SponsoringOverviewRow[],
+	searchTerm: string
+): SponsoringOverviewRow[] {
+	const term = searchTerm.trim().toLowerCase();
+	if (!term) return rows;
+	return rows.filter((row) => row.companyName.toLowerCase().includes(term));
+}
+
+/**
+ * Beschriftung eines Tabellenfußes, der über die **sichtbaren** Zeilen rechnet.
+ * Solange gefiltert wird, nennt sie die Zahl („Σ je Kategorie · 3 von 14
+ * Firmen") — ohne sie wäre eine Kategorie-Summe über drei Firmen eine stille
+ * Lüge (ADR 0006: alle Summen rechnen gefiltert und sagen es in der
+ * Beschriftung). Bereichskopf und Dashboard bleiben davon unberührt: die
+ * rechnen als Fest-Kennzahl über alle Sponsorings.
+ */
+export function sponsoringFooterLabel(base: string, shown: number, total: number): string {
+	if (shown === total) return base;
+	return `${base} · ${shown} von ${total} Firmen`;
+}
+
 /** Der Tabellenfuß der Sponsoring-Matrix: eine Summe je Spalte. */
 export interface SponsoringOverviewFooter {
 	/** Σ je Kategorie-Id — jede Kategorie der Preisliste kommt vor, notfalls mit 0. */

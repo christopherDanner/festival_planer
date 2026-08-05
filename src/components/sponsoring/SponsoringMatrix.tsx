@@ -9,13 +9,22 @@ import {
 import { ValueTag } from '@/components/toolkit/ValueTag';
 import { formatEuro } from '@/lib/money';
 import type { SponsoringCategory } from '@/lib/sponsorService';
-import type { SponsoringOverviewFooter, SponsoringOverviewRow } from '@/lib/sponsoringTotals';
+import {
+	sponsoringFooterLabel,
+	type SponsoringOverviewFooter,
+	type SponsoringOverviewRow
+} from '@/lib/sponsoringTotals';
 
 export interface SponsoringMatrixProps {
 	/** Die Preisliste des Fests — eine Spalte je Kategorie, in dieser Reihenfolge. */
 	categories: SponsoringCategory[];
+	/** Die **sichtbaren** Zeilen; der Fuß summiert genau diese (ADR 0006). */
 	rows: SponsoringOverviewRow[];
 	footer: SponsoringOverviewFooter;
+	/** Firmen des Fests insgesamt — damit der Fuß den Filter beschriften kann. */
+	totalRowCount: number;
+	/** Laufender Suchbegriff; nur für die Hinweiszeile, wenn nichts passt. */
+	searchTerm: string;
 	onDelete: (sponsoringId: string) => void;
 }
 
@@ -58,6 +67,8 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	categories,
 	rows,
 	footer,
+	totalRowCount,
+	searchTerm,
 	onDelete
 }) => (
 	<div className="overflow-x-auto border-2.5 border-tinte bg-white">
@@ -177,14 +188,30 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 						</td>
 					</tr>
 				))}
+
+				{/* Kein Treffer: eine Hinweiszeile statt einer leeren Tabelle — die
+				Kategorie-Spalten bleiben dabei vollständig stehen (#151). */}
+				{rows.length === 0 && searchTerm.trim() !== '' && (
+					<tr className="border-b border-linie">
+						<td
+							colSpan={categories.length + 5}
+							className="px-2.5 py-8 text-center text-tinte-soft"
+						>
+							Keine Firma passt zu „{searchTerm.trim()}"
+						</td>
+					</tr>
+				)}
 			</tbody>
 
 			{/* Ohne Zeile gibt es nichts zu summieren — und sechs korrekte Nullen
-			sehen wie ein Fehler aus (#69, Leerzustand L2). */}
+			sehen wie ein Fehler aus (#69, Leerzustand L2). Dieselbe Regel greift,
+			wenn die Suche nichts übrig lässt (#151). */}
 			{rows.length > 0 && (
 				<tfoot>
 					<tr>
-						<td className={`${FOOT_CELL} ${STICKY_LEFT} z-10`}>Σ je Kategorie</td>
+						<td className={`${FOOT_CELL} ${STICKY_LEFT} z-10`}>
+							{sponsoringFooterLabel('Σ je Kategorie', rows.length, totalRowCount)}
+						</td>
 						{categories.map((category) => (
 							<td key={category.id} className={`${FOOT_CELL} text-center`}>
 								{formatEuro(footer.perCategoryId[category.id] ?? 0)}
