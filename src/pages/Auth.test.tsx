@@ -110,6 +110,15 @@ describe('Auth-Seite', () => {
 		expect(signIn).not.toHaveBeenCalled();
 	});
 
+	it('nimmt die Beanstandung zurück, sobald getippt wird', async () => {
+		const container = await mount();
+		await absenden(container);
+		expect(container.textContent).toContain('Bitte Email und Passwort eingeben.');
+
+		await tippen(container.querySelector('input[type="email"]'), 'obmann@musikverein.at');
+		expect(container.textContent).not.toContain('Bitte Email und Passwort eingeben.');
+	});
+
 	it('meldet mit Email und Passwort an und führt auf das Dashboard', async () => {
 		const container = await mount();
 		await anmelden(container);

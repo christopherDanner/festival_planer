@@ -113,4 +113,17 @@ describe('Anmeldezettel', () => {
 		const email = container.querySelector('input[type="email"]');
 		expect(email?.getAttribute('aria-invalid')).not.toBe('true');
 	});
+
+	it('beanstandet nur das leere Feld, nicht das gefüllte', async () => {
+		const container = await mount({
+			email: 'obmann@musikverein.at',
+			fieldError: 'Bitte Email und Passwort eingeben.'
+		});
+		const email = container.querySelector('input[type="email"]');
+		const passwort = container.querySelector('input[type="password"]');
+
+		expect(email?.getAttribute('aria-invalid')).not.toBe('true');
+		expect(email?.getAttribute('aria-describedby')).toBeNull();
+		expect(passwort?.getAttribute('aria-invalid')).toBe('true');
+	});
 });

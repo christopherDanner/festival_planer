@@ -6,7 +6,7 @@ import Anmeldezettel from '@/components/auth/Anmeldezettel';
 import { useToast } from '@/hooks/use-toast';
 
 /** Fehlende Eingabe wird am Feld beanstandet, nicht im Toast (#161). */
-const UNVOLLSTAENDIG = 'Bitte Email und Passwort eingeben.';
+const MELDUNG_UNVOLLSTAENDIG = 'Bitte Email und Passwort eingeben.';
 
 /**
  * Anmeldung (`/auth`) — seit #90 das erste und einzige Bild vor dem Login.
@@ -31,9 +31,21 @@ export default function Auth() {
 		}
 	}, [user, navigate]);
 
+	// Tippen nimmt die Beanstandung zurück — sie soll nicht unter einem
+	// gefüllten Feld stehen bleiben, bis wieder abgesendet wird.
+	const handleEmailChange = (value: string) => {
+		setEmail(value);
+		setFieldError(null);
+	};
+
+	const handlePasswordChange = (value: string) => {
+		setPassword(value);
+		setFieldError(null);
+	};
+
 	const handleSignIn = async () => {
 		if (!email || !password) {
-			setFieldError(UNVOLLSTAENDIG);
+			setFieldError(MELDUNG_UNVOLLSTAENDIG);
 			return;
 		}
 		setFieldError(null);
@@ -60,8 +72,8 @@ export default function Auth() {
 				password={password}
 				loading={loading}
 				fieldError={fieldError}
-				onEmailChange={setEmail}
-				onPasswordChange={setPassword}
+				onEmailChange={handleEmailChange}
+				onPasswordChange={handlePasswordChange}
 				onSubmit={handleSignIn}
 			/>
 		</div>
