@@ -1,6 +1,7 @@
 import { SectionHeading } from '@/components/toolkit/SectionHeading';
 import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
+import type { FestivalMetricsMap } from '@/lib/festivalMetrics';
 import type { Festival } from '@/lib/festivalService';
 import FestivalPoster from './FestivalPoster';
 import NextFestivalPoster from './NextFestivalPoster';
@@ -11,6 +12,11 @@ interface FestivalWallProps {
 	ranks: FestivalWallRanks;
 	/** Bezugstag der Countdown-Stempel; derselbe, mit dem die Ränge gerechnet wurden. */
 	today: Date;
+	/**
+	 * Kennzahlen je Fest-ID. Sie hängen der Wand nach: die Plakate stehen sofort,
+	 * die Zeile kommt, sobald die Zahlen da sind — und bleibt weg, wenn nicht.
+	 */
+	metrics: FestivalMetricsMap;
 	onOpen: (festival: Festival) => void;
 	onUseAsTemplate: (festival: Festival) => void;
 	onEdit: (festival: Festival) => void;
@@ -32,6 +38,7 @@ const TRIO_GRID =
 export default function FestivalWall({
 	ranks,
 	today,
+	metrics,
 	onOpen,
 	onUseAsTemplate,
 	onEdit,
@@ -53,6 +60,7 @@ export default function FestivalWall({
 						<NextFestivalPoster
 							festival={next}
 							today={today}
+							metrics={metrics[next.id]}
 							onOpen={() => onOpen(next)}
 							onEdit={() => onEdit(next)}
 							onDelete={() => onDelete(next)}
@@ -71,6 +79,7 @@ export default function FestivalWall({
 								festival={festival}
 								variant="soon"
 								today={today}
+								metrics={metrics[festival.id]}
 								onOpen={() => onOpen(festival)}
 								onUseAsTemplate={() => onUseAsTemplate(festival)}
 								onEdit={() => onEdit(festival)}
@@ -91,6 +100,7 @@ export default function FestivalWall({
 								festival={festival}
 								variant="past"
 								today={today}
+								metrics={metrics[festival.id]}
 								onOpen={() => onOpen(festival)}
 								onUseAsTemplate={() => onUseAsTemplate(festival)}
 								onEdit={() => onEdit(festival)}

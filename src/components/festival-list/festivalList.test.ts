@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Festival } from '@/lib/festivalService';
-import { arrangeFestivalWall, festivalCountLine, festivalTitle } from './festivalList';
+import {
+	arrangeFestivalWall,
+	festivalCountLine,
+	festivalStatTexts,
+	festivalTitle
+} from './festivalList';
 
 function fest(over: Partial<Festival> & { id: string; start_date: string }): Festival {
 	return {
@@ -84,6 +89,35 @@ describe('festivalCountLine', () => {
 
 	it('entfällt ohne Feste', () => {
 		expect(festivalCountLine(0, 0)).toBeNull();
+	});
+});
+
+describe('festivalStatTexts', () => {
+	it('nennt Schichten, Materialien und Sponsoring-Summe', () => {
+		expect(festivalStatTexts({ shifts: 52, materials: 86, sponsoring: 4850 })).toEqual([
+			'52 Schichten',
+			'86 Materialien',
+			'€ 4.850 Sponsoring'
+		]);
+	});
+
+	it('lässt leere Werte weg, statt „0" zu zeigen', () => {
+		expect(festivalStatTexts({ shifts: 18, materials: 34, sponsoring: 0 })).toEqual([
+			'18 Schichten',
+			'34 Materialien'
+		]);
+		expect(festivalStatTexts({ shifts: 0, materials: 0, sponsoring: 0 })).toEqual([]);
+	});
+
+	it('setzt den Singular bei genau einer Schicht bzw. einem Material', () => {
+		expect(festivalStatTexts({ shifts: 1, materials: 1, sponsoring: 0 })).toEqual([
+			'1 Schicht',
+			'1 Material'
+		]);
+	});
+
+	it('kennt ohne geladene Kennzahlen keine Zeile', () => {
+		expect(festivalStatTexts(undefined)).toEqual([]);
 	});
 });
 

@@ -1,18 +1,35 @@
-import type { SponsoringAssignmentWithCategory, SponsoringWithDetails } from '@/lib/sponsorService';
+import type { SponsoringWithDetails } from '@/lib/sponsorService';
+
+/**
+ * Was die Geldregel von einer Zuweisung braucht — nur der überschriebene Wert
+ * und der Standardwert der Kategorie. Bewusst strukturell statt
+ * `SponsoringAssignmentWithCategory`, damit auch die schmale Kennzahl-Abfrage
+ * der Plakatwand (#92) dieselbe Regel rechnet, statt sie zu kopieren.
+ */
+export interface AssignedValue {
+	value: number | null;
+	category: { value: number | null };
+}
+
+/** Was die Geldregel von einem Sponsoring braucht. */
+export interface SponsoringValue {
+	free_amount: number | null;
+	assignments: AssignedValue[];
+}
 
 /** Wirksamer Wert einer Zuweisung: überschriebener Wert, sonst Kategorie-Wert. */
-export function assignmentValue(assignment: SponsoringAssignmentWithCategory): number {
+export function assignmentValue(assignment: AssignedValue): number {
 	return assignment.value ?? assignment.category.value ?? 0;
 }
 
 /** Gesamtbeitrag eines Sponsorings: Σ zugewiesene Kategorie-Werte + Freibetrag. */
-export function sponsoringTotal(sponsoring: SponsoringWithDetails): number {
+export function sponsoringTotal(sponsoring: SponsoringValue): number {
 	const assigned = sponsoring.assignments.reduce((acc, a) => acc + assignmentValue(a), 0);
 	return assigned + (sponsoring.free_amount ?? 0);
 }
 
 /** Gesamtsumme des eingeworbenen Sponsorings für ein Fest. */
-export function festivalSponsoringTotal(sponsorings: SponsoringWithDetails[]): number {
+export function festivalSponsoringTotal(sponsorings: SponsoringValue[]): number {
 	return sponsorings.reduce((acc, s) => acc + sponsoringTotal(s), 0);
 }
 

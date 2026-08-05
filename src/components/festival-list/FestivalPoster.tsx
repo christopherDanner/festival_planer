@@ -1,9 +1,11 @@
 import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
 import { festCountdownCoarse, festYear, formatFestDateRange } from '@/lib/festDates';
+import type { FestivalMetrics } from '@/lib/festivalMetrics';
 import type { Festival } from '@/lib/festivalService';
 import { cn } from '@/lib/utils';
 import PosterMenu from './PosterMenu';
+import PosterStats from './PosterStats';
 import { festivalTitle } from './festivalList';
 
 interface FestivalPosterProps {
@@ -11,6 +13,8 @@ interface FestivalPosterProps {
 	/** `soon` = Papier-Plakat mit gelbem Countdown-Stempel, `past` = getönt mit ERLEDIGT. */
 	variant: 'soon' | 'past';
 	today: Date;
+	/** Kennzahlen des Fests; noch nicht geladen heißt: Zeile entfällt. */
+	metrics: FestivalMetrics | undefined;
 	onOpen: () => void;
 	onUseAsTemplate: () => void;
 	onEdit: () => void;
@@ -27,6 +31,7 @@ export default function FestivalPoster({
 	festival,
 	variant,
 	today,
+	metrics,
 	onOpen,
 	onUseAsTemplate,
 	onEdit,
@@ -76,6 +81,7 @@ export default function FestivalPoster({
 			<div className="font-display text-[12.5px] font-semibold tracking-[.04em] text-tinte-soft">
 				{dateLine}
 			</div>
+			<PosterStats metrics={metrics} tone="muted" />
 			<div className="mt-2.5 flex gap-1.5">
 				<Button variant="outline" onClick={onOpen} className="h-10 flex-1 px-2 text-[11.5px]">
 					ÖFFNEN

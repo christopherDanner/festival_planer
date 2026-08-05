@@ -1,4 +1,6 @@
+import { formatEuro } from '@/components/festival-overview/numberBoxes';
 import { festDayStart } from '@/lib/festDates';
+import type { FestivalMetrics } from '@/lib/festivalMetrics';
 import type { Festival } from '@/lib/festivalService';
 
 /** Die drei Plakat-Ränge der Wand (Fächer-Variante A, Issue #64/#90). */
@@ -37,6 +39,26 @@ export function arrangeFestivalWall(
 /** Plakat-Titel; `name` ist am Fest optional. */
 export function festivalTitle(festival: Festival): string {
 	return festival.name || 'Fest';
+}
+
+/**
+ * Die Angaben der Kennzahl-Zeile eines Plakats („52 Schichten", „86
+ * Materialien", „€ 4.850 Sponsoring"). Leere Werte fallen weg statt als „0"
+ * dazustehen — ein Fest ohne Sponsoring zeigt keine €-Angabe. Ohne geladene
+ * Kennzahlen (die Wand ist schneller als die Abfrage, oder die Abfrage ist
+ * gescheitert) bleibt die Zeile leer.
+ */
+export function festivalStatTexts(metrics: FestivalMetrics | undefined): string[] {
+	if (!metrics) return [];
+	const texts: string[] = [];
+	if (metrics.shifts > 0) {
+		texts.push(`${metrics.shifts} ${metrics.shifts === 1 ? 'Schicht' : 'Schichten'}`);
+	}
+	if (metrics.materials > 0) {
+		texts.push(`${metrics.materials} ${metrics.materials === 1 ? 'Material' : 'Materialien'}`);
+	}
+	if (metrics.sponsoring > 0) texts.push(`${formatEuro(metrics.sponsoring)} Sponsoring`);
+	return texts;
 }
 
 /** Zählzeile des Masts („7 Feste · 3 bevorstehend"); ohne Feste entfällt sie. */
