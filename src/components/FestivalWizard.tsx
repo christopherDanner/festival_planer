@@ -95,7 +95,6 @@ export default function FestivalWizard({
 				location: '',
 				startDate,
 				endDate: endDate && endDate !== startDate ? endDate : undefined,
-				visitorCount: 'medium',
 			});
 
 			if (copyOptions && templateId && selectedFestival) {

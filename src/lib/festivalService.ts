@@ -3,10 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Festival {
 	id: string;
 	user_id: string;
-	type: string;
 	start_date: string;
 	end_date?: string;
-	visitor_count: string;
 	name?: string;
 	location?: string;
 	created_at: string;
@@ -19,7 +17,6 @@ export interface FestivalData {
 	location: string;
 	startDate: string;
 	endDate?: string;
-	visitorCount: string;
 }
 
 export async function createFestival(festivalData: FestivalData, userId?: string): Promise<string> {
@@ -40,10 +37,8 @@ export async function createFestival(festivalData: FestivalData, userId?: string
 		.from('festivals')
 		.insert({
 			user_id: actualUserId,
-			type: 'kirtag',
 			start_date: festivalData.startDate,
 			end_date: festivalData.endDate,
-			visitor_count: festivalData.visitorCount,
 			name: festivalData.name,
 			location: festivalData.location
 		})

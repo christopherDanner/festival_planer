@@ -17,10 +17,8 @@ export type Database = {
 					location: string | null;
 					name: string | null;
 					start_date: string;
-					type: string;
 					updated_at: string;
 					user_id: string;
-					visitor_count: string;
 				};
 				Insert: {
 					created_at?: string;
@@ -30,10 +28,8 @@ export type Database = {
 					location?: string | null;
 					name?: string | null;
 					start_date: string;
-					type: string;
 					updated_at?: string;
 					user_id: string;
-					visitor_count: string;
 				};
 				Update: {
 					created_at?: string;
@@ -43,10 +39,8 @@ export type Database = {
 					location?: string | null;
 					name?: string | null;
 					start_date?: string;
-					type?: string;
 					updated_at?: string;
 					user_id?: string;
-					visitor_count?: string;
 				};
 				Relationships: [];
 			};
