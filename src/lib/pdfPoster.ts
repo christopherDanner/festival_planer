@@ -23,6 +23,8 @@ export type PosterRgb = readonly [number, number, number];
 export const POSTER_COLOR = {
 	/** `--papier` — Plakatgrund */
 	papier: [247, 245, 239],
+	/** `--papier-getoent` — getönte Fläche, etwa Wertmarken */
+	papierGetoent: [234, 232, 221],
 	/** `--tinte` — Text und Rahmen */
 	tinte: [25, 34, 25],
 	/** `--tinte-soft` — Sekundärtext */
@@ -97,7 +99,12 @@ export interface PosterDocOptions {
  * Arbeitsschrift in Tinte aktiv.
  */
 export function createPosterDoc({ orientation }: PosterDocOptions): jsPDF {
-	const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+	// Das Halftone-Raster kostet tausende Zeichenbefehle. Mit jsPDFs
+	// 16-Stellen-Standardpräzision und ungepackten Strömen wächst ein Plakat
+	// dadurch auf über ein halbes MB — für ein Papier, das laut Vision auch per
+	// WhatsApp herumgeht, zu viel. Zwei Nachkommastellen sind bei mm feiner als
+	// jeder Drucker auflöst.
+	const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4', precision: 2, compress: true });
 	registerPosterFonts(doc);
 	doc.setFont(POSTER_FONT.body, 'normal');
 	ink(doc, POSTER_COLOR.tinte);
@@ -272,23 +279,26 @@ export function drawStamp(doc: jsPDF, options: PosterStampOptions): void {
 	const padX = 1.8;
 	const padY = 1.2;
 	const width = textWidth + padX * 2;
+	// pt → mm (1pt = 0.3528mm); die Versalhöhe genügt als Zeilenmaß.
 	const height = fontSize * 0.353 + padY * 2;
 
-	const corners: [number, number][] = [
-		[x, y],
-		[x + width, y],
-		[x + width, y + height],
-		[x, y + height]
-	].map(([px, py]) => rotate(px, py, x, y + height / 2, STAMP_TILT));
+	// `rect` kann nicht schräg — der Rahmen entsteht darum als gedrehtes Viereck.
+	const [start, ...corners] = (
+		[
+			[x, y],
+			[x + width, y],
+			[x + width, y + height],
+			[x, y + height]
+		] as [number, number][]
+	).map(([px, py]) => rotate(px, py, x, y + height / 2, STAMP_TILT));
 
 	stroke(doc, color, POSTER_LINE.card);
-	const [start, ...rest] = corners;
-	const deltas: [number, number][] = [];
 	let previous = start;
-	for (const corner of [...rest, start]) {
-		deltas.push([corner[0] - previous[0], corner[1] - previous[1]]);
+	const deltas = corners.map((corner) => {
+		const delta: [number, number] = [corner[0] - previous[0], corner[1] - previous[1]];
 		previous = corner;
-	}
+		return delta;
+	});
 	doc.lines(deltas, start[0], start[1], [1, 1], 'S', true);
 
 	ink(doc, color);

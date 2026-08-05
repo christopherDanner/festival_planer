@@ -1,6 +1,19 @@
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { POSTER_FONT } from '@/lib/pdfFonts';
+import {
+	POSTER_COLOR,
+	POSTER_LINE,
+	POSTER_MARGIN,
+	createPosterDoc,
+	drawPosterFooter,
+	drawPosterHead,
+	drawRuler,
+	drawSectionHeading,
+	drawStamp,
+	posterTableTheme
+} from '@/lib/pdfPoster';
 import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
 
 export interface ExportData {
@@ -89,8 +102,7 @@ export function exportToExcel(data: ExportData): void {
 		if (col.responsible) {
 			rows.push(`Leitung: ${col.responsible}`);
 		}
-		const totalAssigned = col.stationMemberNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
-		rows.push(`${totalAssigned}/${col.station.required_people} Personen`);
+		rows.push(`${assignedPeople(col)}/${col.station.required_people} Personen`);
 		rows.push('');
 
 		if (col.stationMemberNames.length > 0) {
@@ -143,25 +155,100 @@ export function exportToExcel(data: ExportData): void {
 
 // ── PDF Export ────────────────────────────────────────────────
 
-export function exportToPdf(data: ExportData): void {
-	const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+/** Personen, die insgesamt auf einer Station stehen (Station + Schichten). */
+function assignedPeople(column: ReturnType<typeof buildStationColumns>[number]): number {
+	return (
+		column.stationMemberNames.length +
+		column.shiftBlocks.reduce((sum, block) => sum + block.names.length, 0)
+	);
+}
+
+/**
+ * Besetzungs-Leiste: je Station ein Maßband mit Ist/Soll und ein Stempel, der
+ * Klartext spricht („VOLL BESETZT" / „3 FEHLEN", DESIGN-VISION §4).
+ *
+ * @returns y-Kante unter der Leiste.
+ */
+function drawStaffingBars(
+	doc: jsPDF,
+	columns: ReturnType<typeof buildStationColumns>,
+	startY: number
+): number {
 	const pageWidth = doc.internal.pageSize.getWidth();
 	const pageHeight = doc.internal.pageSize.getHeight();
-	const margin = 14;
-	let y = 15;
+	const width = pageWidth - POSTER_MARGIN * 2;
+	let y = drawSectionHeading(doc, {
+		x: POSTER_MARGIN,
+		y: startY,
+		width,
+		label: 'Besetzung',
+		note: `${columns.length} Stationen`
+	});
+	y += 2;
 
-	// Title
-	doc.setFontSize(16);
-	doc.setFont('helvetica', 'bold');
-	doc.text(data.festivalName, pageWidth / 2, y, { align: 'center' });
-	y += 7;
-	doc.setFontSize(10);
-	doc.setFont('helvetica', 'normal');
-	doc.text(data.festivalDate, pageWidth / 2, y, { align: 'center' });
-	y += 10;
+	for (const column of columns) {
+		if (y > pageHeight - 24) {
+			doc.addPage();
+			y = POSTER_MARGIN;
+		}
+		const assigned = assignedPeople(column);
+		const required = column.station.required_people;
+		const missing = Math.max(0, required - assigned);
+
+		doc.setFont(POSTER_FONT.accent, 'normal');
+		doc.setFontSize(11);
+		doc.setTextColor(...POSTER_COLOR.tinte);
+		doc.text(column.station.name.toUpperCase(), POSTER_MARGIN, y + 4.2);
+
+		drawRuler(doc, {
+			x: POSTER_MARGIN + width * 0.24,
+			y: y + 0.6,
+			width: width * 0.38,
+			value: assigned,
+			max: required,
+			height: 4.5
+		});
+
+		doc.setFont(POSTER_FONT.body, 'bold');
+		doc.setFontSize(8.5);
+		doc.text(`${assigned}/${required} Personen`, POSTER_MARGIN + width * 0.64, y + 4.2);
+
+		drawStamp(doc, {
+			x: POSTER_MARGIN + width * 0.79,
+			y,
+			label: missing > 0 ? `${missing} fehlen` : 'Voll besetzt',
+			tone: missing > 0 ? 'rot' : 'gruen'
+		});
+
+		y += 7.5;
+	}
+
+	return y + 4;
+}
+
+/** Baut den Einsatzplan als Plakat; das Speichern macht {@link exportToPdf}. */
+export function buildShiftPlanPdf(data: ExportData): jsPDF {
+	const doc = createPosterDoc({ orientation: 'landscape' });
+	const pageWidth = doc.internal.pageSize.getWidth();
+	const margin = POSTER_MARGIN;
+
+	let y = drawPosterHead(doc, {
+		title: data.festivalName,
+		subtitle: 'Einsatzplan',
+		note: data.festivalDate,
+		height: 20
+	});
 
 	// ── Station columns as table ──
 	const columns = buildStationColumns(data);
+	y = drawStaffingBars(doc, columns, y);
+	y = drawSectionHeading(doc, {
+		x: margin,
+		y,
+		width: pageWidth - margin * 2,
+		label: 'Schichten'
+	});
+	y += 2;
 	const head = columns.map(col => col.station.name);
 
 	const colLines: string[][] = columns.map(col => {
@@ -169,16 +256,21 @@ export function exportToPdf(data: ExportData): void {
 		if (col.responsible) {
 			lines.push(`Leitung: ${col.responsible}`);
 		}
-		const totalAssigned = col.stationMemberNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
-		lines.push(`${totalAssigned}/${col.station.required_people} Personen`);
+		// Ist/Soll steht schon als Maßband in der Besetzungs-Leiste.
+
+		/* Leerzeile nur zwischen zwei Blöcken — sonst beginnt die Spalte mit
+		einer leeren Zeile, die quer durch alle Stationen läuft. */
+		const separate = () => {
+			if (lines.length > 0) lines.push('');
+		};
 
 		if (col.stationMemberNames.length > 0) {
-			lines.push('');
+			separate();
 			for (const name of col.stationMemberNames) lines.push(name);
 		}
 
 		for (const block of col.shiftBlocks) {
-			lines.push('');
+			separate();
 			lines.push(block.label);
 			lines.push(`${block.filled}/${block.required} besetzt`);
 			if (block.names.length > 0) {
@@ -200,57 +292,53 @@ export function exportToPdf(data: ExportData): void {
 	const usableWidth = pageWidth - margin * 2;
 	const colWidth = usableWidth / columns.length;
 
+	const theme = posterTableTheme();
 	autoTable(doc, {
+		...theme,
 		startY: y,
 		head: [head],
 		body: bodyRows,
-		theme: 'grid',
-		styles: {
-			fontSize: 7.5,
-			cellPadding: { top: 1.2, right: 2, bottom: 1.2, left: 2 },
-			overflow: 'linebreak',
-			valign: 'top',
-			lineWidth: 0.2,
-			cellWidth: 'wrap',
-		},
+		styles: { ...theme.styles, fontSize: 7.5, cellWidth: 'wrap' },
 		headStyles: {
-			fillColor: [70, 70, 70],
-			fontStyle: 'bold',
-			fontSize: 9,
-			halign: 'center',
-			cellPadding: 3,
+			...theme.headStyles,
+			// Stationsnamen sind ein Fall für die Akzentschrift (Vision §4).
+			font: POSTER_FONT.accent,
+			fontStyle: 'normal',
+			fontSize: 11,
+			halign: 'center'
 		},
+		// Die Zeilen sind hier Textzeilen, keine Datensätze — Wechseltönung
+		// würde quer durch die Stationsspalten laufen.
+		alternateRowStyles: { fillColor: [...POSTER_COLOR.weiss] },
 		columnStyles: Object.fromEntries(
 			columns.map((_, i) => [i, { cellWidth: colWidth, minCellWidth: 30 }])
 		),
-		margin: { left: margin, right: margin },
 		tableWidth: usableWidth,
 		didParseCell: (hookData) => {
-			if (hookData.section === 'body') {
-				const text = hookData.cell.raw as string;
-				if (text.match(/^\d+\/\d+ besetzt$/)) {
-					hookData.cell.styles.fontStyle = 'bold';
-					hookData.cell.styles.textColor = [100, 100, 100];
-					hookData.cell.styles.fontSize = 6.5;
-				}
-				if (text.startsWith('Leitung:')) {
-					hookData.cell.styles.fontStyle = 'italic';
-					hookData.cell.styles.textColor = [80, 80, 80];
-					hookData.cell.styles.fontSize = 7;
-				}
-				// Shift time labels: "Name (Do 01.01 08:00–16:00)"
-				if (/\(\w{2}\s\d{2}\.\d{2}/.test(text)) {
-					hookData.cell.styles.fontStyle = 'bold';
-					hookData.cell.styles.fontSize = 7;
-				}
-				if (text.match(/^\d+\/\d+ Personen$/)) {
-					hookData.cell.styles.fontStyle = 'italic';
-					hookData.cell.styles.textColor = [120, 120, 120];
-					hookData.cell.styles.fontSize = 6.5;
-				}
+			if (hookData.section !== 'body') return;
+			const text = hookData.cell.raw as string;
+			// Zähler und Leitung treten hinter die Namen zurück …
+			if (/^\d+\/\d+ besetzt$/.test(text) || text.startsWith('Leitung:')) {
+				hookData.cell.styles.textColor = [...POSTER_COLOR.tinteSoft];
+				hookData.cell.styles.fontSize = 6.8;
 			}
-		},
+			// … die Schicht selbst ist die Zwischenzeile der Spalte:
+			// „Name (Do 01.01 08:00–16:00)".
+			if (/\(\w{2}\s\d{2}\.\d{2}/.test(text)) {
+				hookData.cell.styles.fontStyle = 'bold';
+				hookData.cell.styles.fontSize = 7.5;
+				hookData.cell.styles.fillColor = [...POSTER_COLOR.fusszeile];
+			}
+			if (text === '– keine –') {
+				hookData.cell.styles.textColor = [...POSTER_COLOR.rot];
+			}
+		}
 	});
 
-	doc.save(`${sanitizeFilename(data.festivalName)}_Schichtplan.pdf`);
+	drawPosterFooter(doc, `${data.festivalName} — Einsatzplan`);
+	return doc;
+}
+
+export function exportToPdf(data: ExportData): void {
+	buildShiftPlanPdf(data).save(`${sanitizeFilename(data.festivalName)}_Schichtplan.pdf`);
 }

@@ -1,6 +1,17 @@
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import { POSTER_FONT } from '@/lib/pdfFonts';
+import {
+  POSTER_COLOR,
+  POSTER_MARGIN,
+  createPosterDoc,
+  drawPosterFooter,
+  drawPosterHead,
+  drawSectionHeading,
+  drawStamp,
+  posterTableTheme
+} from '@/lib/pdfPoster';
+import type { ScheduleDayWithPhases, ScheduleEntryWithMember } from '@/lib/scheduleService';
 
 export interface ScheduleExportOptions {
   festivalName: string;
@@ -10,49 +21,55 @@ export interface ScheduleExportOptions {
   entryTypeFilter: 'all' | 'task' | 'program';
 }
 
-export function exportScheduleToPdf(options: ScheduleExportOptions): void {
+/**
+ * Wie das Papier heißt, hängt am gewählten Ausschnitt: der Ablaufplan besteht
+ * aus der internen Aufgaben-Werkliste und dem Programmzettel zum Aushang
+ * (CONTEXT.md „Ablaufplan").
+ */
+export function schedulePaperTitle(
+  entryTypeFilter: ScheduleExportOptions['entryTypeFilter']
+): string {
+  if (entryTypeFilter === 'program') return 'Programmzettel';
+  if (entryTypeFilter === 'task') return 'Aufgaben-Werkliste';
+  return 'Ablaufplan';
+}
+
+/** Baut den Programmzettel als Plakat; das Speichern macht {@link exportScheduleToPdf}. */
+export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
   const { festivalName, days, selectedDayIds, selectedPhaseIds, entryTypeFilter } = options;
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const doc = createPosterDoc({ orientation: 'portrait' });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 14;
-  let y = 15;
+  const margin = POSTER_MARGIN;
+  const width = pageWidth - margin * 2;
+  const paperTitle = schedulePaperTitle(entryTypeFilter);
 
-  // Title
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text(festivalName, pageWidth / 2, y, { align: 'center' });
-  y += 7;
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Ablaufplan', pageWidth / 2, y, { align: 'center' });
-  y += 12;
+  let y = drawPosterHead(doc, {
+    title: festivalName,
+    subtitle: paperTitle
+  });
 
   const filteredDays = days.filter(d => selectedDayIds.has(d.id));
 
   for (const day of filteredDays) {
     // Check if we need a new page (leave enough space for at least a header + a few rows)
-    if (y > doc.internal.pageSize.getHeight() - 40) {
+    if (y > doc.internal.pageSize.getHeight() - 45) {
       doc.addPage();
-      y = 15;
+      y = POSTER_MARGIN;
     }
 
     // Day header
     const formattedDate = new Date(day.date + 'T00:00:00').toLocaleDateString('de-AT', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
-    const dayLabel = day.label ? `${formattedDate} (${day.label})` : formattedDate;
 
-    doc.setFontSize(13);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text(dayLabel, margin, y);
-    y += 2;
-    // Draw a line under the day header
-    doc.setDrawColor(100, 100, 200);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 6;
+    y = drawSectionHeading(doc, {
+      x: margin,
+      y: y + 2,
+      width,
+      label: formattedDate,
+      note: day.label ?? undefined
+    }) + 3;
 
     const filteredPhases = day.phases.filter(p => selectedPhaseIds.has(p.id));
 
@@ -66,111 +83,88 @@ export function exportScheduleToPdf(options: ScheduleExportOptions): void {
       if (entries.length === 0) continue;
 
       // Check page space
-      if (y > doc.internal.pageSize.getHeight() - 30) {
+      if (y > doc.internal.pageSize.getHeight() - 35) {
         doc.addPage();
-        y = 15;
+        y = POSTER_MARGIN;
       }
 
-      // Phase header
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(60, 60, 60);
-      doc.text(phase.name, margin, y);
-      y += 5;
+      // Phase header — Akzentschrift, davor der Stempel, wenn alles steht.
+      const done = entries.filter(e => e.status === 'done').length;
+      doc.setFont(POSTER_FONT.accent, 'normal');
+      doc.setFontSize(12);
+      doc.setTextColor(...POSTER_COLOR.tinte);
+      doc.text(phase.name.toUpperCase(), margin, y);
+      if (done === entries.length) {
+        drawStamp(doc, {
+          x: margin + doc.getTextWidth(phase.name.toUpperCase()) + 4,
+          y: y - 3.6,
+          label: 'Erledigt',
+          tone: 'gruen'
+        });
+      }
+      y += 3;
 
       // Build table data
       const head = [['Zeit', 'Typ', 'Eintrag', 'Verantwortlich']];
       const body = entries.map(entry => {
-        let timeStr = '\u2014';
+        let timeStr = '—';
         if (entry.start_time) {
           timeStr = entry.start_time.slice(0, 5);
-          if (entry.end_time) timeStr += ` \u2013 ${entry.end_time.slice(0, 5)}`;
+          if (entry.end_time) timeStr += ` – ${entry.end_time.slice(0, 5)}`;
         }
 
         const typeStr = entry.type === 'task' ? 'Aufgabe' : 'Programm';
 
         const responsible = entry.responsible_member
           ? `${entry.responsible_member.last_name} ${entry.responsible_member.first_name}`
-          : '\u2014';
+          : '—';
 
         return [timeStr, typeStr, entry.title, responsible];
       });
 
+      const theme = posterTableTheme();
       autoTable(doc, {
+        ...theme,
         startY: y,
         head: head,
         body: body,
-        theme: 'grid',
-        styles: {
-          fontSize: 8,
-          cellPadding: { top: 1.5, right: 2, bottom: 1.5, left: 2 },
-          overflow: 'linebreak',
-          valign: 'middle',
-          lineWidth: 0.15,
-          lineColor: [200, 200, 200],
-        },
-        headStyles: {
-          fillColor: [55, 65, 81],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          fontSize: 8,
-          cellPadding: 2.5,
-        },
         columnStyles: {
-          0: { cellWidth: 28, halign: 'center', font: 'courier' },
-          1: { cellWidth: 22, halign: 'center' },
+          // Uhrzeiten sind ein Fall für die Akzentschrift (Vision §4).
+          0: { cellWidth: 28, halign: 'center', font: POSTER_FONT.accent, fontSize: 10 },
+          1: { cellWidth: 24, halign: 'center', fontSize: 7.5 },
           2: { cellWidth: 'auto' },
-          3: { cellWidth: 38 },
+          3: { cellWidth: 38 }
         },
-        margin: { left: margin, right: margin },
         didParseCell: (hookData) => {
-          if (hookData.section === 'body') {
-            const text = hookData.cell.raw as string;
-            // Color type badges
-            if (hookData.column.index === 1) {
-              if (text === 'Aufgabe') {
-                hookData.cell.styles.fillColor = [236, 253, 245]; // emerald-50
-                hookData.cell.styles.textColor = [4, 120, 87]; // emerald-700
-                hookData.cell.styles.fontStyle = 'bold';
-              } else if (text === 'Programm') {
-                hookData.cell.styles.fillColor = [245, 243, 255]; // violet-50
-                hookData.cell.styles.textColor = [109, 40, 217]; // violet-700
-                hookData.cell.styles.fontStyle = 'bold';
-              }
-            }
-            // Strikethrough for done entries
-            if (hookData.column.index === 2 && hookData.row.index < body.length) {
-              const entry = entries[hookData.row.index];
-              if (entry && entry.status === 'done') {
-                hookData.cell.styles.textColor = [156, 163, 175];
-                hookData.cell.styles.fontStyle = 'italic';
-              }
-            }
+          if (hookData.section !== 'body') return;
+          const entry: ScheduleEntryWithMember | undefined = entries[hookData.row.index];
+          // Typ als Wertmarke: Aufgabe getönt, Programm in Gelb. Der Ton muss
+          // dunkler sein als die Wechselzeile, sonst verschwindet die Marke.
+          if (hookData.column.index === 1) {
+            hookData.cell.styles.fontStyle = 'bold';
+            hookData.cell.styles.fillColor =
+              hookData.cell.raw === 'Aufgabe'
+                ? [...POSTER_COLOR.papierGetoent]
+                : [...POSTER_COLOR.gelb];
           }
-        },
+          // Erledigtes tritt zurück, statt zu verschwinden.
+          if (entry?.status === 'done') {
+            hookData.cell.styles.textColor = [...POSTER_COLOR.tinteSoft];
+          }
+        }
       });
 
-      y = (doc as any).lastAutoTable.finalY + 8;
+      y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 7;
     }
 
-    y += 4; // Extra space between days
+    y += 3; // Extra space between days
   }
 
-  // Footer on each page
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `${festivalName} \u2014 Ablaufplan \u2014 Seite ${i}/${pageCount}`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 8,
-      { align: 'center' }
-    );
-  }
+  drawPosterFooter(doc, `${festivalName} — ${paperTitle}`);
+  return doc;
+}
 
-  const safeName = festivalName.replace(/[^a-zA-Z0-9\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df _-]/g, '').trim();
-  doc.save(`${safeName}_Ablaufplan.pdf`);
+export function exportScheduleToPdf(options: ScheduleExportOptions): void {
+  const safeName = options.festivalName.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim();
+  buildSchedulePdf(options).save(`${safeName}_Ablaufplan.pdf`);
 }
