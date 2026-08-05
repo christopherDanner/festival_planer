@@ -2,28 +2,43 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface RecordedQuery {
 	table: string;
+	select: string;
 	column: string;
 	ids: string[];
+	from: number;
 }
 
 const mocks = vi.hoisted(() => ({
 	queries: [] as RecordedQuery[],
 	rows: {} as Record<string, unknown[]>,
-	failing: null as string | null
+	failing: null as string | null,
+	/** Zeilendeckel der REST-Schicht; null = die Antwort trägt alles. */
+	rowCap: null as number | null
 }));
 
+/**
+ * Steht für PostgREST: die Antwort trägt höchstens `rowCap` Zeilen, `count`
+ * nennt trotzdem die wahre Gesamtzahl. Genau daran hängt das Nachblättern.
+ */
 vi.mock('@/integrations/supabase/client', () => ({
 	supabase: {
 		from: (table: string) => ({
-			select: () => ({
-				in: (column: string, ids: string[]) => {
-					mocks.queries.push({ table, column, ids });
-					return Promise.resolve(
-						mocks.failing === table
-							? { data: null, error: { message: `${table} kaputt` } }
-							: { data: mocks.rows[table] ?? [], error: null }
-					);
-				}
+			select: (select: string, options?: { count?: string }) => ({
+				in: (column: string, ids: string[]) => ({
+					range: (from: number, to: number) => {
+						mocks.queries.push({ table, select, column, ids, from });
+						if (mocks.failing === table) {
+							return Promise.resolve({ data: null, error: { message: `${table} kaputt` } });
+						}
+						const all = mocks.rows[table] ?? [];
+						const wanted = Math.min(to - from + 1, mocks.rowCap ?? Infinity);
+						return Promise.resolve({
+							data: all.slice(from, from + wanted),
+							error: null,
+							count: options?.count === 'exact' ? all.length : null
+						});
+					}
+				})
 			})
 		})
 	}
@@ -31,10 +46,13 @@ vi.mock('@/integrations/supabase/client', () => ({
 
 import { getFestivalMetrics } from '../festivalMetricsService';
 
+const countQueries = (table: string) => mocks.queries.filter((q) => q.table === table).length;
+
 beforeEach(() => {
 	mocks.queries = [];
 	mocks.rows = {};
 	mocks.failing = null;
+	mocks.rowCap = null;
 });
 
 describe('getFestivalMetrics', () => {
@@ -80,5 +98,48 @@ describe('getFestivalMetrics', () => {
 		mocks.failing = 'sponsorings';
 
 		await expect(getFestivalMetrics(['a'])).rejects.toThrow('sponsorings kaputt');
+	});
+
+	it('blättert über den Zeilendeckel hinaus, statt zu wenig zu zählen', async () => {
+		// Fünf Schichten, aber die REST-Schicht gibt nur zwei Zeilen je Antwort
+		// heraus — ohne Nachblättern stünde „2 Schichten" auf dem Plakat.
+		mocks.rowCap = 2;
+		mocks.rows = {
+			station_shifts: [
+				{ festival_id: 'a' },
+				{ festival_id: 'a' },
+				{ festival_id: 'a' },
+				{ festival_id: 'b' },
+				{ festival_id: 'b' }
+			]
+		};
+
+		const metrics = await getFestivalMetrics(['a', 'b']);
+
+		expect(metrics.a.shifts).toBe(3);
+		expect(metrics.b.shifts).toBe(2);
+		expect(countQueries('station_shifts')).toBe(3);
+		// Die leeren Tabellen sind mit einer Antwort erledigt.
+		expect(countQueries('festival_materials')).toBe(1);
+	});
+
+	it('fragt nur nach, solange es etwas nachzuholen gibt', async () => {
+		mocks.rows = { station_shifts: [{ festival_id: 'a' }, { festival_id: 'a' }] };
+
+		await getFestivalMetrics(['a']);
+
+		expect(countQueries('station_shifts')).toBe(1);
+		expect(mocks.queries.every((q) => q.from === 0)).toBe(true);
+	});
+
+	it('holt beim Sponsoring genau die Felder, die die Geldregel braucht', async () => {
+		await getFestivalMetrics(['a']);
+
+		const select = mocks.queries.find((q) => q.table === 'sponsorings')!.select;
+		// Freibetrag, überschriebener Zuweisungs-Wert und Kategorie-Standardwert:
+		// fehlt eines, rechnet das Plakat eine andere Summe als der Bereich.
+		expect(select).toContain('free_amount');
+		expect(select).toContain('assignments:sponsoring_category_assignments');
+		expect(select).toContain('category:sponsoring_categories');
 	});
 });

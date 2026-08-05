@@ -177,6 +177,16 @@ export interface SponsoringAssignmentInput {
 
 const SPONSORING_SELECT = '*, sponsor:sponsors(*), assignments:sponsoring_category_assignments(*, category:sponsoring_categories(*))';
 
+/**
+ * Dieselbe Verknüpfung, aber nur die Felder der Geldregel (`sponsoringTotals`):
+ * Freibetrag, überschriebener Zuweisungs-Wert, Kategorie-Standardwert. Für die
+ * Plakat-Kennzahlen der Festliste (#92), die über alle Feste auf einmal liest.
+ * Steht bewusst neben `SPONSORING_SELECT` — wächst die Geldregel (etwa um den
+ * Sachwert aus ADR 0008), müssen beide Selects mitwachsen.
+ */
+export const SPONSORING_VALUES_SELECT =
+	'festival_id, free_amount, assignments:sponsoring_category_assignments(value, category:sponsoring_categories(value))';
+
 // Get all sponsorings of a festival incl. sponsor and assigned categories.
 export const getSponsorings = async (festivalId: string): Promise<SponsoringWithDetails[]> => {
 	const { data, error } = await supabase
