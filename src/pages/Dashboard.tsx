@@ -9,6 +9,8 @@ import { arrangeFestivalWall, festivalTitle } from '@/components/festival-list/f
 import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import type { FestivalMetricsMap } from '@/lib/festivalMetrics';
+import { getFestivalMetrics } from '@/lib/festivalMetricsService';
 import {
 	deleteFestival,
 	getUserFestivals,
@@ -24,6 +26,7 @@ import {
  */
 export default function Dashboard() {
 	const [festivals, setFestivals] = useState<Festival[]>([]);
+	const [metrics, setMetrics] = useState<FestivalMetricsMap>({});
 	const [loading, setLoading] = useState(true);
 	const [wizardTemplateId, setWizardTemplateId] = useState<string | undefined>();
 	const [showWizard, setShowWizard] = useState(false);
@@ -60,6 +63,30 @@ export default function Dashboard() {
 	useEffect(() => {
 		loadFestivals();
 	}, [loadFestivals]);
+
+	// Die Kennzahlen hängen der Wand nach: sie rendert sofort mit den Fest-Zeilen,
+	// die Kennzahl-Zeile kommt, sobald die drei gebündelten Abfragen da sind.
+	// Scheitern sie, bleibt es bei den Plakaten ohne Zeile — für eine Randnotiz
+	// die Seite mit einem Fehler zu behängen wäre unverhältnismäßig (Spec #92).
+	useEffect(() => {
+		const ids = festivals.map((f) => f.id);
+		if (ids.length === 0) {
+			setMetrics({});
+			return;
+		}
+		let current = true;
+		getFestivalMetrics(ids)
+			.then((loaded) => {
+				if (current) setMetrics(loaded);
+			})
+			.catch((error: unknown) => {
+				console.warn('[Plakat-Kennzahlen] nicht geladen:', error);
+				if (current) setMetrics({});
+			});
+		return () => {
+			current = false;
+		};
+	}, [festivals]);
 
 	const openWizard = (templateId?: string) => {
 		setWizardTemplateId(templateId);
@@ -150,6 +177,7 @@ export default function Dashboard() {
 						<FestivalWall
 							ranks={ranks}
 							today={today}
+							metrics={metrics}
 							onOpen={(festival) => navigate(`/festival-results?id=${festival.id}`)}
 							onUseAsTemplate={(festival) => openWizard(festival.id)}
 							onEdit={setEditing}

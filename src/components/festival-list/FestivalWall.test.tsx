@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
+import type { FestivalMetricsMap } from '@/lib/festivalMetrics';
 import type { Festival } from '@/lib/festivalService';
 import FestivalWall from './FestivalWall';
 import { arrangeFestivalWall } from './festivalList';
@@ -33,11 +34,12 @@ const PAST = fest({
 	end_date: '2025-09-06'
 });
 
-const render = (festivals: Festival[]) =>
+const render = (festivals: Festival[], metrics: FestivalMetricsMap = {}) =>
 	renderToStaticMarkup(
 		<FestivalWall
 			ranks={arrangeFestivalWall(festivals, today)}
 			today={today}
+			metrics={metrics}
 			onOpen={noop}
 			onUseAsTemplate={noop}
 			onEdit={noop}
@@ -84,6 +86,43 @@ describe('FestivalWall', () => {
 		expect(html).toContain('ERLEDIGT');
 		expect(html).toContain('bg-papier-getoent');
 		expect(html).toContain('ALS VORLAGE');
+	});
+
+	it('hängt jedem Plakat seine Kennzahlen an', () => {
+		const html = render([NEXT, SOON, PAST], {
+			next: { shifts: 52, materials: 86, sponsoring: 4850 },
+			soon: { shifts: 6, materials: 9, sponsoring: 1200 },
+			past: { shifts: 48, materials: 79, sponsoring: 3900 }
+		});
+		expect(html).toContain('52 Schichten');
+		expect(html).toContain('86 Materialien');
+		expect(html).toContain('€ 4.850 Sponsoring');
+		expect(html).toContain('6 Schichten');
+		expect(html).toContain('€ 1.200 Sponsoring');
+		expect(html).toContain('48 Schichten');
+		expect(html).toContain('€ 3.900 Sponsoring');
+	});
+
+	it('zeigt keinen Besetzungs-Anteil und keine Helfer-Zahl', () => {
+		const html = render([NEXT], { next: { shifts: 52, materials: 86, sponsoring: 4850 } });
+		expect(html).not.toMatch(/\d+\/\d+/);
+		expect(html).not.toContain('Helfer');
+	});
+
+	it('lässt leere Kennzahlen weg, statt „0" zu stempeln', () => {
+		const html = render([PAST], { past: { shifts: 18, materials: 0, sponsoring: 0 } });
+		expect(html).toContain('18 Schichten');
+		expect(html).not.toContain('Materialien');
+		expect(html).not.toContain('Sponsoring');
+	});
+
+	it('steht vollständig, wenn die Kennzahl-Abfrage nichts geliefert hat', () => {
+		const html = render([NEXT, SOON, PAST]);
+		expect(html).toContain('Musikfest Steinbach 2026');
+		expect(html).toContain('Herbstkonzert');
+		expect(html).toContain('Stadlfest');
+		expect(html).not.toContain('Schichten');
+		expect(html).not.toContain('Sponsoring');
 	});
 
 	// Die zwei folgenden Auflagen sind reine CSS-Verträge (Stempel-Rotation des
