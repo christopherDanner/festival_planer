@@ -94,6 +94,9 @@ describe('Sponsor löschen: nur ohne Sponsoren-Historie (ADR 0010)', () => {
 	// in der echten Datenbank einen anderen Namen — Supabase-Altbestand, von Hand
 	// angelegt —, dann darf sie nicht scheinbar durchlaufen und den alten CASCADE
 	// stehen lassen: der feuert zuerst und löscht die Historie trotzdem.
+	// Eigene Frist: dieser Fall baut eine zweite Datenbank von Null auf, und die
+	// 5-Sekunden-Voreinstellung reicht dafür nicht mehr, seit ein weiterer
+	// Prüfstand daneben läuft (#98) und mehr Migrationen einzuspielen sind.
 	it('zieht den Fremdschlüssel auch dann auf RESTRICT, wenn er anders heißt', async () => {
 		const driftDb = await createSponsoringSchemaDb();
 		try {
@@ -122,5 +125,5 @@ describe('Sponsor löschen: nur ohne Sponsoren-Historie (ADR 0010)', () => {
 		} finally {
 			await driftDb.close();
 		}
-	});
+	}, 30000);
 });

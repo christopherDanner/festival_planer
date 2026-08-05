@@ -29,7 +29,7 @@ export interface ScheduleEntry {
 	type: 'task' | 'program';
 	start_time: string | null;
 	end_time: string | null;
-	responsible_member_id: string | null;
+	responsible_helper_id: string | null;
 	status: 'open' | 'done' | null;
 	description: string | null;
 	sort_order: number;
@@ -37,12 +37,12 @@ export interface ScheduleEntry {
 	updated_at: string;
 }
 
-export interface ScheduleEntryWithMember extends ScheduleEntry {
-	responsible_member?: { id: string; first_name: string; last_name: string } | null;
+export interface ScheduleEntryWithHelper extends ScheduleEntry {
+	responsible_helper?: { id: string; first_name: string; last_name: string } | null;
 }
 
 export interface SchedulePhaseWithEntries extends SchedulePhase {
-	entries: ScheduleEntryWithMember[];
+	entries: ScheduleEntryWithHelper[];
 }
 
 export interface ScheduleDayWithPhases extends ScheduleDay {
@@ -54,7 +54,7 @@ export interface ScheduleDayWithPhases extends ScheduleDay {
 export const getScheduleDays = async (festivalId: string): Promise<ScheduleDayWithPhases[]> => {
 	const { data, error } = await (supabase as any)
 		.from('schedule_days')
-		.select('*, phases:schedule_phases(*, entries:schedule_entries(*, responsible_member:members(id, first_name, last_name)))')
+		.select('*, phases:schedule_phases(*, entries:schedule_entries(*, responsible_helper:festival_helpers!responsible_helper_id(id, first_name, last_name)))')
 		.eq('festival_id', festivalId)
 		.order('date')
 		.order('sort_order', { referencedTable: 'phases' })
