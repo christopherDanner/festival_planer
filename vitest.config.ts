@@ -10,6 +10,6 @@ export default defineConfig({
 	test: {
 		environment: 'jsdom',
 		globals: false,
-		include: ['src/**/*.test.ts', 'src/**/*.test.tsx']
+		include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'supabase/tests/**/*.test.ts']
 	}
 });
