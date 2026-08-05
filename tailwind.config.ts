@@ -86,6 +86,10 @@ export default {
       },
       boxShadow: {
         versatz: "4px 4px 0 oklch(var(--tinte))",
+        // Tinte-Kante klebender Tabellenspalten — als Schatten, damit sie
+        // keine Spaltenbreite kostet.
+        "kante-links": "2px 0 0 oklch(var(--tinte))",
+        "kante-rechts": "-2px 0 0 oklch(var(--tinte))",
       },
       borderWidth: {
         "1.5": "1.5px",

@@ -122,6 +122,16 @@ const Werkstatt = () => (
 				<Probe label="Klein · 63 %">
 					<Ruler value={15} max={24} size="small" />
 				</Probe>
+				<Probe label="Marke an eigener Position · Sponsoring gegen Vorjahr">
+					<Ruler
+						value={4850}
+						max={4850}
+						mark={4400}
+						markLabel="Vorjahr"
+						valueText="€ 4.850, Vorjahr € 4.400"
+						className="mt-4"
+					/>
+				</Probe>
 			</div>
 		</Abschnitt>
 
@@ -233,11 +243,14 @@ const Werkstatt = () => (
 				</Probe>
 				<Probe label="Gestrichelt grau: ohne Kategorie / Sachleistung">
 					<div className="flex flex-wrap gap-2">
-						<ValueTag muted>ohne Kategorie</ValueTag>
-						<ValueTag muted value="€ 150">
+						<ValueTag tone="muted">ohne Kategorie</ValueTag>
+						<ValueTag tone="muted" value="€ 150">
 							Sachleistung
 						</ValueTag>
 					</div>
+				</Probe>
+				<Probe label="Tinte-Marke: Betrag ohne Standardwert (Freibetrag)">
+					<ValueTag tone="ink" value="€ 200" />
 				</Probe>
 			</div>
 		</Abschnitt>

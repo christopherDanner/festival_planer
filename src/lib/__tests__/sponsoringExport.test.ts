@@ -25,8 +25,11 @@ function makeRow(overrides: Partial<SponsoringOverviewRow>): SponsoringOverviewR
 		sponsoringId: 'spo-1',
 		companyName: 'Firma',
 		positions: [],
+		positionsByCategoryId: {},
 		freeAmount: null,
+		inKind: null,
 		total: 0,
+		previousTotal: null,
 		...overrides
 	};
 }
@@ -37,8 +40,8 @@ describe('buildSponsoringExportRows', () => {
 			makeRow({
 				companyName: 'Raiffeisen',
 				positions: [
-					{ label: 'Werbeplakat', value: 150 },
-					{ label: 'Social-Media-Beitrag', value: 100 }
+					{ categoryId: 'cat-1', label: 'Werbeplakat', value: 150, overridden: false },
+					{ categoryId: 'cat-2', label: 'Social-Media-Beitrag', value: 100, overridden: false }
 				],
 				freeAmount: 100.5,
 				total: 350.5

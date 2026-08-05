@@ -1,30 +1,49 @@
 import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
 
-export interface ValueTagProps extends React.HTMLAttributes<HTMLSpanElement> {
+const valueTagVariants = cva(
+	'inline-flex items-baseline gap-1.5 whitespace-nowrap border-1.5 px-[9px] py-[3px] text-[11.5px] font-bold',
+	{
+		variants: {
+			tone: {
+				/** Leistung mit Standardwert — die Wertmarke der Vision. */
+				green: 'border-gruen bg-white text-gruen',
+				/** Betrag ohne Standardwert (Freibetrag): Tinte-Rahmen auf Papiergrund. */
+				ink: 'border-tinte bg-papier text-tinte',
+				/** Nichts erfasst / Sachleistung: gestrichelt grau. */
+				muted: 'border-dashed border-tinte-soft bg-white text-tinte-soft'
+			}
+		},
+		defaultVariants: { tone: 'green' }
+	}
+);
+
+export interface ValueTagProps
+	extends React.HTMLAttributes<HTMLSpanElement>,
+		VariantProps<typeof valueTagVariants> {
 	/** Betrag rechts in Akzentschrift, z. B. „€ 200" */
 	value?: React.ReactNode;
 	/** Überschriebener Wert wird rot (DESIGN-VISION.md §4) */
 	overridden?: boolean;
-	/** Gestrichelt-graue Variante: „ohne Kategorie"/Sachleistung */
-	muted?: boolean;
 }
 
-/** Wertmarke: grüner Rahmen, Kategoriename + Akzentschrift-Wert
-(DESIGN-VISION.md §4 „Wertmarke"). */
-export function ValueTag({ className, children, value, overridden, muted, ...props }: ValueTagProps) {
+/** Wertmarke: Kategoriename + Akzentschrift-Wert (DESIGN-VISION.md §4 „Wertmarke"). */
+export function ValueTag({ className, children, value, overridden, tone, ...props }: ValueTagProps) {
 	return (
-		<span
-			className={cn(
-				'inline-flex items-baseline gap-1.5 whitespace-nowrap border-1.5 bg-white px-[9px] py-[3px] text-[11.5px] font-bold',
-				muted ? 'border-dashed border-tinte-soft text-tinte-soft' : 'border-gruen text-gruen',
-				className,
-			)}
-			{...props}
-		>
+		<span className={cn(valueTagVariants({ tone }), className)} {...props}>
 			{children}
-			{value != null && <span className={cn('font-display text-xs font-semibold tracking-[.02em]', overridden && 'text-rot')}>{value}</span>}
+			{value != null && (
+				<span
+					className={cn(
+						'font-display text-xs font-semibold tracking-[.02em]',
+						overridden && 'text-rot'
+					)}
+				>
+					{value}
+				</span>
+			)}
 		</span>
 	);
 }
