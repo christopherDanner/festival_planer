@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { POSTER_FONT } from '@/lib/pdfFonts';
+import { POSTER_MARGIN } from '@/lib/pdfPoster';
 
 /** Jeder gedruckte Text mit der Schrift, in der er gesetzt wurde. */
 interface Printed {
@@ -214,7 +215,7 @@ beforeEach(() => {
 	recorder.printed.length = 0;
 });
 
-describe('buildShiftPlanPdf — Einsatzplan in Plakat-Optik', () => {
+describe('buildShiftPlanPdf — Schichtplan in Plakat-Optik', () => {
 	it('bedruckt das Papier ausschließlich mit den eingebetteten Schriften', () => {
 		buildShiftPlanPdf(shiftPlanData());
 
@@ -227,10 +228,10 @@ describe('buildShiftPlanPdf — Einsatzplan in Plakat-Optik', () => {
 
 		expect(poster.drawPosterHead).toHaveBeenCalledWith(
 			expect.anything(),
-			expect.objectContaining({ title: 'Stadlfest 2026', subtitle: 'Einsatzplan' })
+			expect.objectContaining({ title: 'Stadlfest 2026', subtitle: 'Schichtplan' })
 		);
 		expect(poster.drawPosterFooter).toHaveBeenCalled();
-		expect(printed().map((p) => p.text)).toContain('Stadlfest 2026 — Einsatzplan — Seite 1/1');
+		expect(printed().map((p) => p.text)).toContain('Stadlfest 2026 — Schichtplan — Seite 1/1');
 		expect(printed().map((p) => p.text)).toContain('Ausschank');
 	});
 
@@ -253,9 +254,28 @@ describe('buildShiftPlanPdf — Einsatzplan in Plakat-Optik', () => {
 			expect.objectContaining({ label: '3 fehlen', tone: 'rot' })
 		);
 	});
+
+	it('hält Stempel und Stationsname im Rahmen, auch bei langem Wortlaut', () => {
+		const data = shiftPlanData();
+		data.stations[0].name = 'Ausschank Bierzelt hinten beim Stadl (Nachtschicht)';
+		data.stations[1].required_people = 120;
+
+		buildShiftPlanPdf(data);
+
+		// Der Stempel wird rechts angeschlagen, damit der Rahmen am Rand endet
+		// (297mm ist die Breite von A4 quer).
+		for (const [, options] of vi.mocked(poster.drawStamp).mock.calls) {
+			expect(options.align).toBe('right');
+			expect(options.x).toBeLessThanOrEqual(297 - POSTER_MARGIN + 0.01);
+		}
+		// Der Name wird gekürzt, statt ins Maßband zu laufen.
+		const names = printed().filter((p) => p.text.startsWith('AUSSCHANK'));
+		expect(names).toHaveLength(1);
+		expect(names[0].text.endsWith('…')).toBe(true);
+	});
 });
 
-describe('buildSchedulePdf — Programmzettel in Plakat-Optik', () => {
+describe('buildSchedulePdf — Ablaufplan in Plakat-Optik', () => {
 	it('bedruckt das Papier ausschließlich mit den eingebetteten Schriften', () => {
 		buildSchedulePdf(scheduleOptions());
 
@@ -263,26 +283,18 @@ describe('buildSchedulePdf — Programmzettel in Plakat-Optik', () => {
 		expect([...new Set(printed().map((p) => p.font))].sort()).toEqual([...POSTER_FONTS].sort());
 	});
 
-	it('benennt das Papier nach dem gewählten Ausschnitt', () => {
-		buildSchedulePdf(scheduleOptions({ entryTypeFilter: 'program' }));
-		expect(poster.drawPosterHead).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({ subtitle: 'Programmzettel' })
-		);
-
-		vi.clearAllMocks();
-		buildSchedulePdf(scheduleOptions({ entryTypeFilter: 'task' }));
-		expect(poster.drawPosterHead).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({ subtitle: 'Aufgaben-Werkliste' })
-		);
-
-		vi.clearAllMocks();
-		buildSchedulePdf(scheduleOptions({ entryTypeFilter: 'all' }));
-		expect(poster.drawPosterHead).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({ subtitle: 'Ablaufplan' })
-		);
+	it('heißt „Ablaufplan", auch wenn nur Programmpunkte gewählt sind', () => {
+		// Der Programmzettel darf laut CONTEXT.md/ADR 0007 weder Phasen noch
+		// Verantwortliche zeigen — dieses Papier tut beides. Es so zu betiteln
+		// wäre eine falsche Aufschrift; die zwei echten Papiere baut #67.
+		for (const entryTypeFilter of ['all', 'task', 'program'] as const) {
+			vi.clearAllMocks();
+			buildSchedulePdf(scheduleOptions({ entryTypeFilter }));
+			expect(poster.drawPosterHead).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({ subtitle: 'Ablaufplan' })
+			);
+		}
 	});
 
 	it('setzt den Tag als Sektionszeile, die Phase in der Akzentschrift und stempelt die fertige Phase', () => {

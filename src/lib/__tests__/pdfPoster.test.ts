@@ -11,7 +11,8 @@ import {
 	drawSectionHeading,
 	drawStamp,
 	posterTableTheme,
-	rulerFillFraction
+	rulerFillFraction,
+	truncateToWidth
 } from '@/lib/pdfPoster';
 
 interface Call {
@@ -68,7 +69,7 @@ describe('drawPosterHead', () => {
 		const doc = createPosterDoc({ orientation: 'portrait' });
 		const calls = recordStrokes(doc);
 
-		const bottom = drawPosterHead(doc, { title: 'Stadlfest 2026', subtitle: 'Einsatzplan' });
+		const bottom = drawPosterHead(doc, { title: 'Stadlfest 2026', subtitle: 'Schichtplan' });
 
 		expect(argsOf(calls, 'setFillColor')).toContainEqual([...POSTER_COLOR.gruen]);
 		expect(argsOf(calls, 'rect').some((args) => args[4] === 'F')).toBe(true);
@@ -82,7 +83,7 @@ describe('drawPosterHead', () => {
 		// Titel in Versalien, Akzentschrift.
 		expect(argsOf(calls, 'setFont')).toContainEqual([POSTER_FONT.accent, 'normal']);
 		expect(argsOf(calls, 'text').some((args) => args[0] === 'STADLFEST 2026')).toBe(true);
-		expect(argsOf(calls, 'text').some((args) => args[0] === 'EINSATZPLAN')).toBe(true);
+		expect(argsOf(calls, 'text').some((args) => args[0] === 'SCHICHTPLAN')).toBe(true);
 		expect(bottom).toBeGreaterThan(0);
 	});
 
@@ -153,6 +154,20 @@ describe('drawStamp', () => {
 		expect(argsOf(calls, 'setDrawColor')).toContainEqual([...POSTER_COLOR.gruen]);
 	});
 
+	it('liest x als rechte Kante, wenn rechts angeschlagen wird', () => {
+		const doc = createPosterDoc({ orientation: 'portrait' });
+		const calls = recordStrokes(doc);
+
+		drawStamp(doc, { x: 100, y: 30, label: 'Voll besetzt', align: 'right' });
+
+		// Der Rahmen beginnt links von der Anschlagkante und endet auf ihr.
+		const [start] = of(calls, 'lines')[0].args.slice(1) as number[];
+		expect(start).toBeLessThan(100);
+		const spans = argsOf(calls, 'lines')[0][0] as [number, number][];
+		const widest = Math.max(...spans.map(([dx]) => Math.abs(dx)));
+		expect(start + widest).toBeCloseTo(100, 0);
+	});
+
 	it('nimmt Rot für den Fehlt-Stempel', () => {
 		const doc = createPosterDoc({ orientation: 'portrait' });
 		const calls = recordStrokes(doc);
@@ -179,6 +194,24 @@ describe('drawSectionHeading', () => {
 	});
 });
 
+describe('truncateToWidth', () => {
+	it('lässt Text, der passt, unangetastet', () => {
+		const doc = createPosterDoc({ orientation: 'portrait' });
+		expect(truncateToWidth(doc, 'AUSSCHANK', 100)).toBe('AUSSCHANK');
+	});
+
+	it('kürzt mit Auslassungszeichen, bis der Text in die Breite passt', () => {
+		const doc = createPosterDoc({ orientation: 'portrait' });
+		const long = 'AUSSCHANK BIERZELT HINTEN BEIM STADL';
+
+		const cut = truncateToWidth(doc, long, 20);
+
+		expect(cut).not.toBe(long);
+		expect(cut.endsWith('…')).toBe(true);
+		expect(doc.getTextWidth(cut)).toBeLessThanOrEqual(20);
+	});
+});
+
 describe('posterTableTheme', () => {
 	it('bedruckt Tabellen mit den eingebetteten Schriften, Tinte-Gitter und grünem Kopf', () => {
 		const theme = posterTableTheme();
@@ -189,6 +222,13 @@ describe('posterTableTheme', () => {
 		expect(theme.headStyles?.fillColor).toEqual([...POSTER_COLOR.gruen]);
 		expect(theme.headStyles?.textColor).toEqual([...POSTER_COLOR.weiss]);
 		expect(theme.theme).toBe('grid');
+	});
+
+	it('nimmt eine Zellengröße an und hält den Kopf eine halbe Stufe größer', () => {
+		const theme = posterTableTheme({ fontSize: 7.5 });
+
+		expect(theme.styles?.fontSize).toBe(7.5);
+		expect(theme.headStyles?.fontSize).toBe(8);
 	});
 });
 

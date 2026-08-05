@@ -8,6 +8,7 @@ import {
 	drawPosterFooter,
 	drawPosterHead,
 	drawStamp,
+	posterTableEnd,
 	posterTableTheme
 } from '@/lib/pdfPoster';
 import {
@@ -39,13 +40,12 @@ export function buildSponsoringOverviewPdf(
 	});
 
 	const body = buildSponsoringExportRows(rows);
-	const theme = posterTableTheme();
+	const theme = posterTableTheme({ fontSize: 9 });
 	autoTable(doc, {
 		...theme,
 		startY: y,
 		head: [SPONSORING_EXPORT_COLUMNS],
 		body,
-		styles: { ...theme.styles, fontSize: 9 },
 		columnStyles: {
 			0: { cellWidth: 45, fontStyle: 'bold' }, // Firma
 			1: { cellWidth: 'auto' }, // Leistungen
@@ -60,10 +60,9 @@ export function buildSponsoringOverviewPdf(
 		}
 	});
 
-	const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
 	drawStamp(doc, {
 		x: POSTER_MARGIN,
-		y: finalY,
+		y: posterTableEnd(doc) + 6,
 		label: rows.length === 1 ? '1 Sponsor' : `${rows.length} Sponsoren`,
 		tone: 'tinte'
 	});

@@ -12,7 +12,8 @@ import {
 	drawRuler,
 	drawSectionHeading,
 	drawStamp,
-	posterTableTheme
+	posterTableTheme,
+	truncateToWidth
 } from '@/lib/pdfPoster';
 import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
 
@@ -155,8 +156,11 @@ export function exportToExcel(data: ExportData): void {
 
 // ── PDF Export ────────────────────────────────────────────────
 
+/** Eine Stationsspalte des Papiers, wie {@link buildStationColumns} sie baut. */
+type StationColumn = ReturnType<typeof buildStationColumns>[number];
+
 /** Personen, die insgesamt auf einer Station stehen (Station + Schichten). */
-function assignedPeople(column: ReturnType<typeof buildStationColumns>[number]): number {
+function assignedPeople(column: StationColumn): number {
 	return (
 		column.stationMemberNames.length +
 		column.shiftBlocks.reduce((sum, block) => sum + block.names.length, 0)
@@ -169,11 +173,7 @@ function assignedPeople(column: ReturnType<typeof buildStationColumns>[number]):
  *
  * @returns y-Kante unter der Leiste.
  */
-function drawStaffingBars(
-	doc: jsPDF,
-	columns: ReturnType<typeof buildStationColumns>,
-	startY: number
-): number {
+function drawStaffingBars(doc: jsPDF, columns: StationColumn[], startY: number): number {
 	const pageWidth = doc.internal.pageSize.getWidth();
 	const pageHeight = doc.internal.pageSize.getHeight();
 	const width = pageWidth - POSTER_MARGIN * 2;
@@ -198,7 +198,13 @@ function drawStaffingBars(
 		doc.setFont(POSTER_FONT.accent, 'normal');
 		doc.setFontSize(11);
 		doc.setTextColor(...POSTER_COLOR.tinte);
-		doc.text(column.station.name.toUpperCase(), POSTER_MARGIN, y + 4.2);
+		// Der Name darf nicht ins Maßband laufen — lieber gekürzt als überdruckt.
+		const nameWidth = width * 0.22;
+		doc.text(
+			truncateToWidth(doc, column.station.name.toUpperCase(), nameWidth),
+			POSTER_MARGIN,
+			y + 4.2
+		);
 
 		drawRuler(doc, {
 			x: POSTER_MARGIN + width * 0.24,
@@ -213,11 +219,14 @@ function drawStaffingBars(
 		doc.setFontSize(8.5);
 		doc.text(`${assigned}/${required} Personen`, POSTER_MARGIN + width * 0.64, y + 4.2);
 
+		// Rechts angeschlagen: die Stempelbreite hängt am Wortlaut, der Rahmen
+		// soll trotzdem am Seitenrand enden.
 		drawStamp(doc, {
-			x: POSTER_MARGIN + width * 0.79,
+			x: POSTER_MARGIN + width,
 			y,
 			label: missing > 0 ? `${missing} fehlen` : 'Voll besetzt',
-			tone: missing > 0 ? 'rot' : 'gruen'
+			tone: missing > 0 ? 'rot' : 'gruen',
+			align: 'right'
 		});
 
 		y += 7.5;
@@ -226,7 +235,10 @@ function drawStaffingBars(
 	return y + 4;
 }
 
-/** Baut den Einsatzplan als Plakat; das Speichern macht {@link exportToPdf}. */
+/**
+ * Baut den Schichtplan als Plakat (im Issue „Einsatzplan"; im Glossar heißt das
+ * Papier Schichtplan); das Speichern macht {@link exportToPdf}.
+ */
 export function buildShiftPlanPdf(data: ExportData): jsPDF {
 	const doc = createPosterDoc({ orientation: 'landscape' });
 	const pageWidth = doc.internal.pageSize.getWidth();
@@ -234,7 +246,7 @@ export function buildShiftPlanPdf(data: ExportData): jsPDF {
 
 	let y = drawPosterHead(doc, {
 		title: data.festivalName,
-		subtitle: 'Einsatzplan',
+		subtitle: 'Schichtplan',
 		note: data.festivalDate,
 		height: 20
 	});
@@ -256,8 +268,6 @@ export function buildShiftPlanPdf(data: ExportData): jsPDF {
 		if (col.responsible) {
 			lines.push(`Leitung: ${col.responsible}`);
 		}
-		// Ist/Soll steht schon als Maßband in der Besetzungs-Leiste.
-
 		/* Leerzeile nur zwischen zwei Blöcken — sonst beginnt die Spalte mit
 		einer leeren Zeile, die quer durch alle Stationen läuft. */
 		const separate = () => {
@@ -292,13 +302,13 @@ export function buildShiftPlanPdf(data: ExportData): jsPDF {
 	const usableWidth = pageWidth - margin * 2;
 	const colWidth = usableWidth / columns.length;
 
-	const theme = posterTableTheme();
+	const theme = posterTableTheme({ fontSize: 7.5 });
 	autoTable(doc, {
 		...theme,
 		startY: y,
 		head: [head],
 		body: bodyRows,
-		styles: { ...theme.styles, fontSize: 7.5, cellWidth: 'wrap' },
+		styles: { ...theme.styles, cellWidth: 'wrap' },
 		headStyles: {
 			...theme.headStyles,
 			// Stationsnamen sind ein Fall für die Akzentschrift (Vision §4).
@@ -335,7 +345,7 @@ export function buildShiftPlanPdf(data: ExportData): jsPDF {
 		}
 	});
 
-	drawPosterFooter(doc, `${data.festivalName} — Einsatzplan`);
+	drawPosterFooter(doc, `${data.festivalName} — Schichtplan`);
 	return doc;
 }
 

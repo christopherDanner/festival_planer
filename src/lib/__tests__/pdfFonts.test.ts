@@ -7,7 +7,7 @@ import { POSTER_FONT, POSTER_FONT_FILES, registerPosterFonts } from '@/lib/pdfFo
  * Latin-Subset deckt sie ab; die Icon-Glyphen der Vision (♛ ♪ ✓) liegen
  * außerhalb und bleiben darum aus den PDFs heraus.
  */
-const EXPORT_VOCABULARY = 'äöüÄÖÜß–—€·';
+const EXPORT_VOCABULARY = 'äöüÄÖÜß–—€·…';
 
 describe('registerPosterFonts', () => {
 	it('meldet Arbeits- und Akzentschrift bei jsPDF an', () => {

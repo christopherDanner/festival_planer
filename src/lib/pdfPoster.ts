@@ -67,18 +67,16 @@ const HALFTONE_TILE = 3.7;
 /** Punktradius: 1.15px bei 96 dpi. */
 const HALFTONE_DOT = 0.3;
 
-type Rgb = readonly [number, number, number];
-
-function fill(doc: jsPDF, color: Rgb): void {
+function fill(doc: jsPDF, color: PosterRgb): void {
 	doc.setFillColor(color[0], color[1], color[2]);
 }
 
-function stroke(doc: jsPDF, color: Rgb, width: number): void {
+function stroke(doc: jsPDF, color: PosterRgb, width: number): void {
 	doc.setDrawColor(color[0], color[1], color[2]);
 	doc.setLineWidth(width);
 }
 
-function ink(doc: jsPDF, color: Rgb): void {
+function ink(doc: jsPDF, color: PosterRgb): void {
 	doc.setTextColor(color[0], color[1], color[2]);
 }
 
@@ -88,6 +86,33 @@ function ink(doc: jsPDF, color: Rgb): void {
  */
 function letterSpace(doc: jsPDF, mm: number): void {
 	(doc as jsPDF & { setCharSpace(charSpace: number): jsPDF }).setCharSpace(mm);
+}
+
+/** Breite eines gesperrten Textes — `getTextWidth` kennt die Sperrung nicht. */
+function spacedTextWidth(doc: jsPDF, text: string, spacing: number): number {
+	return doc.getTextWidth(text) + text.length * spacing;
+}
+
+/**
+ * Kürzt Text mit „…", bis er in `maxWidth` passt. Ein Plakat hat harte Rahmen —
+ * ein langer Stationsname darf nicht ins Maßband hineinlaufen.
+ */
+export function truncateToWidth(doc: jsPDF, text: string, maxWidth: number): string {
+	if (doc.getTextWidth(text) <= maxWidth) return text;
+	let cut = text;
+	while (cut.length > 1 && doc.getTextWidth(`${cut}…`) > maxWidth) {
+		cut = cut.slice(0, -1);
+	}
+	return `${cut}…`;
+}
+
+/**
+ * Untere Kante der letzten `autoTable`-Tabelle. `lastAutoTable` hängt das
+ * Plugin ans Dokument, ohne es zu typisieren — die Ausnahme steckt hier an
+ * einer Stelle.
+ */
+export function posterTableEnd(doc: jsPDF): number {
+	return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 }
 
 export interface PosterDocOptions {
@@ -248,6 +273,12 @@ export interface PosterStampOptions {
 	tone?: 'gruen' | 'rot' | 'tinte';
 	/** Schriftgröße in pt. */
 	fontSize?: number;
+	/**
+	 * `'right'` liest `x` als **rechte** Kante des Stempels. Nötig, wo die
+	 * Stempelbreite vom Text abhängt und der Rahmen trotzdem am Seitenrand
+	 * enden soll — sonst blutet ein langer Wortlaut („12 fehlen") aus dem Blatt.
+	 */
+	align?: 'left' | 'right';
 }
 
 /** Dreht einen Punkt um `deg` gegen den Uhrzeigersinn um `(cx, cy)`. */
@@ -261,26 +292,29 @@ function rotate(px: number, py: number, cx: number, cy: number, deg: number): [n
 
 /** Neigung des Stempels in Grad (`.stamp--tilt-left` der Handschrift). */
 const STAMP_TILT = 2;
+/** Sperrung der Stempel-Versalien in mm. */
+const STAMP_LETTER_SPACE = 0.3;
 
 /**
  * Stempel: Versalien in der Rahmenfarbe, leicht schräg in einem harten Rahmen
- * (DESIGN-VISION §4). `x`/`y` sind die linke obere Ecke des Rahmens.
+ * (DESIGN-VISION §4). `y` ist die obere Kante, `x` je `align` die linke oder
+ * rechte.
  */
 export function drawStamp(doc: jsPDF, options: PosterStampOptions): void {
-	const { x, y, label, tone = 'gruen', fontSize = 9 } = options;
+	const { y, label, tone = 'gruen', fontSize = 9, align = 'left' } = options;
 	const text = label.toUpperCase();
 	const color = POSTER_COLOR[tone];
 
 	doc.setFont(POSTER_FONT.accent, 'normal');
 	doc.setFontSize(fontSize);
-	letterSpace(doc, 0.3);
+	letterSpace(doc, STAMP_LETTER_SPACE);
 
-	const textWidth = doc.getTextWidth(text) + text.length * 0.3;
 	const padX = 1.8;
 	const padY = 1.2;
-	const width = textWidth + padX * 2;
+	const width = spacedTextWidth(doc, text, STAMP_LETTER_SPACE) + padX * 2;
 	// pt → mm (1pt = 0.3528mm); die Versalhöhe genügt als Zeilenmaß.
 	const height = fontSize * 0.353 + padY * 2;
+	const x = align === 'right' ? options.x - width : options.x;
 
 	// `rect` kann nicht schräg — der Rahmen entsteht darum als gedrehtes Viereck.
 	const [start, ...corners] = (
@@ -310,6 +344,9 @@ export function drawStamp(doc: jsPDF, options: PosterStampOptions): void {
 	ink(doc, POSTER_COLOR.tinte);
 }
 
+/** Sperrung der Sektionszeile in mm (Vision §4: letter-spacing .08em). */
+const HEADING_LETTER_SPACE = 0.3;
+
 export interface PosterSectionHeadingOptions {
 	x: number;
 	y: number;
@@ -331,9 +368,9 @@ export function drawSectionHeading(doc: jsPDF, options: PosterSectionHeadingOpti
 
 	doc.setFont(POSTER_FONT.body, 'bold');
 	doc.setFontSize(10.5);
-	letterSpace(doc, 0.3);
+	letterSpace(doc, HEADING_LETTER_SPACE);
 	ink(doc, POSTER_COLOR.tinte);
-	const textWidth = doc.getTextWidth(text) + text.length * 0.3;
+	const textWidth = spacedTextWidth(doc, text, HEADING_LETTER_SPACE);
 	doc.text(text, x, y);
 	letterSpace(doc, 0);
 
@@ -358,18 +395,24 @@ export function drawSectionHeading(doc: jsPDF, options: PosterSectionHeadingOpti
 	return y + 4;
 }
 
+export interface PosterTableThemeOptions {
+	/** Schriftgröße der Zellen in pt; der Kopf bleibt eine halbe Stufe größer. */
+	fontSize?: number;
+}
+
 /**
  * Stil-Bündel für `autoTable`, damit alle drei Papiere dieselbe
  * Frachtbrief-Tabelle zeigen: eingebettete Schriften, Tinte-Gitter, grüner
  * Kopf, getönte Wechselzeilen.
  */
-export function posterTableTheme(): UserOptions {
+export function posterTableTheme(options: PosterTableThemeOptions = {}): UserOptions {
+	const { fontSize = 8.5 } = options;
 	return {
 		theme: 'grid',
 		styles: {
 			font: POSTER_FONT.body,
 			fontStyle: 'normal',
-			fontSize: 8.5,
+			fontSize,
 			textColor: [...POSTER_COLOR.tinte],
 			fillColor: [...POSTER_COLOR.weiss],
 			lineColor: [...POSTER_COLOR.tinte],
@@ -381,7 +424,7 @@ export function posterTableTheme(): UserOptions {
 		headStyles: {
 			font: POSTER_FONT.body,
 			fontStyle: 'bold',
-			fontSize: 9,
+			fontSize: fontSize + 0.5,
 			textColor: [...POSTER_COLOR.weiss],
 			fillColor: [...POSTER_COLOR.gruen],
 			lineColor: [...POSTER_COLOR.tinte],

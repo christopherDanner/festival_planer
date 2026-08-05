@@ -9,6 +9,7 @@ import {
   drawPosterHead,
   drawSectionHeading,
   drawStamp,
+  posterTableEnd,
   posterTableTheme
 } from '@/lib/pdfPoster';
 import type { ScheduleDayWithPhases, ScheduleEntryWithMember } from '@/lib/scheduleService';
@@ -22,19 +23,18 @@ export interface ScheduleExportOptions {
 }
 
 /**
- * Wie das Papier heißt, hängt am gewählten Ausschnitt: der Ablaufplan besteht
- * aus der internen Aufgaben-Werkliste und dem Programmzettel zum Aushang
- * (CONTEXT.md „Ablaufplan").
+ * Wie das Papier heißt: „Ablaufplan", unabhängig vom Filter.
+ *
+ * Der Ablaufplan besteht laut CONTEXT.md aus zwei Papieren — der internen
+ * Aufgaben-Werkliste und dem Programmzettel zum Aushang. Dieses Papier ist
+ * keins von beiden: es zeigt Phasen und Verantwortliche, die der Programmzettel
+ * ausdrücklich nicht tragen darf (ADR 0007). Es „Programmzettel" zu nennen, nur
+ * weil auf Programmpunkte gefiltert ist, wäre eine falsche Aufschrift. Das
+ * Aufspalten in die zwei echten Papiere gehört in den Bereich Ablaufplan (#67).
  */
-export function schedulePaperTitle(
-  entryTypeFilter: ScheduleExportOptions['entryTypeFilter']
-): string {
-  if (entryTypeFilter === 'program') return 'Programmzettel';
-  if (entryTypeFilter === 'task') return 'Aufgaben-Werkliste';
-  return 'Ablaufplan';
-}
+const PAPER_TITLE = 'Ablaufplan';
 
-/** Baut den Programmzettel als Plakat; das Speichern macht {@link exportScheduleToPdf}. */
+/** Baut den Ablaufplan als Plakat; das Speichern macht {@link exportScheduleToPdf}. */
 export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
   const { festivalName, days, selectedDayIds, selectedPhaseIds, entryTypeFilter } = options;
 
@@ -42,11 +42,9 @@ export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = POSTER_MARGIN;
   const width = pageWidth - margin * 2;
-  const paperTitle = schedulePaperTitle(entryTypeFilter);
-
   let y = drawPosterHead(doc, {
     title: festivalName,
-    subtitle: paperTitle
+    subtitle: PAPER_TITLE
   });
 
   const filteredDays = days.filter(d => selectedDayIds.has(d.id));
@@ -95,11 +93,14 @@ export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
       doc.setTextColor(...POSTER_COLOR.tinte);
       doc.text(phase.name.toUpperCase(), margin, y);
       if (done === entries.length) {
+        // Rechts am Seitenrand angeschlagen — ein langer Phasenname würde den
+        // Stempel sonst über den Rahmen hinausschieben.
         drawStamp(doc, {
-          x: margin + doc.getTextWidth(phase.name.toUpperCase()) + 4,
+          x: margin + width,
           y: y - 3.6,
           label: 'Erledigt',
-          tone: 'gruen'
+          tone: 'gruen',
+          align: 'right'
         });
       }
       y += 3;
@@ -154,13 +155,13 @@ export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
         }
       });
 
-      y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 7;
+      y = posterTableEnd(doc) + 7;
     }
 
     y += 3; // Extra space between days
   }
 
-  drawPosterFooter(doc, `${festivalName} — ${paperTitle}`);
+  drawPosterFooter(doc, `${festivalName} — ${PAPER_TITLE}`);
   return doc;
 }
 
