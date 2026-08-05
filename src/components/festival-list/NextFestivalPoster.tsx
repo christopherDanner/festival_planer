@@ -56,7 +56,7 @@ export default function NextFestivalPoster({
 			<Stamp tone="yellow" size="md" tilt="none" filled className="mt-2.5 tracking-[.06em]">
 				{festCountdown(festival.start_date, festival.end_date, today).toUpperCase()}
 			</Stamp>
-			<PosterStats metrics={metrics} tone="hell" />
+			<PosterStats metrics={metrics} tone="light" />
 			<Button
 				onClick={onOpen}
 				className="mt-3.5 h-10 w-full border-0 bg-white text-[12.5px] text-tinte hover:bg-white/90">

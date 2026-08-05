@@ -20,9 +20,9 @@ export async function getFestivalMetrics(festivalIds: string[]): Promise<Festiva
 	if (festivalIds.length === 0) return {};
 
 	const [shifts, materials, sponsorings] = await Promise.all([
-		queryRows<FestivalScopedRow>('station_shifts', 'festival_id', festivalIds),
-		queryRows<FestivalScopedRow>('festival_materials', 'festival_id', festivalIds),
-		queryRows<FestivalSponsoringRow>('sponsorings', SPONSORING_VALUES_SELECT, festivalIds)
+		queryByFestival<FestivalScopedRow>('station_shifts', 'festival_id', festivalIds),
+		queryByFestival<FestivalScopedRow>('festival_materials', 'festival_id', festivalIds),
+		queryByFestival<FestivalSponsoringRow>('sponsorings', SPONSORING_VALUES_SELECT, festivalIds)
 	]);
 
 	return buildFestivalMetrics({ shifts, materials, sponsorings });
@@ -44,9 +44,18 @@ interface RowQueryClient {
 	};
 }
 
-async function queryRows<T>(table: string, columns: string, festivalIds: string[]): Promise<T[]> {
+/**
+ * Holt `select` aus `table` für alle übergebenen Feste auf einmal. Gefiltert
+ * wird immer über `festival_id` — das ist der Sinn der Sache und nicht Teil der
+ * Spaltenliste.
+ */
+async function queryByFestival<T>(
+	table: string,
+	select: string,
+	festivalIds: string[]
+): Promise<T[]> {
 	const client = supabase as unknown as RowQueryClient;
-	const { data, error } = await client.from(table).select(columns).in('festival_id', festivalIds);
+	const { data, error } = await client.from(table).select(select).in('festival_id', festivalIds);
 
 	if (error) throw new Error(error.message);
 	return (data ?? []) as T[];

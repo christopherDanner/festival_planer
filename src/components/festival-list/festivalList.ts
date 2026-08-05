@@ -42,10 +42,11 @@ export function festivalTitle(festival: Festival): string {
 }
 
 /**
- * Kennzahl-Zeile eines Plakats („52 Schichten · 86 Materialien · € 4.850
- * Sponsoring"). Leere Werte fallen weg statt als „0" dazustehen — ein Fest ohne
- * Sponsoring zeigt keine €-Angabe. Ohne geladene Kennzahlen (Wand ist schneller
- * als die Abfrage, oder die Abfrage ist gescheitert) bleibt die Zeile leer.
+ * Die Angaben der Kennzahl-Zeile eines Plakats („52 Schichten", „86
+ * Materialien", „€ 4.850 Sponsoring"). Leere Werte fallen weg statt als „0"
+ * dazustehen — ein Fest ohne Sponsoring zeigt keine €-Angabe. Ohne geladene
+ * Kennzahlen (die Wand ist schneller als die Abfrage, oder die Abfrage ist
+ * gescheitert) bleibt die Zeile leer.
  */
 export function festivalStatTexts(metrics: FestivalMetrics | undefined): string[] {
 	if (!metrics) return [];

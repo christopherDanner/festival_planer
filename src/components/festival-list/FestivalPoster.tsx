@@ -81,7 +81,7 @@ export default function FestivalPoster({
 			<div className="font-display text-[12.5px] font-semibold tracking-[.04em] text-tinte-soft">
 				{dateLine}
 			</div>
-			<PosterStats metrics={metrics} tone="grau" />
+			<PosterStats metrics={metrics} tone="muted" />
 			<div className="mt-2.5 flex gap-1.5">
 				<Button variant="outline" onClick={onOpen} className="h-10 flex-1 px-2 text-[11.5px]">
 					ÖFFNEN
