@@ -141,7 +141,15 @@ const SponsorUebernahmeDialog: React.FC<SponsorUebernahmeDialogProps> = ({
 							: createdByName.get(cat.name.trim().toLowerCase())!,
 					value: cat.assignedValue
 				}));
-				await createSponsoring(festivalId, plan.sponsorId, plan.freeAmount, assignments);
+				// Der Einzel-Dialog darf Werte mitnehmen — hier entscheidet ein Mensch pro
+				// Firma, und "wie letztes Jahr" ist am Telefon eine echte Zusage. Das
+				// Kopierwerk bei der Fest-Anlage übernimmt Sponsoren dagegen als nackte
+				// Verknüpfung ohne Beträge; die Semantik der zwei Wege divergiert bewusst
+				// (ADR 0008). Das Quellfest wird festgehalten — nur so hat das übernommene
+				// Sponsoring später einen Vorjahresbeitrag.
+				await createSponsoring(festivalId, plan.sponsorId, plan.freeAmount, assignments, null, {
+					copied_from_festival_id: sourceId
+				});
 			}
 
 			toast({

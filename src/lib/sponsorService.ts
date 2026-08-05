@@ -73,7 +73,8 @@ export const updateSponsor = async (
 	if (error) throw new Error(error.message);
 };
 
-// Delete a sponsor (RLS restricts this to the creator).
+// Delete a sponsor. Seit dem RLS-Nachzug (ADR 0002) darf das jeder
+// angemeldete Benutzer, nicht mehr nur der Ersteller.
 export const deleteSponsor = async (sponsorId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsors').delete().eq('id', sponsorId);
 	if (error) throw new Error(error.message);
@@ -131,7 +132,8 @@ export const updateCategory = async (
 	if (error) throw new Error(error.message);
 };
 
-// Delete a sponsoring category (RLS restricts this to the festival creator).
+// Delete a sponsoring category. Seit dem RLS-Nachzug (ADR 0002) darf das jeder
+// angemeldete Benutzer, nicht mehr nur der Fest-Ersteller.
 export const deleteCategory = async (categoryId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsoring_categories').delete().eq('id', categoryId);
 	if (error) throw new Error(error.message);
@@ -145,9 +147,33 @@ export interface Sponsoring {
 	sponsor_id: string;
 	free_amount: number | null;
 	notes: string | null;
+	/** Sachleistung: was die Firma nicht in Geld gibt (ADR 0008). Höchstens eine je Sponsoring. */
+	in_kind_description: string | null;
+	/** Geschätzter Wert der Sachleistung — zweite Zahl, zählt nie ins Geld (ADR 0008). */
+	in_kind_value: number | null;
+	/** Quellfest einer Sponsor-Übernahme; Grundlage des Vorjahresbeitrags (ADR 0008). */
+	copied_from_festival_id: string | null;
 	created_at: string;
 	updated_at: string;
 }
+
+/**
+ * Die Sachleistung eines Sponsorings: Beschreibung und geschätzter Wert.
+ * Die zwei Spalten sind die Körnung — mehr als eine Sachleistung je
+ * Sponsoring gibt es nicht (ADR 0008). Dass beide gemeinsam gesetzt werden,
+ * ist Sache der Oberfläche; das Schema erzwingt es nicht.
+ */
+export type SponsoringInKind = Pick<Sponsoring, 'in_kind_description' | 'in_kind_value'>;
+
+/**
+ * Was die gewöhnliche Anlage eines Sponsorings offen lässt: die Sachleistung
+ * und der Quellfest-Zeiger. Letzteren setzt **nur** die Sponsor-Übernahme —
+ * bei der normalen Anlage gibt es kein Quellfest, und ohne eines gibt es auch
+ * keinen Vorjahresbeitrag (ADR 0008).
+ */
+export type SponsoringInKindAndOrigin = Partial<
+	SponsoringInKind & Pick<Sponsoring, 'copied_from_festival_id'>
+>;
 
 export interface SponsoringCategoryAssignment {
 	id: string;
@@ -194,11 +220,20 @@ export const createSponsoring = async (
 	sponsorId: string,
 	freeAmount: number | null,
 	assignments: SponsoringAssignmentInput[],
-	notes: string | null = null
+	notes: string | null = null,
+	extras: SponsoringInKindAndOrigin = {}
 ): Promise<string> => {
 	const { data, error } = await supabase
 		.from('sponsorings')
-		.insert({ festival_id: festivalId, sponsor_id: sponsorId, free_amount: freeAmount, notes })
+		.insert({
+			festival_id: festivalId,
+			sponsor_id: sponsorId,
+			free_amount: freeAmount,
+			notes,
+			in_kind_description: extras.in_kind_description ?? null,
+			in_kind_value: extras.in_kind_value ?? null,
+			copied_from_festival_id: extras.copied_from_festival_id ?? null
+		})
 		.select('id')
 		.single();
 
@@ -214,9 +249,11 @@ export const createSponsoring = async (
 };
 
 // Update a sponsoring; the assignments replace the existing ones entirely.
+// Der Quellfest-Zeiger ist bewusst nicht änderbar: er hält fest, woher das
+// Sponsoring übernommen wurde, und das ändert sich beim Bearbeiten nicht.
 export const updateSponsoring = async (
 	sponsoringId: string,
-	updates: Partial<Pick<Sponsoring, 'free_amount' | 'notes'>>,
+	updates: Partial<Pick<Sponsoring, 'free_amount' | 'notes'> & SponsoringInKind>,
 	assignments: SponsoringAssignmentInput[]
 ): Promise<void> => {
 	const { error } = await supabase
@@ -239,7 +276,8 @@ export const updateSponsoring = async (
 	}
 };
 
-// Delete a sponsoring (RLS restricts this to the festival creator).
+// Delete a sponsoring. Seit dem RLS-Nachzug (ADR 0002) darf das jeder
+// angemeldete Benutzer, nicht mehr nur der Fest-Ersteller.
 export const deleteSponsoring = async (sponsoringId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsorings').delete().eq('id', sponsoringId);
 	if (error) throw new Error(error.message);

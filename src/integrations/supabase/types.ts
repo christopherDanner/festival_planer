@@ -210,33 +210,49 @@ export type Database = {
 			};
 			sponsorings: {
 				Row: {
+					copied_from_festival_id: string | null;
 					created_at: string;
 					festival_id: string;
 					free_amount: number | null;
 					id: string;
+					in_kind_description: string | null;
+					in_kind_value: number | null;
 					notes: string | null;
 					sponsor_id: string;
 					updated_at: string;
 				};
 				Insert: {
+					copied_from_festival_id?: string | null;
 					created_at?: string;
 					festival_id: string;
 					free_amount?: number | null;
 					id?: string;
+					in_kind_description?: string | null;
+					in_kind_value?: number | null;
 					notes?: string | null;
 					sponsor_id: string;
 					updated_at?: string;
 				};
 				Update: {
+					copied_from_festival_id?: string | null;
 					created_at?: string;
 					festival_id?: string;
 					free_amount?: number | null;
 					id?: string;
+					in_kind_description?: string | null;
+					in_kind_value?: number | null;
 					notes?: string | null;
 					sponsor_id?: string;
 					updated_at?: string;
 				};
 				Relationships: [
+					{
+						foreignKeyName: 'sponsorings_copied_from_festival_id_fkey';
+						columns: ['copied_from_festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					},
 					{
 						foreignKeyName: 'sponsorings_festival_id_fkey';
 						columns: ['festival_id'];
