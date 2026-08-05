@@ -27,9 +27,11 @@ const one = async <T>(sql: string, params: unknown[] = []): Promise<T> =>
 const count = async (sql: string, params: unknown[] = []): Promise<number> =>
 	Number((await one<{ n: string }>(sql, params)).n);
 
+// Eigene Frist: ein WASM-Postgres hochzufahren dauert länger als die
+// 10-Sekunden-Voreinstellung, sobald der zweite Prüfstand daneben startet.
 beforeAll(async () => {
 	db = await createSponsoringSchemaDb();
-});
+}, 60000);
 
 afterAll(async () => {
 	await db?.close();

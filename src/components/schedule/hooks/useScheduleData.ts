@@ -20,6 +20,7 @@ export const useScheduleData = (festivalId: string) => {
 
 	const refetchAll = () => {
 		queryClient.invalidateQueries({ queryKey: ['scheduleDays', festivalId] });
+		queryClient.invalidateQueries({ queryKey: ['helpers', festivalId] });
 	};
 
 	return {

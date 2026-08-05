@@ -31,7 +31,7 @@ export type HelperInput = Pick<Helper, 'first_name' | 'last_name'> &
 
 /** Die Helfer eines Fests. */
 export const getHelpers = async (festivalId: string): Promise<Helper[]> => {
-	const { data, error } = await (supabase as any)
+	const { data, error } = await supabase
 		.from('festival_helpers')
 		.select('*')
 		.eq('festival_id', festivalId)
@@ -45,7 +45,7 @@ export const getHelpers = async (festivalId: string): Promise<Helper[]> => {
 };
 
 export const createHelper = async (festivalId: string, helper: HelperInput): Promise<string> => {
-	const { data, error } = await (supabase as any)
+	const { data, error } = await supabase
 		.from('festival_helpers')
 		.insert({ ...helper, festival_id: festivalId })
 		.select('id')
@@ -59,13 +59,15 @@ export const createHelper = async (festivalId: string, helper: HelperInput): Pro
 };
 
 export const updateHelper = async (
+	festivalId: string,
 	helperId: string,
 	updates: Partial<HelperInput>
 ): Promise<void> => {
-	const { error } = await (supabase as any)
+	const { error } = await supabase
 		.from('festival_helpers')
 		.update(updates)
-		.eq('id', helperId);
+		.eq('id', helperId)
+		.eq('festival_id', festivalId);
 
 	if (error) {
 		throw new Error(error.message);
@@ -77,11 +79,12 @@ export const updateHelper = async (
  * `ON DELETE CASCADE` mit, der Verantwortliche-Verweis einer Station wird
  * vergessen (`ON DELETE SET NULL`) — siehe Migration 20260804000001.
  */
-export const deleteHelper = async (helperId: string): Promise<void> => {
-	const { error } = await (supabase as any)
+export const deleteHelper = async (festivalId: string, helperId: string): Promise<void> => {
+	const { error } = await supabase
 		.from('festival_helpers')
 		.delete()
-		.eq('id', helperId);
+		.eq('id', helperId)
+		.eq('festival_id', festivalId);
 
 	if (error) {
 		throw new Error(error.message);
@@ -94,17 +97,19 @@ export const deleteHelper = async (helperId: string): Promise<void> => {
  * Update auf seine Zeile.
  */
 export const updateHelperPreferences = async (
+	festivalId: string,
 	helperId: string,
 	stationPreferences: string[],
 	shiftPreferences: string[]
 ): Promise<void> => {
-	const { error } = await (supabase as any)
+	const { error } = await supabase
 		.from('festival_helpers')
 		.update({
 			station_preferences: stationPreferences,
 			shift_preferences: shiftPreferences
 		})
-		.eq('id', helperId);
+		.eq('id', helperId)
+		.eq('festival_id', festivalId);
 
 	if (error) {
 		throw new Error(error.message);

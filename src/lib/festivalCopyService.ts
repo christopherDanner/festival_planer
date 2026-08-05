@@ -48,15 +48,29 @@ export async function copyFestivalData(
 			const sourceStationHelpers = await getStationHelpers(sourceFestivalId);
 			const sourceAssignments = await getShiftAssignments(sourceFestivalId);
 
+			// Nur Helfer, deren Zuteilung auch mitkopiert wird. Wer allein an einer
+			// nicht gewählten Station hängt, bliebe im Zielfest ohne jede Zuteilung
+			// stehen — und ohne Mitglieder-Seite räumt das niemand mehr auf.
+			const selectedStationIds = new Set(selectedStations.map(s => s.id));
+			const selectedShiftIds = new Set(
+				(await getStationShifts(sourceFestivalId))
+					.filter(s => selectedStationIds.has(s.station_id))
+					.map(s => s.id)
+			);
+
 			const neededHelperIds = new Set<string>();
 			for (const s of selectedStations) {
 				if (s.responsible_helper_id) neededHelperIds.add(s.responsible_helper_id);
 			}
 			for (const sm of sourceStationHelpers) {
-				if (sm.helper_id) neededHelperIds.add(sm.helper_id);
+				if (sm.helper_id && selectedStationIds.has(sm.station_id)) {
+					neededHelperIds.add(sm.helper_id);
+				}
 			}
 			for (const a of sourceAssignments) {
-				if (a.helper_id) neededHelperIds.add(a.helper_id);
+				if (a.helper_id && selectedShiftIds.has(a.station_shift_id)) {
+					neededHelperIds.add(a.helper_id);
+				}
 			}
 
 			// Reihenfolge der Helferliste, damit die Kopie nachvollziehbar bleibt.

@@ -192,7 +192,7 @@ export const useShiftPlanningActions = (festivalId: string) => {
 
 	const updateHelperMutation = useMutation({
 		mutationFn: ({ id, updates }: { id: string; updates: Partial<HelperInput> }) =>
-			updateHelper(id, updates),
+			updateHelper(festivalId, id, updates),
 		onSuccess: () => {
 			invalidateAll();
 			toast({ title: 'Helfer aktualisiert', description: 'Helfer wurde erfolgreich aktualisiert.' });
@@ -207,7 +207,7 @@ export const useShiftPlanningActions = (festivalId: string) => {
 	});
 
 	const deleteHelperMutation = useMutation({
-		mutationFn: (id: string) => deleteHelper(id),
+		mutationFn: (id: string) => deleteHelper(festivalId, id),
 		onSuccess: () => {
 			invalidateAll();
 			toast({
@@ -289,7 +289,7 @@ export const useShiftPlanningActions = (festivalId: string) => {
 			helperId: string;
 			stationPrefs: string[];
 			shiftPrefs: string[];
-		}) => updateHelperPreferences(helperId, stationPrefs, shiftPrefs),
+		}) => updateHelperPreferences(festivalId, helperId, stationPrefs, shiftPrefs),
 		onSuccess: () => {
 			invalidateAll();
 			toast({

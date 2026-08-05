@@ -30,7 +30,9 @@ vi.mock('../shiftService', () => ({
 			name: 'Bar',
 			required_people: 2,
 			responsible_helper_id: 'h-alt-1'
-		}
+		},
+		// Nicht ausgewählte Station — was nur an ihr hängt, darf nicht mitkommen.
+		{ id: 'st-bleibt', festival_id: 'quelle', name: 'Kassa', required_people: 1 }
 	],
 	getStationShifts: async () => [
 		{
@@ -42,13 +44,25 @@ vi.mock('../shiftService', () => ({
 			start_time: '18:00',
 			end_time: '23:00',
 			required_people: 2
+		},
+		{
+			id: 'sh-bleibt',
+			festival_id: 'quelle',
+			station_id: 'st-bleibt',
+			name: 'Kassa-Abend',
+			start_date: '2026-07-01',
+			start_time: '18:00',
+			end_time: '23:00',
+			required_people: 1
 		}
 	],
 	getStationHelpers: async () => [
-		{ id: 'sm-1', festival_id: 'quelle', station_id: 'st-alt', helper_id: 'h-alt-1' }
+		{ id: 'sm-1', festival_id: 'quelle', station_id: 'st-alt', helper_id: 'h-alt-1' },
+		{ id: 'sm-2', festival_id: 'quelle', station_id: 'st-bleibt', helper_id: 'h-alt-3' }
 	],
 	getShiftAssignments: async () => [
-		{ id: 'sa-1', station_shift_id: 'sh-alt', helper_id: 'h-alt-2', position: 1 }
+		{ id: 'sa-1', station_shift_id: 'sh-alt', helper_id: 'h-alt-2', position: 1 },
+		{ id: 'sa-2', station_shift_id: 'sh-bleibt', helper_id: 'h-alt-4', position: 1 }
 	],
 	createStationsBulk: async (stations: any[]) => {
 		mocks.createdStations = stations;
@@ -73,7 +87,9 @@ vi.mock('../helperService', () => ({
 			? [
 					{ id: 'h-alt-1', festival_id: 'quelle', first_name: 'Hans', last_name: 'Huber' },
 					{ id: 'h-alt-2', festival_id: 'quelle', first_name: 'Eva', last_name: 'Ebner' },
-					{ id: 'h-alt-3', festival_id: 'quelle', first_name: 'Ohne', last_name: 'Zuteilung' }
+					{ id: 'h-alt-3', festival_id: 'quelle', first_name: 'Nur', last_name: 'Kassa' },
+					{ id: 'h-alt-4', festival_id: 'quelle', first_name: 'Nur', last_name: 'Kassaschicht' },
+					{ id: 'h-alt-5', festival_id: 'quelle', first_name: 'Ohne', last_name: 'Zuteilung' }
 				]
 			: [],
 	createHelper: async (festivalId: string, helper: { first_name: string; last_name: string }) => {
@@ -115,6 +131,17 @@ describe('copyFestivalData mit Zuteilungen', () => {
 			{ festivalId: 'ziel', first_name: 'Hans', last_name: 'Huber' },
 			{ festivalId: 'ziel', first_name: 'Eva', last_name: 'Ebner' }
 		]);
+	});
+
+	// Ohne Mitglieder-Seite gibt es keinen Ort, an dem jemand Helfer aufräumt,
+	// die nie eine Zuteilung bekommen — sie dürfen also gar nicht entstehen.
+	it('lässt Helfer aus, deren Zuteilungen nicht mitkopiert werden', async () => {
+		await copyFestivalData('quelle', 'ziel', options(true));
+
+		const copied = mocks.createdHelpers.map((h) => h.last_name);
+		expect(copied).not.toContain('Kassa');
+		expect(copied).not.toContain('Kassaschicht');
+		expect(copied).not.toContain('Zuteilung');
 	});
 
 	it('schlüsselt Stations- und Schicht-Zuteilungen auf die neuen Helfer um', async () => {

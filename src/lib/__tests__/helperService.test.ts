@@ -163,29 +163,38 @@ describe('createHelper', () => {
 	});
 });
 
+// Jeder Schreibweg nennt das Fest mit: die Helfer-ID allein wäre im
+// gemeinsamen Arbeitsbereich (ADR 0001/0002, RLS offen) der einzige Schutz
+// davor, mit einer veralteten ID in ein fremdes Fest zu schreiben.
 describe('updateHelper', () => {
-	it('ändert genau die eine Helfer-Zeile', async () => {
-		await updateHelper('h1', { notes: 'kann nur Samstag' });
+	it('ändert genau die eine Helfer-Zeile dieses Fests', async () => {
+		await updateHelper('fest-7', 'h1', { notes: 'kann nur Samstag' });
 
 		expect(lastCall().table).toBe('festival_helpers');
 		expect(lastCall().op).toBe('update');
-		expect(lastCall().filters).toEqual([['id', 'h1']]);
+		expect(lastCall().filters).toEqual([
+			['id', 'h1'],
+			['festival_id', 'fest-7']
+		]);
 	});
 });
 
 describe('deleteHelper', () => {
-	it('entfernt den Helfer aus dem Fest', async () => {
-		await deleteHelper('h1');
+	it('entfernt den Helfer aus genau diesem Fest', async () => {
+		await deleteHelper('fest-7', 'h1');
 
 		expect(lastCall().table).toBe('festival_helpers');
 		expect(lastCall().op).toBe('delete');
-		expect(lastCall().filters).toEqual([['id', 'h1']]);
+		expect(lastCall().filters).toEqual([
+			['id', 'h1'],
+			['festival_id', 'fest-7']
+		]);
 	});
 });
 
 describe('updateHelperPreferences', () => {
 	it('schreibt beide Wunsch-Arrays mit einem Update auf die Helfer-Zeile', async () => {
-		await updateHelperPreferences('h1', ['st-1'], ['sh-1', 'sh-2']);
+		await updateHelperPreferences('fest-7', 'h1', ['st-1'], ['sh-1', 'sh-2']);
 
 		expect(mocks.calls).toHaveLength(1);
 		expect(lastCall().table).toBe('festival_helpers');
@@ -194,11 +203,14 @@ describe('updateHelperPreferences', () => {
 			station_preferences: ['st-1'],
 			shift_preferences: ['sh-1', 'sh-2']
 		});
-		expect(lastCall().filters).toEqual([['id', 'h1']]);
+		expect(lastCall().filters).toEqual([
+			['id', 'h1'],
+			['festival_id', 'fest-7']
+		]);
 	});
 
 	it('fasst festival_member_preferences nicht mehr an', async () => {
-		await updateHelperPreferences('h1', [], []);
+		await updateHelperPreferences('fest-7', 'h1', [], []);
 
 		expect(mocks.calls.map((c) => c.table)).not.toContain('festival_member_preferences');
 	});
