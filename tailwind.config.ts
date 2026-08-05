@@ -30,6 +30,7 @@ export default {
         gelb: "oklch(var(--gelb) / <alpha-value>)",
         rot: "oklch(var(--rot) / <alpha-value>)",
         linie: "oklch(var(--linie) / <alpha-value>)",
+        kopfzeile: "oklch(var(--kopfzeile) / <alpha-value>)",
         fusszeile: "oklch(var(--fusszeile) / <alpha-value>)",
         border: "oklch(var(--border) / <alpha-value>)",
         input: "oklch(var(--input) / <alpha-value>)",

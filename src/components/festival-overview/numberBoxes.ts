@@ -4,6 +4,7 @@ Material bestellt-€, Verbraucht-€ (Ist) und Sponsoring. Alle Werte rechnen a
 den bereits geladenen Fest-Daten; die Summenlogik fürs Sponsoring bleibt in
 `sponsoringTotals` (keine Doppelung). */
 
+import { formatEuro } from '@/lib/money';
 import type { Station, StationShift, ShiftAssignment, StationMember } from '@/lib/shiftService';
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
@@ -141,15 +142,6 @@ export function deriveSponsoringMetric(sponsorings: SponsoringWithDetails[]): Sp
 }
 
 // --- Formatierung ------------------------------------------------------------
-
-/** „€ 7.431" — auf ganze Euro gerundet, Tausenderpunkt. Gruppierung manuell
-(unabhängig von der ICU-Locale der Laufzeit), damit Test und Browser gleich
-formatieren (de-AT/Werkstatt-Handschrift: Punkt als Tausendertrenner). */
-export function formatEuro(value: number): string {
-	const rounded = Math.abs(Math.round(value));
-	const grouped = String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-	return `€ ${grouped}`;
-}
 
 export type DeltaTone = 'under' | 'over' | 'equal';
 

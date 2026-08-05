@@ -7,9 +7,9 @@ import {
 	deriveMaterialOrdered,
 	deriveMaterialConsumed,
 	deriveSponsoringMetric,
-	formatEuro,
 	formatDeltaEuro
 } from './numberBoxes';
+import { formatEuro } from '@/lib/money';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
 

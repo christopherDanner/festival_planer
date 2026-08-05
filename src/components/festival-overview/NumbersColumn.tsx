@@ -12,10 +12,10 @@ import {
 	deriveMaterialOrdered,
 	deriveMaterialConsumed,
 	deriveSponsoringMetric,
-	formatEuro,
 	formatDeltaEuro,
 	type DeltaTone
 } from './numberBoxes';
+import { formatEuro } from '@/lib/money';
 
 interface NumbersColumnProps {
 	stations: Station[];

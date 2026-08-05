@@ -11,14 +11,6 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow
-} from '@/components/ui/table';
-import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
@@ -26,6 +18,8 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Building2, FileDown, Import } from 'lucide-react';
 import SponsorUebernahmeDialog from '@/components/sponsoring/SponsorUebernahmeDialog';
+import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
+import SponsoringMatrix from '@/components/sponsoring/SponsoringMatrix';
 import { useToast } from '@/hooks/use-toast';
 import {
 	getSponsors,
@@ -42,7 +36,9 @@ import {
 	type SponsoringAssignmentInput
 } from '@/lib/sponsorService';
 import {
+	buildSponsoringOverviewFooter,
 	buildSponsoringOverviewRows,
+	festivalInKindTotal,
 	festivalSponsoringTotal
 } from '@/lib/sponsoringTotals';
 import { exportSponsoringOverviewPdf } from '@/lib/sponsoringExportService';
@@ -220,8 +216,23 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		? sponsors
 		: sponsors.filter((s) => !sponsorings.some((sp) => sp.sponsor_id === s.id));
 
+	/* Vorjahresbeitrag je Sponsoring und Geldsumme des vorigen Fests kommen aus
+	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Solange es
+	den Leseweg nicht gibt, zeigt die Matrix den Leerfall: keine Vorjahr-Unterzeile
+	und — laut #69, Entscheid 5 — gar kein Maßband. */
 	const rows = buildSponsoringOverviewRows(sponsorings);
+	const footer = buildSponsoringOverviewFooter(rows, categories);
 	const total = festivalSponsoringTotal(sponsorings);
+
+	const openEditById = (sponsoringId: string) => {
+		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
+		if (sponsoring) openEdit(sponsoring);
+	};
+
+	const handleDeleteById = (sponsoringId: string) => {
+		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
+		if (sponsoring) handleDelete(sponsoring);
+	};
 
 	if (loading) {
 		return (
@@ -263,6 +274,13 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 					</Button>
 				</div>
 			</div>
+
+			<SponsoringHeadline
+				total={total}
+				sponsorCount={sponsorings.length}
+				inKindTotal={festivalInKindTotal(sponsorings)}
+				previousFestivalTotal={null}
+			/>
 
 			{/* Mobile: Karten-Liste */}
 			<div className="md:hidden space-y-2">
@@ -321,75 +339,20 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				)}
 			</div>
 
-			{/* Desktop: Tabelle */}
-			<div className="hidden md:block border bg-card">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Firma</TableHead>
-							<TableHead>Leistungen</TableHead>
-							<TableHead className="text-right">Gesamt</TableHead>
-							<TableHead className="w-[100px]">Aktionen</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{rows.length === 0 ? (
-							<TableRow>
-								<TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-									Noch keine Sponsorings erfasst
-								</TableCell>
-							</TableRow>
-						) : (
-							rows.map((row) => {
-								const sponsoring = sponsorings.find((s) => s.id === row.sponsoringId)!;
-								return (
-									<TableRow key={row.sponsoringId}>
-										<TableCell className="font-medium">{row.companyName}</TableCell>
-										<TableCell>
-											<div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-												{row.positions.map((p, i) => (
-													<span key={i}>
-														{p.label} ({formatEuro(p.value)})
-													</span>
-												))}
-												{row.freeAmount != null && (
-													<span>Freibetrag ({formatEuro(row.freeAmount)})</span>
-												)}
-												{row.positions.length === 0 && row.freeAmount == null && (
-													<span className="text-muted-foreground">–</span>
-												)}
-											</div>
-										</TableCell>
-										<TableCell className="text-right font-medium">
-											{formatEuro(row.total)}
-										</TableCell>
-										<TableCell>
-											<div className="flex gap-2">
-												<Button size="sm" variant="outline" onClick={() => openEdit(sponsoring)}>
-													<Edit className="h-4 w-4" />
-												</Button>
-												<Button
-													size="sm"
-													variant="outline"
-													onClick={() => handleDelete(sponsoring)}>
-													<Trash2 className="h-4 w-4" />
-												</Button>
-											</div>
-										</TableCell>
-									</TableRow>
-								);
-							})
-						)}
-						{rows.length > 0 && (
-							<TableRow>
-								<TableCell className="font-semibold">Gesamtsumme</TableCell>
-								<TableCell />
-								<TableCell className="text-right font-semibold">{formatEuro(total)}</TableCell>
-								<TableCell />
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
+			{/* Desktop: Paket-Matrix */}
+			<div className="hidden md:block">
+				<SponsoringMatrix
+					categories={categories}
+					rows={rows}
+					footer={footer}
+					onEdit={openEditById}
+					onDelete={handleDeleteById}
+				/>
+				{rows.length === 0 && (
+					<p className="border-2.5 border-t-0 border-tinte bg-white py-8 text-center text-sm text-tinte-soft">
+						Noch keine Sponsorings erfasst
+					</p>
+				)}
 			</div>
 
 			<SponsorUebernahmeDialog
