@@ -10,6 +10,7 @@ import {
 	formatDeltaEuro
 } from './numberBoxes';
 import { formatEuro } from '@/lib/money';
+import { sumTotals } from '@/lib/materialCosts';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
 
@@ -214,6 +215,13 @@ describe('deriveMaterialOrdered', () => {
 		expect(deriveMaterialOrdered(materials).total).toBe(24); // 2 netto → 2,40 brutto
 	});
 
+	it('lässt einen brutto erfassten Preis stehen — kein zweites Mal Steuer', () => {
+		const materials = [
+			material({ id: 'a', ordered_quantity: 10, unit_price: 2.4, tax_rate: 20, price_is_net: false })
+		];
+		expect(deriveMaterialOrdered(materials).total).toBe(24); // 2,40 ist schon brutto
+	});
+
 	it('keine Positionen → isEmpty, alles 0', () => {
 		const m = deriveMaterialOrdered([]);
 		expect(m.total).toBe(0);
@@ -276,6 +284,39 @@ describe('deriveMaterialConsumed', () => {
 		const m = deriveMaterialConsumed([]);
 		expect(m.isEmpty).toBe(true);
 		expect(m.recorded).toBe(0);
+	});
+});
+
+// --- Dashboard gegen Material-Bereich ----------------------------------------
+
+/** Fertig-Kriterium aus Issue #112: für dasselbe Fest nennen Dashboard und
+Material-Bereich denselben Betrag. Beide rechnen über `materialCosts`; sobald
+eine der beiden Seiten wieder eine eigene Formel bekäme, driften sie
+auseinander — deshalb steht der Vergleich hier als Test. Der Material-Bereich
+summiert die Zeilenkosten (Verbraucht ?? Bestellt), deckt sich also mit dem
+Bestellwert, solange nichts nachgetragen ist, und mit dem Verbrauchswert,
+sobald überall nachgetragen ist (ADR 0006). */
+describe('Dashboard und Material-Bereich', () => {
+	/** Netto und brutto erfasst, mit und ohne Steuersatz, eine ohne Preis. */
+	const positionen = [
+		material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true }),
+		material({ id: 'b', ordered_quantity: 5, unit_price: 3.3, tax_rate: 10, price_is_net: false }),
+		material({ id: 'c', ordered_quantity: 7, unit_price: 1.5, tax_rate: null }),
+		material({ id: 'd', ordered_quantity: 4, unit_price: null })
+	];
+
+	it('nennen denselben Bestellwert, solange nichts nachgetragen ist', () => {
+		const dashboard = deriveMaterialOrdered(positionen).total;
+		expect(dashboard).toBe(24 + 16.5 + 10.5); // 51 — brutto, ohne die Position ohne Preis
+		expect(dashboard).toBe(sumTotals(positionen));
+	});
+
+	it('nennen denselben Verbrauchswert, sobald überall nachgetragen ist', () => {
+		const nachgetragen = positionen.map((m) => ({ ...m, actual_quantity: m.ordered_quantity }));
+		const dashboard = deriveMaterialConsumed(nachgetragen);
+		expect(dashboard.consumed).toBe(51);
+		expect(dashboard.consumed).toBe(sumTotals(nachgetragen));
+		expect(dashboard.delta).toBe(0); // gleiche Mengen, gleiche Preise
 	});
 });
 
