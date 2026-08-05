@@ -19,26 +19,45 @@ import path from 'node:path';
  *
  * Gelesen wird der Migrationsstand als Ganzes, in Dateireihenfolge — nicht
  * eine einzelne Datei. Was zählt, ist der Zustand, in dem eine frische
- * Datenbank landet.
+ * Datenbank landet. Das ist kein SQL-Interpreter: er kennt die zwei
+ * Schreibweisen, in denen dieses Repo DELETE-Policies setzt, und meldet
+ * lautstark, sobald eine der beobachteten Tabellen in einer Form auftaucht,
+ * die er nicht sicher lesen kann (siehe `readDeletePolicies`).
  */
 
 const MIGRATIONS_DIR = path.resolve(__dirname, '../../../supabase/migrations');
 
-const migrations = (): { name: string; sql: string }[] =>
-	readdirSync(MIGRATIONS_DIR)
-		.filter((name) => name.endsWith('.sql'))
-		.sort()
-		.map((name) => ({ name, sql: readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8') }));
+/** Nur diese Tabellen werden verfolgt — für alles andere träfe der Leser keine Aussage. */
+const WATCHED_TABLES = [
+	'sponsors',
+	'sponsorings',
+	'sponsoring_categories',
+	'sponsoring_category_assignments'
+];
 
-const allSql = (): string => migrations().map((m) => m.sql).join('\n');
+interface Migration {
+	name: string;
+	sql: string;
+}
 
-/** `CREATE POLICY "x" ON [public.]<tabelle> FOR DELETE TO authenticated USING (<prädikat>)` */
+const migrations: Migration[] = readdirSync(MIGRATIONS_DIR)
+	.filter((name) => name.endsWith('.sql'))
+	.sort()
+	.map((name) => ({ name, sql: readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8') }));
+
+const allSql = migrations.map((m) => m.sql).join('\n');
+
+/**
+ * Schreibweise 1 — die Policy steht ausgeschrieben da:
+ * `CREATE POLICY "x" ON [public.]<tabelle> FOR DELETE [TO <rolle>] USING (<prädikat>)`.
+ * `TO <rolle>` ist optional, weil die ältesten Migrationen es weglassen.
+ */
 const NAMED_DELETE_POLICY =
-	/CREATE POLICY\s+"([^"]+)"\s+ON\s+(?:public\.)?(\w+)\s+FOR DELETE\s+TO authenticated\s+USING\s*\(([\s\S]*?)\)\s*;/g;
+	/CREATE POLICY\s+"?([\w ]+)"?\s+ON\s+(?:public\.)?(\w+)\s+FOR DELETE\s+(?:TO\s+\w+\s+)?USING\s*\(([\s\S]*?)\)\s*;/g;
 
-/** Dieselbe Policy als format()-Vorlage in einem DO-Block: `ON public.%I`. */
+/** Schreibweise 2 — dieselbe Policy als format()-Vorlage im DO-Block: `ON public.%I`. */
 const TEMPLATED_DELETE_POLICY =
-	/CREATE POLICY\s+"([^"]+)"\s+ON\s+public\.%I\s+FOR DELETE\s+TO authenticated\s+USING\s*\(([\s\S]*?)\)'/g;
+	/CREATE POLICY\s+"?([\w ]+)"?\s+ON\s+public\.%I\s+FOR DELETE\s+(?:TO\s+\w+\s+)?'?\s*'?USING\s*\(([\s\S]*?)\)'/g;
 
 /** Tabellennamen aus allen `ARRAY[ 'a', 'b' ]`-Literalen einer Datei. */
 const tablesInArrayLiterals = (sql: string): string[] =>
@@ -46,46 +65,69 @@ const tablesInArrayLiterals = (sql: string): string[] =>
 		[...m[1].matchAll(/'([a-z_]+)'/g)].map((t) => t[1])
 	);
 
-/**
- * Spielt alle Migrationen durch und liefert die zuletzt gesetzte
- * DELETE-Policy je Tabelle. Erfasst beide im Repo verwendeten Schreibweisen;
- * eine Datei mit mehreren Vorlagen bliebe mehrdeutig und wird für die
- * Vorlagen-Form übersprungen.
- */
-const effectiveDeletePolicies = (): Map<string, { policy: string; using: string }> => {
-	const effective = new Map<string, { policy: string; using: string }>();
+interface DeletePolicy {
+	migration: string;
+	policy: string;
+	using: string;
+}
 
-	for (const { sql } of migrations()) {
+/**
+ * Spielt alle Migrationen in Dateireihenfolge durch und liefert die zuletzt
+ * gesetzte DELETE-Policy je beobachteter Tabelle.
+ *
+ * Eine Datei, die eine beobachtete Tabelle in einem ARRAY-Literal nennt, aber
+ * nicht genau eine DELETE-Vorlage trägt, wäre mehrdeutig: welche Vorlage für
+ * welche Liste gilt, steht dann nicht mehr fest. Statt sie stillschweigend zu
+ * überspringen — womit der Wächter grün bliebe, ohne etwas zu prüfen — wirft
+ * der Leser. Wer eine dritte Schreibweise einführt, erfährt es hier.
+ */
+const readDeletePolicies = (): Map<string, DeletePolicy> => {
+	const effective = new Map<string, DeletePolicy>();
+
+	for (const { name, sql } of migrations) {
 		for (const [, policy, table, using] of sql.matchAll(NAMED_DELETE_POLICY)) {
-			effective.set(table, { policy, using: using.trim() });
+			if (WATCHED_TABLES.includes(table)) {
+				effective.set(table, { migration: name, policy, using: using.trim() });
+			}
 		}
 
+		const listed = tablesInArrayLiterals(sql).filter((t) => WATCHED_TABLES.includes(t));
+		if (listed.length === 0) continue;
+
 		const templates = [...sql.matchAll(TEMPLATED_DELETE_POLICY)];
-		if (templates.length !== 1) continue;
+		if (templates.length !== 1) {
+			throw new Error(
+				`${name} nennt ${listed.join(', ')} in einer Tabellenliste, trägt aber ` +
+					`${templates.length} DELETE-Vorlagen — der Schema-Vertrag kann die Wirkung ` +
+					`nicht mehr eindeutig lesen. Test anpassen.`
+			);
+		}
+
 		const [, policy, using] = templates[0];
-		for (const table of tablesInArrayLiterals(sql)) {
-			effective.set(table, { policy, using: using.trim() });
+		for (const table of listed) {
+			effective.set(table, { migration: name, policy, using: using.trim() });
 		}
 	}
 
 	return effective;
 };
 
+const deletePolicies = readDeletePolicies();
+
 describe('sponsorings-Schema', () => {
 	it('trägt Beschreibung und Wert der Sachleistung', () => {
-		const sql = allSql();
-		expect(sql).toMatch(/ALTER TABLE sponsorings ADD COLUMN[^;]*in_kind_description TEXT/);
-		expect(sql).toMatch(/ALTER TABLE sponsorings ADD COLUMN[^;]*in_kind_value NUMERIC/);
+		expect(allSql).toMatch(/ALTER TABLE sponsorings ADD COLUMN[^;]*in_kind_description TEXT/);
+		expect(allSql).toMatch(/ALTER TABLE sponsorings ADD COLUMN[^;]*in_kind_value NUMERIC/);
 	});
 
 	it('zeigt mit copied_from_festival_id auf ein Fest', () => {
-		expect(allSql()).toMatch(
+		expect(allSql).toMatch(
 			/ALTER TABLE sponsorings ADD COLUMN[^;]*copied_from_festival_id UUID[^;]*REFERENCES festivals\(id\)/
 		);
 	});
 
 	it('löst den Quellfest-Zeiger auf, statt das Sponsoring mitzureißen (SET NULL, nicht CASCADE)', () => {
-		const declaration = allSql().match(
+		const declaration = allSql.match(
 			/ALTER TABLE sponsorings ADD COLUMN[^;]*copied_from_festival_id[^;]*;/
 		);
 		expect(declaration).not.toBeNull();
@@ -95,21 +137,16 @@ describe('sponsorings-Schema', () => {
 });
 
 describe('DELETE im gemeinsamen Arbeitsbereich (ADR 0002)', () => {
-	const openTables = ['sponsors', 'sponsorings', 'sponsoring_categories'];
-
-	it.each(openTables)('öffnet %s für jeden angemeldeten Benutzer', (table) => {
-		const policy = effectiveDeletePolicies().get(table);
+	it.each(WATCHED_TABLES)('öffnet %s für jeden angemeldeten Benutzer', (table) => {
+		const policy = deletePolicies.get(table);
 		expect(policy, `keine DELETE-Policy für ${table} gefunden`).toBeDefined();
-		expect(policy!.using).toBe('true');
-	});
-
-	it('lässt sponsoring_category_assignments offen, wie es schon war', () => {
-		expect(effectiveDeletePolicies().get('sponsoring_category_assignments')?.using).toBe('true');
+		expect(policy!.using, `zuletzt gesetzt in ${policy?.migration}`).toBe('true');
 	});
 
 	it('nimmt das Fest selbst bewusst aus (Blast-Radius)', () => {
-		const migration = migrations().find((m) => m.name.includes('add_sponsoring_in_kind'));
+		const migration = migrations.find((m) => m.name.includes('add_sponsoring_in_kind'));
 		expect(migration).toBeDefined();
-		expect(tablesInArrayLiterals(migration!.sql)).not.toContain('festivals');
+		const opened = tablesInArrayLiterals(migration!.sql);
+		expect(opened).toEqual(['sponsors', 'sponsorings', 'sponsoring_categories']);
 	});
 });

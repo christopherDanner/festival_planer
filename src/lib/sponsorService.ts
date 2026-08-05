@@ -73,7 +73,8 @@ export const updateSponsor = async (
 	if (error) throw new Error(error.message);
 };
 
-// Delete a sponsor (RLS restricts this to the creator).
+// Delete a sponsor. Seit dem RLS-Nachzug (ADR 0002) darf das jeder
+// angemeldete Benutzer, nicht mehr nur der Ersteller.
 export const deleteSponsor = async (sponsorId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsors').delete().eq('id', sponsorId);
 	if (error) throw new Error(error.message);
@@ -131,7 +132,8 @@ export const updateCategory = async (
 	if (error) throw new Error(error.message);
 };
 
-// Delete a sponsoring category (RLS restricts this to the festival creator).
+// Delete a sponsoring category. Seit dem RLS-Nachzug (ADR 0002) darf das jeder
+// angemeldete Benutzer, nicht mehr nur der Fest-Ersteller.
 export const deleteCategory = async (categoryId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsoring_categories').delete().eq('id', categoryId);
 	if (error) throw new Error(error.message);
@@ -147,7 +149,7 @@ export interface Sponsoring {
 	notes: string | null;
 	/** Sachleistung: was die Firma nicht in Geld gibt (ADR 0008). Höchstens eine je Sponsoring. */
 	in_kind_description: string | null;
-	/** Geschätzter Sachwert der Sachleistung — zweite Zahl, zählt nie ins Geld (ADR 0008). */
+	/** Geschätzter Wert der Sachleistung — zweite Zahl, zählt nie ins Geld (ADR 0008). */
 	in_kind_value: number | null;
 	/** Quellfest einer Sponsor-Übernahme; Grundlage des Vorjahresbeitrags (ADR 0008). */
 	copied_from_festival_id: string | null;
@@ -155,16 +157,23 @@ export interface Sponsoring {
 	updated_at: string;
 }
 
-/** Sachleistung eines Sponsorings — beide Spalten oder keine. */
+/**
+ * Die Sachleistung eines Sponsorings: Beschreibung und geschätzter Wert.
+ * Die zwei Spalten sind die Körnung — mehr als eine Sachleistung je
+ * Sponsoring gibt es nicht (ADR 0008). Dass beide gemeinsam gesetzt werden,
+ * ist Sache der Oberfläche; das Schema erzwingt es nicht.
+ */
 export type SponsoringInKind = Pick<Sponsoring, 'in_kind_description' | 'in_kind_value'>;
 
 /**
- * Spalten, die nicht jede Anlage setzt: die Sachleistung und der
- * Quellfest-Zeiger. Letzteren setzt **nur** die Sponsor-Übernahme — bei der
- * normalen Anlage gibt es kein Quellfest, und ohne eines gibt es auch keinen
- * Vorjahresbeitrag (ADR 0008).
+ * Was die gewöhnliche Anlage eines Sponsorings offen lässt: die Sachleistung
+ * und der Quellfest-Zeiger. Letzteren setzt **nur** die Sponsor-Übernahme —
+ * bei der normalen Anlage gibt es kein Quellfest, und ohne eines gibt es auch
+ * keinen Vorjahresbeitrag (ADR 0008).
  */
-export type SponsoringExtras = Partial<SponsoringInKind & Pick<Sponsoring, 'copied_from_festival_id'>>;
+export type SponsoringInKindAndOrigin = Partial<
+	SponsoringInKind & Pick<Sponsoring, 'copied_from_festival_id'>
+>;
 
 export interface SponsoringCategoryAssignment {
 	id: string;
@@ -212,7 +221,7 @@ export const createSponsoring = async (
 	freeAmount: number | null,
 	assignments: SponsoringAssignmentInput[],
 	notes: string | null = null,
-	extras: SponsoringExtras = {}
+	extras: SponsoringInKindAndOrigin = {}
 ): Promise<string> => {
 	const { data, error } = await supabase
 		.from('sponsorings')
@@ -267,7 +276,8 @@ export const updateSponsoring = async (
 	}
 };
 
-// Delete a sponsoring (RLS restricts this to the festival creator).
+// Delete a sponsoring. Seit dem RLS-Nachzug (ADR 0002) darf das jeder
+// angemeldete Benutzer, nicht mehr nur der Fest-Ersteller.
 export const deleteSponsoring = async (sponsoringId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsorings').delete().eq('id', sponsoringId);
 	if (error) throw new Error(error.message);

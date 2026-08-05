@@ -61,7 +61,12 @@ const soleCall = (table: string, op: string): Call => {
 	return found[0];
 };
 
-/** Deckt eine Spaltenauswahl die Spalte ab? `*` deckt alles ab. */
+/**
+ * Deckt eine Spaltenauswahl die Spalte ab? Heute wählt der Leseweg `*` und
+ * deckt damit alles ab — die Prüfung greift erst, wenn jemand auf eine
+ * ausdrückliche Spaltenliste umstellt und die neuen Spalten vergisst. Genau
+ * dagegen steht sie hier.
+ */
 const selectionCovers = (selection: string, column: string): boolean =>
 	selection.includes('*') || selection.includes(column);
 
