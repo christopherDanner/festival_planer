@@ -5,7 +5,7 @@ den bereits geladenen Fest-Daten; die Summenlogik fürs Sponsoring bleibt in
 `sponsoringTotals` (keine Doppelung). */
 
 import { formatEuro } from '@/lib/money';
-import type { Station, StationShift, ShiftAssignment, StationMember } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignment, StationHelper } from '@/lib/shiftService';
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
@@ -33,16 +33,16 @@ export interface ShiftsMetric {
 }
 
 /** Soll/Ist einer einzelnen Station: mit Schichten die Schicht-Summe, sonst
-die Stations-Ebene (required_people gegen zugeteilte StationMembers). */
+die Stations-Ebene (required_people gegen zugeteilte StationHelpers). */
 function stationStaffing(
 	station: Station,
 	shifts: StationShift[],
 	assignments: ShiftAssignment[],
-	stationMembers: StationMember[]
+	stationHelpers: StationHelper[]
 ): { required: number; assigned: number } {
 	const stationShifts = shifts.filter((s) => s.station_id === station.id);
 	if (stationShifts.length === 0) {
-		const assigned = stationMembers.filter((sm) => sm.station_id === station.id).length;
+		const assigned = stationHelpers.filter((sm) => sm.station_id === station.id).length;
 		return { required: station.required_people, assigned };
 	}
 	const required = stationShifts.reduce((sum, s) => sum + s.required_people, 0);
@@ -55,12 +55,12 @@ export function deriveShiftsMetric(
 	stations: Station[],
 	shifts: StationShift[],
 	assignments: ShiftAssignment[],
-	stationMembers: StationMember[]
+	stationHelpers: StationHelper[]
 ): ShiftsMetric {
 	let besetzt = 0;
 	let gesamt = 0;
 	for (const station of stations) {
-		const { required, assigned } = stationStaffing(station, shifts, assignments, stationMembers);
+		const { required, assigned } = stationStaffing(station, shifts, assignments, stationHelpers);
 		gesamt += required;
 		besetzt += Math.min(assigned, required); // Überbesetzung nicht mitzählen
 	}

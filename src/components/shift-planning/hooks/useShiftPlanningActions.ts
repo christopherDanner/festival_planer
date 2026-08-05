@@ -7,19 +7,20 @@ import {
 	createStationShift,
 	updateStationShift,
 	deleteStationShift,
-	assignMemberToStationShift,
-	removeMemberFromStationShift,
-	assignMemberToStation,
-	removeMemberFromStation,
+	assignHelperToStationShift,
+	removeHelperFromStationShift,
+	assignHelperToStation,
+	removeHelperFromStation,
 	type Station,
 	type StationShift
 } from '@/lib/shiftService';
 import {
-	createMember,
-	updateMember,
-	deleteMember,
-	updateMemberPreferences
-} from '@/lib/memberService';
+	createHelper,
+	updateHelper,
+	deleteHelper,
+	updateHelperPreferences,
+	type HelperInput
+} from '@/lib/helperService';
 import {
 	performAutomaticAssignment,
 	clearAllAssignments,
@@ -34,9 +35,8 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		queryClient.invalidateQueries({ queryKey: ['stations', festivalId] });
 		queryClient.invalidateQueries({ queryKey: ['stationShifts', festivalId] });
 		queryClient.invalidateQueries({ queryKey: ['assignments', festivalId] });
-		queryClient.invalidateQueries({ queryKey: ['stationMembers', festivalId] });
-		queryClient.invalidateQueries({ queryKey: ['members'] });
-		queryClient.invalidateQueries({ queryKey: ['preferences', festivalId] });
+		queryClient.invalidateQueries({ queryKey: ['stationHelpers', festivalId] });
+		queryClient.invalidateQueries({ queryKey: ['helpers', festivalId] });
 	};
 
 	const createStationMutation = useMutation({
@@ -132,16 +132,16 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		}
 	});
 
-	const assignMemberMutation = useMutation({
+	const assignHelperMutation = useMutation({
 		mutationFn: ({
 			stationShiftId,
-			memberId,
+			helperId,
 			position
 		}: {
 			stationShiftId: string;
-			memberId: string;
+			helperId: string;
 			position?: number;
-		}) => assignMemberToStationShift(festivalId, stationShiftId, memberId, position),
+		}) => assignHelperToStationShift(festivalId, stationShiftId, helperId, position),
 		onSuccess: () => {
 			invalidateAll();
 		},
@@ -154,9 +154,9 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		}
 	});
 
-	const removeMemberMutation = useMutation({
-		mutationFn: ({ stationShiftId, memberId }: { stationShiftId: string; memberId: string }) =>
-			removeMemberFromStationShift(festivalId, stationShiftId, memberId),
+	const removeHelperMutation = useMutation({
+		mutationFn: ({ stationShiftId, helperId }: { stationShiftId: string; helperId: string }) =>
+			removeHelperFromStationShift(festivalId, stationShiftId, helperId),
 		onSuccess: () => {
 			invalidateAll();
 			toast({ title: 'Erfolg', description: 'Zuweisung wurde entfernt.' });
@@ -170,50 +170,55 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		}
 	});
 
-	const createMemberMutation = useMutation({
-		mutationFn: (data: Parameters<typeof createMember>[0]) => createMember(data),
+	// Der Helfer wird im Fest angelegt (ADR 0005) — die Helferliste des
+	// Schichtplans ist nach dem Wegfall der Mitglieder-Seite der einzige Weg.
+	const createHelperMutation = useMutation({
+		mutationFn: (data: HelperInput) => createHelper(festivalId, data),
 		onSuccess: (_data, variables) => {
 			invalidateAll();
 			toast({
-				title: 'Mitglied hinzugefügt',
+				title: 'Helfer hinzugefügt',
 				description: `${variables.last_name} ${variables.first_name} wurde erfolgreich hinzugefügt.`
 			});
 		},
 		onError: () => {
 			toast({
 				title: 'Fehler',
-				description: 'Mitglied konnte nicht gespeichert werden.',
+				description: 'Helfer konnte nicht gespeichert werden.',
 				variant: 'destructive'
 			});
 		}
 	});
 
-	const updateMemberMutation = useMutation({
-		mutationFn: ({ id, updates }: { id: string; updates: Parameters<typeof updateMember>[1] }) =>
-			updateMember(id, updates),
+	const updateHelperMutation = useMutation({
+		mutationFn: ({ id, updates }: { id: string; updates: Partial<HelperInput> }) =>
+			updateHelper(id, updates),
 		onSuccess: () => {
 			invalidateAll();
-			toast({ title: 'Mitglied aktualisiert', description: 'Mitglied wurde erfolgreich aktualisiert.' });
+			toast({ title: 'Helfer aktualisiert', description: 'Helfer wurde erfolgreich aktualisiert.' });
 		},
 		onError: () => {
 			toast({
 				title: 'Fehler',
-				description: 'Mitglied konnte nicht gespeichert werden.',
+				description: 'Helfer konnte nicht gespeichert werden.',
 				variant: 'destructive'
 			});
 		}
 	});
 
-	const deleteMemberMutation = useMutation({
-		mutationFn: (id: string) => deleteMember(id),
+	const deleteHelperMutation = useMutation({
+		mutationFn: (id: string) => deleteHelper(id),
 		onSuccess: () => {
 			invalidateAll();
-			toast({ title: 'Mitglied gelöscht', description: 'Mitglied wurde erfolgreich gelöscht.' });
+			toast({
+				title: 'Helfer entfernt',
+				description: 'Der Helfer wurde samt seinen Zuteilungen aus dem Fest entfernt.'
+			});
 		},
 		onError: () => {
 			toast({
 				title: 'Fehler',
-				description: 'Mitglied konnte nicht gelöscht werden.',
+				description: 'Helfer konnte nicht entfernt werden.',
 				variant: 'destructive'
 			});
 		}
@@ -223,13 +228,13 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		mutationFn: ({
 			stationShifts,
 			stations,
-			members,
+			helpers,
 			config,
 			stationPreferences
 		}: {
 			stationShifts: StationShift[];
 			stations: Station[];
-			members: Parameters<typeof performAutomaticAssignment>[3];
+			helpers: Parameters<typeof performAutomaticAssignment>[3];
 			config: AutoAssignmentConfig;
 			stationPreferences: Record<string, string[]>;
 		}) =>
@@ -237,7 +242,7 @@ export const useShiftPlanningActions = (festivalId: string) => {
 				festivalId,
 				stationShifts,
 				stations,
-				members,
+				helpers,
 				config,
 				stationPreferences
 			),
@@ -277,14 +282,14 @@ export const useShiftPlanningActions = (festivalId: string) => {
 
 	const savePreferencesMutation = useMutation({
 		mutationFn: ({
-			memberId,
+			helperId,
 			stationPrefs,
 			shiftPrefs
 		}: {
-			memberId: string;
+			helperId: string;
 			stationPrefs: string[];
 			shiftPrefs: string[];
-		}) => updateMemberPreferences(festivalId, memberId, stationPrefs, shiftPrefs),
+		}) => updateHelperPreferences(helperId, stationPrefs, shiftPrefs),
 		onSuccess: () => {
 			invalidateAll();
 			toast({
@@ -301,24 +306,24 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		}
 	});
 
-	const assignMemberToStationMutation = useMutation({
-		mutationFn: ({ stationId, memberId }: { stationId: string; memberId: string }) =>
-			assignMemberToStation(festivalId, stationId, memberId),
+	const assignHelperToStationMutation = useMutation({
+		mutationFn: ({ stationId, helperId }: { stationId: string; helperId: string }) =>
+			assignHelperToStation(festivalId, stationId, helperId),
 		onSuccess: () => {
 			invalidateAll();
 		},
 		onError: () => {
 			toast({
 				title: 'Fehler',
-				description: 'Mitglied konnte nicht zur Station zugewiesen werden.',
+				description: 'Helfer konnte nicht zur Station zugewiesen werden.',
 				variant: 'destructive'
 			});
 		}
 	});
 
-	const removeMemberFromStationMutation = useMutation({
-		mutationFn: ({ stationId, memberId }: { stationId: string; memberId: string }) =>
-			removeMemberFromStation(stationId, memberId),
+	const removeHelperFromStationMutation = useMutation({
+		mutationFn: ({ stationId, helperId }: { stationId: string; helperId: string }) =>
+			removeHelperFromStation(stationId, helperId),
 		onSuccess: () => {
 			invalidateAll();
 			toast({ title: 'Erfolg', description: 'Zuweisung wurde entfernt.' });
@@ -339,13 +344,13 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		createStationShift: createStationShiftMutation,
 		updateStationShift: updateStationShiftMutation,
 		deleteStationShift: deleteStationShiftMutation,
-		assignMember: assignMemberMutation,
-		removeMember: removeMemberMutation,
-		assignMemberToStation: assignMemberToStationMutation,
-		removeMemberFromStation: removeMemberFromStationMutation,
-		createMember: createMemberMutation,
-		updateMember: updateMemberMutation,
-		deleteMember: deleteMemberMutation,
+		assignHelper: assignHelperMutation,
+		removeHelper: removeHelperMutation,
+		assignHelperToStation: assignHelperToStationMutation,
+		removeHelperFromStation: removeHelperFromStationMutation,
+		createHelper: createHelperMutation,
+		updateHelper: updateHelperMutation,
+		deleteHelper: deleteHelperMutation,
 		autoAssign: autoAssignMutation,
 		clearAssignments: clearAssignmentsMutation,
 		savePreferences: savePreferencesMutation

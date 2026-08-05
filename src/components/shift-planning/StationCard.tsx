@@ -4,16 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Edit, Crown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import StationShiftCard from './StationShiftCard';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
+import type { Helper } from '@/lib/helperService';
 
 interface StationCardProps {
 	station: Station;
 	stationShifts: StationShift[];
-	stationMembers: StationMemberWithDetails[];
-	members: Member[];
-	getAssignments: (stationShiftId: string) => ShiftAssignmentWithMember[];
-	selectedMember?: Member | null;
+	stationHelpers: StationHelperWithDetails[];
+	helpers: Helper[];
+	getAssignments: (stationShiftId: string) => ShiftAssignmentWithHelper[];
+	selectedHelper?: Helper | null;
 	onTapAssignToShift?: (stationShiftId: string) => void;
 	onTapAssignToStation?: (stationId: string) => void;
 	onEditStation: () => void;
@@ -21,10 +21,10 @@ interface StationCardProps {
 	onAddShift: () => void;
 	onEditShift: (shift: StationShift) => void;
 	onDeleteShift: (shiftId: string) => void;
-	onRemoveMember: (stationShiftId: string, memberId: string) => void;
+	onRemoveHelper: (stationShiftId: string, helperId: string) => void;
 	onDrop: (stationShiftId: string, e: React.DragEvent) => void;
 	onDropOnStation: (stationId: string, e: React.DragEvent) => void;
-	onRemoveStationMember: (stationId: string, memberId: string) => void;
+	onRemoveStationHelper: (stationId: string, helperId: string) => void;
 }
 
 const getAccentColor = (count: number, required: number) => {
@@ -36,10 +36,10 @@ const getAccentColor = (count: number, required: number) => {
 const StationCard: React.FC<StationCardProps> = ({
 	station,
 	stationShifts,
-	stationMembers,
-	members,
+	stationHelpers,
+	helpers,
 	getAssignments,
-	selectedMember,
+	selectedHelper,
 	onTapAssignToShift,
 	onTapAssignToStation,
 	onEditStation,
@@ -47,25 +47,25 @@ const StationCard: React.FC<StationCardProps> = ({
 	onAddShift,
 	onEditShift,
 	onDeleteShift,
-	onRemoveMember,
+	onRemoveHelper,
 	onDrop,
 	onDropOnStation,
-	onRemoveStationMember
+	onRemoveStationHelper
 }) => {
-	const responsibleName = station.responsible_member
-		? `${station.responsible_member.last_name} ${station.responsible_member.first_name}`
+	const responsibleName = station.responsible_helper
+		? `${station.responsible_helper.last_name} ${station.responsible_helper.first_name}`
 		: null;
 
 	const hasShifts = stationShifts.length > 0;
 	const fillRatio = station.required_people > 0
-		? Math.min(stationMembers.length / station.required_people, 1)
+		? Math.min(stationHelpers.length / station.required_people, 1)
 		: 0;
-	const isComplete = stationMembers.length >= station.required_people && station.required_people > 0;
+	const isComplete = stationHelpers.length >= station.required_people && station.required_people > 0;
 
 	return (
 		<div className={cn(
 			'border border-l-4 bg-card',
-			getAccentColor(stationMembers.length, station.required_people)
+			getAccentColor(stationHelpers.length, station.required_people)
 		)}>
 			{/* Header */}
 			<div className="px-3 py-2 border-b">
@@ -90,7 +90,7 @@ const StationCard: React.FC<StationCardProps> = ({
 				</div>
 				<div className="flex items-center gap-2 mt-0.5">
 					<span className="text-xs text-muted-foreground">
-						{stationMembers.length}/{station.required_people} Personen
+						{stationHelpers.length}/{station.required_people} Personen
 					</span>
 					{responsibleName && (
 						<Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0">
@@ -114,33 +114,33 @@ const StationCard: React.FC<StationCardProps> = ({
 
 			{/* Content */}
 			<div className="px-3 py-2 space-y-3">
-				{/* Station members */}
+				{/* Stations-Helfer */}
 				<div
 					className={cn(
 						'rounded-md min-h-[40px] transition-colors',
-						stationMembers.length === 0 && 'bg-muted/30 px-3 py-2.5 flex items-center',
-						stationMembers.length > 0 && 'divide-y divide-border/40',
-						selectedMember && 'ring-2 ring-primary/40 bg-primary/5 cursor-pointer'
+						stationHelpers.length === 0 && 'bg-muted/30 px-3 py-2.5 flex items-center',
+						stationHelpers.length > 0 && 'divide-y divide-border/40',
+						selectedHelper && 'ring-2 ring-primary/40 bg-primary/5 cursor-pointer'
 					)}
 					onDragOver={(e) => e.preventDefault()}
 					onDrop={(e) => onDropOnStation(station.id, e)}
-					onClick={selectedMember && onTapAssignToStation ? () => onTapAssignToStation(station.id) : undefined}>
-					{stationMembers.length > 0 ? (
-						[...stationMembers].sort((a, b) => (a.member?.last_name ?? '').localeCompare(b.member?.last_name ?? '', 'de')).map((sm) => (
+					onClick={selectedHelper && onTapAssignToStation ? () => onTapAssignToStation(station.id) : undefined}>
+					{stationHelpers.length > 0 ? (
+						[...stationHelpers].sort((a, b) => (a.helper?.last_name ?? '').localeCompare(b.helper?.last_name ?? '', 'de')).map((sm) => (
 							<div
 								key={sm.id}
 								className="flex items-center justify-between px-2 py-1.5 text-sm">
-								<span className="font-medium">{sm.member?.last_name} {sm.member?.first_name}</span>
+								<span className="font-medium">{sm.helper?.last_name} {sm.helper?.first_name}</span>
 								<button
 									className="text-muted-foreground/40 hover:text-destructive transition-colors p-0.5 shrink-0"
-									onClick={(e) => { e.stopPropagation(); onRemoveStationMember(station.id, sm.member_id); }}>
+									onClick={(e) => { e.stopPropagation(); onRemoveStationHelper(station.id, sm.helper_id); }}>
 									<X className="h-3 w-3" />
 								</button>
 							</div>
 						))
 					) : (
 						<span className="text-xs text-muted-foreground/60 mx-auto">
-							Mitglied hierher ziehen oder per Tap zuweisen
+							Helfer hierher ziehen oder per Tap zuweisen
 						</span>
 					)}
 				</div>
@@ -158,11 +158,11 @@ const StationCard: React.FC<StationCardProps> = ({
 									key={shift.id}
 									stationShift={shift}
 									assignments={getAssignments(shift.id)}
-									selectedMember={selectedMember}
+									selectedHelper={selectedHelper}
 									onTapAssign={onTapAssignToShift}
 									onEdit={() => onEditShift(shift)}
 									onDelete={() => onDeleteShift(shift.id)}
-									onRemoveMember={(memberId) => onRemoveMember(shift.id, memberId)}
+									onRemoveHelper={(helperId) => onRemoveHelper(shift.id, helperId)}
 									onDrop={onDrop}
 								/>
 							))}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Station, StationShift, ShiftAssignment, StationMember } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignment, StationHelper } from '@/lib/shiftService';
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import {
@@ -54,12 +54,12 @@ function assignment(over: Partial<ShiftAssignment> = {}): ShiftAssignment {
 	};
 }
 
-function stationMember(over: Partial<StationMember> = {}): StationMember {
+function stationHelper(over: Partial<StationHelper> = {}): StationHelper {
 	return {
 		id: 'm1',
 		festival_id: 'f1',
 		station_id: 's1',
-		member_id: 'p1',
+		helper_id: 'p1',
 		created_at: '',
 		...over
 	};
@@ -129,13 +129,13 @@ describe('deriveShiftsMetric', () => {
 		expect(m.isEmpty).toBe(false);
 	});
 
-	it('nutzt Stations-Ebene (required_people + StationMembers), wenn keine Schichten', () => {
+	it('nutzt Stations-Ebene (required_people + StationHelpers), wenn keine Schichten', () => {
 		const stations = [station({ id: 's1', required_people: 3 })];
-		const stationMembers = [
-			stationMember({ id: 'm1', station_id: 's1', member_id: 'p1' }),
-			stationMember({ id: 'm2', station_id: 's1', member_id: 'p2' })
+		const stationHelpers = [
+			stationHelper({ id: 'm1', station_id: 's1', helper_id: 'p1' }),
+			stationHelper({ id: 'm2', station_id: 's1', helper_id: 'p2' })
 		];
-		const m = deriveShiftsMetric(stations, [], [], stationMembers);
+		const m = deriveShiftsMetric(stations, [], [], stationHelpers);
 		expect(m.gesamt).toBe(3);
 		expect(m.besetzt).toBe(2);
 		expect(m.fehlen).toBe(1);

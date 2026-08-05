@@ -6,18 +6,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Station } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import type { Helper } from '@/lib/helperService';
 
 interface StationDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	station?: Station | null;
-	members: Member[];
-	onSave: (data: { name: string; required_people: number; description: string; responsible_member_id: string | null }) => void;
+	helpers: Helper[];
+	onSave: (data: { name: string; required_people: number; description: string; responsible_helper_id: string | null }) => void;
 }
 
-const StationDialog: React.FC<StationDialogProps> = ({ open, onOpenChange, station, members, onSave }) => {
-	const [form, setForm] = useState({ name: '', required_people: 1, description: '', responsible_member_id: '' as string });
+const StationDialog: React.FC<StationDialogProps> = ({ open, onOpenChange, station, helpers, onSave }) => {
+	const [form, setForm] = useState({ name: '', required_people: 1, description: '', responsible_helper_id: '' as string });
 
 	useEffect(() => {
 		if (station) {
@@ -25,10 +25,10 @@ const StationDialog: React.FC<StationDialogProps> = ({ open, onOpenChange, stati
 				name: station.name,
 				required_people: station.required_people,
 				description: station.description || '',
-				responsible_member_id: station.responsible_member_id || ''
+				responsible_helper_id: station.responsible_helper_id || ''
 			});
 		} else {
-			setForm({ name: '', required_people: 1, description: '', responsible_member_id: '' });
+			setForm({ name: '', required_people: 1, description: '', responsible_helper_id: '' });
 		}
 	}, [station, open]);
 
@@ -38,7 +38,7 @@ const StationDialog: React.FC<StationDialogProps> = ({ open, onOpenChange, stati
 			name: form.name,
 			required_people: form.required_people,
 			description: form.description,
-			responsible_member_id: form.responsible_member_id || null
+			responsible_helper_id: form.responsible_helper_id || null
 		});
 		onOpenChange(false);
 	};
@@ -85,23 +85,23 @@ const StationDialog: React.FC<StationDialogProps> = ({ open, onOpenChange, stati
 						/>
 					</div>
 					<div>
-						<Label htmlFor="responsible-member">Verantwortliche Person (optional)</Label>
+						<Label htmlFor="responsible-helper">Verantwortliche Person (optional)</Label>
 						<Select
-							value={form.responsible_member_id}
+							value={form.responsible_helper_id}
 							onValueChange={(value) =>
 								setForm((prev) => ({
 									...prev,
-									responsible_member_id: value === '__none__' ? '' : value
+									responsible_helper_id: value === '__none__' ? '' : value
 								}))
 							}>
-							<SelectTrigger id="responsible-member">
+							<SelectTrigger id="responsible-helper">
 								<SelectValue placeholder="Keine Person ausgewählt" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
-								{members.map((member) => (
-									<SelectItem key={member.id} value={member.id}>
-										{member.last_name} {member.first_name}
+								{helpers.map((helper) => (
+									<SelectItem key={helper.id} value={helper.id}>
+										{helper.last_name} {helper.first_name}
 									</SelectItem>
 								))}
 							</SelectContent>

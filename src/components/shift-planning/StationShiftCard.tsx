@@ -2,17 +2,17 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Trash2, Edit, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { StationShift, ShiftAssignmentWithMember } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import type { StationShift, ShiftAssignmentWithHelper } from '@/lib/shiftService';
+import type { Helper } from '@/lib/helperService';
 
 interface StationShiftCardProps {
 	stationShift: StationShift;
-	assignments: ShiftAssignmentWithMember[];
-	selectedMember?: Member | null;
+	assignments: ShiftAssignmentWithHelper[];
+	selectedHelper?: Helper | null;
 	onTapAssign?: (stationShiftId: string) => void;
 	onEdit: () => void;
 	onDelete: () => void;
-	onRemoveMember: (memberId: string) => void;
+	onRemoveHelper: (helperId: string) => void;
 	onDrop: (stationShiftId: string, e: React.DragEvent) => void;
 }
 
@@ -39,11 +39,11 @@ const formatShiftTime = (stationShift: StationShift): string => {
 const StationShiftCard: React.FC<StationShiftCardProps> = ({
 	stationShift,
 	assignments,
-	selectedMember,
+	selectedHelper,
 	onTapAssign,
 	onEdit,
 	onDelete,
-	onRemoveMember,
+	onRemoveHelper,
 	onDrop
 }) => {
 	const filled = assignments.length;
@@ -97,24 +97,24 @@ const StationShiftCard: React.FC<StationShiftCardProps> = ({
 			<div className="px-3 py-1 text-xs text-muted-foreground bg-muted/20">
 				{formatShiftTime(stationShift)}
 			</div>
-			{/* Members drop zone */}
+			{/* Ablagefläche für Helfer */}
 			<div
 				className={cn(
 					'min-h-[36px] bg-muted/30 rounded-b-md transition-colors',
 					assignments.length === 0 && 'px-3 py-2 flex items-center',
 					assignments.length > 0 && 'divide-y divide-border/30',
-					selectedMember && 'ring-2 ring-primary/40 cursor-pointer'
+					selectedHelper && 'ring-2 ring-primary/40 cursor-pointer'
 				)}
-				onClick={selectedMember && onTapAssign ? () => onTapAssign(stationShift.id) : undefined}>
+				onClick={selectedHelper && onTapAssign ? () => onTapAssign(stationShift.id) : undefined}>
 				{assignments.length > 0 ? (
-					[...assignments].sort((a, b) => (a.member?.last_name ?? '').localeCompare(b.member?.last_name ?? '', 'de')).map((a) => (
+					[...assignments].sort((a, b) => (a.helper?.last_name ?? '').localeCompare(b.helper?.last_name ?? '', 'de')).map((a) => (
 						<div
 							key={a.id}
 							className="flex items-center justify-between px-3 py-1 text-xs">
-							<span>{a.member?.last_name} {a.member?.first_name}</span>
+							<span>{a.helper?.last_name} {a.helper?.first_name}</span>
 							<button
 								className="text-muted-foreground/40 hover:text-destructive transition-colors p-0.5 shrink-0"
-								onClick={() => a.member_id && onRemoveMember(a.member_id)}>
+								onClick={() => a.helper_id && onRemoveHelper(a.helper_id)}>
 								<X className="h-3 w-3" />
 							</button>
 						</div>

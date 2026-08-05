@@ -21,8 +21,8 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 	isLoading
 }) => {
 	const [config, setConfig] = useState<AutoAssignmentConfig>({
-		minShiftsPerMember: 1,
-		maxShiftsPerMember: 3,
+		minShiftsPerHelper: 1,
+		maxShiftsPerHelper: 3,
 		respectPreferences: true
 	});
 
@@ -40,11 +40,11 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 								id="min-shifts"
 								type="number"
 								min="0"
-								value={config.minShiftsPerMember}
+								value={config.minShiftsPerHelper}
 								onChange={(e) =>
 									setConfig((prev) => ({
 										...prev,
-										minShiftsPerMember: parseInt(e.target.value) || 0
+										minShiftsPerHelper: parseInt(e.target.value) || 0
 									}))
 								}
 							/>
@@ -55,11 +55,11 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 								id="max-shifts"
 								type="number"
 								min="1"
-								value={config.maxShiftsPerMember}
+								value={config.maxShiftsPerHelper}
 								onChange={(e) =>
 									setConfig((prev) => ({
 										...prev,
-										maxShiftsPerMember: parseInt(e.target.value) || 1
+										maxShiftsPerHelper: parseInt(e.target.value) || 1
 									}))
 								}
 							/>
@@ -68,7 +68,7 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 					<div className="bg-muted p-4">
 						<p className="text-sm text-muted-foreground">
 							Die automatische Zuteilung berücksichtigt nur Stationen, die den jeweiligen
-							Schichten zugewiesen wurden. Mitglieder mit Stationswünschen werden bevorzugt
+							Schichten zugewiesen wurden. Helfer mit Stationswünschen werden bevorzugt
 							zugewiesen, solange Schichten in ihren Wunschstationen frei sind. Die Schichten
 							werden gleichmäßig verteilt.
 						</p>

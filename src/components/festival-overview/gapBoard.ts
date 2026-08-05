@@ -7,8 +7,8 @@ Aufgaben und Material ohne Preis. */
 import type {
 	Station,
 	StationShift,
-	ShiftAssignmentWithMember,
-	StationMemberWithDetails
+	ShiftAssignmentWithHelper,
+	StationHelperWithDetails
 } from '@/lib/shiftService';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
@@ -56,8 +56,8 @@ export interface GapBoard {
 export interface GapBoardInput {
 	stations: Station[];
 	shifts: StationShift[];
-	assignments: ShiftAssignmentWithMember[];
-	stationMembers: StationMemberWithDetails[];
+	assignments: ShiftAssignmentWithHelper[];
+	stationHelpers: StationHelperWithDetails[];
 	scheduleDays: ScheduleDayWithPhases[];
 	materials: FestivalMaterialWithStation[];
 }
@@ -117,7 +117,7 @@ function deriveStationGaps(input: GapBoardInput): StationGap[] {
 			}
 		} else {
 			// Station ohne Schichten: Direktbesetzung gegen required_people.
-			const assigned = input.stationMembers.filter((sm) => sm.station_id === station.id).length;
+			const assigned = input.stationHelpers.filter((sm) => sm.station_id === station.id).length;
 			const missing = Math.max(0, station.required_people - assigned);
 			if (missing > 0) {
 				gaps.push({ stationId: station.id, stationName: station.name, missing, shiftGaps: [] });

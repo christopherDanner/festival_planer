@@ -14,7 +14,7 @@ interface ShiftPlanningHeaderProps {
 	onToggleFullscreen: () => void;
 	onAddStation: () => void;
 	onAutoAssign: () => void;
-	onAddMember: () => void;
+	onAddHelper: () => void;
 	onShare: () => void;
 }
 
@@ -23,7 +23,7 @@ const ShiftPlanningHeader: React.FC<ShiftPlanningHeaderProps> = ({
 	onToggleFullscreen,
 	onAddStation,
 	onAutoAssign,
-	onAddMember,
+	onAddHelper,
 	onShare
 }) => {
 	const isMobile = useIsMobile();
@@ -36,9 +36,9 @@ const ShiftPlanningHeader: React.FC<ShiftPlanningHeaderProps> = ({
 					<MapPin className="h-4 w-4 md:mr-1.5" />
 					{!isMobile && 'Station'}
 				</Button>
-				<Button variant="outline" size="sm" onClick={onAddMember} className="h-9 px-2.5 md:px-3">
+				<Button variant="outline" size="sm" onClick={onAddHelper} className="h-9 px-2.5 md:px-3">
 					<UserPlus className="h-4 w-4 md:mr-1.5" />
-					{!isMobile && 'Mitglied'}
+					{!isMobile && 'Helfer'}
 				</Button>
 				<Button
 					variant="default"

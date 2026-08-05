@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getScheduleDays } from '@/lib/scheduleService';
-import { getMembers } from '@/lib/memberService';
+import { getHelpers } from '@/lib/helperService';
 
 export const useScheduleData = (festivalId: string) => {
 	const queryClient = useQueryClient();
@@ -10,12 +10,13 @@ export const useScheduleData = (festivalId: string) => {
 		queryFn: () => getScheduleDays(festivalId)
 	});
 
-	const membersQuery = useQuery({
-		queryKey: ['members'],
-		queryFn: () => getMembers()
+	// Die Verantwortlichen des Ablaufplans sind die Helfer dieses Fests (ADR 0005).
+	const helpersQuery = useQuery({
+		queryKey: ['helpers', festivalId],
+		queryFn: () => getHelpers(festivalId)
 	});
 
-	const isLoading = daysQuery.isLoading || membersQuery.isLoading;
+	const isLoading = daysQuery.isLoading || helpersQuery.isLoading;
 
 	const refetchAll = () => {
 		queryClient.invalidateQueries({ queryKey: ['scheduleDays', festivalId] });
@@ -23,7 +24,7 @@ export const useScheduleData = (festivalId: string) => {
 
 	return {
 		days: daysQuery.data || [],
-		members: membersQuery.data || [],
+		helpers: helpersQuery.data || [],
 		isLoading,
 		refetchAll
 	};
