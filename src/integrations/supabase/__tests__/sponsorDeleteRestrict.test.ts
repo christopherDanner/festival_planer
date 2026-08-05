@@ -8,9 +8,14 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
-import { createSponsoringSchemaDb, seedFestivalAndSponsor } from './schemaHarness';
+import {
+	SPONSOR_RESTRICT_MIGRATION,
+	applyMigration,
+	createSponsoringSchemaDb,
+	seedFestivalAndSponsor
+} from './schemaHarness';
 
-describe('sponsorings.sponsor_id ON DELETE RESTRICT', () => {
+describe('Sponsor löschen: nur ohne Sponsoren-Historie (ADR 0010)', () => {
 	let db: PGlite;
 
 	beforeAll(async () => {
@@ -31,8 +36,9 @@ describe('sponsorings.sponsor_id ON DELETE RESTRICT', () => {
 		const deletion = db.query(`DELETE FROM sponsors WHERE id = $1`, [sponsorId]);
 
 		await expect(deletion).rejects.toMatchObject({
-			// Klasse 23 = Integritätsverletzung; RESTRICT meldet 23001.
-			code: expect.stringMatching(/^23/),
+			// 23001 = restrict_violation. Festgenagelt, weil der Migrations-Kommentar
+			// diesen Code für die Fehlerübersetzung in #159 zusagt.
+			code: '23001',
 			constraint: 'sponsorings_sponsor_id_fkey'
 		});
 
@@ -82,5 +88,39 @@ describe('sponsorings.sponsor_id ON DELETE RESTRICT', () => {
 		// Die Firma selbst ist Stammdatum und überlebt ihr Fest.
 		const sponsors = await db.query(`SELECT id FROM sponsors WHERE id = $1`, [sponsorId]);
 		expect(sponsors.rows).toHaveLength(1);
+	});
+
+	// Die Migration darf den Constraint-Namen nicht raten. Trägt der Fremdschlüssel
+	// in der echten Datenbank einen anderen Namen — Supabase-Altbestand, von Hand
+	// angelegt —, dann darf sie nicht scheinbar durchlaufen und den alten CASCADE
+	// stehen lassen: der feuert zuerst und löscht die Historie trotzdem.
+	it('zieht den Fremdschlüssel auch dann auf RESTRICT, wenn er anders heißt', async () => {
+		const driftDb = await createSponsoringSchemaDb();
+		try {
+			await driftDb.exec(`
+				ALTER TABLE sponsorings DROP CONSTRAINT sponsorings_sponsor_id_fkey;
+				ALTER TABLE sponsorings ADD CONSTRAINT fk_sponsorings_sponsor
+				  FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE;
+			`);
+
+			await applyMigration(driftDb, SPONSOR_RESTRICT_MIGRATION);
+
+			const { festivalId, sponsorId } = await seedFestivalAndSponsor(driftDb);
+			await driftDb.query(`INSERT INTO sponsorings (festival_id, sponsor_id) VALUES ($1, $2)`, [
+				festivalId,
+				sponsorId
+			]);
+
+			const deletion = driftDb.query(`DELETE FROM sponsors WHERE id = $1`, [sponsorId]);
+
+			await expect(deletion).rejects.toMatchObject({ code: '23001' });
+
+			const survivors = await driftDb.query(`SELECT id FROM sponsorings WHERE sponsor_id = $1`, [
+				sponsorId
+			]);
+			expect(survivors.rows).toHaveLength(1);
+		} finally {
+			await driftDb.close();
+		}
 	});
 });

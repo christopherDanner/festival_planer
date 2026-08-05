@@ -24,9 +24,14 @@ const MIGRATIONS_DIR = path.resolve(HERE, '../../../../supabase/migrations');
 /**
  * Erste Migration, die die Sponsoring-Tabellen anlegt. Ab hier wird alles
  * eingespielt — nicht eine Handpflegeliste, damit eine spätere Migration, die den
- * Fremdschlüssel wieder verbiegt, hier auffällt statt durchzurutschen.
+ * Fremdschlüssel wieder verbiegt, hier auffällt statt durchzurutschen. Der Preis:
+ * eine spätere Migration, die eine hier nicht gestellte Tabelle anfasst, scheitert
+ * im Prüfstand und will im PLATFORM_PRELUDE nachgetragen werden.
  */
-export const SPONSORING_SCHEMA_START = '20260609000002_create_sponsors.sql';
+const SPONSORING_SCHEMA_START = '20260609000002_create_sponsors.sql';
+
+/** Die Migration, die den Fremdschlüssel auf ON DELETE RESTRICT zieht (#156). */
+export const SPONSOR_RESTRICT_MIGRATION = '20260805000001_sponsor_delete_restrict.sql';
 
 const PLATFORM_PRELUDE = `
   CREATE ROLE anon;
@@ -44,11 +49,21 @@ const PLATFORM_PRELUDE = `
 `;
 
 /** Migrationsdateien ab `from`, in Dateinamen-Reihenfolge (= Ausführungsreihenfolge). */
-export const migrationFilesFrom = (from: string): string[] =>
+const migrationFilesFrom = (from: string): string[] =>
 	fs
 		.readdirSync(MIGRATIONS_DIR)
 		.filter((file) => file.endsWith('.sql') && file >= from)
 		.sort();
+
+/** Spielt eine Migrationsdatei so ein, wie sie auf der Platte liegt. */
+export const applyMigration = async (db: PGlite, file: string): Promise<void> => {
+	const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
+	try {
+		await db.exec(sql);
+	} catch (error) {
+		throw new Error(`Migration ${file} ist im Prüfstand gescheitert: ${(error as Error).message}`);
+	}
+};
 
 /**
  * Frisches Postgres mit dem Sponsoring-Schema. Der Aufrufer schließt es mit
@@ -59,12 +74,7 @@ export const createSponsoringSchemaDb = async (): Promise<PGlite> => {
 	await db.exec(PLATFORM_PRELUDE);
 
 	for (const file of migrationFilesFrom(SPONSORING_SCHEMA_START)) {
-		const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
-		try {
-			await db.exec(sql);
-		} catch (error) {
-			throw new Error(`Migration ${file} ist im Prüfstand gescheitert: ${(error as Error).message}`);
-		}
+		await applyMigration(db, file);
 	}
 
 	return db;
