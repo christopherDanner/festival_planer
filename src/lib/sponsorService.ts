@@ -144,6 +144,13 @@ export interface Sponsoring {
 	festival_id: string;
 	sponsor_id: string;
 	free_amount: number | null;
+	/**
+	 * Sachleistung: höchstens eine je Sponsoring (ADR 0008). Optional, weil die
+	 * beiden Spalten erst mit #143 an `sponsorings` hängen — bis dahin liefert
+	 * die Datenbank sie nicht, und die Matrix zeigt den Leerfall.
+	 */
+	in_kind_description?: string | null;
+	in_kind_value?: number | null;
 	notes: string | null;
 	created_at: string;
 	updated_at: string;

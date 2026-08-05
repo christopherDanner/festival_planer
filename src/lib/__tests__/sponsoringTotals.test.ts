@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { buildSponsoringOverviewRows, festivalSponsoringTotal, sponsoringTotal } from '../sponsoringTotals';
+import {
+	buildSponsoringOverviewFooter,
+	buildSponsoringOverviewRows,
+	festivalInKindTotal,
+	festivalSponsoringTotal,
+	sponsoringInKindValue,
+	sponsoringTotal
+} from '../sponsoringTotals';
 import type {
 	SponsoringAssignmentWithCategory,
+	SponsoringCategory,
 	SponsoringWithDetails,
 	Sponsor
 } from '../sponsorService';
@@ -25,26 +33,33 @@ function makeSponsor(companyName: string): Sponsor {
 	};
 }
 
+function makeCategory(name: string, value: number | null): SponsoringCategory {
+	idCounter += 1;
+	return {
+		id: `cat-${idCounter}`,
+		festival_id: 'f1',
+		name,
+		value,
+		created_at: '',
+		updated_at: ''
+	};
+}
+
 function makeAssignment(opts: {
-	categoryName: string;
-	categoryValue: number | null;
+	categoryName?: string;
+	categoryValue?: number | null;
+	category?: SponsoringCategory;
 	value?: number | null;
 }): SponsoringAssignmentWithCategory {
+	const category = opts.category ?? makeCategory(opts.categoryName ?? 'Kategorie', opts.categoryValue ?? null);
 	idCounter += 1;
 	return {
 		id: `as-${idCounter}`,
 		sponsoring_id: 'spo-1',
-		category_id: `cat-${idCounter}`,
+		category_id: category.id,
 		value: opts.value ?? null,
 		created_at: '',
-		category: {
-			id: `cat-${idCounter}`,
-			festival_id: 'f1',
-			name: opts.categoryName,
-			value: opts.categoryValue,
-			created_at: '',
-			updated_at: ''
-		}
+		category
 	};
 }
 
@@ -52,6 +67,8 @@ function makeSponsoring(opts: {
 	companyName?: string;
 	freeAmount?: number | null;
 	assignments?: SponsoringAssignmentWithCategory[];
+	inKindDescription?: string | null;
+	inKindValue?: number | null;
 }): SponsoringWithDetails {
 	idCounter += 1;
 	return {
@@ -59,6 +76,8 @@ function makeSponsoring(opts: {
 		festival_id: 'f1',
 		sponsor_id: `sp-${idCounter}`,
 		free_amount: opts.freeAmount ?? null,
+		in_kind_description: opts.inKindDescription ?? null,
+		in_kind_value: opts.inKindValue ?? null,
 		notes: null,
 		created_at: '',
 		updated_at: '',
@@ -113,6 +132,42 @@ describe('sponsoringTotal', () => {
 	});
 });
 
+describe('Sachwert', () => {
+	it('lässt die Geldsumme eines Sponsorings von der Sachleistung unberührt', () => {
+		const sponsoring = makeSponsoring({
+			freeAmount: 250,
+			assignments: [makeAssignment({ categoryName: 'Speisekarte', categoryValue: 150 })],
+			inKindDescription: 'Geschenkkorb Tombola',
+			inKindValue: 80
+		});
+		expect(sponsoringTotal(sponsoring)).toBe(400);
+		expect(sponsoringInKindValue(sponsoring)).toBe(80);
+	});
+
+	it('zählt ein Sponsoring ohne Sachleistung mit 0 Sachwert', () => {
+		expect(sponsoringInKindValue(makeSponsoring({ freeAmount: 100 }))).toBe(0);
+	});
+
+	it('zählt eine Sachleistung ohne Schätzwert mit 0 Sachwert', () => {
+		const sponsoring = makeSponsoring({ inKindDescription: '3 Warengutscheine' });
+		expect(sponsoringInKindValue(sponsoring)).toBe(0);
+	});
+
+	it('summiert die Sachwerte eines Fests, ohne sie ins Geld zu addieren', () => {
+		const sponsorings = [
+			makeSponsoring({ freeAmount: 200, inKindDescription: 'Brotkorb', inKindValue: 40 }),
+			makeSponsoring({ freeAmount: 150, inKindDescription: '6 Fl. Wein', inKindValue: 60 }),
+			makeSponsoring({ freeAmount: 100 })
+		];
+		expect(festivalInKindTotal(sponsorings)).toBe(100);
+		expect(festivalSponsoringTotal(sponsorings)).toBe(450);
+	});
+
+	it('liefert 0 Sachwert für ein Fest ohne Sponsorings', () => {
+		expect(festivalInKindTotal([])).toBe(0);
+	});
+});
+
 describe('festivalSponsoringTotal', () => {
 	it('returns 0 for a festival without sponsorings', () => {
 		expect(festivalSponsoringTotal([])).toBe(0);
@@ -132,22 +187,126 @@ describe('festivalSponsoringTotal', () => {
 
 describe('buildSponsoringOverviewRows', () => {
 	it('builds one row per sponsor with category positions, free amount and total, sorted by company name', () => {
+		const werbeplakat = makeAssignment({
+			categoryName: 'Werbeplakat',
+			categoryValue: 200,
+			value: 150
+		});
 		const sponsorings = [
-			makeSponsoring({
-				companyName: 'Raiffeisen',
-				freeAmount: 100,
-				assignments: [makeAssignment({ categoryName: 'Werbeplakat', categoryValue: 200, value: 150 })]
-			}),
+			makeSponsoring({ companyName: 'Raiffeisen', freeAmount: 100, assignments: [werbeplakat] }),
 			makeSponsoring({ companyName: 'Brauerei Schremser', freeAmount: 50 })
 		];
 
 		const rows = buildSponsoringOverviewRows(sponsorings);
 
 		expect(rows.map((r) => r.companyName)).toEqual(['Brauerei Schremser', 'Raiffeisen']);
-		expect(rows[1].positions).toEqual([{ label: 'Werbeplakat', value: 150 }]);
+		expect(rows[1].positions).toEqual([
+			{ categoryId: werbeplakat.category_id, label: 'Werbeplakat', value: 150, overridden: true }
+		]);
 		expect(rows[1].freeAmount).toBe(100);
 		expect(rows[1].total).toBe(250);
 		expect(rows[0].positions).toEqual([]);
 		expect(rows[0].total).toBe(50);
+	});
+
+	it('macht die zugewiesenen Werte je Kategorie-Id greifbar', () => {
+		const plakat = makeAssignment({ categoryName: 'Plakat', categoryValue: 200 });
+		const social = makeAssignment({ categoryName: 'Social', categoryValue: 100 });
+		const rows = buildSponsoringOverviewRows([makeSponsoring({ assignments: [plakat, social] })]);
+
+		expect(Object.keys(rows[0].positionsByCategoryId).sort()).toEqual(
+			[plakat.category_id, social.category_id].sort()
+		);
+		expect(rows[0].positionsByCategoryId[plakat.category_id].value).toBe(200);
+		expect(rows[0].positionsByCategoryId[social.category_id]?.label).toBe('Social');
+	});
+
+	it('markiert nur die Zuweisung, die vom Standardwert der Kategorie abweicht', () => {
+		const abweichend = makeAssignment({ categoryName: 'Plakat', categoryValue: 200, value: 350 });
+		const standard = makeAssignment({ categoryName: 'Social', categoryValue: 100 });
+		const gleich = makeAssignment({ categoryName: 'Durchsage', categoryValue: 80, value: 80 });
+		const rows = buildSponsoringOverviewRows([
+			makeSponsoring({ assignments: [abweichend, standard, gleich] })
+		]);
+		const byId = rows[0].positionsByCategoryId;
+
+		expect(byId[abweichend.category_id].overridden).toBe(true);
+		expect(byId[standard.category_id].overridden).toBe(false);
+		expect(byId[gleich.category_id].overridden).toBe(false);
+	});
+
+	it('trägt die Sachleistung als Beschreibung mit Schätzwert, ohne sie in die Summe zu nehmen', () => {
+		const rows = buildSponsoringOverviewRows([
+			makeSponsoring({
+				freeAmount: 250,
+				inKindDescription: 'Geschenkkorb Tombola',
+				inKindValue: 80
+			})
+		]);
+
+		expect(rows[0].inKind).toEqual({ description: 'Geschenkkorb Tombola', value: 80 });
+		expect(rows[0].total).toBe(250);
+	});
+
+	it('lässt die Sachleistung leer, wenn keine erfasst ist', () => {
+		expect(buildSponsoringOverviewRows([makeSponsoring({})])[0].inKind).toBeNull();
+	});
+
+	it('trägt den Vorjahresbeitrag aus dem Quellfest je Sponsoring ein', () => {
+		const uebernommen = makeSponsoring({ companyName: 'Brauerei Wieselburger', freeAmount: 900 });
+		const handeingetragen = makeSponsoring({ companyName: 'Taxi Brandl', freeAmount: 150 });
+
+		const rows = buildSponsoringOverviewRows([uebernommen, handeingetragen], {
+			[uebernommen.id]: 500
+		});
+
+		expect(rows.find((r) => r.sponsoringId === uebernommen.id)?.previousTotal).toBe(500);
+	});
+
+	it('lässt den Vorjahresbeitrag eines handeingetragenen Sponsorings leer', () => {
+		const handeingetragen = makeSponsoring({ companyName: 'Taxi Brandl', freeAmount: 150 });
+		const rows = buildSponsoringOverviewRows([handeingetragen], {});
+		expect(rows[0].previousTotal).toBeNull();
+	});
+});
+
+describe('buildSponsoringOverviewFooter', () => {
+	it('summiert je Kategorie, den Freibetrag und das Geld — den Sachwert daneben', () => {
+		const plakat = makeCategory('Plakat', 200);
+		const socialKategorie = makeCategory('Social', 100);
+		const categories = [plakat, socialKategorie, makeCategory('Durchsage', 80)];
+		const plakatA = makeAssignment({ category: plakat });
+		const plakatB = makeAssignment({ category: plakat, value: 350 });
+		const social = makeAssignment({ category: socialKategorie });
+
+		const rows = buildSponsoringOverviewRows([
+			makeSponsoring({
+				assignments: [plakatA, social],
+				freeAmount: 100,
+				inKindDescription: 'Geschenkkorb',
+				inKindValue: 80
+			}),
+			makeSponsoring({
+				assignments: [plakatB],
+				freeAmount: 50,
+				inKindDescription: 'Brotkorb',
+				inKindValue: 40
+			})
+		]);
+		const footer = buildSponsoringOverviewFooter(rows, categories);
+
+		expect(footer.perCategoryId[plakat.id]).toBe(550);
+		expect(footer.perCategoryId[socialKategorie.id]).toBe(100);
+		expect(footer.freeAmount).toBe(150);
+		expect(footer.inKindValue).toBe(120);
+		expect(footer.total).toBe(800);
+	});
+
+	it('führt eine Kategorie ohne Zuweisung mit 0 statt sie wegzulassen', () => {
+		const ungenutzt = makeCategory('Durchsage', 80);
+		const footer = buildSponsoringOverviewFooter([], [ungenutzt]);
+		expect(footer.perCategoryId).toEqual({ [ungenutzt.id]: 0 });
+		expect(footer.total).toBe(0);
+		expect(footer.inKindValue).toBe(0);
 	});
 });
