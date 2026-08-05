@@ -16,12 +16,18 @@ import {
 const preisliste = (namesAndValues: [string, number][]): SponsoringCategory[] =>
 	namesAndValues.map(([name, value]) => makeCategory(name, value));
 
-function render(rows: SponsoringOverviewRow[], categories: SponsoringCategory[]) {
+function render(
+	rows: SponsoringOverviewRow[],
+	categories: SponsoringCategory[],
+	filter: { totalRowCount?: number; searchTerm?: string } = {}
+) {
 	return renderToStaticMarkup(
 		<SponsoringMatrix
 			categories={categories}
 			rows={rows}
 			footer={buildSponsoringOverviewFooter(rows, categories)}
+			totalRowCount={filter.totalRowCount ?? rows.length}
+			searchTerm={filter.searchTerm ?? ''}
 			onDelete={() => {}}
 		/>
 	);
@@ -196,6 +202,16 @@ describe('SponsoringMatrix — Fuß', () => {
 		expect(html).toContain('€ 550'); // Geld-Gesamtsumme
 	});
 
+	it('lässt die Beschriftung nackt, solange alle Firmen sichtbar sind', () => {
+		const rows = buildSponsoringOverviewRows([
+			makeSponsoring({ companyName: 'Taxi Brandl', freeAmount: 150 })
+		]);
+		const html = render(rows, preisliste([['Plakat', 200]]));
+
+		expect(html).toContain('Σ je Kategorie');
+		expect(html).not.toContain('von 1 Firmen');
+	});
+
 	it('lässt die Sachleistung mit einer Zeilensumme unangetastet', () => {
 		const rows = buildSponsoringOverviewRows([
 			makeSponsoring({
@@ -208,5 +224,71 @@ describe('SponsoringMatrix — Fuß', () => {
 		const footer = buildSponsoringOverviewFooter(rows, []);
 		expect(footer.total).toBe(150);
 		expect(render(rows, [])).toContain('+ € 60 Sachwert');
+	});
+});
+
+describe('SponsoringMatrix — gefilterter Fuß (ADR 0006)', () => {
+	const plakat = makeCategory('Plakat', 200);
+	const transparent = makeCategory('Transparent', 300);
+	const preise = [plakat, transparent];
+
+	const drei = () => [
+		makeSponsoring({
+			companyName: 'Bäckerei Leitner',
+			assignments: [makeAssignment({ category: plakat })]
+		}),
+		makeSponsoring({
+			companyName: 'Brauerei Wieselburger',
+			assignments: [makeAssignment({ category: transparent })]
+		}),
+		makeSponsoring({
+			companyName: 'Taxi Brandl',
+			assignments: [makeAssignment({ category: plakat })]
+		})
+	];
+
+	it('summiert nur die sichtbaren Zeilen und sagt es in der Beschriftung', () => {
+		const alle = buildSponsoringOverviewRows(drei());
+		const sichtbar = alle.filter((r) => r.companyName === 'Bäckerei Leitner');
+		const html = render(sichtbar, preise, { totalRowCount: alle.length });
+
+		expect(html).toContain('Σ je Kategorie · 1 von 3 Firmen');
+		expect(html).toContain('€ 200'); // Σ Plakat nur der sichtbaren Zeile
+		expect(html).not.toContain('€ 400');
+	});
+
+	it('lässt bei jedem Filter alle Kategorie-Spalten stehen — sonst springt das Layout', () => {
+		const alle = buildSponsoringOverviewRows(drei());
+		const sichtbar = alle.filter((r) => r.companyName === 'Bäckerei Leitner');
+		const html = render(sichtbar, preise, { totalRowCount: alle.length });
+
+		// „Transparent" hat keine sichtbare Firma und bleibt trotzdem Spalte
+		expect(html).toContain('Transparent');
+		expect(html).toContain('Plakat');
+	});
+
+	it('zeigt bei keinem Treffer eine Hinweiszeile mit dem Suchbegriff und keinen Fuß', () => {
+		const html = render([], preise, { totalRowCount: 3, searchTerm: 'gibtsnicht' });
+
+		expect(html).toContain('Keine Firma passt zu');
+		expect(html).toContain('gibtsnicht');
+		// nichts zu summieren — gleiche Regel wie im Leerzustand L2
+		expect(html).not.toContain('Σ je Kategorie');
+	});
+
+	it('lässt die Kategorie-Spalten auch neben der Hinweiszeile stehen', () => {
+		const html = render([], preise, { totalRowCount: 3, searchTerm: 'gibtsnicht' });
+		expect(html).toContain('Transparent');
+		expect(html).toContain('Plakat');
+	});
+
+	it('schweigt ohne Suchbegriff — ein Fest ohne Sponsoring ist kein Suchergebnis', () => {
+		expect(render([], preise)).not.toContain('Keine Firma passt zu');
+	});
+
+	it('schweigt auch mit Suchbegriff, solange das Fest überhaupt keine Firma hat', () => {
+		// sonst stünde am leeren Fest je nach Breite ein anderer Satz
+		const html = render([], preise, { totalRowCount: 0, searchTerm: 'bau' });
+		expect(html).not.toContain('Keine Firma passt zu');
 	});
 });
