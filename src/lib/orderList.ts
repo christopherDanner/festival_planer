@@ -1,5 +1,6 @@
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { toBaseQuantity } from '@/lib/materialQuantity';
+import { orderedValue, withoutPrice } from '@/lib/materialCosts';
 
 export type OrderListAxis = 'supplier' | 'station';
 
@@ -35,6 +36,14 @@ export interface OrderListGroup {
 	/** Display name: supplier/station name, or "Kein Lieferant"/"Keine Station". */
 	name: string;
 	rows: OrderListRow[];
+	/**
+	 * Bestellwert € der Gruppe — Σ (Bestellt-Menge × Bruttopreis), gerechnet in
+	 * `materialCosts` (ADR 0006). Die Bestellliste kennt nur bestellte Mengen,
+	 * darum der Bestellwert und nicht die Zeilenkosten der Arbeitsliste.
+	 */
+	orderedValue: number;
+	/** Preislücke: Positionen der Gruppe ohne erfassten Preis. */
+	withoutPrice: number;
 }
 
 /**
@@ -56,14 +65,19 @@ export function buildOrderList(
 ): OrderListGroup[] {
 	const ordered = materials.filter((m) => m.ordered_quantity > 0);
 
+	// Die Positionen je Gruppe bleiben liegen, damit `materialCosts` den
+	// Bestellwert rechnen kann — die Zeilen selbst tragen keinen Preis.
 	const byKey = new Map<string, OrderListGroup>();
+	const positionsByKey = new Map<string, FestivalMaterialWithStation[]>();
 	for (const m of ordered) {
 		const { key, name } = groupKeyAndName(m, axis);
 		let group = byKey.get(key);
 		if (!group) {
-			group = { key, name, rows: [] };
+			group = { key, name, rows: [], orderedValue: 0, withoutPrice: 0 };
 			byKey.set(key, group);
+			positionsByKey.set(key, []);
 		}
+		positionsByKey.get(key)!.push(m);
 		const base = toBaseQuantity(m.ordered_quantity, m) ?? 0;
 		const packaging: OrderListPackaging | null =
 			m.packaging_unit && m.amount_per_packaging
@@ -83,6 +97,9 @@ export function buildOrderList(
 	for (const group of groups) {
 		if (group.key === '') group.name = noneLabel;
 		group.rows.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+		const positions = positionsByKey.get(group.key) ?? [];
+		group.orderedValue = orderedValue(positions);
+		group.withoutPrice = withoutPrice(positions);
 	}
 
 	// Named groups alphabetically; the none-group ("Kein Lieferant"/"Keine Station") always last.
@@ -170,4 +187,28 @@ export function planOrderListExport(
 
 	const selected = groups.filter((g) => g.key === selectedKey);
 	return { individual: selected, collection: null };
+}
+
+/** Was der Export-Dialog über einen Plan sagt: Positionen, Dateien, Bestellwert. */
+export interface OrderListSummary {
+	/** Positionen der Bestellung — das Sammeldokument wiederholt sie nur. */
+	positionCount: number;
+	/** Dateien, die der Export erzeugt (Einzeldateien + Sammeldokument). */
+	fileCount: number;
+	/** Bestellwert € über alle Gruppen des Plans (aus `materialCosts`). */
+	orderedValue: number;
+	/** Preislücke über alle Gruppen des Plans. */
+	withoutPrice: number;
+}
+
+/** Zählt einen Bestelllisten-Plan zusammen. Die Zahlen stehen im Dialog und auf
+dem Papier — sie dürfen nur an einer Stelle entstehen. */
+export function summarizeOrderListExport(plan: OrderListExportPlan): OrderListSummary {
+	return {
+		positionCount: plan.individual.reduce((sum, group) => sum + group.rows.length, 0),
+		// Ein leeres Sammeldokument ist keine Datei — ohne Bestellung entsteht nichts.
+		fileCount: plan.individual.length + (plan.collection?.length ? 1 : 0),
+		orderedValue: plan.individual.reduce((sum, group) => sum + group.orderedValue, 0),
+		withoutPrice: plan.individual.reduce((sum, group) => sum + group.withoutPrice, 0)
+	};
 }
