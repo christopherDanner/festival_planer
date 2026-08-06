@@ -12,6 +12,7 @@ import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
 import OrderListExportDialog from './dialogs/OrderListExportDialog';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
+import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
 import {
 	groupMaterials,
 	searchMaterials,
@@ -79,11 +80,13 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	const activeCategory = resolveActiveCategory(groupChips, requestedCategory);
 	const visible = activeGroup ? filterByCategory(activeGroup.materials, activeCategory) : [];
 
-	const handleSave = (data: any) => {
-		if (dialogState.type === 'material' && dialogState.material) {
-			actions.updateMaterial.mutate({ id: dialogState.material.id, updates: data });
-		} else {
+	// Die volle Nutzlast kommt nur beim Anlegen; beim Bearbeiten schickt der
+	// Dialog nur seine Stammdaten (#117).
+	const handleSave = (data: MaterialSaveData) => {
+		if (isFullPayload(data)) {
 			actions.createMaterial.mutate(data);
+		} else if (dialogState.type === 'material' && dialogState.material) {
+			actions.updateMaterial.mutate({ id: dialogState.material.id, updates: data });
 		}
 	};
 

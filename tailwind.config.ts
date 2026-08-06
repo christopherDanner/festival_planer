@@ -95,6 +95,10 @@ export default {
       borderWidth: {
         "1.5": "1.5px",
         "2.5": "2.5px",
+        // Dialoge stehen einen Strich kräftiger als Container: 3px aus dem
+        // abgenommenen Prototyp `entscheid-material-bearbeiten.html` (`.dlg`),
+        // ausdrücklich so in #117 verlangt.
+        "3": "3px",
       },
       borderRadius: {
         lg: "var(--radius)",

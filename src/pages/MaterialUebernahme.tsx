@@ -12,6 +12,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import FestivalTabBar, { type FestivalTab } from '@/components/festival/FestivalTabBar';
 import MaterialDialog from '@/components/material-list/dialogs/MaterialDialog';
+import { isFullPayload } from '@/lib/materialDialogForm';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -595,6 +596,9 @@ export default function MaterialUebernahme() {
 					stations={targetStations}
 					festivalId={targetId}
 					onSave={async (data) => {
+						// Diese Maske legt immer neu an (`material={null}`) — dann liefert
+						// der Dialog die volle Nutzlast samt Menge und Preis.
+						if (!isFullPayload(data)) return;
 						await createMaterial(data);
 						queryClient.invalidateQueries({ queryKey: ['materials', targetId] });
 						setCreateDialogOpen(false);
