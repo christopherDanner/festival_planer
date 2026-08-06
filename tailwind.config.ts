@@ -95,6 +95,8 @@ export default {
       borderWidth: {
         "1.5": "1.5px",
         "2.5": "2.5px",
+        // Dialoge stehen einen Strich kräftiger als Container (#117).
+        "3": "3px",
       },
       borderRadius: {
         lg: "var(--radius)",
