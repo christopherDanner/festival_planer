@@ -1,14 +1,27 @@
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+
+import { POSTER_FONT } from '@/lib/pdfFonts';
+import {
+	POSTER_MARGIN,
+	createPosterDoc,
+	drawPosterFooter,
+	drawPosterHead,
+	drawSectionHeading,
+	drawStamp,
+	posterTableEnd,
+	posterTableTheme
+} from '@/lib/pdfPoster';
+import { formatEuro } from '@/lib/money';
 import {
 	axisLabel,
 	buildOrderListFilename,
 	orderListColumns,
 	orderListRowCells,
 	type OrderListAxis,
-	type OrderListGroup,
+	type OrderListGroup
 } from '@/lib/orderList';
 
 export interface OrderListMeta {
@@ -17,6 +30,8 @@ export interface OrderListMeta {
 	/** Defaults to now. */
 	date?: Date;
 }
+
+const PAPER_TITLE = 'Bestellliste';
 
 function formatDate(date: Date): string {
 	return format(date, 'dd.MM.yyyy');
@@ -38,82 +53,113 @@ function pdfColumnStyles(axis: OrderListAxis): Record<number, { cellWidth: numbe
 
 // ── PDF ───────────────────────────────────────────────────────
 
-function addPageNumbers(doc: jsPDF): void {
+/**
+ * Zeichnet eine Bestellung aufs laufende Blatt: Sektionszeile mit Gruppe und
+ * Datum, Frachtbrief-Tabelle, darunter Positionszahl und Bestellwert.
+ *
+ * Die Bausteine kommen aus `pdfPoster` (#110, ADR 0012) — dieses Papier bringt
+ * keine eigene Grafik mit.
+ */
+function drawSection(doc: jsPDF, group: OrderListGroup, meta: OrderListMeta, y: number): void {
 	const pageWidth = doc.internal.pageSize.getWidth();
-	const pageHeight = doc.internal.pageSize.getHeight();
-	const pageCount = doc.getNumberOfPages();
-	for (let i = 1; i <= pageCount; i++) {
-		doc.setPage(i);
+	const usableWidth = pageWidth - POSTER_MARGIN * 2;
+
+	let top = drawSectionHeading(doc, {
+		x: POSTER_MARGIN,
+		y,
+		width: usableWidth,
+		label: `${axisLabel(meta.axis)}: ${group.name}`,
+		note: formatDate(meta.date ?? new Date())
+	});
+	top += 2;
+
+	autoTable(doc, {
+		...posterTableTheme({ fontSize: 9 }),
+		startY: top,
+		head: [orderListColumns(meta.axis)],
+		body: group.rows.map((r) => orderListRowCells(r, meta.axis)),
+		columnStyles: pdfColumnStyles(meta.axis)
+	});
+
+	const end = posterTableEnd(doc) + 6;
+	const count = group.rows.length;
+	drawStamp(doc, {
+		x: POSTER_MARGIN,
+		y: end,
+		label: `${count} ${count === 1 ? 'Position' : 'Positionen'}`,
+		tone: 'tinte'
+	});
+
+	// Bestellwert aus dem gemeinsamen Rechenmodul (#111, ADR 0006) — die Zeilen
+	// selbst tragen keinen Preis, die Bestellung braucht trotzdem ihre Summe.
+	drawStamp(doc, {
+		x: pageWidth - POSTER_MARGIN,
+		y: end,
+		label: `Bestellwert ${formatEuro(group.orderedValue)}`,
+		tone: group.withoutPrice > 0 ? 'rot' : 'gruen',
+		align: 'right'
+	});
+
+	if (group.withoutPrice > 0) {
+		doc.setFont(POSTER_FONT.body, 'normal');
 		doc.setFontSize(8);
-		doc.setFont('helvetica', 'normal');
-		doc.setTextColor(130, 130, 130);
-		doc.text(`Seite ${i} von ${pageCount}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-		doc.setTextColor(0, 0, 0);
+		doc.text(
+			`${group.withoutPrice} Position(en) ohne Preis — der Bestellwert ist unvollständig.`,
+			POSTER_MARGIN,
+			end + 9
+		);
 	}
 }
 
-/** Draws one group (header + table + "X Positionen" footer) starting at the top of the current page. */
-function drawSection(doc: jsPDF, group: OrderListGroup, meta: OrderListMeta): void {
-	const pageWidth = doc.internal.pageSize.getWidth();
-	const margin = 14;
-	let y = 15;
-
-	doc.setFontSize(14);
-	doc.setFont('helvetica', 'bold');
-	doc.text(meta.festivalName, pageWidth / 2, y, { align: 'center' });
-	y += 6;
-
-	doc.setFontSize(11);
-	doc.setFont('helvetica', 'normal');
-	doc.text('Bestellliste', pageWidth / 2, y, { align: 'center' });
-	y += 7;
-
-	doc.setFontSize(10);
-	doc.setFont('helvetica', 'bold');
-	doc.text(`${axisLabel(meta.axis)}: ${group.name}`, margin, y);
-	doc.setFont('helvetica', 'normal');
-	doc.text(formatDate(meta.date ?? new Date()), pageWidth - margin, y, { align: 'right' });
-	y += 5;
-
-	autoTable(doc, {
-		startY: y,
-		head: [orderListColumns(meta.axis)],
-		body: group.rows.map((r) => orderListRowCells(r, meta.axis)),
-		theme: 'grid',
-		styles: { fontSize: 9, cellPadding: 2, overflow: 'linebreak', valign: 'top', lineWidth: 0.2 },
-		headStyles: { fillColor: [70, 70, 70], fontStyle: 'bold', halign: 'left' },
-		columnStyles: pdfColumnStyles(meta.axis),
-		margin: { left: margin, right: margin },
+/** Baut eine einzelne Bestellung als Plakat. */
+export function buildOrderListSinglePdf(group: OrderListGroup, meta: OrderListMeta): jsPDF {
+	const doc = createPosterDoc({ orientation: 'portrait' });
+	const y = drawPosterHead(doc, {
+		title: meta.festivalName,
+		subtitle: PAPER_TITLE,
+		note: formatDate(meta.date ?? new Date())
 	});
+	drawSection(doc, group, meta, y);
+	drawPosterFooter(doc, `${meta.festivalName} — ${PAPER_TITLE}`);
+	return doc;
+}
 
-	const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
-	doc.setFontSize(9);
-	doc.setFont('helvetica', 'bold');
-	doc.text(`${group.rows.length} Positionen`, margin, finalY);
+/** Baut das Sammeldokument: eine Bestellung je Seite. */
+export function buildOrderListCollectionPdf(
+	groups: OrderListGroup[],
+	meta: OrderListMeta
+): jsPDF {
+	const doc = createPosterDoc({ orientation: 'portrait' });
+	groups.forEach((group, i) => {
+		if (i > 0) doc.addPage();
+		const y = drawPosterHead(doc, {
+			title: meta.festivalName,
+			subtitle: PAPER_TITLE,
+			note: formatDate(meta.date ?? new Date())
+		});
+		drawSection(doc, group, meta, y);
+	});
+	drawPosterFooter(doc, `${meta.festivalName} — ${PAPER_TITLE}`);
+	return doc;
 }
 
 export function exportOrderListSinglePdf(group: OrderListGroup, meta: OrderListMeta): void {
-	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-	drawSection(doc, group, meta);
-	addPageNumbers(doc);
-	doc.save(buildOrderListFilename(meta.festivalName, 'pdf', meta.axis, group));
+	buildOrderListSinglePdf(group, meta).save(
+		buildOrderListFilename(meta.festivalName, 'pdf', meta.axis, group)
+	);
 }
 
 export function exportOrderListCollectionPdf(groups: OrderListGroup[], meta: OrderListMeta): void {
-	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-	groups.forEach((group, i) => {
-		if (i > 0) doc.addPage();
-		drawSection(doc, group, meta);
-	});
-	addPageNumbers(doc);
-	doc.save(buildOrderListFilename(meta.festivalName, 'pdf', meta.axis, null));
+	buildOrderListCollectionPdf(groups, meta).save(
+		buildOrderListFilename(meta.festivalName, 'pdf', meta.axis, null)
+	);
 }
 
 // ── Excel ─────────────────────────────────────────────────────
 
 type Merge = { s: { r: number; c: number }; e: { r: number; c: number } };
 
-/** Appends one group's block (titles + table + count) to the row matrix; returns column merges added. */
+/** Appends one group's block (titles + table + count + Bestellwert) to the row matrix; returns column merges added. */
 function pushSectionRows(
 	rows: (string | number)[][],
 	group: OrderListGroup,
@@ -124,7 +170,7 @@ function pushSectionRows(
 	const merges: Merge[] = [];
 	const titleRow = rows.length;
 	rows.push([meta.festivalName]);
-	rows.push(['Bestellliste']);
+	rows.push([PAPER_TITLE]);
 	const headerRow: (string | number)[] = new Array(columns.length).fill('');
 	headerRow[0] = `${axisLabel(meta.axis)}: ${group.name}`;
 	headerRow[lastCol] = formatDate(meta.date ?? new Date());
@@ -135,6 +181,8 @@ function pushSectionRows(
 	rows.push(columns);
 	for (const r of group.rows) rows.push(orderListRowCells(r, meta.axis));
 	rows.push([`${group.rows.length} Positionen`]);
+	rows.push([`Bestellwert ${formatEuro(group.orderedValue)}`]);
+	if (group.withoutPrice > 0) rows.push([`${group.withoutPrice} ohne Preis`]);
 	return merges;
 }
 
@@ -151,7 +199,7 @@ export function exportOrderListSingleExcel(group: OrderListGroup, meta: OrderLis
 	const ws = XLSX.utils.aoa_to_sheet(rows);
 	ws['!cols'] = excelCols(meta.axis);
 	ws['!merges'] = merges;
-	XLSX.utils.book_append_sheet(wb, ws, 'Bestellliste');
+	XLSX.utils.book_append_sheet(wb, ws, PAPER_TITLE);
 	XLSX.writeFile(wb, buildOrderListFilename(meta.festivalName, 'xlsx', meta.axis, group));
 }
 
@@ -169,6 +217,6 @@ export function exportOrderListCollectionExcel(groups: OrderListGroup[], meta: O
 	const ws = XLSX.utils.aoa_to_sheet(rows);
 	ws['!cols'] = excelCols(meta.axis);
 	ws['!merges'] = merges;
-	XLSX.utils.book_append_sheet(wb, ws, 'Bestellliste');
+	XLSX.utils.book_append_sheet(wb, ws, PAPER_TITLE);
 	XLSX.writeFile(wb, buildOrderListFilename(meta.festivalName, 'xlsx', meta.axis, null));
 }

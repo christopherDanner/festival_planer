@@ -210,8 +210,6 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				}}
 				festivalName={festivalName || 'Festival'}
 				materials={materials}
-				stations={stations}
-				suppliers={suppliers}
 			/>
 
 			<OrderListExportDialog

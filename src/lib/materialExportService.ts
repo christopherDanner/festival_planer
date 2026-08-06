@@ -1,25 +1,54 @@
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+
+import { POSTER_FONT } from '@/lib/pdfFonts';
+import {
+	POSTER_COLOR,
+	POSTER_MARGIN,
+	createPosterDoc,
+	drawPosterFooter,
+	drawPosterHead,
+	drawSectionHeading,
+	drawStamp,
+	posterTableEnd,
+	posterTableTheme
+} from '@/lib/pdfPoster';
+import { consumedValue, orderedValue, withoutPrice } from '@/lib/materialCosts';
+import { formatEuro } from '@/lib/money';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
-export interface MaterialExportOptions {
+/** Ein Papier der Materialliste — eine Gruppe der Achse oder die ganze Liste
+(geplant in `materialExportPlan`). */
+export interface MaterialListPaper {
 	festivalName: string;
+	/** Untertitel-Zusatz („Ausschank"); `null` = gesamte Liste. */
+	label: string | null;
+	/** Station als Spalte — entfällt, wo die Achse sie schon gesetzt hat (#113). */
+	showStation: boolean;
 	materials: FestivalMaterialWithStation[];
-	filterLabel?: string;
-	isStationFiltered?: boolean;
+	/** Druckdatum; Standard jetzt. */
+	date?: Date;
 }
+
+const PAPER_TITLE = 'Materialliste';
 
 function sanitizeFilename(name: string): string {
 	return name.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim();
 }
 
-function buildFilename(festivalName: string, suffix: string, filterLabel?: string): string {
-	const base = sanitizeFilename(festivalName);
-	if (filterLabel) {
-		return `${base}_Materialliste_${sanitizeFilename(filterLabel)}.${suffix}`;
+function buildFilename(paper: MaterialListPaper, suffix: string): string {
+	const base = sanitizeFilename(paper.festivalName);
+	if (paper.label) {
+		return `${base}_${PAPER_TITLE}_${sanitizeFilename(paper.label)}.${suffix}`;
 	}
-	return `${base}_Materialliste.${suffix}`;
+	return `${base}_${PAPER_TITLE}.${suffix}`;
+}
+
+/** Untertitel des Papiers: „Materialliste" bzw. „Materialliste — Ausschank". */
+function subtitle(paper: MaterialListPaper): string {
+	return paper.label ? `${PAPER_TITLE} — ${paper.label}` : PAPER_TITLE;
 }
 
 const EXPLANATION_TEXT = (festivalName: string) =>
@@ -48,251 +77,224 @@ function wrapText(text: string, maxChars: number): string[] {
 	return lines;
 }
 
-// ── Excel Export ──────────────────────────────────────────────
+/**
+ * Spaltenköpfe des Papiers. Preise stehen bewusst nicht darauf: die
+ * Materialliste ist laut `CONTEXT.md` die Planungsliste mit Mengen und einer
+ * leeren „Neue Menge"-Spalte. Die Geldsummen trägt der Fuß.
+ */
+function columns(paper: MaterialListPaper): string[] {
+	return [
+		'Bezeichnung',
+		'Lieferant',
+		...(paper.showStation ? ['Station'] : []),
+		'Einheit',
+		'Gebinde',
+		'Menge/Gebinde',
+		'Bestellt',
+		'Verbraucht',
+		'Neue Menge'
+	];
+}
 
-export function exportMaterialsToExcel(options: MaterialExportOptions): void {
-	const { festivalName, materials, filterLabel, isStationFiltered } = options;
-	const wb = XLSX.utils.book_new();
+function rowCells(m: FestivalMaterialWithStation, paper: MaterialListPaper): string[] {
+	return [
+		m.name,
+		m.supplier || '',
+		...(paper.showStation ? [m.station?.name || ''] : []),
+		m.unit,
+		m.packaging_unit || '',
+		m.amount_per_packaging != null ? String(m.amount_per_packaging) : '',
+		String(m.ordered_quantity),
+		m.actual_quantity != null ? String(m.actual_quantity) : '',
+		'' // Neue Menge — bleibt leer, sie wird von Hand eingetragen
+	];
+}
+
+/** Spaltenindizes, die je nach Station-Spalte verrutschen. */
+function columnIndexes(paper: MaterialListPaper): { consumed: number; newQuantity: number } {
+	const last = columns(paper).length - 1;
+	return { consumed: last - 1, newQuantity: last };
+}
+
+// ── PDF ───────────────────────────────────────────────────────
+
+/** Spaltenbreiten in mm; die Bezeichnung nimmt den Rest. */
+function pdfColumnStyles(paper: MaterialListPaper): Record<number, Record<string, unknown>> {
+	const right = { halign: 'right' as const };
+	const cells: Record<string, unknown>[] = [
+		{ cellWidth: 'auto', fontStyle: 'bold' }, // Bezeichnung
+		{ cellWidth: 26 }, // Lieferant
+		...(paper.showStation ? [{ cellWidth: 22 }] : []), // Station
+		{ cellWidth: 16 }, // Einheit
+		{ cellWidth: 18 }, // Gebinde
+		{ cellWidth: 20, ...right }, // Menge/Gebinde
+		{ cellWidth: 18, ...right }, // Bestellt
+		{ cellWidth: 20, ...right }, // Verbraucht
+		{ cellWidth: 22, ...right } // Neue Menge
+	];
+	return Object.fromEntries(cells.map((style, index) => [index, style]));
+}
+
+/**
+ * Baut die Materialliste als Plakat (#119): Papier und Bausteine kommen aus
+ * `pdfPoster` (#110, ADR 0012) — grüner Halftone-Kopf, Frachtbrief-Tabelle,
+ * getönte Fußzeile. Gespeichert wird in {@link exportMaterialListPdf}.
+ */
+export function buildMaterialListPdf(paper: MaterialListPaper): jsPDF {
+	const doc = createPosterDoc({ orientation: 'portrait' });
+	const pageWidth = doc.internal.pageSize.getWidth();
+	const usableWidth = pageWidth - POSTER_MARGIN * 2;
+
+	let y = drawPosterHead(doc, {
+		title: paper.festivalName,
+		subtitle: subtitle(paper),
+		note: format(paper.date ?? new Date(), 'dd.MM.yyyy')
+	});
+
+	// Der Auftrag an den Leser steht über der Tabelle, nicht im Kleingedruckten.
+	doc.setFont(POSTER_FONT.body, 'normal');
+	doc.setFontSize(8.5);
+	const soft = POSTER_COLOR.tinteSoft;
+	doc.setTextColor(soft[0], soft[1], soft[2]);
+	const explanation: string[] = doc.splitTextToSize(
+		EXPLANATION_TEXT(paper.festivalName),
+		usableWidth
+	);
+	doc.text(explanation, POSTER_MARGIN, y);
+	y += explanation.length * 3.6 + 4;
+	const ink = POSTER_COLOR.tinte;
+	doc.setTextColor(ink[0], ink[1], ink[2]);
+
+	const { consumed, newQuantity } = columnIndexes(paper);
+	autoTable(doc, {
+		...posterTableTheme({ fontSize: 8 }),
+		startY: y,
+		head: [columns(paper)],
+		body: paper.materials.map((m) => rowCells(m, paper)),
+		columnStyles: pdfColumnStyles(paper),
+		tableWidth: usableWidth,
+		didParseCell: (data) => {
+			if (data.section !== 'body') return;
+			// Verbraucht ist die nachgetragene Zahl — getönt wie eine Wertmarke.
+			if (data.column.index === consumed && data.cell.raw) {
+				data.cell.styles.fillColor = [...POSTER_COLOR.papierGetoent];
+				data.cell.styles.fontStyle = 'bold';
+			}
+			// „Neue Menge" ist der freie Platz zum Eintragen — gelb wie die Auswahl.
+			if (data.column.index === newQuantity) {
+				data.cell.styles.fillColor = [...POSTER_COLOR.gelbFill];
+			}
+		}
+	});
+
+	const count = paper.materials.length;
+	y = drawSectionHeading(doc, {
+		x: POSTER_MARGIN,
+		y: posterTableEnd(doc) + 8,
+		width: usableWidth,
+		label: 'Summen',
+		note: `${count} ${count === 1 ? 'Position' : 'Positionen'}`
+	});
+
+	// Beträge aus dem gemeinsamen Rechenmodul (#111, ADR 0006) — sonst laufen
+	// Bildschirm und Papier auseinander.
+	doc.setFont(POSTER_FONT.body, 'bold');
+	doc.setFontSize(10);
+	doc.text(
+		`Bestellt ${formatEuro(orderedValue(paper.materials))}   ·   Verbraucht ${formatEuro(
+			consumedValue(paper.materials)
+		)}`,
+		POSTER_MARGIN,
+		y + 4
+	);
+
+	const gaps = withoutPrice(paper.materials);
+	if (gaps > 0) {
+		drawStamp(doc, {
+			x: pageWidth - POSTER_MARGIN,
+			y: y + 0.5,
+			label: `${gaps} ohne Preis`,
+			tone: 'rot',
+			align: 'right'
+		});
+	}
+
+	drawPosterFooter(doc, `${paper.festivalName} — ${subtitle(paper)}`);
+	return doc;
+}
+
+/** Exportiert ein Papier der Materialliste als PDF. */
+export function exportMaterialListPdf(paper: MaterialListPaper): void {
+	buildMaterialListPdf(paper).save(buildFilename(paper, 'pdf'));
+}
+
+// ── Excel ─────────────────────────────────────────────────────
+
+type Merge = { s: { r: number; c: number }; e: { r: number; c: number } };
+
+/** Spaltenbreiten der Tabelle in Zeichen — auch das Maß, an dem der Erklärtext
+umbricht (die freie xlsx-Ausgabe kennt keinen Zellumbruch). */
+function excelCols(paper: MaterialListPaper): { wch: number }[] {
+	return [
+		{ wch: 28 }, // Bezeichnung
+		{ wch: 20 }, // Lieferant
+		...(paper.showStation ? [{ wch: 18 }] : []), // Station
+		{ wch: 10 }, // Einheit
+		{ wch: 14 }, // Gebinde
+		{ wch: 14 }, // Menge/Gebinde
+		{ wch: 10 }, // Bestellt
+		{ wch: 12 }, // Verbraucht
+		{ wch: 14 } // Neue Menge
+	];
+}
+
+/** Exportiert ein Papier der Materialliste als Excel-Datei. Dieselben Spalten
+und dieselben Summen wie das PDF — nur ohne Plakat, weil eine Tabelle zum
+Weiterrechnen gedacht ist. */
+export function exportMaterialListExcel(paper: MaterialListPaper): void {
+	const cols = excelCols(paper);
+	const header = columns(paper);
+	const maxCharsPerLine = Math.floor(cols.reduce((sum, c) => sum + c.wch, 0) * 0.95);
 
 	const rows: (string | number | null)[][] = [];
+	rows.push([paper.festivalName]);
+	rows.push([subtitle(paper)]);
+	rows.push([]);
 
-	// Headers — omit Station column when filtered by station
-	const headers = isStationFiltered
-		? ['Name', 'Lieferant', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']
-		: ['Name', 'Lieferant', 'Station', 'Einheit', 'Verpackung', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge'];
-
-	// Total approximate character width of the table — used to wrap the explanation text
-	// so it doesn't get clipped (xlsx free edition does not support wrapText cell styles).
-	const totalCharWidth = isStationFiltered
-		? 28 + 20 + 10 + 14 + 10 + 10 + 12 + 14
-		: 28 + 20 + 18 + 10 + 14 + 10 + 10 + 12 + 14;
-	const maxCharsPerLine = Math.floor(totalCharWidth * 0.95);
-
-	// Title rows
-	const subtitle = filterLabel ? `Materialliste — ${filterLabel}` : 'Materialliste';
-	rows.push([festivalName]);
-	rows.push([subtitle]);
-	rows.push([]); // empty row
-
-	// Explanation text — wrapped manually into multiple rows
-	const explanationLines = wrapText(EXPLANATION_TEXT(festivalName), maxCharsPerLine);
-	const explanationStartRow = rows.length;
-	for (const line of explanationLines) {
+	const explanationStart = rows.length;
+	for (const line of wrapText(EXPLANATION_TEXT(paper.festivalName), maxCharsPerLine)) {
 		rows.push([line]);
 	}
-	const explanationEndRow = rows.length - 1;
+	const explanationEnd = rows.length - 1;
 
-	rows.push([]); // empty row before table
-	rows.push(headers);
-
-	for (const m of materials) {
-		const row = isStationFiltered
-			? [
-				m.name,
-				m.supplier || '',
-				m.unit,
-				m.packaging_unit || '',
-				m.amount_per_packaging ?? '',
-				m.ordered_quantity,
-				m.actual_quantity ?? '',
-				'', // Neue Menge — empty for user to fill in
-			]
-			: [
-				m.name,
-				m.supplier || '',
-				m.station?.name || '',
-				m.unit,
-				m.packaging_unit || '',
-				m.amount_per_packaging ?? '',
-				m.ordered_quantity,
-				m.actual_quantity ?? '',
-				'', // Neue Menge
-			];
-		rows.push(row);
-	}
-
-	// Summary row
 	rows.push([]);
-	rows.push([`Gesamt: ${materials.length} Positionen`]);
+	rows.push(header);
+	for (const m of paper.materials) rows.push(rowCells(m, paper));
+
+	rows.push([]);
+	rows.push([`${paper.materials.length} Positionen`]);
+	rows.push([
+		`Bestellt ${formatEuro(orderedValue(paper.materials))} · Verbraucht ${formatEuro(
+			consumedValue(paper.materials)
+		)}`
+	]);
+	const gaps = withoutPrice(paper.materials);
+	if (gaps > 0) rows.push([`${gaps} ohne Preis`]);
 
 	const ws = XLSX.utils.aoa_to_sheet(rows);
+	ws['!cols'] = cols;
 
-	// Column widths
-	ws['!cols'] = isStationFiltered
-		? [
-			{ wch: 28 }, // Name
-			{ wch: 20 }, // Lieferant
-			{ wch: 10 }, // Einheit
-			{ wch: 14 }, // Verpackung
-			{ wch: 10 }, // Menge/VE
-			{ wch: 10 }, // Bestellt
-			{ wch: 12 }, // Verbraucht
-			{ wch: 14 }, // Neue Menge
-		]
-		: [
-			{ wch: 28 }, // Name
-			{ wch: 20 }, // Lieferant
-			{ wch: 18 }, // Station
-			{ wch: 10 }, // Einheit
-			{ wch: 14 }, // Verpackung
-			{ wch: 10 }, // Menge/VE
-			{ wch: 10 }, // Bestellt
-			{ wch: 12 }, // Verbraucht
-			{ wch: 14 }, // Neue Menge
-		];
-
-	// Merge title, subtitle and each explanation line across the full table width
-	const colCount = headers.length;
-	const merges = [
-		{ s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } }, // title
-		{ s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } }, // subtitle
+	const lastCol = header.length - 1;
+	const merges: Merge[] = [
+		{ s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } },
+		{ s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } }
 	];
-	for (let r = explanationStartRow; r <= explanationEndRow; r++) {
-		merges.push({ s: { r, c: 0 }, e: { r, c: colCount - 1 } });
+	for (let r = explanationStart; r <= explanationEnd; r++) {
+		merges.push({ s: { r, c: 0 }, e: { r, c: lastCol } });
 	}
 	ws['!merges'] = merges;
 
-	XLSX.utils.book_append_sheet(wb, ws, 'Materialliste');
-	XLSX.writeFile(wb, buildFilename(festivalName, 'xlsx', filterLabel));
-}
-
-// ── PDF Export ────────────────────────────────────────────────
-
-export function exportMaterialsToPdf(options: MaterialExportOptions): void {
-	const { festivalName, materials, filterLabel, isStationFiltered } = options;
-	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-	const pageWidth = doc.internal.pageSize.getWidth();
-	const pageHeight = doc.internal.pageSize.getHeight();
-	const margin = 14;
-	let y = 15;
-
-	// Title
-	doc.setFontSize(14);
-	doc.setFont('helvetica', 'bold');
-	doc.text(festivalName, pageWidth / 2, y, { align: 'center' });
-	y += 6;
-
-	doc.setFontSize(11);
-	doc.setFont('helvetica', 'normal');
-	const subtitle = filterLabel ? `Materialliste — ${filterLabel}` : 'Materialliste';
-	doc.text(subtitle, pageWidth / 2, y, { align: 'center' });
-	y += 8;
-
-	// Explanation text
-	doc.setFontSize(9);
-	doc.setFont('helvetica', 'italic');
-	const explanationLines = doc.splitTextToSize(EXPLANATION_TEXT(festivalName), pageWidth - margin * 2);
-	doc.text(explanationLines, margin, y);
-	y += explanationLines.length * 4 + 4;
-
-	// Table columns — omit Station when filtered
-	const head = isStationFiltered
-		? [['Name', 'Lieferant', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']]
-		: [['Name', 'Lieferant', 'Station', 'Einheit', 'VE', 'Menge/VE', 'Bestellt', 'Verbraucht', 'Neue Menge']];
-
-	const body = materials.map(m => {
-		const baseRow = [
-			m.name,
-			m.supplier || '',
-			...(isStationFiltered ? [] : [m.station?.name || '']),
-			m.unit,
-			m.packaging_unit || '',
-			m.amount_per_packaging != null ? String(m.amount_per_packaging) : '',
-			String(m.ordered_quantity),
-			m.actual_quantity != null ? String(m.actual_quantity) : '',
-			'', // Neue Menge — empty
-		];
-		return baseRow;
-	});
-
-	// Column style indices shift based on whether station is shown
-	const neueMengeIdx = isStationFiltered ? 7 : 8;
-	const istMengeIdx = isStationFiltered ? 6 : 7;
-
-	const usableWidth = pageWidth - margin * 2;
-
-	const columnStyles: Record<number, any> = isStationFiltered
-		? {
-			0: { cellWidth: 36 },  // Name
-			1: { cellWidth: 26 },  // Lieferant
-			2: { cellWidth: 16 },  // Einheit
-			3: { cellWidth: 18 },  // VE
-			4: { cellWidth: 20, halign: 'right' },  // Menge/VE
-			5: { cellWidth: 20, halign: 'right' },  // Bestellt
-			6: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },  // Verbraucht
-			7: { cellWidth: 24, halign: 'right' },  // Neue Menge
-		}
-		: {
-			0: { cellWidth: 30 },  // Name
-			1: { cellWidth: 24 },  // Lieferant
-			2: { cellWidth: 20 },  // Station
-			3: { cellWidth: 16 },  // Einheit
-			4: { cellWidth: 16 },  // VE
-			5: { cellWidth: 18, halign: 'right' },  // Menge/VE
-			6: { cellWidth: 18, halign: 'right' },  // Bestellt
-			7: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },  // Verbraucht
-			8: { cellWidth: 20, halign: 'right' },  // Neue Menge
-		};
-
-	autoTable(doc, {
-		startY: y,
-		head,
-		body,
-		theme: 'grid',
-		styles: {
-			fontSize: 8,
-			cellPadding: { top: 1.5, right: 1.5, bottom: 1.5, left: 1.5 },
-			overflow: 'linebreak',
-			valign: 'top',
-			lineWidth: 0.2,
-		},
-		headStyles: {
-			fillColor: [70, 70, 70],
-			fontStyle: 'bold',
-			fontSize: 8,
-			halign: 'center',
-			cellPadding: { top: 2, right: 1, bottom: 2, left: 1 },
-		},
-		columnStyles,
-		margin: { left: margin, right: margin },
-		tableWidth: usableWidth,
-		didParseCell: (hookData) => {
-			if (hookData.section === 'body') {
-				// Highlight Verbraucht column in light blue
-				if (hookData.column.index === istMengeIdx) {
-					const text = hookData.cell.raw as string;
-					if (text) {
-						hookData.cell.styles.fillColor = [235, 245, 255];
-						hookData.cell.styles.textColor = [30, 64, 120];
-					}
-				}
-				// Highlight Neue Menge column in light yellow
-				if (hookData.column.index === neueMengeIdx) {
-					hookData.cell.styles.fillColor = [255, 253, 230];
-				}
-			}
-		},
-		didDrawPage: () => {
-			const pageCount = (doc as any).internal.getNumberOfPages();
-			const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
-			doc.setFontSize(8);
-			doc.setFont('helvetica', 'normal');
-			doc.setTextColor(130, 130, 130);
-			doc.text(
-				`Seite ${currentPage} von ${pageCount}`,
-				pageWidth / 2,
-				pageHeight - 8,
-				{ align: 'center' }
-			);
-			doc.setTextColor(0, 0, 0);
-		},
-	});
-
-	// Summary below table
-	const finalY = (doc as any).lastAutoTable.finalY + 8;
-	doc.setFontSize(9);
-	doc.setFont('helvetica', 'bold');
-	doc.text(`${materials.length} Positionen`, margin, finalY);
-
-	doc.save(buildFilename(festivalName, 'pdf', filterLabel));
+	const wb = XLSX.utils.book_new();
+	XLSX.utils.book_append_sheet(wb, ws, PAPER_TITLE);
+	XLSX.writeFile(wb, buildFilename(paper, 'xlsx'));
 }
