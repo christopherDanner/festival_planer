@@ -46,9 +46,7 @@ export default function FestivalBasicsStep({
 	return (
 		<div className="border-2.5 border-tinte bg-white">
 			<div className="flex flex-wrap items-baseline gap-3 border-b-2.5 border-tinte px-4 py-3">
-				<h3 className="font-display text-[19px] font-semibold uppercase tracking-[.02em]">
-					Name &amp; Datum
-				</h3>
+				<h3 className="text-sm font-bold uppercase tracking-[.08em]">Name &amp; Datum</h3>
 				<span className="text-xs text-tinte-soft">
 					Name und Startdatum genügen — Ort und Zeitraum lassen sich später am Fest ändern.
 				</span>
@@ -65,7 +63,7 @@ export default function FestivalBasicsStep({
 					/>
 				</div>
 
-				<div className="grid grid-cols-1 gap-4 min-[560px]:grid-cols-2">
+				<div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
 					<div className="space-y-1.5">
 						<Label htmlFor="festival-start">Startdatum *</Label>
 						<Input

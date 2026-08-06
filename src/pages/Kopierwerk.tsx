@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import FestivalBasicsStep from '@/components/festival-wizard/FestivalBasicsStep';
-import KopierwerkMast from '@/components/festival-wizard/KopierwerkMast';
-import StampCard from '@/components/festival-wizard/StampCard';
-import TemplateSelectionStep from '@/components/festival-wizard/TemplateSelectionStep';
+import FestivalBasicsStep from '@/components/kopierwerk/FestivalBasicsStep';
+import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
+import StampCard from '@/components/kopierwerk/StampCard';
+import TemplateSelectionStep from '@/components/kopierwerk/TemplateSelectionStep';
+import { loadTemplate, type LoadedTemplate } from '@/components/kopierwerk/loadTemplate';
 import {
 	draftToFestivalData,
 	emptyFestivalDraft,
@@ -13,22 +14,12 @@ import {
 	stampCardHeading,
 	type FestivalDraft,
 	type KopierwerkStepKey
-} from '@/components/festival-wizard/kopierwerk';
+} from '@/components/kopierwerk/kopierwerk';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { copyFestivalData, type CopyFestivalOptions } from '@/lib/festivalCopyService';
-import { FESTIVAL_LIST_PATH, festivalTabPath, templateIdFromSearch } from '@/lib/festivalRoutes';
+import { FESTIVAL_LIST_PATH, festivalWorkspacePath, templateIdFromSearch } from '@/lib/festivalRoutes';
 import { createFestival, getUserFestivals, type Festival } from '@/lib/festivalService';
-import type { FestivalMaterialWithStation } from '@/lib/materialService';
-import { getMaterials } from '@/lib/materialService';
-import { getStationShifts, getStations, type Station, type StationShift } from '@/lib/shiftService';
-
-/** Was aus der Vorlage kopiert werden kann — der Umfang, den die Karte beziffert. */
-interface TemplateContent {
-	stations: Station[];
-	shifts: StationShift[];
-	materials: FestivalMaterialWithStation[];
-}
 
 type CopySelection = Omit<
 	CopyFestivalOptions,
@@ -60,16 +51,15 @@ export default function Kopierwerk() {
 	);
 	const [step, setStep] = useState<KopierwerkStepKey>('basics');
 	const [templates, setTemplates] = useState<Festival[]>([]);
-	const [templateContent, setTemplateContent] = useState<TemplateContent | null>(null);
+	const [template, setTemplate] = useState<LoadedTemplate | null>(null);
 	const [loadingTemplate, setLoadingTemplate] = useState(false);
 	const [saving, setSaving] = useState(false);
 
 	const { templateId } = draft;
-	const selectedTemplate = templates.find((festival) => festival.id === templateId);
 
 	useEffect(() => {
-		// Scheitert die Liste, bleibt das Vorlage-Feld leer — angelegt werden kann
-		// trotzdem, und der Deep-Link trägt seine Vorlage selbst.
+		// Scheitert die Liste, bleibt nur das Vorlage-Feld leer — die Vorlage aus
+		// dem Deep-Link lädt darunter trotzdem, sie hängt nicht an dieser Abfrage.
 		getUserFestivals()
 			.then(setTemplates)
 			.catch((error: unknown) => console.warn('[Kopierwerk] Vorlagen nicht geladen:', error));
@@ -77,18 +67,21 @@ export default function Kopierwerk() {
 
 	useEffect(() => {
 		if (!templateId) {
-			setTemplateContent(null);
+			setTemplate(null);
 			return;
 		}
 		let current = true;
 		setLoadingTemplate(true);
-		Promise.all([getStations(templateId), getStationShifts(templateId), getMaterials(templateId)])
-			.then(([stations, shifts, materials]) => {
-				if (current) setTemplateContent({ stations, shifts, materials });
+		loadTemplate(templateId)
+			.then((loaded) => {
+				if (current) setTemplate(loaded);
 			})
+			// Auch ein gelöschtes oder erfundenes Fest im Link landet hier: lieber ohne
+			// Vorlage weitermachen, als einen Kopier-Schritt anbieten, der ins Leere greift.
 			.catch(() => {
 				if (!current) return;
 				toast({ title: 'Vorlage konnte nicht geladen werden', variant: 'destructive' });
+				setTemplate(null);
 				setDraft((previous) => ({ ...previous, templateId: '' }));
 				setStep('basics');
 			})
@@ -103,17 +96,17 @@ export default function Kopierwerk() {
 	const steps = kopierwerkSteps({
 		current: step,
 		hasTemplate: templateId !== '',
-		scope: templateContent && {
-			stations: templateContent.stations.length,
-			shifts: templateContent.shifts.length,
-			materials: templateContent.materials.length
-		},
+		scope: template
+			? {
+					stations: template.stations.length,
+					shifts: template.shifts.length,
+					materials: template.materials.length
+				}
+			: undefined,
 		festivalName: draft.name.trim() || undefined
 	});
-	const heading = useMemo(
-		() => stampCardHeading(draft, selectedTemplate?.name),
-		[draft, selectedTemplate?.name]
-	);
+	const templateName = template?.festival.name;
+	const heading = useMemo(() => stampCardHeading(draft, templateName), [draft, templateName]);
 
 	const backToWall = () => navigate(FESTIVAL_LIST_PATH);
 
@@ -131,10 +124,13 @@ export default function Kopierwerk() {
 			try {
 				const festivalId = await createFestival(draftToFestivalData(draft));
 
-				if (selection && selectedTemplate) {
-					await copyFestivalData(selectedTemplate.id, festivalId, {
+				// `template` und nicht `selection` entscheidet: die Auswahl kommt aus
+				// Schritt 2, den es ohne geladene Vorlage gar nicht gibt — so kann kein
+				// Fest still ohne Kopie entstehen, während der Hinweis eine verspricht.
+				if (selection && template) {
+					await copyFestivalData(template.festival.id, festivalId, {
 						...selection,
-						sourceFestivalStartDate: selectedTemplate.start_date,
+						sourceFestivalStartDate: template.festival.start_date,
 						targetFestivalStartDate: draft.startDate
 					});
 				}
@@ -143,9 +139,9 @@ export default function Kopierwerk() {
 					title: 'Fest angelegt',
 					description: selection
 						? 'Das Fest wurde aus der Vorlage angelegt.'
-						: 'Stationen, Material und Ablauf hängen jetzt am neuen Fest.'
+						: 'Stationen, Material und Ablauf legst du jetzt am Fest an.'
 				});
-				navigate(festivalTabPath(festivalId));
+				navigate(festivalWorkspacePath(festivalId));
 			} catch (error: unknown) {
 				toast({
 					title: 'Fest konnte nicht angelegt werden',
@@ -157,19 +153,19 @@ export default function Kopierwerk() {
 				setSaving(false);
 			}
 		},
-		[draft, navigate, selectedTemplate, toast]
+		[draft, navigate, template, toast]
 	);
 
 	const submitBasics = () => {
 		if (templateId) {
-			if (templateContent) setStep('stations');
+			if (template) setStep('stations');
 			return;
 		}
 		void createNewFestival();
 	};
 
 	const workbench =
-		step === 'basics' || !templateContent ? (
+		step === 'basics' || !template ? (
 			<FestivalBasicsStep
 				draft={draft}
 				templates={templates}
@@ -180,9 +176,9 @@ export default function Kopierwerk() {
 			/>
 		) : (
 			<TemplateSelectionStep
-				stations={templateContent.stations}
-				shifts={templateContent.shifts}
-				materials={templateContent.materials}
+				stations={template.stations}
+				shifts={template.shifts}
+				materials={template.materials}
 				loading={saving}
 				onBack={() => setStep('basics')}
 				onSubmit={(selection) => void createNewFestival(selection)}
@@ -199,7 +195,7 @@ export default function Kopierwerk() {
 						: 'mx-auto max-w-[1180px] px-[22px] pb-20 pt-[18px]'
 				}>
 				<KopierwerkMast
-					templateName={selectedTemplate?.name}
+					templateName={templateName}
 					compact={isMobile}
 					onOpenFestivalList={backToWall}
 					onCancel={backToWall}

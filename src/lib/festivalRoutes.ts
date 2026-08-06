@@ -25,7 +25,7 @@ export function templateIdFromSearch(search: URLSearchParams): string {
 	return search.get(TEMPLATE_PARAM) ?? '';
 }
 
-/** Fest-Arbeitsbereich, adressiert über `?id=` — sein Einstieg ist der Dashboard-Tab. */
-export function festivalTabPath(festivalId: string): string {
+/** Fest-Arbeitsbereich, adressiert über `?id=`; er öffnet auf dem Dashboard-Tab. */
+export function festivalWorkspacePath(festivalId: string): string {
 	return `/festival-results?id=${encodeURIComponent(festivalId)}`;
 }

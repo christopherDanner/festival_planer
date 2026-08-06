@@ -39,7 +39,7 @@ const Festplakat: React.FC<FestplakatProps> = ({ festival, scheduleDays, onOpenS
 			</h3>
 			<div className="font-display mt-1 text-[17px] tracking-[.04em] text-gelb">{dateLine}</div>
 			{festival.location && (
-				<div className="mt-0.5 text-[12.5px] text-[oklch(0.92_0.02_110)]">{festival.location}</div>
+				<div className="mt-0.5 text-[12.5px] text-kreide">{festival.location}</div>
 			)}
 
 			<Stamp tone="yellow" size="md" tilt="none" filled className="mt-3 tracking-[.05em]">
@@ -72,7 +72,7 @@ const Festplakat: React.FC<FestplakatProps> = ({ festival, scheduleDays, onOpenS
 					<Stamp tone="red" size="md" tilt="right">
 						Noch kein Programm
 					</Stamp>
-					<p className="mt-3 text-[12.5px] text-[oklch(0.92_0.02_110)]">
+					<p className="mt-3 text-[12.5px] text-kreide">
 						Programmpunkte pflegst du im Ablaufplan — sie erscheinen dann hier als Aushang.
 					</p>
 				</div>

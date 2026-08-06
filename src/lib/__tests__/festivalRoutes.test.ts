@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	FESTIVAL_LIST_PATH,
 	NEW_FESTIVAL_PATH,
-	festivalTabPath,
+	festivalWorkspacePath,
 	newFestivalPath,
 	templateIdFromSearch
 } from '../festivalRoutes';
@@ -31,7 +31,7 @@ describe('festivalRoutes', () => {
 	// Die Wand adressiert Feste über `?id=`; der Wizard navigierte früher über
 	// `state: { festivalId }` — vereinheitlicht auf `?id=` (Spec #64).
 	it('adressiert den Fest-Arbeitsbereich über ?id=', () => {
-		expect(festivalTabPath('fest-neu')).toBe('/festival-results?id=fest-neu');
+		expect(festivalWorkspacePath('fest-neu')).toBe('/festival-results?id=fest-neu');
 	});
 
 	it('kennt die Festliste als Zurück-Weg', () => {

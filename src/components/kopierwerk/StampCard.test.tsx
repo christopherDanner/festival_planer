@@ -20,9 +20,8 @@ const render = (steps: StampCardStep[], compact = false) =>
 	renderToStaticMarkup(<StampCard steps={steps} heading={heading} compact={compact} />);
 
 describe('Stempelkarte (≥900px)', () => {
-	it('trägt den grünen Karten-Kopf mit Festname, Zeitraum und Vorlage', () => {
+	it('trägt den Karten-Kopf mit Festname, Zeitraum und Vorlage', () => {
 		const html = render(threeSteps);
-		expect(html).toContain('poster');
 		expect(html).toContain('Musikfest 2027');
 		expect(html).toContain('Fr 23. – So 25. Juli 2027 · aus Vorlage Musikfest Steinbach 2026');
 	});
@@ -95,7 +94,7 @@ describe('Schritt-Leiste (<900px)', () => {
 		const html = render(threeSteps, true);
 		expect(html).toContain('Stationen');
 		expect(html).not.toContain('Stationen &amp; Schichten');
-		expect(html).not.toContain('poster');
+		expect(html).not.toContain('Musikfest 2027');
 		expect(html).not.toContain('aus Vorlage');
 	});
 

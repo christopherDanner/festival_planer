@@ -10,7 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import type { FestivalMetricsMap } from '@/lib/festivalMetrics';
 import { getFestivalMetrics } from '@/lib/festivalMetricsService';
-import { festivalTabPath, newFestivalPath } from '@/lib/festivalRoutes';
+import { festivalWorkspacePath, newFestivalPath } from '@/lib/festivalRoutes';
 import {
 	deleteFestival,
 	getUserFestivals,
@@ -155,7 +155,7 @@ export default function Dashboard() {
 							ranks={ranks}
 							today={today}
 							metrics={metrics}
-							onOpen={(festival) => navigate(festivalTabPath(festival.id))}
+							onOpen={(festival) => navigate(festivalWorkspacePath(festival.id))}
 							onUseAsTemplate={(festival) => openKopierwerk(festival.id)}
 							onEdit={setEditing}
 							onDelete={handleDelete}

@@ -51,7 +51,7 @@ export function Mast({ title, when, end, compact, onWordmarkClick, className }: 
 				{title}
 			</h1>
 			{when != null && (
-				<span className={cn('text-[oklch(0.92_0.02_110)]', compact ? 'text-xs' : 'text-[13px]')}>
+				<span className={cn('text-kreide', compact ? 'text-xs' : 'text-[13px]')}>
 					{when}
 				</span>
 			)}

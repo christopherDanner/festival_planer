@@ -31,6 +31,7 @@ export default {
           tief: "oklch(var(--gruen-tief) / <alpha-value>)",
         },
         gelb: "oklch(var(--gelb) / <alpha-value>)",
+        kreide: "oklch(var(--kreide) / <alpha-value>)",
         rot: "oklch(var(--rot) / <alpha-value>)",
         linie: "oklch(var(--linie) / <alpha-value>)",
         fusszeile: "oklch(var(--fusszeile) / <alpha-value>)",

@@ -1,21 +1,16 @@
 import { Poster } from '@/components/toolkit/Poster';
 import { cn } from '@/lib/utils';
 
-import type { KopierwerkStepState } from './kopierwerk';
+import type { KopierwerkStep, KopierwerkStepState } from './kopierwerk';
 
 /**
- * Ein Eintrag der Stempelkarte. Bewusst ohne Schritt-Schlüssel-Union: die Karte
- * zählt die Liste, die sie bekommt, und weiß nicht, welche Schritte es gibt —
- * Sponsoring als Schritt 4 (#63) ist darum ein Eintrag mehr, kein Umbau hier.
+ * Ein Eintrag der Stempelkarte — ein `KopierwerkStep`, dessen Schlüssel hier
+ * nur noch `string` ist: die Karte zählt die Liste, die sie bekommt, und weiß
+ * nicht, welche Schritte es gibt. Sponsoring als Schritt 4 (#63) ist darum ein
+ * Eintrag mehr, kein Umbau hier.
  */
-export interface StampCardStep {
+export interface StampCardStep extends Omit<KopierwerkStep, 'key'> {
 	key: string;
-	number: number;
-	title: string;
-	/** Kurzform für die waagrechte Leiste unter 900px. */
-	shortTitle: string;
-	subtitle?: string;
-	state: KopierwerkStepState;
 }
 
 export interface StampCardProps {
@@ -61,7 +56,7 @@ export default function StampCard({ steps, heading, compact }: StampCardProps) {
 					{heading.title}
 				</h3>
 				{heading.sub && (
-					<div className="mt-0.5 text-[11px] text-[oklch(0.92_0.02_110)]">{heading.sub}</div>
+					<div className="mt-0.5 text-[11px] text-kreide">{heading.sub}</div>
 				)}
 			</Poster>
 			<ol>
