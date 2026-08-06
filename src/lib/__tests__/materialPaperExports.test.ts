@@ -197,19 +197,32 @@ describe('buildMaterialListPdf — Materialliste in Plakat-Optik', () => {
 		expect(printed()).toContain('Bestellt € 0   ·   Verbraucht € 0');
 	});
 
-	it('setzt den Summenblock auf eine neue Seite, wenn die Tabelle unten ausläuft', () => {
-		// Genug Zeilen, dass die Tabelle knapp über dem Blattende endet — der
-		// Summenblock darf nicht in die Fußzeile rutschen.
-		const many = Array.from({ length: 200 }, (_, i) =>
-			material({ id: `m-${i}`, name: `Position ${i}`, ordered_quantity: 1 })
-		);
-		const doc = buildMaterialListPdf(paper({ materials: many }));
-		const pages = (doc as typeof doc & { getNumberOfPages(): number }).getNumberOfPages();
+	it('hält den Summenblock über der Fußzeile, egal wo die Tabelle endet', () => {
+		// A4 ist 297mm hoch; die getönte Fußzeile liegt in den letzten 10mm, der
+		// Summenblock braucht 18mm. Bei irgendeiner dieser Zeilenzahlen endet die
+		// Tabelle knapp über dem Blattende — dann muss der Block umbrechen.
+		const OBERKANTE_FUSSZEILE = 297 - 10 - 18;
+		const oberkanten: number[] = [];
 
-		expect(pages).toBeGreaterThan(1);
-		// Der Summenblock steht auf der letzten Seite, oberhalb der Fußzeile.
-		const summenY = vi.mocked(poster.drawSectionHeading).mock.calls.at(-1)?.[1].y ?? 0;
-		expect(summenY).toBeLessThanOrEqual(297 - 10 - 18);
+		for (const count of [1, 30, 33, 36, 39, 42, 45, 60, 200]) {
+			vi.clearAllMocks();
+			recorder.printed.length = 0;
+			const materials = Array.from({ length: count }, (_, i) =>
+				material({ id: `m-${i}`, name: `Position ${i}`, ordered_quantity: 1 })
+			);
+
+			buildMaterialListPdf(paper({ materials }));
+
+			const summenY = vi.mocked(poster.drawSectionHeading).mock.calls.at(-1)?.[1].y ?? Infinity;
+			expect(summenY).toBeLessThanOrEqual(OBERKANTE_FUSSZEILE);
+			oberkanten.push(summenY);
+		}
+
+		// Ohne diese zwei Zeilen könnte der Umbruch nie greifen und der Test
+		// trotzdem grün sein: einmal steht der Block direkt unter der Tabelle,
+		// einmal oben auf einem neuen Blatt.
+		expect(Math.max(...oberkanten)).toBeGreaterThan(100);
+		expect(Math.min(...oberkanten)).toBeLessThan(40);
 	});
 });
 
