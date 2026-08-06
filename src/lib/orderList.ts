@@ -1,8 +1,19 @@
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { toBaseQuantity } from '@/lib/materialQuantity';
-import { orderedValue, withoutPrice } from '@/lib/materialCosts';
+import { orderedValue, roundEuro, withoutPrice } from '@/lib/materialCosts';
 
 export type OrderListAxis = 'supplier' | 'station';
+
+/**
+ * Die zwei Achsen der Bestellliste samt Beschriftung des Umschalters —
+ * Lieferant zuerst, weil `CONTEXT.md` die Bestellliste über den Lieferanten
+ * definiert („alle Positionen mit demselben Lieferanten ergeben eine
+ * Bestellung"). Formgleich mit `MATERIAL_AXES` der Arbeitsliste.
+ */
+export const ORDER_LIST_AXES: readonly { value: OrderListAxis; label: string }[] = [
+	{ value: 'supplier', label: 'LIEFERANT' },
+	{ value: 'station', label: 'STATION' }
+];
 
 /** Packaging breakdown for a position, rendered inline in the Menge cell. */
 export interface OrderListPackaging {
@@ -116,6 +127,11 @@ export function axisLabel(axis: OrderListAxis): string {
 	return axis === 'supplier' ? 'Lieferant' : 'Station';
 }
 
+/** Mehrzahl der Achse, für „Alle Lieferanten" / „Alle Stationen". */
+export function axisPluralLabel(axis: OrderListAxis): string {
+	return axis === 'supplier' ? 'Lieferanten' : 'Stationen';
+}
+
 /**
  * Table column headers for the given axis. The station axis adds a "Lieferant" column,
  * since the supplier is no longer implied by the grouping.
@@ -163,6 +179,9 @@ export function buildOrderListFilename(
 }
 
 export interface OrderListExportPlan {
+	/** Alle Gruppen der Achse — die Auswahl des Dialogs. Steht hier, damit
+	`buildOrderList` (und mit ihm die Geldrechnung) je Rendern *einmal* läuft. */
+	groups: OrderListGroup[];
 	/** One output file per group. */
 	individual: OrderListGroup[];
 	/** Collection document (one section per group), or null for a single-group export. */
@@ -182,11 +201,11 @@ export function planOrderListExport(
 	const groups = buildOrderList(materials, axis);
 
 	if (selectedKey === null) {
-		return { individual: groups, collection: groups };
+		return { groups, individual: groups, collection: groups };
 	}
 
 	const selected = groups.filter((g) => g.key === selectedKey);
-	return { individual: selected, collection: null };
+	return { groups, individual: selected, collection: null };
 }
 
 /** Was der Export-Dialog über einen Plan sagt: Positionen, Dateien, Bestellwert. */
@@ -202,13 +221,15 @@ export interface OrderListSummary {
 }
 
 /** Zählt einen Bestelllisten-Plan zusammen. Die Zahlen stehen im Dialog und auf
-dem Papier — sie dürfen nur an einer Stelle entstehen. */
+dem Papier — sie dürfen nur an einer Stelle entstehen. Die Gruppenbeträge sind
+schon gerechnet; `roundEuro` stellt nur die Summe wieder auf Cent, damit der
+Dialog nicht um Bruchteile von den Gruppen abweicht (ADR 0006). */
 export function summarizeOrderListExport(plan: OrderListExportPlan): OrderListSummary {
 	return {
 		positionCount: plan.individual.reduce((sum, group) => sum + group.rows.length, 0),
 		// Ein leeres Sammeldokument ist keine Datei — ohne Bestellung entsteht nichts.
 		fileCount: plan.individual.length + (plan.collection?.length ? 1 : 0),
-		orderedValue: plan.individual.reduce((sum, group) => sum + group.orderedValue, 0),
+		orderedValue: roundEuro(plan.individual.reduce((sum, group) => sum + group.orderedValue, 0)),
 		withoutPrice: plan.individual.reduce((sum, group) => sum + group.withoutPrice, 0)
 	};
 }

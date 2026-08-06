@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { type ElementType, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -13,11 +12,11 @@ import { Poster } from './Poster';
  * als Tailwind-Utilities sind der von ADR 0003 §2 vorgesehene Ort; die Ringe
  * der Hüllen repo-weit auf Outline zu drehen wäre ein eigenes Ticket.
  */
-export const ZETTEL_FOCUS =
+export const FOCUS_INK =
 	'focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 ' +
 	'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte';
 
-export interface ZettelProps {
+export interface PaperSheetProps {
 	/** Titel im Plakat-Kopf; wird in der Akzentschrift und Versalien gesetzt. */
 	title: ReactNode;
 	/** Der Radix-Dialog reicht hier seinen `DialogTitle` durch; alleinstehend
@@ -34,19 +33,17 @@ export interface ZettelProps {
 }
 
 /**
- * Zettel — der Rahmen eines Dialog-Papiers: Papier-Grund, 3px-Tinte-Rahmen,
+ * PaperSheet — der Rahmen eines Dialog-Papiers: Papier-Grund, 3px-Tinte-Rahmen,
  * Versatz-Schatten, grüner Halftone-Kopf mit Akzentschrift-Titel und gelbem
- * Knopf, darunter der Inhalt und eine klebende Fußleiste.
+ * Knopf, darunter der Inhalt und eine klebende Fußleiste. In der Vision heißt
+ * dieses Papier „Zettel" (Prototyp `.dlg`); der Baustein trägt nach ADR 0003 §4
+ * den englischen Namen.
  *
- * Die Maße stammen aus dem abgenommenen Prototyp und wurden in #117 am
- * Positions-Dialog festgelegt; seit #119 liegt der Rahmen an *einer* Stelle,
- * damit Positions- und Export-Dialoge dasselbe Papier bedrucken.
- *
- * Der deutsche Name bleibt: „Zettel" ist im Repo schon das Wort für dieses
- * Papier (`MaterialZettel`, #117), und die englischen Kandidaten sind vergeben
- * (`Sheet` heißt in shadcn eine Schublade).
+ * Die Maße wurden in #117 am Positions-Dialog festgelegt; seit #119 liegt der
+ * Rahmen an *einer* Stelle, damit Positions- und Export-Dialoge dasselbe Papier
+ * bedrucken.
  */
-export function Zettel({
+export function PaperSheet({
 	title,
 	TitleTag = 'h2',
 	onClose,
@@ -54,7 +51,7 @@ export function Zettel({
 	footer,
 	children,
 	className
-}: ZettelProps) {
+}: PaperSheetProps) {
 	return (
 		<div
 			className={cn(
@@ -94,20 +91,39 @@ export function Zettel({
 	);
 }
 
-export interface ZettelFieldProps {
+/**
+ * Das Feldraster des Papiers: eine Spalte am Handy, zwei ab 900px. Es steht
+ * hier und nicht bei den Aufrufern, weil `wide` von genau diesem Raster
+ * abhängt — sonst wäre die Zusammenarbeit der beiden ein stiller Vertrag.
+ */
+export function PaperSheetFields({
+	children,
+	className
+}: {
+	children: ReactNode;
+	className?: string;
+}) {
+	return (
+		<div className={cn('grid grid-cols-1 gap-3.5 px-4 py-4 min-[900px]:grid-cols-2', className)}>
+			{children}
+		</div>
+	);
+}
+
+export interface PaperSheetFieldProps {
 	label: ReactNode;
 	htmlFor?: string;
 	hint?: ReactNode;
-	/** Über die ganze Breite, wo der Zettel zweispaltig steht. */
+	/** Über beide Spalten von `PaperSheetFields`. */
 	wide?: boolean;
 	children: ReactNode;
 }
 
 /**
- * Eine Feldzeile des Zettels: Versalien-Kleinlabel (Public Sans 800,
+ * Eine Feldzeile des Papiers: Versalien-Kleinlabel (Public Sans 800,
  * letter-spacing .06em) über dem Baustein, darunter optional ein Hinweis.
  */
-export function ZettelField({ label, htmlFor, hint, wide, children }: ZettelFieldProps) {
+export function PaperSheetField({ label, htmlFor, hint, wide, children }: PaperSheetFieldProps) {
 	return (
 		<div className={cn('flex flex-col gap-1', wide && 'min-[900px]:col-span-2')}>
 			<Label htmlFor={htmlFor} variant="kleinlabel">

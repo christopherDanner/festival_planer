@@ -8,28 +8,21 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
-import { ZettelField, ZETTEL_FOCUS } from '@/components/toolkit/Zettel';
+import { FOCUS_INK, PaperSheetField } from '@/components/toolkit/PaperSheet';
 import {
+	ORDER_LIST_AXES,
+	axisPluralLabel,
 	summarizeOrderListExport,
 	type OrderListAxis,
-	type OrderListExportPlan,
-	type OrderListGroup
+	type OrderListExportPlan
 } from '@/lib/orderList';
 
 import ExportZettel from './ExportZettel';
 
 /** Auswahlwert „alle Gruppen"; die Gruppe ohne Zuordnung hat den leeren
 Schlüssel und braucht darum ihren eigenen Platzhalter (Radix verbietet ''). */
-export const ALL_GROUPS = '__alle__';
-export const NO_GROUP = '__ohne__';
-
-/** Die zwei Achsen der Bestellliste — Lieferant zuerst, weil `CONTEXT.md` die
-Bestellliste über den Lieferanten definiert („alle Positionen mit demselben
-Lieferanten ergeben eine Bestellung"). */
-const AXES: readonly { value: OrderListAxis; label: string }[] = [
-	{ value: 'supplier', label: 'LIEFERANT' },
-	{ value: 'station', label: 'STATION' }
-];
+const ALL_GROUPS = '__alle__';
+const NO_GROUP = '__ohne__';
 
 export interface OrderListExportZettelProps {
 	axis: OrderListAxis;
@@ -37,9 +30,8 @@ export interface OrderListExportZettelProps {
 	/** Gewählte Gruppe (`''` ist die Gruppe ohne Zuordnung); `null` heißt „alle". */
 	selectedKey: string | null;
 	onSelectedKeyChange: (key: string | null) => void;
-	/** Alle Gruppen der Achse — die Auswahl. */
-	groups: OrderListGroup[];
-	/** Der geplante Export (`planOrderListExport`). */
+	/** Der geplante Export (`planOrderListExport`) — er trägt auch alle Gruppen
+	der Achse, aus denen gewählt wird. */
 	plan: OrderListExportPlan;
 	onPdf: () => void;
 	onExcel: () => void;
@@ -61,7 +53,6 @@ const OrderListExportZettel: React.FC<OrderListExportZettelProps> = ({
 	onAxisChange,
 	selectedKey,
 	onSelectedKeyChange,
-	groups,
 	plan,
 	onPdf,
 	onExcel,
@@ -69,8 +60,9 @@ const OrderListExportZettel: React.FC<OrderListExportZettelProps> = ({
 	TitleTag
 }) => {
 	const summary = summarizeOrderListExport(plan);
-	const selected = selectedKey == null ? null : groups.find((g) => g.key === selectedKey) ?? null;
-	const allLabel = `Alle ${axis === 'supplier' ? 'Lieferanten' : 'Stationen'} (Einzeldateien + Sammeldokument)`;
+	const selected =
+		selectedKey == null ? null : plan.groups.find((g) => g.key === selectedKey) ?? null;
+	const allLabel = `Alle ${axisPluralLabel(axis)} (Einzeldateien + Sammeldokument)`;
 
 	return (
 		<ExportZettel
@@ -85,20 +77,20 @@ const OrderListExportZettel: React.FC<OrderListExportZettelProps> = ({
 			onPdf={onPdf}
 			onExcel={onExcel}
 			onCancel={onCancel}>
-			<ZettelField
+			<PaperSheetField
 				wide
 				label="Gruppiert nach"
 				hint="Eine Bestellung je Lieferant — oder je Station, wo die Ware gebraucht wird.">
 				<SegmentedControl
-					options={AXES}
+					options={ORDER_LIST_AXES}
 					value={axis}
 					onValueChange={onAxisChange}
 					aria-label="Achse der Bestellliste"
 					className="w-max"
 				/>
-			</ZettelField>
+			</PaperSheetField>
 
-			<ZettelField
+			<PaperSheetField
 				wide
 				label="Welche Bestellung"
 				htmlFor="order-export-group"
@@ -106,25 +98,23 @@ const OrderListExportZettel: React.FC<OrderListExportZettelProps> = ({
 				<Select
 					value={selected ? selected.key || NO_GROUP : ALL_GROUPS}
 					onValueChange={(value) =>
-						onSelectedKeyChange(
-							value === ALL_GROUPS ? null : value === NO_GROUP ? '' : value
-						)
+						onSelectedKeyChange(value === ALL_GROUPS ? null : value === NO_GROUP ? '' : value)
 					}>
-					<SelectTrigger id="order-export-group" className={ZETTEL_FOCUS}>
+					<SelectTrigger id="order-export-group" className={FOCUS_INK}>
 						<SelectValue>
 							{selected ? `${selected.name} (${selected.rows.length})` : allLabel}
 						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value={ALL_GROUPS}>{allLabel}</SelectItem>
-						{groups.map((group) => (
+						{plan.groups.map((group) => (
 							<SelectItem key={group.key || NO_GROUP} value={group.key || NO_GROUP}>
 								{group.name} ({group.rows.length})
 							</SelectItem>
 						))}
 					</SelectContent>
 				</Select>
-			</ZettelField>
+			</PaperSheetField>
 		</ExportZettel>
 	);
 };

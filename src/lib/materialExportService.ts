@@ -13,7 +13,8 @@ import {
 	drawSectionHeading,
 	drawStamp,
 	posterTableEnd,
-	posterTableTheme
+	posterTableTheme,
+	setPosterInk
 } from '@/lib/pdfPoster';
 import { consumedValue, orderedValue, withoutPrice } from '@/lib/materialCosts';
 import { formatEuro } from '@/lib/money';
@@ -96,18 +97,31 @@ function columns(paper: MaterialListPaper): string[] {
 	];
 }
 
-function rowCells(m: FestivalMaterialWithStation, paper: MaterialListPaper): string[] {
+/**
+ * Eine Zeile des Papiers. Mengen bleiben **Zahlen**, nicht Text: die
+ * Excel-Datei ist zum Weiterrechnen gedacht, und eine Textzelle summiert sich
+ * nicht. Für das PDF macht `autoTable` daraus ohnehin Text.
+ */
+function rowCells(
+	m: FestivalMaterialWithStation,
+	paper: MaterialListPaper
+): (string | number)[] {
 	return [
 		m.name,
 		m.supplier || '',
 		...(paper.showStation ? [m.station?.name || ''] : []),
 		m.unit,
 		m.packaging_unit || '',
-		m.amount_per_packaging != null ? String(m.amount_per_packaging) : '',
-		String(m.ordered_quantity),
-		m.actual_quantity != null ? String(m.actual_quantity) : '',
+		m.amount_per_packaging ?? '',
+		m.ordered_quantity,
+		m.actual_quantity ?? '',
 		'' // Neue Menge — bleibt leer, sie wird von Hand eingetragen
 	];
+}
+
+/** Dieselbe Zeile als reiner Text — `autoTable` erwartet Zellen als Strings. */
+function pdfRowCells(m: FestivalMaterialWithStation, paper: MaterialListPaper): string[] {
+	return rowCells(m, paper).map(String);
 }
 
 /** Spaltenindizes, die je nach Station-Spalte verrutschen. */
@@ -136,6 +150,24 @@ function pdfColumnStyles(paper: MaterialListPaper): Record<number, Record<string
 }
 
 /**
+ * Höhe des Summenblocks in mm: Sektionszeile, Betragszeile, Stempel — plus die
+ * getönte Fußzeile, in die er nicht hineinragen darf.
+ */
+const SUMMARY_HEIGHT = 18;
+const FOOTER_BAND = 10;
+
+/**
+ * Setzt den Summenblock auf die nächste Seite, wenn er unten nicht mehr passt.
+ * @returns die y-Kante, an der er beginnt.
+ */
+function summaryTop(doc: jsPDF, wanted: number): number {
+	const pageHeight = doc.internal.pageSize.getHeight();
+	if (wanted + SUMMARY_HEIGHT <= pageHeight - FOOTER_BAND) return wanted;
+	doc.addPage();
+	return POSTER_MARGIN + 4;
+}
+
+/**
  * Baut die Materialliste als Plakat (#119): Papier und Bausteine kommen aus
  * `pdfPoster` (#110, ADR 0012) — grüner Halftone-Kopf, Frachtbrief-Tabelle,
  * getönte Fußzeile. Gespeichert wird in {@link exportMaterialListPdf}.
@@ -154,23 +186,21 @@ export function buildMaterialListPdf(paper: MaterialListPaper): jsPDF {
 	// Der Auftrag an den Leser steht über der Tabelle, nicht im Kleingedruckten.
 	doc.setFont(POSTER_FONT.body, 'normal');
 	doc.setFontSize(8.5);
-	const soft = POSTER_COLOR.tinteSoft;
-	doc.setTextColor(soft[0], soft[1], soft[2]);
+	setPosterInk(doc, POSTER_COLOR.tinteSoft);
 	const explanation: string[] = doc.splitTextToSize(
 		EXPLANATION_TEXT(paper.festivalName),
 		usableWidth
 	);
 	doc.text(explanation, POSTER_MARGIN, y);
 	y += explanation.length * 3.6 + 4;
-	const ink = POSTER_COLOR.tinte;
-	doc.setTextColor(ink[0], ink[1], ink[2]);
+	setPosterInk(doc, POSTER_COLOR.tinte);
 
 	const { consumed, newQuantity } = columnIndexes(paper);
 	autoTable(doc, {
 		...posterTableTheme({ fontSize: 8 }),
 		startY: y,
 		head: [columns(paper)],
-		body: paper.materials.map((m) => rowCells(m, paper)),
+		body: paper.materials.map((m) => pdfRowCells(m, paper)),
 		columnStyles: pdfColumnStyles(paper),
 		tableWidth: usableWidth,
 		didParseCell: (data) => {
@@ -190,7 +220,9 @@ export function buildMaterialListPdf(paper: MaterialListPaper): jsPDF {
 	const count = paper.materials.length;
 	y = drawSectionHeading(doc, {
 		x: POSTER_MARGIN,
-		y: posterTableEnd(doc) + 8,
+		// Endet die Tabelle zu tief, läge der Summenblock in der Fußzeile — dann
+		// bekommt er eine eigene Seite.
+		y: summaryTop(doc, posterTableEnd(doc) + 8),
 		width: usableWidth,
 		label: 'Summen',
 		note: `${count} ${count === 1 ? 'Position' : 'Positionen'}`
@@ -248,15 +280,23 @@ function excelCols(paper: MaterialListPaper): { wch: number }[] {
 	];
 }
 
-/** Exportiert ein Papier der Materialliste als Excel-Datei. Dieselben Spalten
-und dieselben Summen wie das PDF — nur ohne Plakat, weil eine Tabelle zum
-Weiterrechnen gedacht ist. */
-export function exportMaterialListExcel(paper: MaterialListPaper): void {
+export interface MaterialListSheet {
+	rows: (string | number)[][];
+	cols: { wch: number }[];
+	merges: Merge[];
+}
+
+/**
+ * Baut die Zeilenmatrix der Excel-Datei. Dieselben Spalten und dieselben Summen
+ * wie das PDF — nur ohne Plakat, weil eine Tabelle zum Weiterrechnen gedacht
+ * ist; die Mengen bleiben darum Zahlen (siehe {@link rowCells}).
+ */
+export function buildMaterialListSheet(paper: MaterialListPaper): MaterialListSheet {
 	const cols = excelCols(paper);
 	const header = columns(paper);
 	const maxCharsPerLine = Math.floor(cols.reduce((sum, c) => sum + c.wch, 0) * 0.95);
 
-	const rows: (string | number | null)[][] = [];
+	const rows: (string | number)[][] = [];
 	rows.push([paper.festivalName]);
 	rows.push([subtitle(paper)]);
 	rows.push([]);
@@ -281,9 +321,6 @@ export function exportMaterialListExcel(paper: MaterialListPaper): void {
 	const gaps = withoutPrice(paper.materials);
 	if (gaps > 0) rows.push([`${gaps} ohne Preis`]);
 
-	const ws = XLSX.utils.aoa_to_sheet(rows);
-	ws['!cols'] = cols;
-
 	const lastCol = header.length - 1;
 	const merges: Merge[] = [
 		{ s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } },
@@ -292,6 +329,15 @@ export function exportMaterialListExcel(paper: MaterialListPaper): void {
 	for (let r = explanationStart; r <= explanationEnd; r++) {
 		merges.push({ s: { r, c: 0 }, e: { r, c: lastCol } });
 	}
+
+	return { rows, cols, merges };
+}
+
+/** Exportiert ein Papier der Materialliste als Excel-Datei. */
+export function exportMaterialListExcel(paper: MaterialListPaper): void {
+	const { rows, cols, merges } = buildMaterialListSheet(paper);
+	const ws = XLSX.utils.aoa_to_sheet(rows);
+	ws['!cols'] = cols;
 	ws['!merges'] = merges;
 
 	const wb = XLSX.utils.book_new();

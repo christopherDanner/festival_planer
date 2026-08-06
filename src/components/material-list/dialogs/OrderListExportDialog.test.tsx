@@ -69,6 +69,8 @@ const mount = async (over: Partial<React.ComponentProps<typeof OrderListExportDi
 				onOpenChange={() => {}}
 				festivalName="Stadlfest 2026"
 				materials={MATERIALS}
+				axis="supplier"
+				selectedKey={null}
 				{...over}
 			/>
 		);
@@ -159,6 +161,17 @@ describe('OrderListExportDialog', () => {
 		expect(exportOrderListSinglePdf).not.toHaveBeenCalled();
 		expect(exportOrderListCollectionPdf).not.toHaveBeenCalled();
 		expect(document.body.textContent).toContain('Nichts zu exportieren');
+	});
+
+	it('beginnt auf der Achse und der Gruppe, die die Arbeitsliste mitgibt', async () => {
+		await mount({ axis: 'supplier', selectedKey: 'Maier' });
+		expect(document.body.textContent).toContain('Maier (1)');
+
+		await click('[data-export="pdf"]');
+		await settle();
+		expect(vi.mocked(exportOrderListSinglePdf).mock.calls.map(([g]) => g.name)).toEqual(['Maier']);
+		// Eine einzelne Bestellung braucht kein Sammeldokument.
+		expect(exportOrderListCollectionPdf).not.toHaveBeenCalled();
 	});
 
 	it('bringt genau einen Schließen-Knopf mit — den im Plakat-Kopf', async () => {

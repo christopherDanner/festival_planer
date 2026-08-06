@@ -81,6 +81,15 @@ function ink(doc: jsPDF, color: PosterRgb): void {
 }
 
 /**
+ * Textfarbe aus den Papier-Farbrollen setzen. Exportiert, damit ein Papier
+ * seine Nebentexte tönen kann, ohne die Tripel selbst auszupacken — ADR 0012
+ * lässt die Farben nur hier wohnen.
+ */
+export function setPosterInk(doc: jsPDF, color: PosterRgb): void {
+	ink(doc, color);
+}
+
+/**
  * Sperrung in mm. `setCharSpace` fehlt in den mitgelieferten jsPDF-Typen,
  * existiert aber zur Laufzeit — die Ausnahme steckt darum hier an einer Stelle.
  */

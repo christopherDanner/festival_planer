@@ -15,7 +15,12 @@ import {
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { SectionHeading } from '@/components/toolkit/SectionHeading';
 import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
-import { Zettel, ZettelField as Feld, ZETTEL_FOCUS as FOKUS } from '@/components/toolkit/Zettel';
+import {
+	FOCUS_INK,
+	PaperSheet,
+	PaperSheetField,
+	PaperSheetFields
+} from '@/components/toolkit/PaperSheet';
 import type { Station } from '@/lib/shiftService';
 import {
 	canSave,
@@ -49,7 +54,7 @@ export interface MaterialZettelProps {
 /**
  * Der Positions-Zettel (#117): Papier-Grund, 3px-Tinte-Rahmen,
  * Versatz-Schatten, grüner Halftone-Kopf mit Oswald-Titel, gelber
- * Primärknopf — der Rahmen kommt aus `<Zettel>` (#119), damit Positions- und
+ * Primärknopf — der Rahmen kommt aus `<PaperSheet>` (#119), damit Positions- und
  * Export-Dialoge dasselbe Papier bedrucken.
  *
  * Inhaltlich ist er auf **Stammdaten** geschnitten (Entscheid Wayfinder #66):
@@ -110,25 +115,25 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 	const preisBezug = gebinde && form.price_per === 'packaging' ? gebinde : form.unit;
 
 	return (
-		<Zettel
+		<PaperSheet
 			title={mode === 'edit' ? 'Position bearbeiten' : 'Neue Position'}
 			TitleTag={TitleTag}
 			onClose={onCancel}
 			footer={
 				<>
-					<Button variant="outline" className={FOKUS} onClick={onCancel}>
+					<Button variant="outline" className={FOCUS_INK} onClick={onCancel}>
 						Abbrechen
 					</Button>
 					<Button
 						data-zettel="speichern"
-						className={FOKUS}
+						className={FOCUS_INK}
 						onClick={onSave}
 						disabled={!canSave(form, mode)}>
 						{mode === 'edit' ? 'Speichern' : 'Anlegen'}
 					</Button>
 				</>
 			}>
-			<div className="grid grid-cols-1 gap-3.5 px-4 py-4 min-[900px]:grid-cols-2">
+			<PaperSheetFields>
 				{mode === 'edit' && (
 					// Der Hinweis steht neben der Lücke, nicht im Changelog.
 					<p className="border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed min-[900px]:col-span-2">
@@ -136,35 +141,35 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 					</p>
 				)}
 
-				<Feld wide label="Bezeichnung" htmlFor="mat-name">
+				<PaperSheetField wide label="Bezeichnung" htmlFor="mat-name">
 					<Input
 						id="mat-name"
-						className={FOKUS}
+						className={FOCUS_INK}
 						value={form.name}
 						onChange={(e) => onChange({ name: e.target.value })}
 						placeholder="z.B. Bier, Servietten, Grillkohle"
 					/>
-				</Feld>
+				</PaperSheetField>
 
-				<Feld label="Kategorie" htmlFor="mat-category">
+				<PaperSheetField label="Kategorie" htmlFor="mat-category">
 					<CreatableCombobox
 						id="mat-category"
-						className={FOKUS}
+						className={FOCUS_INK}
 						value={form.category}
 						onChange={(value) => onChange({ category: value })}
 						suggestions={categorySuggestions}
 						placeholder="Suchen oder neu anlegen"
 						emptyPlaceholder="Keine Kategorie"
 					/>
-				</Feld>
+				</PaperSheetField>
 
-				<Feld label="Station" htmlFor="mat-station">
+				<PaperSheetField label="Station" htmlFor="mat-station">
 					{creatingStation ? (
 						<div className="flex gap-2">
 							<Input
 								id="mat-station"
 								autoFocus
-								className={FOKUS}
+								className={FOCUS_INK}
 								value={newStationName}
 								onChange={(e) => setNewStationName(e.target.value)}
 								onKeyDown={(e) => {
@@ -183,7 +188,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 							<Button
 								type="button"
 								size="icon"
-								className={FOKUS}
+								className={FOCUS_INK}
 								onClick={handleCreateStation}
 								disabled={!newStationName.trim() || creatingStationBusy}
 								title="Anlegen">
@@ -193,7 +198,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 								type="button"
 								size="icon"
 								variant="outline"
-								className={FOKUS}
+								className={FOCUS_INK}
 								onClick={() => {
 									setCreatingStation(false);
 									setNewStationName('');
@@ -210,7 +215,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 								onValueChange={(value) =>
 									onChange({ station_id: value === KEINE ? '' : value })
 								}>
-								<SelectTrigger id="mat-station" className={FOKUS}>
+								<SelectTrigger id="mat-station" className={FOCUS_INK}>
 									<SelectValue placeholder="Keine Station" />
 								</SelectTrigger>
 								<SelectContent>
@@ -226,52 +231,52 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 								<Button
 									type="button"
 									variant="outline"
-									className={cn('shrink-0 px-2.5 text-xs', FOKUS)}
+									className={cn('shrink-0 px-2.5 text-xs', FOCUS_INK)}
 									onClick={() => setCreatingStation(true)}>
 									+ Station
 								</Button>
 							)}
 						</div>
 					)}
-				</Feld>
+				</PaperSheetField>
 
-				<Feld label="Lieferant" htmlFor="mat-supplier">
+				<PaperSheetField label="Lieferant" htmlFor="mat-supplier">
 					<CreatableCombobox
 						id="mat-supplier"
-						className={FOKUS}
+						className={FOCUS_INK}
 						value={form.supplier}
 						onChange={(value) => onChange({ supplier: value })}
 						suggestions={supplierSuggestions}
 						placeholder="Suchen oder neu anlegen"
 						emptyPlaceholder="Kein Lieferant"
 					/>
-				</Feld>
+				</PaperSheetField>
 
-				<Feld label="Gebinde" htmlFor="mat-packaging">
+				<PaperSheetField label="Gebinde" htmlFor="mat-packaging">
 					<CreatableCombobox
 						id="mat-packaging"
-						className={FOKUS}
+						className={FOCUS_INK}
 						value={form.packaging_unit}
 						onChange={(value) => onChange({ packaging_unit: value })}
 						suggestions={DEFAULT_PACKAGING_UNITS}
 						placeholder="Suchen oder neu anlegen"
 						emptyPlaceholder="Kein Gebinde"
 					/>
-				</Feld>
+				</PaperSheetField>
 
-				<Feld label="Einheit" htmlFor="mat-unit">
+				<PaperSheetField label="Einheit" htmlFor="mat-unit">
 					<CreatableCombobox
 						id="mat-unit"
-						className={FOKUS}
+						className={FOCUS_INK}
 						value={form.unit}
 						onChange={(value) => onChange({ unit: value })}
 						suggestions={DEFAULT_UNITS}
 						placeholder="Suchen oder neu anlegen"
 						emptyPlaceholder="Einheit wählen"
 					/>
-				</Feld>
+				</PaperSheetField>
 
-				<Feld
+				<PaperSheetField
 					label={gebinde ? `${form.unit} je ${gebinde}` : 'Stück je Gebinde'}
 					htmlFor="mat-amount-per"
 					hint={gebinde ? null : 'Erst mit Gebinde'}>
@@ -280,24 +285,24 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 						type="number"
 						min="0"
 						step="any"
-						className={FOKUS}
+						className={FOCUS_INK}
 						disabled={!gebinde}
 						value={form.amount_per_packaging}
 						onChange={(e) => onChange({ amount_per_packaging: e.target.value })}
 						placeholder={gebinde ? `z.B. 50 ${form.unit} je ${gebinde}` : '—'}
 					/>
-				</Feld>
+				</PaperSheetField>
 
-				<Feld wide label="Notiz" htmlFor="mat-notes">
+				<PaperSheetField wide label="Notiz" htmlFor="mat-notes">
 					<Textarea
 						id="mat-notes"
 						rows={2}
-						className={FOKUS}
+						className={FOCUS_INK}
 						value={form.notes}
 						onChange={(e) => onChange({ notes: e.target.value })}
 						placeholder="z.B. Abholung Freitag 14 Uhr"
 					/>
-				</Feld>
+				</PaperSheetField>
 
 				{mengenUndPreis && (
 					<>
@@ -305,20 +310,20 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 							Mengen &amp; Preis
 						</SectionHeading>
 
-						<Feld label={`Bestellt (${form.unit || 'Einheit'})`} htmlFor="mat-ordered">
+						<PaperSheetField label={`Bestellt (${form.unit || 'Einheit'})`} htmlFor="mat-ordered">
 							<Input
 								id="mat-ordered"
 								type="number"
 								min="0"
 								step="any"
-								className={cn('text-right tabular-nums', FOKUS)}
+								className={cn('text-right tabular-nums', FOCUS_INK)}
 								value={form.ordered_quantity}
 								onChange={(e) => onChange({ ordered_quantity: e.target.value })}
 								placeholder={form.unit ? `Menge in ${form.unit}` : 'Menge'}
 							/>
-						</Feld>
+						</PaperSheetField>
 
-						<Feld
+						<PaperSheetField
 							label={`Verbraucht (${form.unit || 'Einheit'})`}
 							htmlFor="mat-actual"
 							hint="Wird typisch nach dem Fest nachgetragen">
@@ -327,31 +332,31 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 								type="number"
 								min="0"
 								step="any"
-								className={cn('text-right tabular-nums', FOKUS)}
+								className={cn('text-right tabular-nums', FOCUS_INK)}
 								value={form.actual_quantity}
 								onChange={(e) => onChange({ actual_quantity: e.target.value })}
 								placeholder="Optional"
 							/>
-						</Feld>
+						</PaperSheetField>
 
-						<Feld label={`Preis je ${preisBezug} (€)`} htmlFor="mat-price">
+						<PaperSheetField label={`Preis je ${preisBezug} (€)`} htmlFor="mat-price">
 							<Input
 								id="mat-price"
 								type="number"
 								min="0"
 								step="0.01"
-								className={cn('text-right tabular-nums', FOKUS)}
+								className={cn('text-right tabular-nums', FOCUS_INK)}
 								value={form.unit_price}
 								onChange={(e) => onChange({ unit_price: e.target.value })}
 								placeholder="0.00"
 							/>
-						</Feld>
+						</PaperSheetField>
 
-						<Feld label="MwSt" htmlFor="mat-tax-rate">
+						<PaperSheetField label="MwSt" htmlFor="mat-tax-rate">
 							<Select
 								value={form.tax_rate || KEINE}
 								onValueChange={(value) => onChange({ tax_rate: value === KEINE ? '' : value })}>
-								<SelectTrigger id="mat-tax-rate" className={FOKUS}>
+								<SelectTrigger id="mat-tax-rate" className={FOCUS_INK}>
 									<SelectValue placeholder="Keine" />
 								</SelectTrigger>
 								<SelectContent>
@@ -361,9 +366,9 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 									<SelectItem value="20">20% (Standard)</SelectItem>
 								</SelectContent>
 							</Select>
-						</Feld>
+						</PaperSheetField>
 
-						<Feld
+						<PaperSheetField
 							wide
 							label="Preisbasis"
 							hint="Ohne MwSt sind Netto und Brutto gleich.">
@@ -377,10 +382,10 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 									{ value: 'false', label: 'Brutto eingegeben' }
 								]}
 							/>
-						</Feld>
+						</PaperSheetField>
 
 						{gebinde && (
-							<Feld wide label="Preis bezieht sich auf">
+							<PaperSheetField wide label="Preis bezieht sich auf">
 								<SegmentedControl
 									aria-label="Preis bezieht sich auf"
 									className="w-max"
@@ -391,12 +396,12 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 										{ value: 'packaging', label: `pro ${gebinde}` }
 									]}
 								/>
-							</Feld>
+							</PaperSheetField>
 						)}
 					</>
 				)}
-			</div>
-		</Zettel>
+			</PaperSheetFields>
+		</PaperSheet>
 	);
 };
 

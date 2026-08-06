@@ -7,14 +7,18 @@ nicht anders gruppieren als der Bildschirm. Gerechnet wird in `materialCosts`
 (ADR 0006); hier steht keine Geldformel. */
 
 import { consumedValue, orderedValue, withoutPrice } from './materialCosts';
-import { groupMaterials, type GroupableMaterial, type MaterialAxis } from './materialGrouping';
+import { axisNoun, groupMaterials, type GroupableMaterial, type MaterialAxis } from './materialGrouping';
 
 /** Ein Papier des Exports — eine Gruppe der Achse, oder die ganze Liste. */
 export interface MaterialExportSheet<T extends GroupableMaterial = GroupableMaterial> {
 	/** Gruppen-Id aus `groupMaterials`; hält die Auswahl im Dialog. */
 	groupId: string;
-	/** Untertitel des Papiers („Ausschank"); `null` auf der Achse ALLE — dort
-	trägt das Papier nur „Materialliste". */
+	/**
+	 * Untertitel und Dateiname-Zusatz des Papiers, **mit** dem Wort der Achse
+	 * („Station: Ausschank") — wie die Bestellliste es schon tut. Ohne das Wort
+	 * wären eine Station und ein Lieferant desselben Namens dasselbe Papier und
+	 * überschrieben sich beim Herunterladen. `null` auf der Achse ALLE.
+	 */
 	label: string | null;
 	/** Station als Tabellenspalte nur, wo die Achse sie nicht schon gesetzt hat
 	(Regel aus #113). */
@@ -63,9 +67,10 @@ export function planMaterialExport<T extends GroupableMaterial>(
 	const selected = groups.filter((group) => groupId == null || group.id === groupId);
 	const chosen = selected.length > 0 ? selected : groups;
 
+	const noun = axisNoun(axis);
 	const sheets = chosen.map((group) => ({
 		groupId: group.id,
-		label: axis === 'all' ? null : group.name,
+		label: noun == null ? null : `${noun}: ${group.name}`,
 		showStation: axis !== 'station',
 		materials: group.materials
 	}));

@@ -17,6 +17,21 @@ export const MATERIAL_AXES: readonly { value: MaterialAxis; label: string }[] = 
 	{ value: 'all', label: 'ALLE' }
 ];
 
+/** Einzahl-Wortlaut einer Achse für Aufschriften („Station: Ausschank"). Die
+Achse ALLE steht für keine Zuordnung und hat darum kein Wort. */
+export function axisNoun(axis: MaterialAxis): string | null {
+	switch (axis) {
+		case 'station':
+			return 'Station';
+		case 'supplier':
+			return 'Lieferant';
+		case 'category':
+			return 'Kategorie';
+		default:
+			return null;
+	}
+}
+
 /** Was eine Material-Position beisteuern muss, um gruppiert zu werden —
 strukturell, damit auch Testfixtures ohne DB-Felder reichen. */
 export interface GroupableMaterial extends MaterialPosition {

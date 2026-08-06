@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { buildOrderList, planOrderListExport, type OrderListAxis } from '@/lib/orderList';
+import { runDownloads } from '@/lib/exportDownloads';
+import { planOrderListExport, type OrderListAxis } from '@/lib/orderList';
 import {
 	exportOrderListSinglePdf,
 	exportOrderListSingleExcel,
@@ -18,10 +19,13 @@ interface OrderListExportDialogProps {
 	onOpenChange: (open: boolean) => void;
 	festivalName: string;
 	materials: FestivalMaterialWithStation[];
+	/** Achse, auf der die Bestellliste beginnt — abgeleitet aus der Achse der
+	Arbeitsliste (#113); die Bestellliste kennt nur Lieferant und Station. */
+	axis: OrderListAxis;
+	/** Vorgewählte Gruppe (Lieferantenname bzw. Stations-Id, `''` für die
+	Restgruppe); `null` heißt „alle". */
+	selectedKey: string | null;
 }
-
-/** Pause zwischen zwei Downloads — ohne sie blockt der Browser die Folgedateien. */
-const DOWNLOAD_GAP_MS = 350;
 
 /**
  * Der Radix-Rahmen um den Bestelllisten-Export-Zettel (#119). Er hält Achse und
@@ -33,12 +37,21 @@ const OrderListExportDialog: React.FC<OrderListExportDialogProps> = ({
 	open,
 	onOpenChange,
 	festivalName,
-	materials
+	materials,
+	axis: viewAxis,
+	selectedKey: viewSelectedKey
 }) => {
-	const [axis, setAxis] = useState<OrderListAxis>('supplier');
-	const [selectedKey, setSelectedKey] = useState<string | null>(null);
+	const [axis, setAxis] = useState<OrderListAxis>(viewAxis);
+	const [selectedKey, setSelectedKey] = useState<string | null>(viewSelectedKey);
 
-	const groups = useMemo(() => buildOrderList(materials, axis), [materials, axis]);
+	// Beim Öffnen den Stand des Bildschirms übernehmen, danach nicht mehr.
+	useEffect(() => {
+		if (!open) return;
+		setAxis(viewAxis);
+		setSelectedKey(viewSelectedKey);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [open]);
+
 	const plan = useMemo(
 		() => planOrderListExport(materials, axis, selectedKey),
 		[materials, axis, selectedKey]
@@ -50,7 +63,7 @@ const OrderListExportDialog: React.FC<OrderListExportDialogProps> = ({
 		setSelectedKey(null);
 	};
 
-	const run = async (format: 'pdf' | 'excel') => {
+	const run = (format: 'pdf' | 'excel') => {
 		const meta: OrderListMeta = { festivalName, axis };
 		const jobs: Array<() => void> = plan.individual.map((group) => () =>
 			format === 'pdf'
@@ -65,23 +78,11 @@ const OrderListExportDialog: React.FC<OrderListExportDialogProps> = ({
 					: exportOrderListCollectionExcel(collection, meta)
 			);
 		}
-
-		for (let i = 0; i < jobs.length; i++) {
-			jobs[i]();
-			if (i < jobs.length - 1) await new Promise((r) => setTimeout(r, DOWNLOAD_GAP_MS));
-		}
-	};
-
-	const handleOpenChange = (next: boolean) => {
-		if (!next) {
-			setAxis('supplier');
-			setSelectedKey(null);
-		}
-		onOpenChange(next);
+		return runDownloads(jobs);
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
+		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				hideClose
 				aria-describedby={undefined}
@@ -91,11 +92,10 @@ const OrderListExportDialog: React.FC<OrderListExportDialogProps> = ({
 					onAxisChange={changeAxis}
 					selectedKey={selectedKey}
 					onSelectedKeyChange={setSelectedKey}
-					groups={groups}
 					plan={plan}
 					onPdf={() => void run('pdf')}
 					onExcel={() => void run('excel')}
-					onCancel={() => handleOpenChange(false)}
+					onCancel={() => onOpenChange(false)}
 					TitleTag={DialogTitle}
 				/>
 			</DialogContent>

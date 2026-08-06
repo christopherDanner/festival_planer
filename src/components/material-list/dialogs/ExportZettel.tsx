@@ -2,7 +2,7 @@ import React, { type ElementType, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Stamp } from '@/components/toolkit/Stamp';
-import { Zettel, ZETTEL_FOCUS } from '@/components/toolkit/Zettel';
+import { FOCUS_INK, PaperSheet, PaperSheetFields } from '@/components/toolkit/PaperSheet';
 import { formatEuro } from '@/lib/money';
 
 /** Die Zahlen der Auswahl. Sie kommen fertig gerechnet aus `materialCosts`
@@ -32,7 +32,7 @@ export interface ExportZettelProps {
 
 /**
  * Der gemeinsame Zettel der beiden Export-Dialoge des Material-Bereichs
- * (#119): Plakat-Rahmen aus `<Zettel>` (Optik wie der Positions-Dialog #117),
+ * (#119): Plakat-Rahmen aus `<PaperSheet>` (Optik wie der Positions-Dialog #117),
  * darin die Auswahlfelder, darunter die Zahlen der Auswahl und die Fußleiste
  * mit **PDF als gelbem Primärknopf** und Excel daneben.
  *
@@ -51,33 +51,33 @@ const ExportZettel: React.FC<ExportZettelProps> = ({
 	const nothing = summary.positionCount === 0 || summary.fileCount === 0;
 
 	return (
-		<Zettel
+		<PaperSheet
 			title={title}
 			TitleTag={TitleTag}
 			onClose={onCancel}
 			footer={
 				<>
-					<Button variant="outline" className={ZETTEL_FOCUS} onClick={onCancel}>
+					<Button variant="outline" className={FOCUS_INK} onClick={onCancel}>
 						Abbrechen
 					</Button>
 					<Button
 						data-export="excel"
 						variant="outline"
-						className={ZETTEL_FOCUS}
+						className={FOCUS_INK}
 						disabled={nothing}
 						onClick={onExcel}>
 						Excel
 					</Button>
 					<Button
 						data-export="pdf"
-						className={ZETTEL_FOCUS}
+						className={FOCUS_INK}
 						disabled={nothing}
 						onClick={onPdf}>
 						PDF drucken
 					</Button>
 				</>
 			}>
-			<div className="grid grid-cols-1 gap-3.5 px-4 py-4 min-[900px]:grid-cols-2">{children}</div>
+			<PaperSheetFields>{children}</PaperSheetFields>
 
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t-2 border-tinte bg-white px-4 py-3">
 				{nothing ? (
@@ -101,7 +101,7 @@ const ExportZettel: React.FC<ExportZettelProps> = ({
 					</>
 				)}
 			</div>
-		</Zettel>
+		</PaperSheet>
 	);
 };
 

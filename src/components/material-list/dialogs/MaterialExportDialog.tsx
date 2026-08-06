@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { runDownloads } from '@/lib/exportDownloads';
 import { planMaterialExport } from '@/lib/materialExportPlan';
 import {
 	exportMaterialListExcel,
@@ -17,27 +18,47 @@ interface MaterialExportDialogProps {
 	onOpenChange: (open: boolean) => void;
 	festivalName: string;
 	materials: FestivalMaterialWithStation[];
+	/** Achse der Arbeitsliste — der Export beginnt auf ihr (#113, Entscheid #66). */
+	axis: MaterialAxis;
+	/** Reiter der Arbeitsliste; `null` heißt „alle Gruppen". */
+	groupId: string | null;
 }
-
-/** Pause zwischen zwei Downloads — ohne sie blockt der Browser die Folgedateien. */
-const DOWNLOAD_GAP_MS = 350;
 
 /**
  * Der Radix-Rahmen um den Materiallisten-Export-Zettel (#119). Er hält Achse
  * und gewählte Gruppe und schiebt die Papiere raus — Optik und Beschriftung
  * liegen im `MaterialExportZettel`, die Regel in `materialExportPlan`, das
  * Papier in `materialExportService`.
+ *
+ * Beim Öffnen übernimmt er Achse und Reiter der Arbeitsliste: wer auf
+ * LIEFERANT/Metro schaut und EXPORT drückt, will Metros Liste. Danach darf er im
+ * Dialog umstellen, ohne dass der Bildschirm mitspringt.
  */
 const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 	open,
 	onOpenChange,
 	festivalName,
-	materials
+	materials,
+	axis: viewAxis,
+	groupId: viewGroupId
 }) => {
-	const [axis, setAxis] = useState<MaterialAxis>('station');
-	const [groupId, setGroupId] = useState<string | null>(null);
+	const [axis, setAxis] = useState<MaterialAxis>(viewAxis);
+	const [groupId, setGroupId] = useState<string | null>(viewGroupId);
 
-	const plan = useMemo(() => planMaterialExport(materials, axis, groupId), [materials, axis, groupId]);
+	// Beim Öffnen (nicht bei jedem Rendern) den Stand des Bildschirms übernehmen.
+	useEffect(() => {
+		if (!open) return;
+		setAxis(viewAxis);
+		setGroupId(viewGroupId);
+		// Absichtlich nur an `open` hängend: eine Achsenänderung hinter dem
+		// offenen Dialog soll die Auswahl im Dialog nicht überschreiben.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [open]);
+
+	const plan = useMemo(
+		() => planMaterialExport(materials, axis, groupId),
+		[materials, axis, groupId]
+	);
 
 	const changeAxis = (next: MaterialAxis) => {
 		setAxis(next);
@@ -46,31 +67,22 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 		setGroupId(null);
 	};
 
-	const run = async (format: 'pdf' | 'excel') => {
+	const run = (format: 'pdf' | 'excel') => {
 		const papers: MaterialListPaper[] = plan.sheets.map((sheet) => ({
 			festivalName,
 			label: sheet.label,
 			showStation: sheet.showStation,
 			materials: sheet.materials
 		}));
-
-		for (let i = 0; i < papers.length; i++) {
-			if (format === 'pdf') exportMaterialListPdf(papers[i]);
-			else exportMaterialListExcel(papers[i]);
-			if (i < papers.length - 1) await new Promise((r) => setTimeout(r, DOWNLOAD_GAP_MS));
-		}
-	};
-
-	const handleOpenChange = (next: boolean) => {
-		if (!next) {
-			setAxis('station');
-			setGroupId(null);
-		}
-		onOpenChange(next);
+		return runDownloads(
+			papers.map((paper) => () =>
+				format === 'pdf' ? exportMaterialListPdf(paper) : exportMaterialListExcel(paper)
+			)
+		);
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
+		<Dialog open={open} onOpenChange={onOpenChange}>
 			{/* Der Zettel bringt Rahmen, Papier und Versatz-Schatten mit — die
 			Shell bleibt reine Positionierung (wie beim Positions-Dialog #117). */}
 			<DialogContent
@@ -85,7 +97,7 @@ const MaterialExportDialog: React.FC<MaterialExportDialogProps> = ({
 					plan={plan}
 					onPdf={() => void run('pdf')}
 					onExcel={() => void run('excel')}
-					onCancel={() => handleOpenChange(false)}
+					onCancel={() => onOpenChange(false)}
 					TitleTag={DialogTitle}
 				/>
 			</DialogContent>

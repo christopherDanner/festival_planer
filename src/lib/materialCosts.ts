@@ -21,6 +21,13 @@ function toCents(value: number): number {
 	return Math.round(value * 100) / 100;
 }
 
+/** Einen zusammengesetzten Betrag auf Cent stellen. Exportiert für Aufrufer, die
+schon gerechnete Zwischensummen addieren (etwa der Bestelllisten-Export über
+seine Gruppen) — die Rundungsregel bleibt damit in diesem Modul. */
+export function roundEuro(value: number): number {
+	return toCents(value);
+}
+
 /** Bruttopreis ungerundet — Rechengrundlage aller Beträge. Erst der Betrag wird
 gerundet, nicht der Preis: 100 × (0,99 netto + 20 %) sind 118,80 €, nicht 119,00 €. */
 function exactGross(m: MaterialPrice): number | null {

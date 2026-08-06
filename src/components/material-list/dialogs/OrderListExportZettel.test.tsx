@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import { buildOrderList, planOrderListExport, type OrderListAxis } from '@/lib/orderList';
+import { planOrderListExport, type OrderListAxis } from '@/lib/orderList';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import OrderListExportZettel, { type OrderListExportZettelProps } from './OrderListExportZettel';
 
@@ -57,7 +57,6 @@ const props = (
 		onAxisChange: noop,
 		selectedKey,
 		onSelectedKeyChange: noop,
-		groups: buildOrderList(MATERIALS, axis),
 		plan: planOrderListExport(MATERIALS, axis, selectedKey),
 		onPdf: noop,
 		onExcel: noop,
@@ -164,11 +163,7 @@ describe('OrderListExportZettel — Zahlen der Bestellung', () => {
 	it('sperrt beide Knöpfe, wo nichts bestellt ist', () => {
 		const host = parse(
 			renderToStaticMarkup(
-				<OrderListExportZettel
-					{...props()}
-					groups={[]}
-					plan={planOrderListExport([], 'supplier', null)}
-				/>
+				<OrderListExportZettel {...props()} plan={planOrderListExport([], 'supplier', null)} />
 			)
 		);
 		expect(host.querySelector('[data-export="pdf"]')?.hasAttribute('disabled')).toBe(true);

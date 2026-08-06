@@ -60,6 +60,8 @@ const mount = async (over: Partial<React.ComponentProps<typeof MaterialExportDia
 				onOpenChange={() => {}}
 				festivalName="Stadlfest 2026"
 				materials={MATERIALS}
+				axis="station"
+				groupId={null}
 				{...over}
 			/>
 		);
@@ -99,7 +101,7 @@ describe('MaterialExportDialog', () => {
 		expect(exportMaterialListPdf).toHaveBeenCalledWith(
 			expect.objectContaining({
 				festivalName: 'Stadlfest 2026',
-				label: 'Ausschank',
+				label: 'Station: Ausschank',
 				showStation: false
 			})
 		);
@@ -108,8 +110,8 @@ describe('MaterialExportDialog', () => {
 			await new Promise((r) => setTimeout(r, 800));
 		});
 		expect(vi.mocked(exportMaterialListPdf).mock.calls.map(([p]) => p.label)).toEqual([
-			'Ausschank',
-			'Ohne Station'
+			'Station: Ausschank',
+			'Station: Ohne Station'
 		]);
 	});
 
@@ -142,7 +144,19 @@ describe('MaterialExportDialog', () => {
 		expect(document.body.textContent).toContain('Alle Gruppen');
 		await click('[data-export="pdf"]');
 		expect(exportMaterialListPdf).toHaveBeenCalledWith(
-			expect.objectContaining({ label: 'Kein Lieferant', showStation: true })
+			expect.objectContaining({ label: 'Lieferant: Kein Lieferant', showStation: true })
+		);
+	});
+
+	it('beginnt auf Achse und Reiter der Arbeitsliste', async () => {
+		// Wer auf STATION/Ausschank schaut und exportiert, will Ausschanks Liste.
+		await mount({ axis: 'station', groupId: 'station:s1' });
+		expect(document.body.textContent).toContain('Ausschank (1)');
+
+		await click('[data-export="pdf"]');
+		expect(exportMaterialListPdf).toHaveBeenCalledTimes(1);
+		expect(exportMaterialListPdf).toHaveBeenCalledWith(
+			expect.objectContaining({ label: 'Station: Ausschank' })
 		);
 	});
 

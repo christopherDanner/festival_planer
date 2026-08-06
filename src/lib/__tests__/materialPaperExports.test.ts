@@ -38,7 +38,11 @@ vi.mock('@/lib/pdfPoster', async (importOriginal) => {
 });
 
 import * as poster from '@/lib/pdfPoster';
-import { buildMaterialListPdf, type MaterialListPaper } from '@/lib/materialExportService';
+import {
+	buildMaterialListPdf,
+	buildMaterialListSheet,
+	type MaterialListPaper
+} from '@/lib/materialExportService';
 import {
 	buildOrderListCollectionPdf,
 	buildOrderListSinglePdf
@@ -191,6 +195,57 @@ describe('buildMaterialListPdf — Materialliste in Plakat-Optik', () => {
 		buildMaterialListPdf(paper({ materials: [] }));
 
 		expect(printed()).toContain('Bestellt € 0   ·   Verbraucht € 0');
+	});
+
+	it('setzt den Summenblock auf eine neue Seite, wenn die Tabelle unten ausläuft', () => {
+		// Genug Zeilen, dass die Tabelle knapp über dem Blattende endet — der
+		// Summenblock darf nicht in die Fußzeile rutschen.
+		const many = Array.from({ length: 200 }, (_, i) =>
+			material({ id: `m-${i}`, name: `Position ${i}`, ordered_quantity: 1 })
+		);
+		const doc = buildMaterialListPdf(paper({ materials: many }));
+		const pages = (doc as typeof doc & { getNumberOfPages(): number }).getNumberOfPages();
+
+		expect(pages).toBeGreaterThan(1);
+		// Der Summenblock steht auf der letzten Seite, oberhalb der Fußzeile.
+		const summenY = vi.mocked(poster.drawSectionHeading).mock.calls.at(-1)?.[1].y ?? 0;
+		expect(summenY).toBeLessThanOrEqual(297 - 10 - 18);
+	});
+});
+
+describe('buildMaterialListSheet — Excel-Zeilen der Materialliste', () => {
+	it('lässt die Mengen Zahlen bleiben — die Datei ist zum Weiterrechnen gedacht', () => {
+		const { rows } = buildMaterialListSheet(paper({ materials: [BIER] }));
+		const bierRow = rows.find((r) => r[0] === 'Bier');
+
+		// Bestellt und Verbraucht als Zahl, nicht als Text.
+		expect(bierRow).toContain(5);
+		expect(bierRow).toContain(3);
+		expect(bierRow).not.toContain('5');
+		expect(bierRow).not.toContain('3');
+	});
+
+	it('trägt Kopf, Erklärtext und dieselben Summen wie das Papier', () => {
+		const { rows, cols, merges } = buildMaterialListSheet(paper());
+		const flat = rows.map((r) => r.join(' | '));
+
+		expect(flat[0]).toBe('Stadlfest 2026');
+		expect(flat[1]).toBe('Materialliste');
+		expect(flat.join('\n')).toContain('Neue Menge');
+		expect(flat).toContain('Bestellt € 60 · Verbraucht € 36');
+		expect(flat).toContain('1 ohne Preis');
+		// Titel und Erklärzeilen laufen über die ganze Tabellenbreite.
+		expect(cols).toHaveLength(9);
+		expect(merges[0]).toEqual({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+	});
+
+	it('lässt die Station-Spalte weg, wo die Achse sie schon gesetzt hat', () => {
+		const { rows, cols } = buildMaterialListSheet(
+			paper({ showStation: false, label: 'Station: Ausschank' })
+		);
+
+		expect(cols).toHaveLength(8);
+		expect(rows.some((r) => r.includes('Station'))).toBe(false);
 	});
 });
 

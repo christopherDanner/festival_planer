@@ -80,6 +80,17 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	const activeCategory = resolveActiveCategory(groupChips, requestedCategory);
 	const visible = activeGroup ? filterByCategory(activeGroup.materials, activeCategory) : [];
 
+	// Die Bestellliste kennt nur zwei Achsen (CONTEXT.md): wer nach Station
+	// plant, bestellt für die Station; sonst beim Lieferanten. Der Reiter reist
+	// nur mit, wo er auf der Achse der Bestellliste auch ein Schlüssel ist.
+	const orderListAxis = axis === 'station' ? 'station' : 'supplier';
+	const orderListKey =
+		(axis === 'station' || axis === 'supplier') && activeGroup
+			? // Die Restgruppe heißt in `orderList` leerer Schlüssel, nicht `null` —
+				// `null` wäre dort „alle Gruppen".
+				activeGroup.key ?? ''
+			: null;
+
 	// Die volle Nutzlast kommt nur beim Anlegen; beim Bearbeiten schickt der
 	// Dialog nur seine Stammdaten (#117).
 	const handleSave = (data: MaterialSaveData) => {
@@ -203,6 +214,10 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				onSave={handleSave}
 			/>
 
+			{/* Beide Export-Dialoge beginnen dort, wo der Bildschirm steht — Achse
+			und Reiter der Arbeitsliste (#119). Exportiert wird über *alle*
+			Positionen des Fests, nicht über die Suchtreffer: ein Papier, dem
+			stillschweigend Zeilen fehlen, wäre schlimmer als eines zu viel. */}
 			<MaterialExportDialog
 				open={dialogState.type === 'export'}
 				onOpenChange={(open) => {
@@ -210,6 +225,8 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				}}
 				festivalName={festivalName || 'Festival'}
 				materials={materials}
+				axis={axis}
+				groupId={activeGroupId}
 			/>
 
 			<OrderListExportDialog
@@ -219,6 +236,8 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				}}
 				festivalName={festivalName || 'Festival'}
 				materials={materials}
+				axis={orderListAxis}
+				selectedKey={orderListKey}
 			/>
 		</div>
 	);

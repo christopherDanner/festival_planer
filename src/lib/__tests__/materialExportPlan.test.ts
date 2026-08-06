@@ -58,7 +58,11 @@ describe('planMaterialExport — welche Papiere entstehen', () => {
 	it('macht je Gruppe ein Papier, wenn keine Gruppe gewählt ist — Restgruppe am Ende', () => {
 		const plan = planMaterialExport(materials, 'station', null);
 
-		expect(plan.sheets.map((s) => s.label)).toEqual(['Ausschank', 'Küche', 'Ohne Station']);
+		expect(plan.sheets.map((s) => s.label)).toEqual([
+			'Station: Ausschank',
+			'Station: Küche',
+			'Station: Ohne Station'
+		]);
 		expect(names(plan.sheets)).toEqual([['Bier'], ['Teller'], ['Zelt']]);
 	});
 
@@ -66,7 +70,7 @@ describe('planMaterialExport — welche Papiere entstehen', () => {
 		const [, kueche] = planMaterialExport(materials, 'station', null).sheets;
 		const plan = planMaterialExport(materials, 'station', kueche.groupId);
 
-		expect(plan.sheets.map((s) => s.label)).toEqual(['Küche']);
+		expect(plan.sheets.map((s) => s.label)).toEqual(['Station: Küche']);
 		expect(plan.positionCount).toBe(1);
 	});
 
@@ -74,7 +78,7 @@ describe('planMaterialExport — welche Papiere entstehen', () => {
 		// Achsenwechsel: die Gruppen-Id trägt die Achse im Schlüssel.
 		const plan = planMaterialExport(materials, 'supplier', 'station:s-Küche');
 
-		expect(plan.sheets.map((s) => s.label)).toEqual(['Huber', 'Metro']);
+		expect(plan.sheets.map((s) => s.label)).toEqual(['Lieferant: Huber', 'Lieferant: Metro']);
 	});
 
 	it('folgt der Lieferanten-Achse mit dem Wortlaut der Arbeitsliste', () => {
@@ -84,7 +88,11 @@ describe('planMaterialExport — welche Papiere entstehen', () => {
 			null
 		);
 
-		expect(plan.sheets.map((s) => s.label)).toEqual(['Huber', 'Metro', 'Kein Lieferant']);
+		expect(plan.sheets.map((s) => s.label)).toEqual([
+			'Lieferant: Huber',
+			'Lieferant: Metro',
+			'Lieferant: Kein Lieferant'
+		]);
 	});
 
 	it('lässt die Station-Spalte nur weg, wo die Achse sie schon gesetzt hat', () => {
