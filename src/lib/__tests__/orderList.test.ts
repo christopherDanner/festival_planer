@@ -5,6 +5,7 @@ import {
 	buildOrderListFilename,
 	orderListColumns,
 	orderListRowCells,
+	summarizeOrderListExport,
 } from '../orderList';
 import type { FestivalMaterialWithStation } from '../materialService';
 
@@ -22,6 +23,9 @@ interface MakeOpts {
 	station?: string | null; // station name; null => no station
 	packagingUnit?: string | null;
 	amountPerPackaging?: number | null;
+	price?: number | null;
+	tax?: number | null;
+	actual?: number | null;
 }
 
 function make(opts: MakeOpts): FestivalMaterialWithStation {
@@ -37,9 +41,9 @@ function make(opts: MakeOpts): FestivalMaterialWithStation {
 		packaging_unit: opts.packagingUnit ?? null,
 		amount_per_packaging: opts.amountPerPackaging ?? null,
 		ordered_quantity: opts.ordered ?? 0,
-		actual_quantity: null,
-		unit_price: null,
-		tax_rate: null,
+		actual_quantity: opts.actual ?? null,
+		unit_price: opts.price ?? null,
+		tax_rate: opts.tax ?? null,
 		price_is_net: true,
 		price_per: 'unit',
 		notes: null,
@@ -124,6 +128,47 @@ describe('buildOrderList — supplier axis', () => {
 	});
 });
 
+describe('buildOrderList — Bestellwert je Gruppe', () => {
+	it('nennt den Bestellwert der Gruppe, gerechnet mit dem Bruttopreis (#119)', () => {
+		// 10 € netto + 20 % = 12 € brutto, 5 bestellt → 60 €.
+		// 4 € brutto ohne Steuersatz, 10 bestellt → 40 €.
+		const materials = [
+			make({ name: 'Bier', ordered: 5, supplier: 'Huber', price: 10, tax: 20 }),
+			make({ name: 'Wein', ordered: 10, supplier: 'Huber', price: 4 }),
+			make({ name: 'Limo', ordered: 2, supplier: 'Maier', price: 3 })
+		];
+
+		const groups = buildOrderList(materials, 'supplier');
+
+		expect(groups.find((g) => g.name === 'Huber')?.orderedValue).toBe(100);
+		expect(groups.find((g) => g.name === 'Maier')?.orderedValue).toBe(6);
+	});
+
+	it('bleibt beim Bestellwert, auch wenn eine Verbrauchsmenge nachgetragen ist', () => {
+		// Die Bestellliste ist die Bestellung — verbraucht wurde noch nichts, als
+		// sie geschrieben wurde.
+		const [group] = buildOrderList(
+			[make({ name: 'Bier', ordered: 5, supplier: 'Huber', price: 10, actual: 1 })],
+			'supplier'
+		);
+
+		expect(group.orderedValue).toBe(50);
+	});
+
+	it('zählt die Positionen ohne Preis als Preislücke der Gruppe', () => {
+		const [group] = buildOrderList(
+			[
+				make({ name: 'Bier', ordered: 5, supplier: 'Huber', price: 10 }),
+				make({ name: 'Kohle', ordered: 2, supplier: 'Huber' })
+			],
+			'supplier'
+		);
+
+		expect(group.orderedValue).toBe(50);
+		expect(group.withoutPrice).toBe(1);
+	});
+});
+
 describe('buildOrderList — station axis', () => {
 	it('gruppiert nach Station und bündelt Positionen ohne Station in "Keine Station"', () => {
 		const materials = [
@@ -189,6 +234,44 @@ describe('planOrderListExport', () => {
 		const single = planOrderListExport(stationMaterials, 'station', '');
 		expect(single.collection).toBeNull();
 		expect(single.individual.map((g) => g.name)).toEqual(['Keine Station']);
+	});
+});
+
+describe('summarizeOrderListExport', () => {
+	const materials = [
+		// 12 € brutto × 5 = 60 €
+		make({ name: 'Bier', ordered: 5, supplier: 'Huber', price: 10, tax: 20 }),
+		// 3 € brutto × 2 = 6 €
+		make({ name: 'Limo', ordered: 2, supplier: 'Maier', price: 3 }),
+		make({ name: 'Kohle', ordered: 1, supplier: 'Maier' })
+	];
+
+	it('zählt Positionen und Bestellwert über alle Gruppen und das Sammeldokument als eigene Datei', () => {
+		const summary = summarizeOrderListExport(planOrderListExport(materials, 'supplier', null));
+
+		expect(summary).toEqual({
+			positionCount: 3,
+			fileCount: 3, // zwei Lieferanten + Sammeldokument
+			orderedValue: 66,
+			withoutPrice: 1
+		});
+	});
+
+	it('zählt bei einer gewählten Gruppe nur diese, ohne Sammeldokument', () => {
+		const summary = summarizeOrderListExport(planOrderListExport(materials, 'supplier', 'Huber'));
+
+		expect(summary).toEqual({
+			positionCount: 1,
+			fileCount: 1,
+			orderedValue: 60,
+			withoutPrice: 0
+		});
+	});
+
+	it('sagt bei leerer Bestellung, dass es nichts zu exportieren gibt', () => {
+		const summary = summarizeOrderListExport(planOrderListExport([], 'supplier', null));
+
+		expect(summary).toEqual({ positionCount: 0, fileCount: 0, orderedValue: 0, withoutPrice: 0 });
 	});
 });
 
