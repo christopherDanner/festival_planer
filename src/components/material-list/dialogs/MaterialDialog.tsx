@@ -5,13 +5,14 @@ import type { Station } from '@/lib/shiftService';
 import { mergeSuggestions } from '@/lib/materialSuggestions';
 import type { MaterialPrefill } from '@/lib/materialGrouping';
 import {
+	buildMasterDataUpdate,
 	buildMaterialPayload,
 	canSave,
 	dialogMode,
 	emptyMaterialForm,
 	formFromMaterial,
 	type MaterialForm,
-	type MaterialPayload
+	type MaterialSaveData
 } from '@/lib/materialDialogForm';
 import MaterialZettel from './MaterialZettel';
 
@@ -40,7 +41,9 @@ interface MaterialDialogProps {
 	existingSuppliers?: string[];
 	existingCategories?: string[];
 	onCreateStation?: (name: string) => Promise<Station>;
-	onSave: (data: MaterialPayload) => void;
+	/** Beim Anlegen die volle Nutzlast, beim Bearbeiten nur die Stammdaten —
+	 * `isFullPayload` unterscheidet die beiden. */
+	onSave: (data: MaterialSaveData) => void;
 }
 
 /**
@@ -76,8 +79,12 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 
 	const handleSave = () => {
 		if (!canSave(form, mode)) return;
+		const context = { festivalId, categorySuggestions, supplierSuggestions };
+		// Der Stammdaten-Dialog schreibt beim Bearbeiten auch nur Stammdaten.
 		onSave(
-			buildMaterialPayload(form, { festivalId, categorySuggestions, supplierSuggestions })
+			mode === 'create'
+				? buildMaterialPayload(form, context)
+				: buildMasterDataUpdate(form, context)
 		);
 		onOpenChange(false);
 	};

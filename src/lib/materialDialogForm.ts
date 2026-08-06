@@ -20,6 +20,13 @@ import { toBaseQuantity, fromBaseQuantity } from '@/lib/materialQuantity';
 
 export type MaterialDialogMode = 'create' | 'edit';
 
+/** Worauf sich der erfasste Preis bezieht — ohne Gebinde bleibt nur die Einheit. */
+export type PriceBase = 'unit' | 'packaging';
+
+/** Ob der erfasste Preis netto gemeint ist. Als Text, weil beide Schalter des
+Zettels über Textwerte gehen (CONTEXT.md „Bruttopreis", ADR 0006). */
+export type PriceIsNet = 'true' | 'false';
+
 export interface MaterialForm {
 	name: string;
 	category: string;
@@ -32,14 +39,13 @@ export interface MaterialForm {
 	actual_quantity: string;
 	unit_price: string;
 	tax_rate: string;
-	/** 'true' = der erfasste Preis ist netto gemeint (CONTEXT.md „Bruttopreis"). */
-	price_is_net: string;
-	/** 'unit' | 'packaging' */
-	price_per: string;
+	price_is_net: PriceIsNet;
+	price_per: PriceBase;
 	notes: string;
 }
 
-export interface MaterialPayload {
+/** Was der Dialog besitzt: die Stammdaten einer Position. */
+export interface MaterialMasterData {
 	festival_id: string;
 	station_id: string | null;
 	name: string;
@@ -48,13 +54,26 @@ export interface MaterialPayload {
 	unit: string;
 	packaging_unit: string | null;
 	amount_per_packaging: number | null;
+	notes: string | null;
+}
+
+/** Stammdaten plus Mengen und Preis — die volle Zeile, wie sie beim Anlegen
+in einem Zug entsteht. */
+export interface MaterialPayload extends MaterialMasterData {
 	ordered_quantity: number;
 	actual_quantity: number | null;
 	unit_price: number | null;
 	tax_rate: number | null;
 	price_is_net: boolean;
 	price_per: string;
-	notes: string | null;
+}
+
+export type MaterialSaveData = MaterialPayload | MaterialMasterData;
+
+/** Trennt die volle Nutzlast (Anlegen) von der Stammdaten-Änderung
+(Bearbeiten) — die Bestellmenge gibt es nur in der einen. */
+export function isFullPayload(data: MaterialSaveData): data is MaterialPayload {
+	return 'ordered_quantity' in data;
 }
 
 export interface PayloadContext {
@@ -64,12 +83,13 @@ export interface PayloadContext {
 }
 
 /** Der Satz, mit dem der Zettel beim Bearbeiten die fehlenden Mengenfelder
-erklärt — die Begründung gehört neben die Lücke, nicht ins Changelog. */
-export const ZEILEN_HINWEIS =
-	'Mengen und Preise ändert man schneller direkt in der Zeile (Knopf ✎).';
+erklärt — die Begründung gehört neben die Lücke, nicht ins Changelog. Wortlaut
+aus #117; auf den ✎-Knopf zeigt er erst, wenn #115 ihn gebaut hat. */
+export const ZEILEN_HINWEIS = 'Mengen und Preise ändert man schneller direkt in der Zeile.';
 
-/** Sentinel der Select-Felder: „keine Station" / „keine MwSt". */
-const KEINE = '__none__';
+/** Sentinel der Select-Felder: „keine Station" / „keine MwSt" — Radix kennt
+keinen leeren Wert, der Zettel setzt ihn und diese Datei liest ihn wieder weg. */
+export const KEINE = '__none__';
 
 export function dialogMode(material?: FestivalMaterialWithStation | null): MaterialDialogMode {
 	return material ? 'edit' : 'create';
@@ -117,7 +137,7 @@ export function formFromMaterial(material: FestivalMaterialWithStation): Materia
 		unit_price: material.unit_price != null ? String(material.unit_price) : '',
 		tax_rate: material.tax_rate != null ? String(material.tax_rate) : '',
 		price_is_net: material.price_is_net ? 'true' : 'false',
-		price_per: material.price_per || 'packaging',
+		price_per: material.price_per === 'unit' ? 'unit' : 'packaging',
 		notes: material.notes || ''
 	};
 }
@@ -134,23 +154,44 @@ export function canSave(form: MaterialForm, mode: MaterialDialogMode): boolean {
 	return true;
 }
 
-export function buildMaterialPayload(form: MaterialForm, context: PayloadContext): MaterialPayload {
-	const packagingUnit = form.packaging_unit.trim() || null;
-	const quantityContext = {
-		packaging_unit: packagingUnit,
-		amount_per_packaging: form.amount_per_packaging ? Number(form.amount_per_packaging) : null
-	};
-	const category = canonicalizeValue(form.category, context.categorySuggestions);
-	const supplier = canonicalizeValue(form.supplier, context.supplierSuggestions);
+/**
+ * Was der Dialog beim **Bearbeiten** abgibt: nur die Stammdaten. Er zeigt
+ * Mengen und Preise nicht, also schreibt er sie auch nicht — sonst trüge er
+ * bei jedem Umbenennen seinen Stand der Geldspalten über das, was die Zeile
+ * (#115) inzwischen gesetzt hat.
+ *
+ * Folge fürs Gebinde: eine korrigierte Gebindegröße lässt die *gespeicherte*
+ * Menge stehen (4 Fass bleiben 4 Fass, nur ihr Inhalt ändert sich). Die
+ * Zeile zeigt diese Änderung sofort — anders als ein stilles Umrechnen einer
+ * Zahl, die im Dialog gar nicht steht.
+ */
+export function buildMasterDataUpdate(
+	form: MaterialForm,
+	context: PayloadContext
+): MaterialMasterData {
 	return {
 		festival_id: context.festivalId,
 		station_id: form.station_id && form.station_id !== KEINE ? form.station_id : null,
 		name: form.name.trim(),
-		category: category || null,
-		supplier: supplier || null,
+		category: canonicalizeValue(form.category, context.categorySuggestions) || null,
+		supplier: canonicalizeValue(form.supplier, context.supplierSuggestions) || null,
 		unit: form.unit,
-		packaging_unit: packagingUnit,
-		amount_per_packaging: quantityContext.amount_per_packaging,
+		packaging_unit: form.packaging_unit.trim() || null,
+		amount_per_packaging: form.amount_per_packaging ? Number(form.amount_per_packaging) : null,
+		notes: form.notes.trim() || null
+	};
+}
+
+/** Was der Dialog beim **Anlegen** abgibt: Stammdaten, Mengen und Preis in
+einem Zug (#117). */
+export function buildMaterialPayload(form: MaterialForm, context: PayloadContext): MaterialPayload {
+	const stammdaten = buildMasterDataUpdate(form, context);
+	const quantityContext = {
+		packaging_unit: stammdaten.packaging_unit,
+		amount_per_packaging: stammdaten.amount_per_packaging
+	};
+	return {
+		...stammdaten,
 		ordered_quantity: fromBaseQuantity(Number(form.ordered_quantity || 0), quantityContext),
 		actual_quantity: form.actual_quantity
 			? fromBaseQuantity(Number(form.actual_quantity), quantityContext)
@@ -159,7 +200,6 @@ export function buildMaterialPayload(form: MaterialForm, context: PayloadContext
 		tax_rate: form.tax_rate && form.tax_rate !== KEINE ? Number(form.tax_rate) : null,
 		price_is_net: form.price_is_net === 'true',
 		// Ohne Gebinde gibt es nur eine Bezugsgröße.
-		price_per: packagingUnit ? form.price_per : 'unit',
-		notes: form.notes.trim() || null
+		price_per: stammdaten.packaging_unit ? form.price_per : 'unit'
 	};
 }

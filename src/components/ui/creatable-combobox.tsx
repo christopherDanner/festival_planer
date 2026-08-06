@@ -20,6 +20,8 @@ interface CreatableComboboxProps {
 	placeholder?: string;
 	emptyPlaceholder?: string;
 	id?: string;
+	/** Zusatzklassen für den Auslöser — etwa der Fokus-Zustand des Aufrufers. */
+	className?: string;
 }
 
 export const CreatableCombobox: React.FC<CreatableComboboxProps> = ({
@@ -28,7 +30,8 @@ export const CreatableCombobox: React.FC<CreatableComboboxProps> = ({
 	suggestions,
 	placeholder = 'Wählen oder neu anlegen',
 	emptyPlaceholder = 'Nicht gesetzt',
-	id
+	id,
+	className
 }) => {
 	const [open, setOpen] = React.useState(false);
 	const [query, setQuery] = React.useState('');
@@ -52,7 +55,7 @@ export const CreatableCombobox: React.FC<CreatableComboboxProps> = ({
 					variant="outline"
 					role="combobox"
 					aria-expanded={open}
-					className="w-full justify-between font-normal tracking-normal">
+					className={cn('w-full justify-between font-normal tracking-normal', className)}>
 					<span className={cn('truncate', !value && 'text-muted-foreground')}>
 						{value || emptyPlaceholder}
 					</span>

@@ -77,7 +77,7 @@ describe('MaterialDialog', () => {
 		expect(text).not.toContain('Verbraucht');
 	});
 
-	it('lässt Mengen und Preise der Position stehen, wenn nur Stammdaten geändert werden', async () => {
+	it('gibt beim Bearbeiten nur Stammdaten ab — Mengen und Preise bleiben, wie die Zeile sie hat', async () => {
 		const onSave = vi.fn();
 		await mount({ material: material(), onSave });
 		const name = document.querySelector<HTMLInputElement>('#mat-name');
@@ -86,15 +86,19 @@ describe('MaterialDialog', () => {
 			speichern()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 		});
 		expect(onSave).toHaveBeenCalledTimes(1);
-		expect(onSave.mock.calls[0][0]).toMatchObject({
+		const data = onSave.mock.calls[0][0];
+		expect(data).toMatchObject({
 			name: 'Bier',
-			ordered_quantity: 4,
-			actual_quantity: 3,
-			unit_price: 92.5,
-			tax_rate: 20,
-			price_is_net: true,
-			price_per: 'packaging'
+			station_id: 's1',
+			category: 'Getränke',
+			supplier: 'Brauerei Schwechat',
+			unit: 'Liter',
+			packaging_unit: 'Fass',
+			amount_per_packaging: 50
 		});
+		for (const spalte of ['ordered_quantity', 'actual_quantity', 'unit_price', 'tax_rate']) {
+			expect(data).not.toHaveProperty(spalte);
+		}
 	});
 
 	it('trägt beim Anlegen die Zuordnung der Gruppe vor und verlangt eine Bestellmenge', async () => {

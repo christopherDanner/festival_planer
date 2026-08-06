@@ -78,10 +78,14 @@ describe('MaterialZettel — Plakat-Optik', () => {
 		expect(html).toContain('tracking-[.06em]');
 	});
 
-	it('setzt den Fokus als 2px-Tinte-Outline mit Versatz', () => {
-		const html = render();
-		expect(html).toContain('focus-visible:outline-tinte');
-		expect(html).toContain('focus-visible:outline-offset-2');
+	it('setzt den Fokus als 2px-Tinte-Outline mit Versatz — an jedem Feld', () => {
+		const host = parse(render());
+		expect(render()).toContain('focus-visible:outline-offset-2');
+		// Auch die Auswahlfelder: sie sind Knöpfe und brächten sonst den Ring
+		// der Hülle mit.
+		for (const id of ['mat-name', 'mat-category', 'mat-station', 'mat-supplier', 'mat-packaging', 'mat-unit', 'mat-notes']) {
+			expect(host.querySelector(`#${id}`)?.className).toContain('focus-visible:outline-tinte');
+		}
 	});
 
 	it('bleibt ohne runde Ecken', () => {

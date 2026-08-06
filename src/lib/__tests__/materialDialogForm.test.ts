@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import {
+	buildMasterDataUpdate,
 	buildMaterialPayload,
 	canSave,
 	dialogMode,
 	emptyMaterialForm,
 	formFromMaterial,
+	isFullPayload,
 	showsQuantityAndPrice,
 	ZEILEN_HINWEIS,
 	type MaterialForm
@@ -49,12 +51,14 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 const KATEGORIEN = ['Getränke', 'Lebensmittel'];
 const LIEFERANTEN = ['Brauerei Schwechat'];
 
-const payloadOf = (form: MaterialForm) =>
-	buildMaterialPayload(form, {
-		festivalId: 'f1',
-		categorySuggestions: KATEGORIEN,
-		supplierSuggestions: LIEFERANTEN
-	});
+const CONTEXT = {
+	festivalId: 'f1',
+	categorySuggestions: KATEGORIEN,
+	supplierSuggestions: LIEFERANTEN
+};
+
+const payloadOf = (form: MaterialForm) => buildMaterialPayload(form, CONTEXT);
+const stammdatenOf = (form: MaterialForm) => buildMasterDataUpdate(form, CONTEXT);
 
 describe('dialogMode', () => {
 	it('bearbeitet, wenn eine Position mitkommt — legt sonst an', () => {
@@ -156,42 +160,20 @@ describe('buildMaterialPayload', () => {
 		});
 	});
 
-	it('lässt Mengen und Preise einer bearbeiteten Position unangetastet', () => {
-		const bestand = material({
+	it('rechnet die getippte Basismenge in Gebinde zurück', () => {
+		const form = {
+			...emptyMaterialForm(),
 			name: 'Bier',
+			unit: 'Liter',
 			packaging_unit: 'Fass',
-			amount_per_packaging: 50,
-			ordered_quantity: 4,
-			actual_quantity: 3,
-			unit_price: 92.5,
-			tax_rate: 20,
-			price_is_net: true,
-			price_per: 'packaging'
-		});
-		// Der Zettel zeigt diese Felder beim Bearbeiten nicht — gespeichert
-		// werden müssen sie trotzdem unverändert, sonst räumt ein Umbenennen
-		// die Zeile leer.
-		const payload = payloadOf({ ...formFromMaterial(bestand), name: 'Bier hell' });
-		expect(payload).toMatchObject({
-			name: 'Bier hell',
-			ordered_quantity: 4,
-			actual_quantity: 3,
-			unit_price: 92.5,
-			tax_rate: 20,
-			price_is_net: true,
-			price_per: 'packaging'
-		});
-	});
-
-	it('hält die Basismenge fest, wenn sich die Gebindegröße ändert', () => {
-		const bestand = material({ packaging_unit: 'Fass', amount_per_packaging: 50, ordered_quantity: 4 });
-		const form = { ...formFromMaterial(bestand), amount_per_packaging: '25' };
-		// 200 Liter bleiben 200 Liter — aus 4 Fässern à 50 werden 8 à 25.
-		expect(payloadOf(form).ordered_quantity).toBe(8);
+			amount_per_packaging: '50',
+			ordered_quantity: '200'
+		};
+		expect(payloadOf(form).ordered_quantity).toBe(4);
 	});
 
 	it('bezieht den Preis ohne Gebinde immer auf die Einheit', () => {
-		const form = {
+		const form: MaterialForm = {
 			...emptyMaterialForm(),
 			name: 'Servietten',
 			ordered_quantity: '500',
@@ -213,5 +195,57 @@ describe('buildMaterialPayload', () => {
 
 	it('nimmt die Bezeichnung ohne Randleerzeichen', () => {
 		expect(payloadOf({ ...emptyMaterialForm(), name: '  Bier  ', ordered_quantity: '1' }).name).toBe('Bier');
+	});
+});
+
+describe('buildMasterDataUpdate', () => {
+	const bestand = material({
+		name: 'Bier',
+		packaging_unit: 'Fass',
+		amount_per_packaging: 50,
+		ordered_quantity: 4,
+		actual_quantity: 3,
+		unit_price: 92.5,
+		tax_rate: 20,
+		price_is_net: true,
+		price_per: 'packaging'
+	});
+
+	it('fasst beim Bearbeiten keine Menge und keinen Preis an', () => {
+		// Der Dialog zeigt diese Spalten nicht — also schreibt er sie auch
+		// nicht. Sonst trüge er bei jedem Umbenennen seinen Stand über das,
+		// was inzwischen in der Zeile steht (#115).
+		const update = stammdatenOf({ ...formFromMaterial(bestand), name: 'Bier hell' });
+		expect(update).toEqual({
+			festival_id: 'f1',
+			station_id: null,
+			name: 'Bier hell',
+			category: null,
+			supplier: null,
+			unit: 'Liter',
+			packaging_unit: 'Fass',
+			amount_per_packaging: 50,
+			notes: null
+		});
+		for (const spalte of ['ordered_quantity', 'actual_quantity', 'unit_price', 'tax_rate']) {
+			expect(update).not.toHaveProperty(spalte);
+		}
+	});
+
+	it('lässt eine korrigierte Gebindegröße die gespeicherte Menge in Ruhe', () => {
+		// 4 Fass bleiben 4 Fass — nur ihr Inhalt ändert sich, und das sieht
+		// man in der Zeile. Eine Zahl still umzurechnen, die im Dialog gar
+		// nicht steht, wäre die schlechtere Überraschung.
+		const update = stammdatenOf({ ...formFromMaterial(bestand), amount_per_packaging: '25' });
+		expect(update.amount_per_packaging).toBe(25);
+		expect(update).not.toHaveProperty('ordered_quantity');
+	});
+});
+
+describe('isFullPayload', () => {
+	it('unterscheidet die volle Nutzlast von der Stammdaten-Änderung', () => {
+		const form = { ...emptyMaterialForm(), name: 'Bier', ordered_quantity: '30' };
+		expect(isFullPayload(payloadOf(form))).toBe(true);
+		expect(isFullPayload(stammdatenOf(form))).toBe(false);
 	});
 });

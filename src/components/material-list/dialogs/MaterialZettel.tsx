@@ -20,22 +20,24 @@ import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
 import type { Station } from '@/lib/shiftService';
 import {
 	canSave,
+	KEINE,
 	showsQuantityAndPrice,
 	ZEILEN_HINWEIS,
 	type MaterialDialogMode,
-	type MaterialForm
+	type MaterialForm,
+	type PriceBase,
+	type PriceIsNet
 } from '@/lib/materialDialogForm';
 
 const DEFAULT_UNITS = ['Stück', 'Liter', 'kg', 'Meter', 'Packung', 'Dose', 'Flasche'];
 const DEFAULT_PACKAGING_UNITS = ['Fass', 'Karton', 'Kiste', 'Palette', 'Sack', 'Beutel', 'Kanister'];
 
-/** Sentinel der Select-Felder — Radix kennt keinen leeren Wert. */
-const KEINE = '__none__';
-
 /**
  * Fokus als 2px-Tinte-Outline mit Versatz (DESIGN-VISION §6, #117). Die
  * Shell-Bausteine bringen einen Ring mit; der wird hier abgeschaltet, damit
- * nicht beides übereinander liegt.
+ * nicht beides übereinander liegt. Zustände als Tailwind-Utilities in der
+ * Komponente sind der von ADR 0003 §2 vorgesehene Ort; die Ringe der Hüllen
+ * repo-weit auf Outline zu drehen wäre ein eigenes Ticket.
  */
 const FOKUS =
 	'focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 ' +
@@ -124,22 +126,26 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 				<TitleTag className="font-display text-[17px] font-semibold uppercase tracking-[.02em]">
 					{mode === 'edit' ? 'Position bearbeiten' : 'Neue Position'}
 				</TitleTag>
+				{/* Gelber Knopf auf dem Plakat-Kopf — gleiches Rezept wie
+				„+ POSITION FÜR …" im Gruppen-Kasten (#113). */}
 				<button
 					type="button"
 					onClick={onCancel}
 					className={cn(
-						'ml-auto bg-gelb px-3 py-1 text-[12px] font-extrabold uppercase tracking-[.02em] text-tinte',
+						'ml-auto bg-gelb px-3 py-1.5 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte',
 						'max-[899px]:min-h-10',
+						// Papier statt Tinte: auf der grünen Kopffläche wäre eine
+						// Tinte-Outline kaum zu sehen.
 						'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-papier'
 					)}>
 					Schließen
 				</button>
 			</Poster>
 
-			<div className="grid grid-cols-1 gap-3.5 px-4 py-4 sm:grid-cols-2">
+			<div className="grid grid-cols-1 gap-3.5 px-4 py-4 min-[900px]:grid-cols-2">
 				{mode === 'edit' && (
 					// Der Hinweis steht neben der Lücke, nicht im Changelog.
-					<p className="border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed sm:col-span-2">
+					<p className="border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed min-[900px]:col-span-2">
 						Hier liegen die <b>Stammdaten</b> der Position. {ZEILEN_HINWEIS}
 					</p>
 				)}
@@ -157,6 +163,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 				<Feld label="Kategorie" htmlFor="mat-category">
 					<CreatableCombobox
 						id="mat-category"
+						className={FOKUS}
 						value={form.category}
 						onChange={(value) => onChange({ category: value })}
 						suggestions={categorySuggestions}
@@ -245,6 +252,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 				<Feld label="Lieferant" htmlFor="mat-supplier">
 					<CreatableCombobox
 						id="mat-supplier"
+						className={FOKUS}
 						value={form.supplier}
 						onChange={(value) => onChange({ supplier: value })}
 						suggestions={supplierSuggestions}
@@ -256,6 +264,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 				<Feld label="Gebinde" htmlFor="mat-packaging">
 					<CreatableCombobox
 						id="mat-packaging"
+						className={FOKUS}
 						value={form.packaging_unit}
 						onChange={(value) => onChange({ packaging_unit: value })}
 						suggestions={DEFAULT_PACKAGING_UNITS}
@@ -267,6 +276,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 				<Feld label="Einheit" htmlFor="mat-unit">
 					<CreatableCombobox
 						id="mat-unit"
+						className={FOKUS}
 						value={form.unit}
 						onChange={(value) => onChange({ unit: value })}
 						suggestions={DEFAULT_UNITS}
@@ -305,7 +315,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 
 				{mengenUndPreis && (
 					<>
-						<SectionHeading as="h3" className="mt-1 sm:col-span-2">
+						<SectionHeading as="h3" className="mt-1 min-[900px]:col-span-2">
 							Mengen &amp; Preis
 						</SectionHeading>
 
@@ -370,12 +380,12 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 						<Feld
 							wide
 							label="Preisbasis"
-							hint="Ohne MwSt sind Netto und Brutto gleich (ADR 0006).">
+							hint="Ohne MwSt sind Netto und Brutto gleich.">
 							<SegmentedControl
 								aria-label="Preisbasis"
 								className="w-max"
 								value={form.price_is_net}
-								onValueChange={(value) => onChange({ price_is_net: value })}
+								onValueChange={(value: PriceIsNet) => onChange({ price_is_net: value })}
 								options={[
 									{ value: 'true', label: 'Netto eingegeben' },
 									{ value: 'false', label: 'Brutto eingegeben' }
@@ -389,7 +399,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 									aria-label="Preis bezieht sich auf"
 									className="w-max"
 									value={form.price_per}
-									onValueChange={(value) => onChange({ price_per: value })}
+									onValueChange={(value: PriceBase) => onChange({ price_per: value })}
 									options={[
 										{ value: 'unit', label: `pro ${form.unit}` },
 										{ value: 'packaging', label: `pro ${gebinde}` }
@@ -428,8 +438,8 @@ interface FeldProps {
 /** Eine Feldzeile des Zettels: Versalien-Kleinlabel (Public Sans 800,
 letter-spacing .06em, #117) über dem Baustein, darunter optional ein Hinweis. */
 const Feld: React.FC<FeldProps> = ({ label, htmlFor, hint, wide, children }) => (
-	<div className={cn('flex flex-col gap-1', wide && 'sm:col-span-2')}>
-		<Label htmlFor={htmlFor} className="font-extrabold tracking-[.06em]">
+	<div className={cn('flex flex-col gap-1', wide && 'min-[900px]:col-span-2')}>
+		<Label htmlFor={htmlFor} variant="kleinlabel">
 			{label}
 		</Label>
 		{children}
