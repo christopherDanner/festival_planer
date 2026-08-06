@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import MaterialTable from './MaterialTable';
+import MaterialTable, { MaterialMobileCard } from './MaterialTable';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
 const noop = () => {};
@@ -29,10 +29,11 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 	};
 }
 
-const renderTable = (materials: FestivalMaterialWithStation[]) =>
+const renderTable = (materials: FestivalMaterialWithStation[], showStation?: boolean) =>
 	renderToStaticMarkup(
 		<MaterialTable
 			materials={materials}
+			showStation={showStation}
 			onEdit={noop}
 			onDelete={noop}
 			onCopy={noop}
@@ -40,6 +41,47 @@ const renderTable = (materials: FestivalMaterialWithStation[]) =>
 			onUpdateFields={noop}
 		/>
 	);
+
+const renderCard = (material: FestivalMaterialWithStation, showStation: boolean) =>
+	renderToStaticMarkup(
+		<MaterialMobileCard
+			material={material}
+			showStation={showStation}
+			onEdit={noop}
+			onDelete={noop}
+			onCopy={noop}
+			onUpdateField={noop}
+			onUpdateFields={noop}
+		/>
+	);
+
+describe('MaterialTable — Station-Spalte', () => {
+	const rows = [material({ station: { id: 's1', name: 'Ausschank' } })];
+
+	it('zeigt die Station, solange die Arbeitsliste nicht nach Station gruppiert', () => {
+		expect(renderTable(rows, true)).toContain('Ausschank');
+	});
+
+	it('lässt die Spalte im Stations-Kasten weg — dort wäre sie redundant', () => {
+		const html = renderTable(rows, false);
+		expect(html).not.toContain('Ausschank');
+		expect(html).not.toContain('>Station<');
+	});
+
+	it('lässt die Station auch auf der Handy-Karte weg', () => {
+		const card = renderCard(rows[0], false);
+		expect(card).not.toContain('Ausschank');
+		expect(renderCard(rows[0], true)).toContain('Ausschank');
+	});
+});
+
+describe('MaterialTable — Zwischensumme im Fuß', () => {
+	it('nennt den Fuß „Zwischensumme (gefiltert)" — er summiert die sichtbaren Zeilen', () => {
+		const html = renderTable([material({ unit_price: 10, ordered_quantity: 2 })]);
+		expect(html).toContain('Zwischensumme (gefiltert)');
+		expect(html).not.toContain('Gesamtkosten');
+	});
+});
 
 describe('MaterialTable — Gesamtkosten', () => {
 	it('summiert brutto über die übergebenen (gefilterten) Positionen', () => {
