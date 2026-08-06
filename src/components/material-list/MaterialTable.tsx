@@ -111,6 +111,11 @@ const InlineTaxSelect: React.FC<{
 
 interface MaterialTableProps {
 	materials: FestivalMaterialWithStation[];
+	/**
+	 * Station als eigene Spalte — nur sinnvoll, wenn die Arbeitsliste *nicht*
+	 * nach Station gruppiert; im Stations-Kasten wäre sie redundant (#113).
+	 */
+	showStation?: boolean;
 	onEdit: (material: FestivalMaterialWithStation) => void;
 	onDelete: (id: string) => void;
 	onCopy: (material: FestivalMaterialWithStation) => void;
@@ -315,7 +320,7 @@ const MaterialMobileCard: React.FC<{
 /*  Main table component                                               */
 /* ------------------------------------------------------------------ */
 
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
 	const isMobile = useIsMobile();
 
 	const totalCost = sumTotals(materials);
@@ -347,7 +352,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 				))}
 				{hasCosts && (
 					<div className="border bg-card p-3 flex items-center justify-between">
-						<span className="font-semibold text-sm">Gesamtkosten</span>
+						<span className="font-semibold text-sm">Zwischensumme (gefiltert)</span>
 						<span className="font-semibold text-sm">{totalCost.toFixed(2)} €</span>
 					</div>
 				)}
@@ -355,14 +360,15 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 		);
 	}
 
+	// Rahmen und Rundung entfallen — die Tabelle sitzt im Gruppen-Kasten (#113).
 	return (
-		<div className="rounded-md border bg-card overflow-x-auto">
+		<div className="bg-card overflow-x-auto">
 			<Table>
 				<TableHeader className="sticky top-0 z-10">
 					<TableRow className="hover:bg-transparent">
 						<TableHead>Material</TableHead>
 						<TableHead>Kategorie</TableHead>
-						<TableHead>Station</TableHead>
+						{showStation && <TableHead>Station</TableHead>}
 						<TableHead>Lieferant</TableHead>
 						<TableHead>Gebinde</TableHead>
 						<TableHead className="text-right">Bestellt</TableHead>
@@ -382,7 +388,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 							<TableRow key={m.id}>
 								<TableCell className="font-medium">{m.name}</TableCell>
 								<TableCell>{m.category || '–'}</TableCell>
-								<TableCell>{m.station?.name || '–'}</TableCell>
+								{showStation && <TableCell>{m.station?.name || '–'}</TableCell>}
 								<TableCell>
 									<InlineEditCell
 										value={m.supplier || ''}
@@ -510,8 +516,8 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, onEdit, onDele
 				{hasCosts && (
 					<TableFooter>
 						<TableRow>
-							<TableCell colSpan={11} className="text-right font-semibold">
-								Gesamtkosten
+							<TableCell colSpan={showStation ? 11 : 10} className="text-right font-semibold">
+								Zwischensumme (gefiltert)
 							</TableCell>
 							<TableCell className="text-right font-semibold">
 								{totalCost.toFixed(2)} €

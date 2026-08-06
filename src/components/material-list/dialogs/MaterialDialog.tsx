@@ -16,6 +16,7 @@ import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import type { Station } from '@/lib/shiftService';
 import { mergeSuggestions, canonicalizeValue } from '@/lib/materialSuggestions';
 import { toBaseQuantity, fromBaseQuantity } from '@/lib/materialQuantity';
+import type { MaterialPrefill } from '@/lib/materialGrouping';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 
 const DEFAULT_CATEGORIES = [
@@ -35,6 +36,12 @@ interface MaterialDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	material?: FestivalMaterialWithStation | null;
+	/**
+	 * Vorgetragene Zuordnung für eine *neue* Position — „+ POSITION FÜR
+	 * AUSSCHANK" im Gruppen-Kasten setzt die Station der Gruppe schon (#113).
+	 * Beim Bearbeiten einer Position wirkungslos.
+	 */
+	prefill?: MaterialPrefill;
 	stations: Station[];
 	festivalId: string;
 	existingSuppliers?: string[];
@@ -63,6 +70,7 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 	open,
 	onOpenChange,
 	material,
+	prefill,
 	stations,
 	festivalId,
 	existingSuppliers = [],
@@ -119,9 +127,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 		} else {
 			setForm({
 				name: '',
-				category: '',
-				station_id: '',
-				supplier: '',
+				category: prefill?.category ?? '',
+				station_id: prefill?.station_id ?? '',
+				supplier: prefill?.supplier ?? '',
 				unit: 'Stück',
 				packaging_unit: '',
 				amount_per_packaging: '',
@@ -134,7 +142,9 @@ const MaterialDialog: React.FC<MaterialDialogProps> = ({
 				notes: ''
 			});
 		}
-	}, [material, open]);
+		// Auf die Felder von `prefill` hören, nicht auf das Objekt — ein Literal
+		// wäre bei jedem Rendern neu und würde das Formular leerräumen.
+	}, [material, open, prefill?.station_id, prefill?.supplier, prefill?.category]);
 
 	const handleCreateStation = async () => {
 		if (!onCreateStation) return;

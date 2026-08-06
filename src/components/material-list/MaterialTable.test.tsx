@@ -29,10 +29,11 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 	};
 }
 
-const renderTable = (materials: FestivalMaterialWithStation[]) =>
+const renderTable = (materials: FestivalMaterialWithStation[], showStation?: boolean) =>
 	renderToStaticMarkup(
 		<MaterialTable
 			materials={materials}
+			showStation={showStation}
 			onEdit={noop}
 			onDelete={noop}
 			onCopy={noop}
@@ -40,6 +41,28 @@ const renderTable = (materials: FestivalMaterialWithStation[]) =>
 			onUpdateFields={noop}
 		/>
 	);
+
+describe('MaterialTable — Station-Spalte', () => {
+	const rows = [material({ station: { id: 's1', name: 'Ausschank' } })];
+
+	it('zeigt die Station, solange die Arbeitsliste nicht nach Station gruppiert', () => {
+		expect(renderTable(rows, true)).toContain('Ausschank');
+	});
+
+	it('lässt die Spalte im Stations-Kasten weg — dort wäre sie redundant', () => {
+		const html = renderTable(rows, false);
+		expect(html).not.toContain('Ausschank');
+		expect(html).not.toContain('>Station<');
+	});
+});
+
+describe('MaterialTable — Zwischensumme im Fuß', () => {
+	it('nennt den Fuß „Zwischensumme (gefiltert)" — er summiert die sichtbaren Zeilen', () => {
+		const html = renderTable([material({ unit_price: 10, ordered_quantity: 2 })]);
+		expect(html).toContain('Zwischensumme (gefiltert)');
+		expect(html).not.toContain('Gesamtkosten');
+	});
+});
 
 describe('MaterialTable — Gesamtkosten', () => {
 	it('summiert brutto über die übergebenen (gefilterten) Positionen', () => {

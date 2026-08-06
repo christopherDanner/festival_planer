@@ -192,12 +192,19 @@ export function resolveActiveCategory(categories: string[], requested: string | 
 	return requested && categories.includes(requested) ? requested : null;
 }
 
+/** Vorgetragene Zuordnung einer neuen Position. */
+export interface MaterialPrefill {
+	station_id?: string;
+	supplier?: string;
+	category?: string;
+}
+
 /** Was „+ POSITION FÜR X" im Dialog vorträgt: die Zuordnung der Gruppe. Die
 Restgruppe und die Achse ALLE tragen nichts vor — sie stehen für keine. */
 export function prefillFromGroup(
 	group: MaterialGroup<GroupableMaterial>,
 	axis: MaterialAxis
-): { station_id?: string; supplier?: string; category?: string } {
+): MaterialPrefill {
 	if (group.key == null) return {};
 	switch (axis) {
 		case 'station':
