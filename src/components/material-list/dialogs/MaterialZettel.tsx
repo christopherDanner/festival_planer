@@ -1,10 +1,9 @@
-import React, { useEffect, useState, type ElementType, type ReactNode } from 'react';
+import React, { useEffect, useState, type ElementType } from 'react';
 import { Check, X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
 	Select,
@@ -14,9 +13,9 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
-import { Poster } from '@/components/toolkit/Poster';
 import { SectionHeading } from '@/components/toolkit/SectionHeading';
 import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
+import { Zettel, ZettelField as Feld, ZETTEL_FOCUS as FOKUS } from '@/components/toolkit/Zettel';
 import type { Station } from '@/lib/shiftService';
 import {
 	canSave,
@@ -31,17 +30,6 @@ import {
 
 const DEFAULT_UNITS = ['Stück', 'Liter', 'kg', 'Meter', 'Packung', 'Dose', 'Flasche'];
 const DEFAULT_PACKAGING_UNITS = ['Fass', 'Karton', 'Kiste', 'Palette', 'Sack', 'Beutel', 'Kanister'];
-
-/**
- * Fokus als 2px-Tinte-Outline mit Versatz (DESIGN-VISION §6, #117). Die
- * Shell-Bausteine bringen einen Ring mit; der wird hier abgeschaltet, damit
- * nicht beides übereinander liegt. Zustände als Tailwind-Utilities in der
- * Komponente sind der von ADR 0003 §2 vorgesehene Ort; die Ringe der Hüllen
- * repo-weit auf Outline zu drehen wäre ein eigenes Ticket.
- */
-const FOKUS =
-	'focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 ' +
-	'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte';
 
 export interface MaterialZettelProps {
 	mode: MaterialDialogMode;
@@ -61,7 +49,8 @@ export interface MaterialZettelProps {
 /**
  * Der Positions-Zettel (#117): Papier-Grund, 3px-Tinte-Rahmen,
  * Versatz-Schatten, grüner Halftone-Kopf mit Oswald-Titel, gelber
- * Primärknopf.
+ * Primärknopf — der Rahmen kommt aus `<Zettel>` (#119), damit Positions- und
+ * Export-Dialoge dasselbe Papier bedrucken.
  *
  * Inhaltlich ist er auf **Stammdaten** geschnitten (Entscheid Wayfinder #66):
  * Bezeichnung, Kategorie, Station, Lieferant, Gebinde, Einheit, Stück je
@@ -121,27 +110,24 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 	const preisBezug = gebinde && form.price_per === 'packaging' ? gebinde : form.unit;
 
 	return (
-		<div className="max-h-[88vh] w-full overflow-y-auto border-3 border-tinte bg-papier shadow-versatz">
-			<Poster className="sticky top-0 z-10 flex items-center gap-3 border-0 border-b-2 px-4 py-2.5">
-				<TitleTag className="font-display text-[17px] font-semibold uppercase tracking-[.02em]">
-					{mode === 'edit' ? 'Position bearbeiten' : 'Neue Position'}
-				</TitleTag>
-				{/* Gelber Knopf auf dem Plakat-Kopf — gleiches Rezept wie
-				„+ POSITION FÜR …" im Gruppen-Kasten (#113). */}
-				<button
-					type="button"
-					onClick={onCancel}
-					className={cn(
-						'ml-auto bg-gelb px-3 py-1.5 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte',
-						'max-[899px]:min-h-10',
-						// Papier statt Tinte: auf der grünen Kopffläche wäre eine
-						// Tinte-Outline kaum zu sehen.
-						'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-papier'
-					)}>
-					Schließen
-				</button>
-			</Poster>
-
+		<Zettel
+			title={mode === 'edit' ? 'Position bearbeiten' : 'Neue Position'}
+			TitleTag={TitleTag}
+			onClose={onCancel}
+			footer={
+				<>
+					<Button variant="outline" className={FOKUS} onClick={onCancel}>
+						Abbrechen
+					</Button>
+					<Button
+						data-zettel="speichern"
+						className={FOKUS}
+						onClick={onSave}
+						disabled={!canSave(form, mode)}>
+						{mode === 'edit' ? 'Speichern' : 'Anlegen'}
+					</Button>
+				</>
+			}>
 			<div className="grid grid-cols-1 gap-3.5 px-4 py-4 min-[900px]:grid-cols-2">
 				{mode === 'edit' && (
 					// Der Hinweis steht neben der Lücke, nicht im Changelog.
@@ -410,41 +396,8 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 					</>
 				)}
 			</div>
-
-			<div className="sticky bottom-0 flex justify-end gap-2 border-t-2 border-tinte bg-white px-4 py-3">
-				<Button variant="outline" className={FOKUS} onClick={onCancel}>
-					Abbrechen
-				</Button>
-				<Button
-					data-zettel="speichern"
-					className={FOKUS}
-					onClick={onSave}
-					disabled={!canSave(form, mode)}>
-					{mode === 'edit' ? 'Speichern' : 'Anlegen'}
-				</Button>
-			</div>
-		</div>
+		</Zettel>
 	);
 };
-
-interface FeldProps {
-	label: ReactNode;
-	htmlFor?: string;
-	hint?: ReactNode;
-	wide?: boolean;
-	children: ReactNode;
-}
-
-/** Eine Feldzeile des Zettels: Versalien-Kleinlabel (Public Sans 800,
-letter-spacing .06em, #117) über dem Baustein, darunter optional ein Hinweis. */
-const Feld: React.FC<FeldProps> = ({ label, htmlFor, hint, wide, children }) => (
-	<div className={cn('flex flex-col gap-1', wide && 'min-[900px]:col-span-2')}>
-		<Label htmlFor={htmlFor} variant="kleinlabel">
-			{label}
-		</Label>
-		{children}
-		{hint && <span className="text-[10.5px] leading-snug text-tinte-soft">{hint}</span>}
-	</div>
-);
 
 export default MaterialZettel;
