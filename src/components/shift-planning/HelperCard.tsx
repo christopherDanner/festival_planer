@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, UserMinus, Settings, Heart, Clock, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
+import type { Helper } from '@/lib/helperService';
 
-interface MemberCardProps {
-	member: Member;
-	assignments: ShiftAssignmentWithMember[];
-	stationAssignments: StationMemberWithDetails[];
+interface HelperCardProps {
+	helper: Helper;
+	assignments: ShiftAssignmentWithHelper[];
+	stationAssignments: StationHelperWithDetails[];
 	totalShifts: number;
 	stationShifts: StationShift[];
 	stations: Station[];
@@ -19,12 +19,12 @@ interface MemberCardProps {
 	onDragEnd: () => void;
 	onTapSelect?: () => void;
 	onEditPreferences: () => void;
-	onEditMember: () => void;
-	onDeleteMember: () => void;
+	onEditHelper: () => void;
+	onDeleteHelper: () => void;
 }
 
-const MemberCard: React.FC<MemberCardProps> = ({
-	member,
+const HelperCard: React.FC<HelperCardProps> = ({
+	helper,
 	assignments,
 	stationAssignments,
 	totalShifts,
@@ -36,8 +36,8 @@ const MemberCard: React.FC<MemberCardProps> = ({
 	onDragEnd,
 	onTapSelect,
 	onEditPreferences,
-	onEditMember,
-	onDeleteMember
+	onEditHelper,
+	onDeleteHelper
 }) => {
 	const totalAssignments = assignments.length + stationAssignments.length;
 	const isAssigned = totalAssignments > 0;
@@ -64,7 +64,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 							'w-2 h-2 inline-block mr-2',
 							isAssigned ? 'bg-primary' : 'bg-muted-foreground/30'
 						)} />
-						{member.last_name} {member.first_name}
+						{helper.last_name} {helper.first_name}
 					</span>
 					<div className="flex items-center gap-1">
 						<Button
@@ -90,21 +90,24 @@ const MemberCard: React.FC<MemberCardProps> = ({
 							size="sm"
 							onClick={(e) => {
 								e.stopPropagation();
-								onEditMember();
+								onEditHelper();
 							}}
 							className="h-6 w-6 p-0 hover:bg-muted"
-							title="Mitglied bearbeiten">
+							title="Helfer bearbeiten">
 							<Edit className="h-3 w-3 text-muted-foreground" />
 						</Button>
+						{/* Entfernt den Helfer vollständig aus dem Fest samt seiner
+						    Zuteilungen (ADR 0005). Der Titel sagt das, weil dieselbe
+						    Geste früher nur den Aktiv-Marker umgelegt hat. */}
 						<Button
 							variant="ghost"
 							size="sm"
 							onClick={(e) => {
 								e.stopPropagation();
-								onDeleteMember();
+								onDeleteHelper();
 							}}
 							className="h-6 w-6 p-0 hover:bg-destructive/10"
-							title="Mitglied löschen">
+							title="Helfer aus dem Fest entfernen">
 							<UserMinus className="h-3 w-3 text-destructive/70" />
 						</Button>
 						{isAssigned ? (
@@ -194,4 +197,4 @@ const MemberCard: React.FC<MemberCardProps> = ({
 	);
 };
 
-export default MemberCard;
+export default HelperCard;

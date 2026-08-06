@@ -116,9 +116,9 @@ export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
 
         const typeStr = entry.type === 'task' ? 'Aufgabe' : 'Programm';
 
-        const responsible = entry.responsible_member
-          ? `${entry.responsible_member.last_name} ${entry.responsible_member.first_name}`
-          : '—';
+        const responsible = entry.responsible_helper
+          ? `${entry.responsible_helper.last_name} ${entry.responsible_helper.first_name}`
+          : '\u2014';
 
         return [timeStr, typeStr, entry.title, responsible];
       });

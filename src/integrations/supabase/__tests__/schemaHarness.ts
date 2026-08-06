@@ -44,7 +44,72 @@ const PLATFORM_PRELUDE = `
   CREATE TABLE festivals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT,
+    start_date DATE,
+    deleted_at TIMESTAMPTZ,
     user_id UUID NOT NULL
+  );
+
+  -- Der Rest dieses Vorlaufs steht hier, weil die verfolgten Migrationen darauf
+  -- zeigen, die anlegenden Migrationen aber vor SPONSORING_SCHEMA_START liegen
+  -- (bzw. bei members: gar nicht in diesem Repo). Nur die Spalten, die die
+  -- eingespielten Migrationen anfassen — allen voran der Helfer-Umbau
+  -- (20260804000001, 20260805000002), der aus dem alten Bestand liest und die
+  -- Zeiger umlegt.
+  CREATE TABLE members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    notes TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    user_id UUID
+  );
+
+  CREATE TABLE festival_member_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    station_preferences TEXT[] DEFAULT '{}',
+    shift_preferences TEXT[] DEFAULT '{}',
+    UNIQUE(festival_id, member_id)
+  );
+
+  CREATE TABLE stations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    responsible_member_id UUID REFERENCES members(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE station_shifts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    station_id UUID NOT NULL REFERENCES stations(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE station_members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    station_id UUID NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+    member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    UNIQUE(station_id, member_id)
+  );
+
+  CREATE TABLE shift_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    station_shift_id UUID REFERENCES station_shifts(id) ON DELETE CASCADE,
+    station_id UUID REFERENCES stations(id) ON DELETE CASCADE,
+    member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+    position INTEGER
+  );
+
+  CREATE TABLE schedule_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    title TEXT,
+    responsible_member_id UUID REFERENCES members(id) ON DELETE SET NULL
   );
 `;
 

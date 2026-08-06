@@ -1,4 +1,5 @@
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
+import { matchesCompanyName } from '@/lib/companySearch';
 
 /**
  * Was die Geldregel von einer Zuweisung braucht — nur der überschriebene Wert
@@ -116,6 +117,44 @@ export function buildSponsoringOverviewRows(
 	});
 	rows.sort((a, b) => a.companyName.localeCompare(b.companyName, 'de'));
 	return rows;
+}
+
+/**
+ * Firmennamen-Suche über die Zeilen der Übersicht — die Matching-Regel steht in
+ * `matchesCompanyName`, damit hier und in den Sponsoren-Stammdaten dieselbe
+ * Firma gefunden wird (#151). Filtert ausschließlich **Zeilen**; die Preisliste
+ * und damit die Spalten bleiben unberührt, sonst springt das Layout beim Tippen.
+ */
+export function filterSponsoringOverviewRows(
+	rows: SponsoringOverviewRow[],
+	searchTerm: string
+): SponsoringOverviewRow[] {
+	return rows.filter((row) => matchesCompanyName(row.companyName, searchTerm));
+}
+
+/**
+ * Beschriftung eines Tabellenfußes, der über die **sichtbaren** Zeilen rechnet.
+ * Fehlt eine Zeile, nennt sie die Zahl („Σ je Kategorie · 3 von 14 Firmen") —
+ * ohne sie wäre eine Kategorie-Summe über drei Firmen eine stille Lüge (ADR
+ * 0006: alle Summen rechnen gefiltert und sagen es in der Beschriftung).
+ *
+ * Auslöser ist die **fehlende Zeile**, nicht der getippte Begriff: passt der
+ * Begriff auf alle Firmen, summiert der Fuß auch alle und hat nichts
+ * offenzulegen — dass die Suche läuft, sagt der Zähler an der Suche.
+ * Bereichskopf und Dashboard bleiben ohnehin unberührt: die rechnen als
+ * Fest-Kennzahl über alle Sponsorings.
+ */
+export function sponsoringFooterLabel(base: string, shown: number, total: number): string {
+	if (shown === total) return base;
+	return `${base} · ${shown} von ${total} Firmen`;
+}
+
+/**
+ * Hinweiszeile, wenn kein Firmenname zur Suche passt. Steht einmal hier, weil
+ * Matrix (Desktop) und Karten-Liste (Handy) denselben Satz zeigen müssen.
+ */
+export function sponsoringNoMatchNotice(searchTerm: string): string {
+	return `Keine Firma passt zu „${searchTerm.trim()}"`;
 }
 
 /** Der Tabellenfuß der Sponsoring-Matrix: eine Summe je Spalte. */

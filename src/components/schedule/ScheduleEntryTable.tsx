@@ -1,12 +1,12 @@
 import ScheduleEntryRow from './ScheduleEntryRow';
 import ScheduleEntryCard from './ScheduleEntryCard';
-import type { ScheduleEntryWithMember } from '@/lib/scheduleService';
+import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
 interface ScheduleEntryTableProps {
-	entries: ScheduleEntryWithMember[];
-	onEdit: (entry: ScheduleEntryWithMember) => void;
+	entries: ScheduleEntryWithHelper[];
+	onEdit: (entry: ScheduleEntryWithHelper) => void;
 	onDelete: (id: string) => void;
-	onToggleStatus: (entry: ScheduleEntryWithMember) => void;
+	onToggleStatus: (entry: ScheduleEntryWithHelper) => void;
 	onReorder: (orderedIds: string[]) => void;
 	isMobile: boolean;
 }
@@ -28,7 +28,7 @@ const ScheduleEntryTable = ({
 		onReorder(newOrder.map(e => e.id));
 	};
 
-	const formatTime = (entry: ScheduleEntryWithMember) => {
+	const formatTime = (entry: ScheduleEntryWithHelper) => {
 		if (!entry.start_time) return null;
 		const start = entry.start_time.slice(0, 5);
 		if (entry.end_time) {

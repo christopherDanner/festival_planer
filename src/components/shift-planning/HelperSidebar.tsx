@@ -8,17 +8,17 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import { Users } from 'lucide-react';
-import MemberCard from './MemberCard';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import HelperCard from './HelperCard';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
+import type { Helper } from '@/lib/helperService';
 
-interface MemberSidebarProps {
+interface HelperSidebarProps {
 	variant?: 'sidebar' | 'drawer';
-	members: Member[];
+	helpers: Helper[];
 	stations: Station[];
 	stationShifts: StationShift[];
-	assignments: ShiftAssignmentWithMember[];
-	stationMembers: StationMemberWithDetails[];
+	assignments: ShiftAssignmentWithHelper[];
+	stationHelpers: StationHelperWithDetails[];
 	stationPreferences: Record<string, string[]>;
 	shiftPreferences: Record<string, string[]>;
 	nameFilter: string;
@@ -27,21 +27,26 @@ interface MemberSidebarProps {
 	onNameFilterChange: (value: string) => void;
 	onStationFilterChange: (value: string) => void;
 	onAssignmentFilterChange: (value: string) => void;
-	onDragStart: (member: Member) => void;
+	onDragStart: (helper: Helper) => void;
 	onDragEnd: () => void;
-	onTapSelect?: (member: Member) => void;
-	onEditPreferences: (member: Member) => void;
-	onEditMember: (member: Member) => void;
-	onDeleteMember: (member: Member) => void;
+	onTapSelect?: (helper: Helper) => void;
+	onEditPreferences: (helper: Helper) => void;
+	onEditHelper: (helper: Helper) => void;
+	onDeleteHelper: (helper: Helper) => void;
 }
 
-const MemberSidebar: React.FC<MemberSidebarProps> = ({
+/**
+ * Die Helferliste des Fests (ADR 0005) — zugleich der einzige Ort, an dem
+ * Helfer entstehen und verschwinden. Es gibt keinen Aktiv-Filter mehr: wer
+ * nicht mitmacht, steht hier gar nicht erst.
+ */
+const HelperSidebar: React.FC<HelperSidebarProps> = ({
 	variant = 'sidebar',
-	members,
+	helpers,
 	stations,
 	stationShifts,
 	assignments,
-	stationMembers,
+	stationHelpers,
 	stationPreferences,
 	shiftPreferences,
 	nameFilter,
@@ -54,37 +59,37 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 	onDragEnd,
 	onTapSelect,
 	onEditPreferences,
-	onEditMember,
-	onDeleteMember
+	onEditHelper,
+	onDeleteHelper
 }) => {
 	const isDrawer = variant === 'drawer';
-	const getMemberAssignments = (memberId: string) =>
-		assignments.filter((a) => a.member_id === memberId);
+	const getHelperAssignments = (helperId: string) =>
+		assignments.filter((a) => a.helper_id === helperId);
 
-	const getMemberStationAssignments = (memberId: string) =>
-		stationMembers.filter((sm) => sm.member_id === memberId);
+	const getHelperStationAssignments = (helperId: string) =>
+		stationHelpers.filter((sm) => sm.helper_id === helperId);
 
-	const isMemberAssigned = (memberId: string) =>
-		getMemberAssignments(memberId).length > 0 || getMemberStationAssignments(memberId).length > 0;
+	const isHelperAssigned = (helperId: string) =>
+		getHelperAssignments(helperId).length > 0 || getHelperStationAssignments(helperId).length > 0;
 
-	const filteredMembers = members.filter((member) => {
+	const filteredHelpers = helpers.filter((helper) => {
 		if (
 			nameFilter &&
-			!`${member.last_name} ${member.first_name}`.toLowerCase().includes(nameFilter.toLowerCase())
+			!`${helper.last_name} ${helper.first_name}`.toLowerCase().includes(nameFilter.toLowerCase())
 		) {
 			return false;
 		}
 		if (stationFilter !== 'all') {
-			const memberPrefs = stationPreferences[member.id] || [];
-			if (!memberPrefs.includes(stationFilter)) return false;
+			const helperPrefs = stationPreferences[helper.id] || [];
+			if (!helperPrefs.includes(stationFilter)) return false;
 		}
-		if (assignmentFilter === 'free' && isMemberAssigned(member.id)) return false;
-		if (assignmentFilter === 'assigned' && !isMemberAssigned(member.id)) return false;
+		if (assignmentFilter === 'free' && isHelperAssigned(helper.id)) return false;
+		if (assignmentFilter === 'assigned' && !isHelperAssigned(helper.id)) return false;
 		return true;
 	});
 
-	const freeCount = members.filter((m) => !isMemberAssigned(m.id)).length;
-	const assignedCount = members.length - freeCount;
+	const freeCount = helpers.filter((h) => !isHelperAssigned(h.id)).length;
+	const assignedCount = helpers.length - freeCount;
 
 	return (
 		<div className={isDrawer ? 'flex flex-col' : 'w-80 border-l bg-card flex flex-col'}>
@@ -92,7 +97,7 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 				{!isDrawer && (
 					<h3 className="font-semibold flex items-center gap-2">
 						<Users className="h-4 w-4" />
-						Mitglieder ({filteredMembers.length})
+						Helfer ({filteredHelpers.length})
 					</h3>
 				)}
 				<div className={isDrawer ? '' : 'mt-3'}>
@@ -109,7 +114,7 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 							<SelectValue placeholder="Zuweisungsstatus..." />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">Alle ({members.length})</SelectItem>
+							<SelectItem value="all">Alle ({helpers.length})</SelectItem>
 							<SelectItem value="free">Frei ({freeCount})</SelectItem>
 							<SelectItem value="assigned">Zugeteilt ({assignedCount})</SelectItem>
 						</SelectContent>
@@ -133,23 +138,23 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 				? 'overflow-y-auto px-4 pb-4 space-y-2 max-h-[50vh]'
 				: 'flex-1 overflow-y-auto p-4 space-y-2'
 			}>
-				{filteredMembers.map((member) => (
-					<MemberCard
-						key={member.id}
-						member={member}
-						assignments={getMemberAssignments(member.id)}
-						stationAssignments={getMemberStationAssignments(member.id)}
+				{filteredHelpers.map((helper) => (
+					<HelperCard
+						key={helper.id}
+						helper={helper}
+						assignments={getHelperAssignments(helper.id)}
+						stationAssignments={getHelperStationAssignments(helper.id)}
 						totalShifts={stationShifts.length}
 						stationShifts={stationShifts}
 						stations={stations}
-						stationPreferences={stationPreferences[member.id] || []}
-						shiftPreferences={shiftPreferences[member.id] || []}
-						onDragStart={() => onDragStart(member)}
+						stationPreferences={stationPreferences[helper.id] || []}
+						shiftPreferences={shiftPreferences[helper.id] || []}
+						onDragStart={() => onDragStart(helper)}
 						onDragEnd={onDragEnd}
-						onTapSelect={onTapSelect ? () => onTapSelect(member) : undefined}
-						onEditPreferences={() => onEditPreferences(member)}
-						onEditMember={() => onEditMember(member)}
-						onDeleteMember={() => onDeleteMember(member)}
+						onTapSelect={onTapSelect ? () => onTapSelect(helper) : undefined}
+						onEditPreferences={() => onEditPreferences(helper)}
+						onEditHelper={() => onEditHelper(helper)}
+						onDeleteHelper={() => onDeleteHelper(helper)}
 					/>
 				))}
 			</div>
@@ -157,4 +162,4 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({
 	);
 };
 
-export default MemberSidebar;
+export default HelperSidebar;

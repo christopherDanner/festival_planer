@@ -4,11 +4,10 @@ import {
 	getStations,
 	getStationShifts,
 	getShiftAssignments,
-	getStationMembers
+	getStationHelpers
 } from '@/lib/shiftService';
 import { getMaterials } from '@/lib/materialService';
 import { getScheduleDays } from '@/lib/scheduleService';
-import { getMembers } from '@/lib/memberService';
 import { getSponsorings } from '@/lib/sponsorService';
 import type { FestivalTab } from '@/components/festival/FestivalTabBar';
 import Festplakat from './Festplakat';
@@ -65,9 +64,9 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 		queryFn: () => getShiftAssignments(festivalId)
 	});
 
-	const { data: stationMembers = [] } = useQuery({
-		queryKey: ['stationMembers', festivalId],
-		queryFn: () => getStationMembers(festivalId)
+	const { data: stationHelpers = [] } = useQuery({
+		queryKey: ['stationHelpers', festivalId],
+		queryFn: () => getStationHelpers(festivalId)
 	});
 
 	const { data: materials = [] } = useQuery({
@@ -80,19 +79,10 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 		queryFn: () => getScheduleDays(festivalId)
 	});
 
-	const { data: members = [] } = useQuery({
-		queryKey: ['members'],
-		queryFn: () => getMembers(),
-		select: (data) => data.filter((m) => m.is_active)
-	});
-
 	const { data: sponsorings = [] } = useQuery({
 		queryKey: ['sponsorings', festivalId],
 		queryFn: () => getSponsorings(festivalId)
 	});
-
-	// Referenzieren, damit die verbleibenden Hooks für #85 bestehen bleiben (noch ungenutzt).
-	void members;
 
 	return (
 		<div className="grid grid-cols-1 items-start gap-5 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
@@ -102,7 +92,7 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 					stations={stations}
 					shifts={shifts}
 					assignments={assignments}
-					stationMembers={stationMembers}
+					stationHelpers={stationHelpers}
 					scheduleDays={scheduleDays}
 					materials={materials}
 					onTabChange={onTabChange}
@@ -124,7 +114,7 @@ const FestivalOverviewView: React.FC<FestivalOverviewViewProps> = ({
 					stations={stations}
 					shifts={shifts}
 					assignments={assignments}
-					stationMembers={stationMembers}
+					stationHelpers={stationHelpers}
 					materials={materials}
 					sponsorings={sponsorings}
 					onTabChange={onTabChange}

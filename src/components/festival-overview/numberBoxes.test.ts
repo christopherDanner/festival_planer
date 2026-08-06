@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Station, StationShift, ShiftAssignment, StationMember } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignment, StationHelper } from '@/lib/shiftService';
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import {
@@ -54,12 +54,12 @@ function assignment(over: Partial<ShiftAssignment> = {}): ShiftAssignment {
 	};
 }
 
-function stationMember(over: Partial<StationMember> = {}): StationMember {
+function stationHelper(over: Partial<StationHelper> = {}): StationHelper {
 	return {
 		id: 'm1',
 		festival_id: 'f1',
 		station_id: 's1',
-		member_id: 'p1',
+		helper_id: 'p1',
 		created_at: '',
 		...over
 	};
@@ -129,13 +129,13 @@ describe('deriveShiftsMetric', () => {
 		expect(m.isEmpty).toBe(false);
 	});
 
-	it('nutzt Stations-Ebene (required_people + StationMembers), wenn keine Schichten', () => {
+	it('nutzt Stations-Ebene (required_people + StationHelpers), wenn keine Schichten', () => {
 		const stations = [station({ id: 's1', required_people: 3 })];
-		const stationMembers = [
-			stationMember({ id: 'm1', station_id: 's1', member_id: 'p1' }),
-			stationMember({ id: 'm2', station_id: 's1', member_id: 'p2' })
+		const stationHelpers = [
+			stationHelper({ id: 'm1', station_id: 's1', helper_id: 'p1' }),
+			stationHelper({ id: 'm2', station_id: 's1', helper_id: 'p2' })
 		];
-		const m = deriveShiftsMetric(stations, [], [], stationMembers);
+		const m = deriveShiftsMetric(stations, [], [], stationHelpers);
 		expect(m.gesamt).toBe(3);
 		expect(m.besetzt).toBe(2);
 		expect(m.fehlen).toBe(1);
@@ -193,14 +193,15 @@ describe('deriveShiftsMetric', () => {
 // --- Material bestellt -------------------------------------------------------
 
 describe('deriveMaterialOrdered', () => {
-	it('summiert € (ordered × unit_price), zählt Positionen und ohne-Preis', () => {
+	it('summiert Bestellt-Menge × Bruttopreis, zählt Positionen und ohne-Preis', () => {
 		const materials = [
-			material({ id: 'a', ordered_quantity: 10, unit_price: 2 }), // 20
+			// netto erfasst: 2 → 2,40 brutto × 10 = 24 (mit der alten Formel wären es 20)
+			material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true }),
 			material({ id: 'b', ordered_quantity: 5, unit_price: 3 }), // 15
 			material({ id: 'c', ordered_quantity: 4, unit_price: null }) // ohne Preis
 		];
 		const m = deriveMaterialOrdered(materials);
-		expect(m.total).toBe(35);
+		expect(m.total).toBe(39);
 		expect(m.positions).toBe(3);
 		expect(m.withoutPrice).toBe(1);
 		expect(m.withPrice).toBe(2);
@@ -212,6 +213,13 @@ describe('deriveMaterialOrdered', () => {
 			material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true })
 		];
 		expect(deriveMaterialOrdered(materials).total).toBe(24); // 2 netto → 2,40 brutto
+	});
+
+	it('lässt einen brutto erfassten Preis stehen — kein zweites Mal Steuer', () => {
+		const materials = [
+			material({ id: 'a', ordered_quantity: 10, unit_price: 2.4, tax_rate: 20, price_is_net: false })
+		];
+		expect(deriveMaterialOrdered(materials).total).toBe(24); // 2,40 ist schon brutto
 	});
 
 	it('keine Positionen → isEmpty, alles 0', () => {
@@ -228,14 +236,22 @@ describe('deriveMaterialOrdered', () => {
 describe('deriveMaterialConsumed', () => {
 	it('summiert Verbrauch €, bestellt €, Δ und erfasst-Zähler', () => {
 		const materials = [
-			material({ id: 'a', ordered_quantity: 10, actual_quantity: 8, unit_price: 2 }), // ord 20, ist 16
+			// netto erfasst: 2 → 2,40 brutto; ord 24, ist 19,20 (alte Formel: 20 / 16)
+			material({
+				id: 'a',
+				ordered_quantity: 10,
+				actual_quantity: 8,
+				unit_price: 2,
+				tax_rate: 20,
+				price_is_net: true
+			}),
 			material({ id: 'b', ordered_quantity: 5, actual_quantity: null, unit_price: 3 }), // ord 15, ist 0 (nicht erfasst)
 			material({ id: 'c', ordered_quantity: 4, actual_quantity: 4, unit_price: null }) // kein Preis → 0/0
 		];
 		const m = deriveMaterialConsumed(materials);
-		expect(m.ordered).toBe(35);
-		expect(m.consumed).toBe(16);
-		expect(m.delta).toBe(16 - 35); // −19, unter Plan
+		expect(m.ordered).toBe(39);
+		expect(m.consumed).toBe(19.2);
+		expect(m.delta).toBe(-19.8); // unter Plan
 		expect(m.recorded).toBe(2); // a und c haben actual_quantity gesetzt
 		expect(m.positions).toBe(3);
 	});
@@ -276,6 +292,34 @@ describe('deriveMaterialConsumed', () => {
 		const m = deriveMaterialConsumed([]);
 		expect(m.isEmpty).toBe(true);
 		expect(m.recorded).toBe(0);
+	});
+});
+
+// --- Dasselbe Fest, dieselbe Zahl wie der Material-Bereich -------------------
+
+/** Fertig-Kriterium aus Issue #112: für dasselbe Fest nennen Dashboard und
+Material-Bereich denselben Betrag. Die Gegenprobe steht in
+`MaterialTable.test.tsx` („dieselbe Zahl wie das Dashboard") — dieselben vier
+Positionen, dieselben 51 € als Literal, dort durch die gerenderte Tabelle
+gelesen. Beide Seiten sind einzeln festgeschrieben, keine gegen die andere
+gerechnet: bekäme eine wieder eine eigene Formel, fällt genau ihr Test.
+Nichts ist nachgetragen, deshalb fällt die Zeilenkosten-Summe des Bereichs
+hier mit dem Bestellwert zusammen — im gemischten Fall tut sie das laut
+ADR 0006 bewusst nicht. */
+const festPositionen = [
+	// netto erfasst, 20 % → 2,40 × 10 = 24
+	material({ id: 'a', ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true }),
+	// brutto erfasst, 10 % → bleibt 3,30 × 5 = 16,50
+	material({ id: 'b', ordered_quantity: 5, unit_price: 3.3, tax_rate: 10, price_is_net: false }),
+	// ohne Steuersatz → 1,50 × 7 = 10,50
+	material({ id: 'c', ordered_quantity: 7, unit_price: 1.5, tax_rate: null }),
+	// ohne Preis → zählt nicht mit
+	material({ id: 'd', ordered_quantity: 4, unit_price: null })
+];
+
+describe('Dashboard gegen Material-Bereich', () => {
+	it('nennt den Bestellwert, den der Material-Bereich für dasselbe Fest zeigt', () => {
+		expect(deriveMaterialOrdered(festPositionen).total).toBe(51);
 	});
 });
 

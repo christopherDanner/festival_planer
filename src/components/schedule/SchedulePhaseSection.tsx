@@ -2,15 +2,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import ScheduleEntryTable from './ScheduleEntryTable';
-import type { SchedulePhaseWithEntries, ScheduleEntryWithMember } from '@/lib/scheduleService';
+import type { SchedulePhaseWithEntries, ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
 interface SchedulePhaseSectionProps {
 	phase: SchedulePhaseWithEntries;
 	onEditPhase: (phase: SchedulePhaseWithEntries) => void;
 	onDeletePhase: (id: string) => void;
-	onEditEntry: (entry: ScheduleEntryWithMember) => void;
+	onEditEntry: (entry: ScheduleEntryWithHelper) => void;
 	onDeleteEntry: (id: string) => void;
-	onToggleEntryStatus: (entry: ScheduleEntryWithMember) => void;
+	onToggleEntryStatus: (entry: ScheduleEntryWithHelper) => void;
 	onAddEntry: (phaseId: string) => void;
 	onReorderEntries: (phaseId: string, orderedIds: string[]) => void;
 	isMobile: boolean;

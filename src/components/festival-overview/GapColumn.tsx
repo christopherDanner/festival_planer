@@ -3,8 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import type {
 	Station,
 	StationShift,
-	ShiftAssignmentWithMember,
-	StationMemberWithDetails
+	ShiftAssignmentWithHelper,
+	StationHelperWithDetails
 } from '@/lib/shiftService';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
@@ -15,8 +15,8 @@ import { deriveGapBoard, formatDeadline, type StationGap } from './gapBoard';
 interface GapColumnProps {
 	stations: Station[];
 	shifts: StationShift[];
-	assignments: ShiftAssignmentWithMember[];
-	stationMembers: StationMemberWithDetails[];
+	assignments: ShiftAssignmentWithHelper[];
+	stationHelpers: StationHelperWithDetails[];
 	scheduleDays: ScheduleDayWithPhases[];
 	materials: FestivalMaterialWithStation[];
 	/** Absprung in einen anderen Fest-Tab. */
@@ -78,13 +78,13 @@ const GapColumn: React.FC<GapColumnProps> = ({
 	stations,
 	shifts,
 	assignments,
-	stationMembers,
+	stationHelpers,
 	scheduleDays,
 	materials,
 	onTabChange
 }) => {
 	const [expanded, setExpanded] = React.useState(false);
-	const board = deriveGapBoard({ stations, shifts, assignments, stationMembers, scheduleDays, materials });
+	const board = deriveGapBoard({ stations, shifts, assignments, stationHelpers, scheduleDays, materials });
 
 	const shownStations = expanded ? board.stationGaps : board.stationGaps.slice(0, TOP_STATIONS);
 	const hiddenCount = board.stationGaps.length - shownStations.length;
