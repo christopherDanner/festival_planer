@@ -1,15 +1,15 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
 
 export interface ExportData {
 	festivalName: string;
 	festivalDate: string;
 	stations: Station[];
 	stationShifts: StationShift[];
-	assignments: ShiftAssignmentWithMember[];
-	stationMembers: StationMemberWithDetails[];
+	assignments: ShiftAssignmentWithHelper[];
+	stationHelpers: StationHelperWithDetails[];
 }
 
 function formatShiftTime(shift: StationShift): string {
@@ -22,9 +22,9 @@ function formatShiftTime(shift: StationShift): string {
 	return `${day} ${dateStr} ${startTime}–${endTime}`;
 }
 
-function getMemberName(member?: { first_name: string; last_name: string }): string {
-	if (!member) return '';
-	return `${member.last_name} ${member.first_name}`;
+function getHelperName(helper?: { first_name: string; last_name: string }): string {
+	if (!helper) return '';
+	return `${helper.last_name} ${helper.first_name}`;
 }
 
 function sanitizeFilename(name: string): string {
@@ -34,16 +34,16 @@ function sanitizeFilename(name: string): string {
 /** Build per-station column data */
 function buildStationColumns(data: ExportData) {
 	return data.stations.map(station => {
-		const stMembers = data.stationMembers
+		const stHelpers = data.stationHelpers
 			.filter(sm => sm.station_id === station.id)
-			.map(sm => getMemberName(sm.member))
+			.map(sm => getHelperName(sm.helper))
 			.filter(Boolean);
 
 		const shifts = data.stationShifts.filter(s => s.station_id === station.id);
 		const shiftBlocks = shifts.map(shift => {
 			const assignedNames = data.assignments
 				.filter(a => a.station_shift_id === shift.id)
-				.map(a => getMemberName(a.member))
+				.map(a => getHelperName(a.helper))
 				.filter(Boolean);
 			return {
 				label: `${shift.name} (${formatShiftTime(shift)})`,
@@ -53,14 +53,14 @@ function buildStationColumns(data: ExportData) {
 			};
 		});
 
-		const responsible = station.responsible_member
-			? getMemberName(station.responsible_member)
+		const responsible = station.responsible_helper
+			? getHelperName(station.responsible_helper)
 			: null;
 
 		return {
 			station,
 			responsible,
-			stationMemberNames: stMembers,
+			stationHelperNames: stHelpers,
 			shiftBlocks,
 		};
 	});
@@ -89,12 +89,12 @@ export function exportToExcel(data: ExportData): void {
 		if (col.responsible) {
 			rows.push(`Leitung: ${col.responsible}`);
 		}
-		const totalAssigned = col.stationMemberNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
+		const totalAssigned = col.stationHelperNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
 		rows.push(`${totalAssigned}/${col.station.required_people} Personen`);
 		rows.push('');
 
-		if (col.stationMemberNames.length > 0) {
-			for (const name of col.stationMemberNames) rows.push(name);
+		if (col.stationHelperNames.length > 0) {
+			for (const name of col.stationHelperNames) rows.push(name);
 			rows.push('');
 		}
 
@@ -169,12 +169,12 @@ export function exportToPdf(data: ExportData): void {
 		if (col.responsible) {
 			lines.push(`Leitung: ${col.responsible}`);
 		}
-		const totalAssigned = col.stationMemberNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
+		const totalAssigned = col.stationHelperNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
 		lines.push(`${totalAssigned}/${col.station.required_people} Personen`);
 
-		if (col.stationMemberNames.length > 0) {
+		if (col.stationHelperNames.length > 0) {
 			lines.push('');
-			for (const name of col.stationMemberNames) lines.push(name);
+			for (const name of col.stationHelperNames) lines.push(name);
 		}
 
 		for (const block of col.shiftBlocks) {

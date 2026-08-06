@@ -1,9 +1,9 @@
 import {
-	getStations, getStationShifts, getStationMembers, getShiftAssignments,
-	createStationsBulk, createStationShiftsBulk, assignMemberToStation, assignMemberToStationShift
+	getStations, getStationShifts, getStationHelpers, getShiftAssignments,
+	createStationsBulk, createStationShiftsBulk, assignHelperToStation, assignHelperToStationShift
 } from '@/lib/shiftService';
+import { getHelpers, createHelper } from '@/lib/helperService';
 import { getMaterials, createMaterialsBulk } from '@/lib/materialService';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface CopyFestivalOptions {
 	stationIds: string[];
@@ -30,18 +30,69 @@ export async function copyFestivalData(
 ): Promise<void> {
 	const stationIdMap: Record<string, string> = {};
 	const shiftIdMap: Record<string, string> = {};
+	/** Quell-Helfer → seine neue Zeile im Zielfest. */
+	const helperIdMap: Record<string, string> = {};
 
 	// Step 1: Copy stations
 	if (options.stationIds.length > 0) {
 		const allStations = await getStations(sourceFestivalId);
 		const selectedStations = allStations.filter(s => options.stationIds.includes(s.id));
 
+		// Ein Helfer gehört dem Fest (ADR 0005) — die Zuteilungen des Quellfests
+		// können im Zielfest also nicht auf dieselbe Zeile zeigen. Wer gebraucht
+		// wird, wird im Zielfest neu angelegt. Bewusst nur die tatsächlich
+		// gebrauchten und ohne Wünsche: die ganze Helferliste samt auf die neuen
+		// Stationen umgeschlüsselten Wünschen holt der eigene Schalter „Helfer
+		// übernehmen" (ADR 0005), der noch nicht existiert.
+		if (options.copyAssignments) {
+			const sourceStationHelpers = await getStationHelpers(sourceFestivalId);
+			const sourceAssignments = await getShiftAssignments(sourceFestivalId);
+
+			// Nur Helfer, deren Zuteilung auch mitkopiert wird. Wer allein an einer
+			// nicht gewählten Station hängt, bliebe im Zielfest ohne jede Zuteilung
+			// stehen — und ohne Mitglieder-Seite räumt das niemand mehr auf.
+			const selectedStationIds = new Set(selectedStations.map(s => s.id));
+			const selectedShiftIds = new Set(
+				(await getStationShifts(sourceFestivalId))
+					.filter(s => selectedStationIds.has(s.station_id))
+					.map(s => s.id)
+			);
+
+			const neededHelperIds = new Set<string>();
+			for (const s of selectedStations) {
+				if (s.responsible_helper_id) neededHelperIds.add(s.responsible_helper_id);
+			}
+			for (const sm of sourceStationHelpers) {
+				if (sm.helper_id && selectedStationIds.has(sm.station_id)) {
+					neededHelperIds.add(sm.helper_id);
+				}
+			}
+			for (const a of sourceAssignments) {
+				if (a.helper_id && selectedShiftIds.has(a.station_shift_id)) {
+					neededHelperIds.add(a.helper_id);
+				}
+			}
+
+			// Reihenfolge der Helferliste, damit die Kopie nachvollziehbar bleibt.
+			const sourceHelpers = await getHelpers(sourceFestivalId);
+			for (const helper of sourceHelpers) {
+				if (!neededHelperIds.has(helper.id)) continue;
+				helperIdMap[helper.id] = await createHelper(targetFestivalId, {
+					first_name: helper.first_name,
+					last_name: helper.last_name,
+					email: helper.email,
+					phone: helper.phone,
+					notes: helper.notes
+				});
+			}
+		}
+
 		const stationsToInsert = selectedStations.map(s => ({
 			festival_id: targetFestivalId,
 			name: s.name,
 			description: s.description || undefined,
 			required_people: s.required_people,
-			responsible_member_id: options.copyAssignments ? (s.responsible_member_id || undefined) : undefined,
+			responsible_helper_id: (s.responsible_helper_id && helperIdMap[s.responsible_helper_id]) || undefined,
 		}));
 
 		const created = await createStationsBulk(stationsToInsert);
@@ -75,30 +126,29 @@ export async function copyFestivalData(
 
 		// Step 3: Copy assignments if requested
 		if (options.copyAssignments) {
-			const { data: existingMembers } = await supabase
-				.from('members')
-				.select('id');
-			const existingMemberIds = new Set((existingMembers || []).map(m => m.id));
-
-			// Station members
-			const allStationMembers = await getStationMembers(sourceFestivalId);
-			const selectedStationMembers = allStationMembers.filter(
-				sm => stationIdMap[sm.station_id] && existingMemberIds.has(sm.member_id)
+			// Station helpers
+			const allStationHelpers = await getStationHelpers(sourceFestivalId);
+			const selectedStationHelpers = allStationHelpers.filter(
+				sm => stationIdMap[sm.station_id] && helperIdMap[sm.helper_id]
 			);
-			for (const sm of selectedStationMembers) {
-				await assignMemberToStation(targetFestivalId, stationIdMap[sm.station_id], sm.member_id);
+			for (const sm of selectedStationHelpers) {
+				await assignHelperToStation(
+					targetFestivalId,
+					stationIdMap[sm.station_id],
+					helperIdMap[sm.helper_id]
+				);
 			}
 
 			// Shift assignments
 			const allAssignments = await getShiftAssignments(sourceFestivalId);
 			const selectedAssignments = allAssignments.filter(
-				a => a.member_id && shiftIdMap[a.station_shift_id] && existingMemberIds.has(a.member_id)
+				a => a.helper_id && shiftIdMap[a.station_shift_id] && helperIdMap[a.helper_id]
 			);
 			for (const a of selectedAssignments) {
-				await assignMemberToStationShift(
+				await assignHelperToStationShift(
 					targetFestivalId,
 					shiftIdMap[a.station_shift_id],
-					a.member_id!,
+					helperIdMap[a.helper_id!],
 					a.position
 				);
 			}

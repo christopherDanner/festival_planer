@@ -19,7 +19,7 @@ function entry(
 		type: 'program',
 		start_time: null,
 		end_time: null,
-		responsible_member_id: null,
+		responsible_helper_id: null,
 		status: null,
 		description: null,
 		sort_order: 0,

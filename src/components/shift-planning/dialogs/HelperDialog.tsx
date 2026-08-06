@@ -5,41 +5,37 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { UserPlus, Save } from 'lucide-react';
-import type { Member } from '@/lib/memberService';
+import type { Helper, HelperInput } from '@/lib/helperService';
 
-interface MemberDialogProps {
+interface HelperDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	member?: Member | null;
-	onSave: (data: {
-		first_name: string;
-		last_name: string;
-		phone: string;
-		email: string;
-		notes: string;
-		is_active: boolean;
-	}) => void;
+	helper?: Helper | null;
+	onSave: (data: Required<HelperInput>) => void;
 }
 
-const MemberDialog: React.FC<MemberDialogProps> = ({ open, onOpenChange, member, onSave }) => {
+/**
+ * Anlegen und Bearbeiten eines Helfers — nach dem Wegfall der Mitglieder-Seite
+ * der einzige Weg dazu, aufgerufen aus der Helferliste des Schichtplans.
+ * Der Aktiv-Haken ist mit ADR 0005 weg: wer nicht mitmacht, wird entfernt.
+ */
+const HelperDialog: React.FC<HelperDialogProps> = ({ open, onOpenChange, helper, onSave }) => {
 	const [form, setForm] = useState({
 		first_name: '',
 		last_name: '',
 		phone: '',
 		email: '',
-		notes: '',
-		is_active: true
+		notes: ''
 	});
 
 	useEffect(() => {
-		if (member) {
+		if (helper) {
 			setForm({
-				first_name: member.first_name,
-				last_name: member.last_name,
-				phone: member.phone || '',
-				email: member.email || '',
-				notes: member.notes || '',
-				is_active: member.is_active
+				first_name: helper.first_name,
+				last_name: helper.last_name,
+				phone: helper.phone || '',
+				email: helper.email || '',
+				notes: helper.notes || ''
 			});
 		} else {
 			setForm({
@@ -47,11 +43,10 @@ const MemberDialog: React.FC<MemberDialogProps> = ({ open, onOpenChange, member,
 				last_name: '',
 				phone: '',
 				email: '',
-				notes: '',
-				is_active: true
+				notes: ''
 			});
 		}
-	}, [member, open]);
+	}, [helper, open]);
 
 	const handleSave = () => {
 		if (!form.first_name || !form.last_name) return;
@@ -65,7 +60,7 @@ const MemberDialog: React.FC<MemberDialogProps> = ({ open, onOpenChange, member,
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<UserPlus className="h-5 w-5" />
-						{member ? 'Mitglied bearbeiten' : 'Neues Mitglied hinzufügen'}
+						{helper ? 'Helfer bearbeiten' : 'Neuen Helfer hinzufügen'}
 					</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">
@@ -120,22 +115,13 @@ const MemberDialog: React.FC<MemberDialogProps> = ({ open, onOpenChange, member,
 							rows={3}
 						/>
 					</div>
-					<div className="flex items-center space-x-2">
-						<input
-							type="checkbox"
-							id="is_active"
-							checked={form.is_active}
-							onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
-						/>
-						<Label htmlFor="is_active">Aktiv</Label>
-					</div>
 					<div className="flex justify-end gap-2 pt-4">
 						<Button variant="outline" onClick={() => onOpenChange(false)}>
 							Abbrechen
 						</Button>
 						<Button onClick={handleSave} disabled={!form.first_name || !form.last_name}>
 							<Save className="h-4 w-4 mr-2" />
-							{member ? 'Aktualisieren' : 'Hinzufügen'}
+							{helper ? 'Aktualisieren' : 'Hinzufügen'}
 						</Button>
 					</div>
 				</div>
@@ -144,4 +130,4 @@ const MemberDialog: React.FC<MemberDialogProps> = ({ open, onOpenChange, member,
 	);
 };
 
-export default MemberDialog;
+export default HelperDialog;
