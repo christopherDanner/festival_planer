@@ -153,14 +153,18 @@ function formatTotal(m: FestivalMaterialWithStation): string {
 /*  Mobile card                                                        */
 /* ------------------------------------------------------------------ */
 
-const MaterialMobileCard: React.FC<{
+/** Exportiert, damit die Station-Regel aus #113 auch für die Karte prüfbar ist —
+`useIsMobile` entscheidet erst im Browser, ein Server-Rendern der Tabelle käme
+nie hier vorbei. */
+export const MaterialMobileCard: React.FC<{
 	material: FestivalMaterialWithStation;
+	showStation: boolean;
 	onEdit: () => void;
 	onDelete: () => void;
 	onCopy: () => void;
 	onUpdateField: (field: string, value: any) => void;
 	onUpdateFields: (partial: Partial<FestivalMaterialWithStation>) => void;
-}> = ({ material, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
+}> = ({ material, showStation, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
 	const diff = formatDifference(material);
 	return (
 		<div className="border bg-card overflow-hidden">
@@ -171,7 +175,7 @@ const MaterialMobileCard: React.FC<{
 						{material.category && (
 							<Badge variant="outline" className="text-[10px] px-1.5 py-0">{material.category}</Badge>
 						)}
-						{material.station?.name && (
+						{showStation && material.station?.name && (
 							<Badge variant="secondary" className="text-[10px] px-1.5 py-0">{material.station.name}</Badge>
 						)}
 						{material.supplier && (
@@ -343,6 +347,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 					<MaterialMobileCard
 						key={m.id}
 						material={m}
+						showStation={showStation}
 						onEdit={() => onEdit(m)}
 						onDelete={() => onDelete(m.id)}
 						onCopy={() => onCopy(m)}

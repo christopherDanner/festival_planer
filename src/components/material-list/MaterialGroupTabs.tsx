@@ -60,7 +60,9 @@ const MaterialGroupTabs: React.FC<MaterialGroupTabsProps> = ({
 			className="flex flex-wrap gap-2"
 			buttonClassName={(active) =>
 				cn(
-					'flex min-w-[158px] flex-1 flex-col border-2 border-tinte px-3.5 pb-2 pt-2.5 text-left sm:flex-none',
+					// Ein Breakpoint für die ganze App (DESIGN-VISION §6): unter 900px
+					// teilen sich die Reiter die Zeile, darüber tragen sie ihre Breite.
+					'flex min-w-[158px] flex-1 flex-col border-2 border-tinte px-3.5 pb-2 pt-2.5 text-left min-[900px]:flex-none',
 					'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte',
 					active ? 'bg-gelb shadow-versatz' : 'bg-white hover:bg-papier-getoent'
 				)

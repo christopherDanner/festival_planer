@@ -26,12 +26,12 @@ const MaterialTotals: React.FC<MaterialTotalsProps> = ({ materials, totalCount }
 
 	return (
 		<div className="flex flex-wrap items-end gap-x-8 gap-y-3 border-2.5 border-tinte bg-white px-4 py-3">
-			<Zahl label={filtered ? 'Bestellt € (gefiltert)' : 'Bestellt €'}>
+			<Figure label={filtered ? 'Bestellt € (gefiltert)' : 'Bestellt €'}>
 				{isEmpty ? '—' : formatEuro(orderedValue(materials))}
-			</Zahl>
-			<Zahl label={filtered ? 'Verbraucht € (gefiltert)' : 'Verbraucht €'}>
+			</Figure>
+			<Figure label={filtered ? 'Verbraucht € (gefiltert)' : 'Verbraucht €'}>
 				{isEmpty ? '—' : formatEuro(consumedValue(materials))}
-			</Zahl>
+			</Figure>
 			<p className="text-[11.5px] text-tinte-soft">
 				{isEmpty ? (
 					'Noch keine Positionen'
@@ -53,7 +53,9 @@ const MaterialTotals: React.FC<MaterialTotalsProps> = ({ materials, totalCount }
 	);
 };
 
-const Zahl: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+/** Eine der zwei Zahlen: Beschriftung klein in Versalien, Betrag in Akzentschrift.
+Formgleich mit `NumBox` im Dashboard, aber ohne Maßband und Sprungziel. */
+const Figure: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
 	<div>
 		<p className="text-[10.5px] font-extrabold uppercase tracking-[.06em] text-tinte-soft">
 			{label}

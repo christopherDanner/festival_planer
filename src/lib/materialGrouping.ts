@@ -3,6 +3,7 @@ Reines Logikmodul ohne React. Gerechnet wird nicht hier, sondern in
 `materialCosts` — dieses Modul ordnet nur (ADR 0006). */
 
 import { sumTotals, withoutPrice, type MaterialPosition } from './materialCosts';
+import { NO_SUPPLIER_LABEL } from './orderList';
 
 /** Die Achse, nach der die Arbeitsliste gruppiert: planen (Station),
 bestellen (Lieferant), Kosten prüfen (Kategorie) oder alles auf einem Papier. */
@@ -44,8 +45,14 @@ export interface MaterialGroup<T extends GroupableMaterial = GroupableMaterial> 
 
 const UNASSIGNED_KEY = '__none__';
 
-/** Name der Kategorie-Restgruppe — Chip im Kasten *und* Gruppe der Kategorie-Achse. */
+/** Beschriftung der Kategorie-Restgruppe — Gruppe der Kategorie-Achse *und*
+letzter Chip im Kasten. */
 export const NO_CATEGORY = 'Ohne Kategorie';
+
+/** Chip-*Wert* für „keine Kategorie". Bewusst kein Anzeigename: eine Kategorie,
+die wirklich „Ohne Kategorie" heißt, soll nicht mit den unzugeordneten
+Positionen verschmelzen. */
+export const NO_CATEGORY_KEY = UNASSIGNED_KEY;
 
 /** Wie eine Achse eine Position einordnet: Schlüssel, Anzeigename und der
 Name der Restgruppe für alles ohne Zuordnung. */
@@ -63,7 +70,9 @@ const AXIS_KEYS: Record<
 	supplier: {
 		key: (m) => blankToNull(m.supplier),
 		name: (m) => blankToNull(m.supplier) ?? '',
-		unassignedName: 'Kein Lieferant'
+		// Wortlaut aus `orderList` — Arbeitsliste und Bestelllisten-Export dürfen
+		// die Restgruppe nicht verschieden nennen.
+		unassignedName: NO_SUPPLIER_LABEL
 	},
 	category: {
 		key: (m) => blankToNull(m.category),
@@ -159,9 +168,9 @@ export function resolveActiveGroupId(
 
 /**
  * Die Kategorie-Chips eines Kastens: jede Kategorie der Gruppe einmal,
- * alphabetisch, „Ohne Kategorie" am Ende — dieselbe Regel wie bei den Gruppen
- * ohne Zuordnung. Auf der Kategorie-Achse sind die Chips redundant und werden
- * im Kasten ausgeblendet (#113).
+ * alphabetisch, die Restgruppe (`NO_CATEGORY_KEY`) am Ende — dieselbe Regel wie
+ * bei den Gruppen ohne Zuordnung. Auf der Kategorie-Achse sind die Chips
+ * redundant und werden im Kasten ausgeblendet (#113).
  */
 export function groupCategories(materials: GroupableMaterial[]): string[] {
 	const named = new Set<string>();
@@ -174,7 +183,12 @@ export function groupCategories(materials: GroupableMaterial[]): string[] {
 	}
 
 	const sorted = [...named].sort((a, b) => a.localeCompare(b, 'de'));
-	return hasNone ? [...sorted, NO_CATEGORY] : sorted;
+	return hasNone ? [...sorted, NO_CATEGORY_KEY] : sorted;
+}
+
+/** Beschriftung eines Kategorie-Chips. */
+export function categoryChipLabel(category: string): string {
+	return category === NO_CATEGORY_KEY ? NO_CATEGORY : category;
 }
 
 /** Filtert eine Gruppe auf einen Kategorie-Chip; `null` heißt „alle Chips aus". */
@@ -183,7 +197,7 @@ export function filterByCategory<T extends GroupableMaterial>(
 	category: string | null
 ): T[] {
 	if (category == null) return materials;
-	if (category === NO_CATEGORY) return materials.filter((m) => blankToNull(m.category) == null);
+	if (category === NO_CATEGORY_KEY) return materials.filter((m) => blankToNull(m.category) == null);
 	return materials.filter((m) => blankToNull(m.category) === category);
 }
 

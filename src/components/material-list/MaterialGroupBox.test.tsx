@@ -34,7 +34,7 @@ const render = (
 		<MaterialGroupBox
 			group={group}
 			axis={axis}
-			materials={filterByCategory(group.materials, activeCategory)}
+			visibleMaterials={filterByCategory(group.materials, activeCategory)}
 			categories={groupCategories(group.materials)}
 			activeCategory={activeCategory}
 			onCategoryChange={() => {}}
@@ -55,7 +55,8 @@ describe('MaterialGroupBox — der Kopf des Kastens', () => {
 		expect(html).toContain('poster');
 		expect(html).toContain('Ausschank');
 		expect(html).toContain('2 Positionen');
-		expect(html).toContain('Zwischensumme');
+		// Gleicher Wortlaut wie der Tabellenfuß — eine Zahl, ein Name (ADR 0006).
+		expect(html).toContain('Zwischensumme (gefiltert)');
 		expect(html).toContain('€ 30');
 	});
 
@@ -105,13 +106,22 @@ describe('MaterialGroupBox — Kategorie-Chips', () => {
 		expect(chips[1]).not.toContain('bg-tinte');
 	});
 
-	it('rechnet den Kopf mit dem Chip mit und sagt, dass er gefiltert ist', () => {
+	it('rechnet den Kopf mit dem Chip mit', () => {
 		const html = render(rows, 'station', 'Getränke');
 
 		expect(html).toContain('1 Position');
-		expect(html).toContain('Zwischensumme (gefiltert)');
 		expect(html).toContain('€ 20');
 		expect(html).not.toContain('€ 30');
+	});
+
+	it('beschriftet den Restgruppen-Chip mit „Ohne Kategorie"', () => {
+		const html = render([
+			material({ name: 'Bier', category: 'Getränke' }),
+			material({ name: 'Funkgerät', category: null })
+		]);
+
+		expect(html).toContain('>Ohne Kategorie<');
+		expect(html).not.toContain('__none__<');
 	});
 
 	it('blendet die Chips auf der Kategorie-Achse aus — dort sind sie redundant', () => {

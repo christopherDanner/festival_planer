@@ -5,13 +5,21 @@ import { Poster } from '@/components/toolkit/Poster';
 import { Stamp } from '@/components/toolkit/Stamp';
 import { formatEuro } from '@/lib/money';
 import { sumTotals, withoutPrice } from '@/lib/materialCosts';
-import type { GroupableMaterial, MaterialAxis, MaterialGroup } from '@/lib/materialGrouping';
+import {
+	categoryChipLabel,
+	type GroupableMaterial,
+	type MaterialAxis,
+	type MaterialGroup
+} from '@/lib/materialGrouping';
 
 export interface MaterialGroupBoxProps {
 	group: MaterialGroup;
 	axis: MaterialAxis;
-	/** Die sichtbaren Positionen der Gruppe — vom Kategorie-Chip schon gefiltert. */
-	materials: GroupableMaterial[];
+	/**
+	 * Die sichtbaren Positionen der Gruppe — vom Kategorie-Chip schon gefiltert.
+	 * Über sie rechnet der Kopf, *nicht* über `group.materials`.
+	 */
+	visibleMaterials: GroupableMaterial[];
 	/** Kategorie-Chips der ganzen Gruppe (nicht der gefilterten Sicht). */
 	categories: string[];
 	activeCategory: string | null;
@@ -25,21 +33,21 @@ export interface MaterialGroupBoxProps {
  * Anzahl, Zwischensumme und Preislücken, darunter die Kategorie-Chips als
  * Filter *innerhalb* der Gruppe und die Positionstabelle (#114).
  *
- * Die Zahlen des Kopfs rechnen über die **sichtbaren** Positionen und sagen es,
- * wenn ein Chip filtert — der alte Widerspruch „Kopf summiert alle, Fuß die
- * gefilterten, bei fast gleichem Namen" ist damit weg (ADR 0006).
+ * Die Zahlen des Kopfs rechnen über die **sichtbaren** Positionen und heißen
+ * genauso wie der Tabellenfuß darunter — der alte Widerspruch „Kopf summiert
+ * alle, Fuß die gefilterten, bei fast gleichem Namen" ist damit weg (ADR 0006).
  */
 const MaterialGroupBox: React.FC<MaterialGroupBoxProps> = ({
 	group,
 	axis,
-	materials,
+	visibleMaterials,
 	categories,
 	activeCategory,
 	onCategoryChange,
 	onAddPosition,
 	children
 }) => {
-	const gaps = withoutPrice(materials);
+	const gaps = withoutPrice(visibleMaterials);
 	// Auf der Kategorie-Achse ist der Chip die Gruppe selbst; ein einzelner Chip
 	// filtert nichts. In beiden Fällen bleibt die Zeile weg.
 	const showChips = axis !== 'category' && categories.length > 1;
@@ -52,11 +60,13 @@ const MaterialGroupBox: React.FC<MaterialGroupBoxProps> = ({
 					{group.name}
 				</h3>
 				<span className="text-xs text-papier">
-					{materials.length} {materials.length === 1 ? 'Position' : 'Positionen'}
-					{' · '}
-					{activeCategory ? 'Zwischensumme (gefiltert) ' : 'Zwischensumme '}
+					{visibleMaterials.length}{' '}
+					{visibleMaterials.length === 1 ? 'Position' : 'Positionen'}
+					{/* Gleiche Beschriftung wie der Tabellenfuß — dieselbe Zahl darf
+					nicht zwei Namen haben (ADR 0006). */}
+					{' · Zwischensumme (gefiltert) '}
 					<b className="font-display font-semibold tabular-nums text-gelb">
-						{formatEuro(sumTotals(materials))}
+						{formatEuro(sumTotals(visibleMaterials))}
 					</b>
 				</span>
 				{gaps > 0 && (
@@ -69,7 +79,7 @@ const MaterialGroupBox: React.FC<MaterialGroupBoxProps> = ({
 				<button
 					type="button"
 					onClick={onAddPosition}
-					className="ml-auto bg-gelb px-3 py-1.5 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-papier"
+					className="ml-auto bg-gelb px-3 py-1.5 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte max-[899px]:min-h-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-papier"
 				>
 					{addPositionLabel(group, axis)}
 				</button>
@@ -91,11 +101,13 @@ const MaterialGroupBox: React.FC<MaterialGroupBoxProps> = ({
 								onClick={() => onCategoryChange(active ? null : category)}
 								className={cn(
 									'border-1.5 border-tinte px-2.5 py-0.5 text-[11.5px] font-bold',
+									// Tippziel ≥ 40px am Handy (DESIGN-VISION §6), wie im Toolkit.
+									'max-[899px]:min-h-10 max-[899px]:px-3.5',
 									'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte',
 									active ? 'bg-tinte text-white' : 'bg-white text-tinte'
 								)}
 							>
-								{category}
+								{categoryChipLabel(category)}
 							</button>
 						);
 					})}

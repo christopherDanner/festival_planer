@@ -122,6 +122,10 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				onExportOrderList={() => setDialogState({ type: 'order-export' })}
 			/>
 
+			{/* Der Bereichskopf folgt der Suche, nicht dem Reiter und nicht dem
+			Kategorie-Chip: die zwei Zahlen sollen mit den Dashboard-Kästen desselben
+			Fests zusammenpassen (ADR 0006), und Reiter wie Chip sind Sichten auf
+			*einen* Kasten. */}
 			<MaterialTotals materials={found} totalCount={materials.length} />
 
 			<MaterialAxisBar axis={axis} onAxisChange={setAxis} />
@@ -137,7 +141,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 				<MaterialGroupBox
 					group={activeGroup}
 					axis={axis}
-					materials={visible}
+					visibleMaterials={visible}
 					categories={groupChips}
 					activeCategory={activeCategory}
 					onCategoryChange={setRequestedCategory}

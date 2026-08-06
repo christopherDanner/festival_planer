@@ -20,7 +20,9 @@ import {
 	filterByCategory,
 	resolveActiveCategory,
 	prefillFromGroup,
+	categoryChipLabel,
 	NO_CATEGORY,
+	NO_CATEGORY_KEY,
 	type GroupableMaterial
 } from '../materialGrouping';
 
@@ -245,8 +247,10 @@ describe('Kategorie-Chips im Kasten', () => {
 		material({ name: 'Funkgerät', category: null })
 	];
 
-	it('nennt jede Kategorie der Gruppe einmal, „Ohne Kategorie" am Ende', () => {
-		expect(groupCategories(rows)).toEqual(['Getränke', 'Lebensmittel', NO_CATEGORY]);
+	it('nennt jede Kategorie der Gruppe einmal, die Restgruppe am Ende', () => {
+		expect(groupCategories(rows)).toEqual(['Getränke', 'Lebensmittel', NO_CATEGORY_KEY]);
+		expect(categoryChipLabel(NO_CATEGORY_KEY)).toBe(NO_CATEGORY);
+		expect(categoryChipLabel('Getränke')).toBe('Getränke');
 	});
 
 	it('filtert die Gruppe auf eine Kategorie', () => {
@@ -257,8 +261,21 @@ describe('Kategorie-Chips im Kasten', () => {
 		expect(filterByCategory(rows, null)).toHaveLength(4);
 	});
 
-	it('fängt mit „Ohne Kategorie" die Positionen ohne Kategorie', () => {
-		expect(filterByCategory(rows, NO_CATEGORY).map((m) => m.name)).toEqual(['Funkgerät']);
+	it('fängt mit dem Restgruppen-Chip die Positionen ohne Kategorie', () => {
+		expect(filterByCategory(rows, NO_CATEGORY_KEY).map((m) => m.name)).toEqual(['Funkgerät']);
+	});
+
+	it('hält eine Kategorie, die wirklich „Ohne Kategorie" heißt, davon getrennt', () => {
+		const heikel = [
+			material({ name: 'Funkgerät', category: null }),
+			material({ name: 'Erste-Hilfe-Koffer', category: NO_CATEGORY })
+		];
+
+		expect(groupCategories(heikel)).toEqual([NO_CATEGORY, NO_CATEGORY_KEY]);
+		expect(filterByCategory(heikel, NO_CATEGORY).map((m) => m.name)).toEqual([
+			'Erste-Hilfe-Koffer'
+		]);
+		expect(filterByCategory(heikel, NO_CATEGORY_KEY).map((m) => m.name)).toEqual(['Funkgerät']);
 	});
 
 	it('lässt den Chip fallen, wenn ihn die neue Gruppe nicht hat', () => {
