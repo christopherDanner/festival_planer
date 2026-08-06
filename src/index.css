@@ -23,6 +23,8 @@ oklch(var(--token) / <alpha-value>). Keine hsl()-Tokens mehr.
 		--gelb: 0.86 0.15 92;
 		--rot: 0.55 0.18 30;
 		--linie: 0.87 0.012 100;
+		/* Kreide: Sekundärtext auf grünem Grund — Mast-Zeitzeile, Plakat-Unterzeilen */
+		--kreide: 0.92 0.02 110;
 		--fusszeile: 0.955 0.01 100;
 		--weiss: 1 0 0;
 

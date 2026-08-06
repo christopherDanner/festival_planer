@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/components/AuthProvider';
-import FestivalWizard from '@/components/FestivalWizard';
 import FestivalListMast from '@/components/festival-list/FestivalListMast';
 import FestivalWall from '@/components/festival-list/FestivalWall';
 import { arrangeFestivalWall, festivalTitle } from '@/components/festival-list/festivalList';
@@ -11,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import type { FestivalMetricsMap } from '@/lib/festivalMetrics';
 import { getFestivalMetrics } from '@/lib/festivalMetricsService';
+import { festivalWorkspacePath, newFestivalPath } from '@/lib/festivalRoutes';
 import {
 	deleteFestival,
 	getUserFestivals,
@@ -21,15 +21,13 @@ import {
 
 /**
  * Fest-Einstieg („Meine Feste", Issue #90): Mast + Plakatwand mit drei Rängen.
- * Bis das Kopierwerk seine eigene Route hat (#93), führen „+ NEUES FEST" und
- * „ALS VORLAGE" weiter in den heutigen Wizard — letzteres mit vorbelegter Vorlage.
+ * „+ NEUES FEST" und „ALS VORLAGE" führen auf die Kopierwerk-Route (#93) —
+ * letzteres mit der Vorlage im Link, damit der Sprung deep-linkbar ist.
  */
 export default function Dashboard() {
 	const [festivals, setFestivals] = useState<Festival[]>([]);
 	const [metrics, setMetrics] = useState<FestivalMetricsMap>({});
 	const [loading, setLoading] = useState(true);
-	const [wizardTemplateId, setWizardTemplateId] = useState<string | undefined>();
-	const [showWizard, setShowWizard] = useState(false);
 	const [editing, setEditing] = useState<Festival | null>(null);
 
 	const { user, signOut } = useAuth();
@@ -88,15 +86,7 @@ export default function Dashboard() {
 		};
 	}, [festivals]);
 
-	const openWizard = (templateId?: string) => {
-		setWizardTemplateId(templateId);
-		setShowWizard(true);
-	};
-
-	const closeWizard = () => {
-		setShowWizard(false);
-		setWizardTemplateId(undefined);
-	};
+	const openKopierwerk = (templateId?: string) => navigate(newFestivalPath(templateId));
 
 	const handleSignOut = async () => {
 		await signOut();
@@ -127,19 +117,6 @@ export default function Dashboard() {
 		}
 	};
 
-	if (showWizard) {
-		return (
-			<FestivalWizard
-				initialTemplateId={wizardTemplateId}
-				onClose={closeWizard}
-				onComplete={() => {
-					closeWizard();
-					loadFestivals();
-				}}
-			/>
-		);
-	}
-
 	if (!user) {
 		return null;
 	}
@@ -161,7 +138,7 @@ export default function Dashboard() {
 					festivalCount={festivals.length}
 					upcomingCount={ranks.upcomingCount}
 					compact={isMobile}
-					onNewFestival={() => openWizard()}
+					onNewFestival={() => openKopierwerk()}
 					onSponsors={() => navigate('/sponsors')}
 					onSignOut={handleSignOut}
 				/>
@@ -178,11 +155,11 @@ export default function Dashboard() {
 							ranks={ranks}
 							today={today}
 							metrics={metrics}
-							onOpen={(festival) => navigate(`/festival-results?id=${festival.id}`)}
-							onUseAsTemplate={(festival) => openWizard(festival.id)}
+							onOpen={(festival) => navigate(festivalWorkspacePath(festival.id))}
+							onUseAsTemplate={(festival) => openKopierwerk(festival.id)}
 							onEdit={setEditing}
 							onDelete={handleDelete}
-							onNewFestival={() => openWizard()}
+							onNewFestival={() => openKopierwerk()}
 						/>
 					)}
 				</div>
