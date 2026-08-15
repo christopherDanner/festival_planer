@@ -75,6 +75,20 @@ describe('stationPreviewRows', () => {
 		});
 	});
 
+	// Die Vorlage steht schon, während Schritt 1 noch leer ist — über den
+	// Deep-Link `?vorlage=` sogar von Anfang an. Ohne Startdatum gibt es keinen
+	// neuen Termin zu zeigen; gerechnet werden darf damit erst recht nicht.
+	it('zeigt ohne Startdatum des neuen Fests nichts an', () => {
+		expect(
+			stationPreviewRows({
+				stations: [station()],
+				shifts: [shift()],
+				sourceStartDate: SOURCE_START,
+				targetStartDate: ''
+			})
+		).toEqual([]);
+	});
+
 	it('nennt eine Schicht über Mitternacht mit beiden Tagen', () => {
 		const [row] = rows(
 			[station()],

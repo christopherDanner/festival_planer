@@ -120,10 +120,6 @@ describe('„Alle Stationen"-Umschalter', () => {
 			'data-state="unchecked"'
 		);
 	});
-
-	it('beziffert die Auswahl', () => {
-		expect(render({ selectedStationIds: ['st-1'] })).toContain('1/2 gewählt');
-	});
 });
 
 describe('„Zuweisungen übernehmen"', () => {
@@ -153,8 +149,21 @@ describe('Handschrift', () => {
 		expect(html).not.toContain('overflow-hidden');
 	});
 
+	// Tippziele ≥ 40px am Handy (DESIGN-VISION §6): die Beschriftung neben der
+	// Checkbox gehört dazu, sie schaltet über `htmlFor` mit.
 	it('hält die Tippziele am Handy auf 40px', () => {
-		expect(render()).toContain('max-[899px]:min-h-10');
+		const html = render();
+		expect(html.match(/max-\[899px\]:min-h-10/g)?.length).toBeGreaterThanOrEqual(4);
+		expect(tagWithId(html, 'station-st-1')).toContain('h-[18px]');
+	});
+
+	it('setzt den Fokus als Tinte-Outline, ohne Ring darunter', () => {
+		expect(tagWithId(render(), 'alle-stationen')).toContain('focus-visible:outline-tinte');
+		expect(tagWithId(render(), 'alle-stationen')).toContain('focus-visible:ring-0');
+	});
+
+	it('setzt Stationsnamen in die Akzentschrift', () => {
+		expect(render()).toContain('font-display');
 	});
 
 	it('kommt ohne Rundungen aus', () => {

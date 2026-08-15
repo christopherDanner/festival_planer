@@ -1,3 +1,4 @@
+import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
 import { copiedShiftDateLabel, formatShiftRange } from '@/lib/shiftDates';
 import type { Station, StationShift } from '@/lib/shiftService';
 
@@ -9,6 +10,12 @@ import type { Station, StationShift } from '@/lib/shiftService';
  * nur als Vorschau darunter, damit man vor dem Anlegen sieht, auf welche Tage
  * sie rücken.
  */
+
+/**
+ * Was Schritt 2 zur Kopie beisteuert — der Ausschnitt aus `CopyFestivalOptions`,
+ * den diese Werkbank füllt. Das Material kommt aus Schritt 3.
+ */
+export type StationSelection = Pick<CopyFestivalOptions, 'stationIds' | 'copyAssignments'>;
 
 /** Eine Schicht in der Vorschau — read-only, ohne eigene Auswahl. */
 export interface ShiftPreview {
@@ -79,6 +86,11 @@ export function stationPreviewRows({
 	sourceStartDate,
 	targetStartDate
 }: StationPreviewInput): StationPreviewRow[] {
+	// Die Vorlage steht schon, während Schritt 1 noch leer ist — über den
+	// Deep-Link `?vorlage=` sogar von Anfang an. Ohne Startdatum gibt es keinen
+	// Versatz, und die Rechnung darüber liefe auf ein ungültiges Datum hinaus.
+	if (!targetStartDate || !sourceStartDate) return [];
+
 	return stations.map((station) => {
 		const own = shifts.filter((shift) => shift.station_id === station.id);
 		return {

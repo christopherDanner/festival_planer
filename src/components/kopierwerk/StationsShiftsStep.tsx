@@ -1,21 +1,16 @@
+import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-import type { StationPreviewRow } from './stationChoice';
+import { allStationsState, type StationPreviewRow } from './stationChoice';
 
-/**
- * Checkbox in Werkzeug-Optik: 2px Tinte-Rahmen, gewählt grün gefüllt (#94).
- * Die Hülle füllt sonst gelb — Gelb ist die Primäraktion, das Häkchen einer
- * gewählten Station ist ein Zustand und trägt darum die Marken-Farbe.
- */
-const WERKZEUG_CHECKBOX =
-	'h-[18px] w-[18px] data-[state=checked]:border-gruen data-[state=checked]:bg-gruen data-[state=checked]:text-white data-[state=indeterminate]:border-gruen data-[state=indeterminate]:bg-gruen/30 data-[state=indeterminate]:text-gruen';
+/** Maß der Werkzeug-Checkbox (Prototyp `.cbx`); grün gefüllt über die Variante. */
+const CHECKBOX = 'h-[18px] w-[18px]';
 
-/** Fokus als 2px-Tinte-Outline mit Versatz (DESIGN-VISION §6). */
-const FOKUS =
-	'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte';
+/** Beschriftung als Tippziel: am Handy ≥ 40px hoch (DESIGN-VISION §6). */
+const TIPPZIEL = 'flex items-center max-[899px]:min-h-10';
 
 export interface StationsShiftsStepProps {
 	rows: StationPreviewRow[];
@@ -53,8 +48,10 @@ export default function StationsShiftsStep({
 	onBack,
 	onNext
 }: StationsShiftsStepProps) {
-	const chosen = rows.filter((row) => selectedStationIds.includes(row.id)).length;
-	const allState = chosen === 0 ? false : chosen === rows.length ? true : 'indeterminate';
+	const allState = allStationsState(
+		rows.map((row) => row.id),
+		selectedStationIds
+	);
 
 	return (
 		<div className="border-2.5 border-tinte bg-white">
@@ -72,19 +69,17 @@ export default function StationsShiftsStep({
 				</p>
 			) : (
 				<>
-					<div className="flex flex-wrap items-center gap-2.5 border-b border-linie px-4 py-2.5 max-[899px]:min-h-10">
+					<div className="flex flex-wrap items-center gap-2.5 border-b border-linie px-4 py-2.5">
 						<Checkbox
 							id="alle-stationen"
+							variant="gruen"
 							checked={allState}
 							onCheckedChange={onToggleAllStations}
-							className={cn(WERKZEUG_CHECKBOX, FOKUS)}
+							className={cn(CHECKBOX, FOCUS_INK)}
 						/>
-						<Label htmlFor="alle-stationen" className="text-[13px] font-bold">
+						<Label htmlFor="alle-stationen" className={cn(TIPPZIEL, 'text-[13px] font-bold')}>
 							Alle Stationen
 						</Label>
-						<span className="ml-auto text-[11.5px] text-tinte-soft">
-							{chosen}/{rows.length} gewählt
-						</span>
 					</div>
 
 					<ul>
@@ -93,14 +88,18 @@ export default function StationsShiftsStep({
 							const panelId = `schichten-${row.id}`;
 							return (
 								<li key={row.id} className="border-b border-linie last:border-b-0">
-									<div className="flex flex-wrap items-center gap-2.5 px-4 py-2.5 text-[13.5px] max-[899px]:min-h-10">
+									<div className="flex flex-wrap items-center gap-2.5 px-4 py-2.5 text-[13.5px]">
 										<Checkbox
 											id={`station-${row.id}`}
+											variant="gruen"
 											checked={selectedStationIds.includes(row.id)}
 											onCheckedChange={() => onToggleStation(row.id)}
-											className={cn(WERKZEUG_CHECKBOX, FOKUS)}
+											className={cn(CHECKBOX, FOCUS_INK)}
 										/>
-										<Label htmlFor={`station-${row.id}`} className="text-[13.5px] font-bold">
+										{/* Stationsnamen tragen die Akzentschrift (DESIGN-VISION §4). */}
+										<Label
+											htmlFor={`station-${row.id}`}
+											className={cn(TIPPZIEL, 'font-display text-[15px] font-semibold')}>
 											{row.name}
 										</Label>
 										<span className="text-[11.5px] text-tinte-soft">{row.meta}</span>
@@ -111,8 +110,9 @@ export default function StationsShiftsStep({
 											onClick={() => onToggleExpanded(row.id)}
 											className={cn(
 												'ml-auto px-1 text-[11px] font-extrabold uppercase tracking-[.04em] text-gruen',
+												// Tippziel ≥ 40px am Handy (DESIGN-VISION §6).
 												'max-[899px]:min-h-10 max-[899px]:px-2.5',
-												FOKUS
+												FOCUS_INK
 											)}>
 											{open ? 'ZUKLAPPEN ▴' : 'AUFKLAPPEN ▾'}
 										</button>
@@ -145,15 +145,18 @@ export default function StationsShiftsStep({
 						})}
 					</ul>
 
-					<div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-linie px-4 py-3 max-[899px]:min-h-10">
+					<div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-linie px-4 py-3">
 						<div className="flex items-center gap-2.5">
 							<Checkbox
 								id="zuweisungen-uebernehmen"
+								variant="gruen"
 								checked={copyAssignments}
 								onCheckedChange={(value) => onCopyAssignmentsChange(value === true)}
-								className={cn(WERKZEUG_CHECKBOX, FOKUS)}
+								className={cn(CHECKBOX, FOCUS_INK)}
 							/>
-							<Label htmlFor="zuweisungen-uebernehmen" className="text-[12.5px] font-bold">
+							<Label
+								htmlFor="zuweisungen-uebernehmen"
+								className={cn(TIPPZIEL, 'text-[12.5px] font-bold')}>
 								Zuweisungen übernehmen (Helfer + Verantwortliche)
 							</Label>
 						</div>

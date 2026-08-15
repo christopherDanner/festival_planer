@@ -25,12 +25,14 @@ function shortHour(time: string): string {
 	return hhmm.endsWith(':00') ? hhmm.slice(0, 2) : hhmm;
 }
 
-/** „24.07.2027" — der Termin, wie ihn ein Kalender schreibt. */
-function germanDate(date: string): string {
+/** Tag, Monat und Jahr eines Datum-Strings, zweistellig — „24", „07", „2027". */
+function dateParts(date: string): { day: string; month: string; year: string } {
 	const d = festDayStart(date);
-	const day = String(d.getDate()).padStart(2, '0');
-	const month = String(d.getMonth() + 1).padStart(2, '0');
-	return `${day}.${month}.${d.getFullYear()}`;
+	return {
+		day: String(d.getDate()).padStart(2, '0'),
+		month: String(d.getMonth() + 1).padStart(2, '0'),
+		year: String(d.getFullYear())
+	};
 }
 
 /** Schicht als kompakte Zeitspanne, z. B. „Sa 15–19" (mehrtägig: „Sa 22–So 02"). */
@@ -70,15 +72,18 @@ export function copiedShiftDateLabel(
 	targetStart: string
 ): string {
 	const start = shiftFestivalDate(sourceStart, shift.start_date, targetStart);
+	const from = dateParts(start);
 	const crossesDay = shift.end_date && shift.end_date !== shift.start_date;
-	if (!crossesDay) return `${weekday(start)} ${germanDate(start)}`;
+	if (!crossesDay) return `${weekday(start)} ${from.day}.${from.month}.${from.year}`;
 
 	const end = shiftFestivalDate(sourceStart, shift.end_date as string, targetStart);
-	const days = `${weekday(start)}/${weekday(end)}`;
-	// Innerhalb eines Monats steht er nur einmal: „24.–25.07.2027".
-	const sameMonth = start.slice(0, 7) === end.slice(0, 7);
-	const span = sameMonth
-		? `${germanDate(start).slice(0, 3)}–${germanDate(end)}`
-		: `${germanDate(start).slice(0, 6)}–${germanDate(end)}`;
-	return `${days} ${span}`;
+	const to = dateParts(end);
+	// Innerhalb eines Monats steht der Monat nur einmal („24.–25.07.2027"); über
+	// den Monatswechsel zweimal, sonst läse sich „31.–01.08." als ein Zeitraum
+	// innerhalb des Augusts.
+	const span =
+		from.month === to.month && from.year === to.year
+			? `${from.day}.–${to.day}.${to.month}.${to.year}`
+			: `${from.day}.${from.month}.–${to.day}.${to.month}.${to.year}`;
+	return `${weekday(start)}/${weekday(end)} ${span}`;
 }

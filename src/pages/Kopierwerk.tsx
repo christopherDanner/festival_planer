@@ -11,7 +11,8 @@ import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
 import {
 	stationPreviewRows,
 	toggleAllStations,
-	toggleStation
+	toggleStation,
+	type StationSelection
 } from '@/components/kopierwerk/stationChoice';
 import { loadTemplate, type LoadedTemplate } from '@/components/kopierwerk/loadTemplate';
 import {
@@ -33,12 +34,6 @@ type CopySelection = Omit<
 	CopyFestivalOptions,
 	'sourceFestivalStartDate' | 'targetFestivalStartDate'
 >;
-
-/** Was Schritt 2 zur Kopie beisteuert. */
-interface StationSelection {
-	stationIds: string[];
-	copyAssignments: boolean;
-}
 
 /**
  * Kopierwerk (`/festivals/neu`, Issue #93): eigene Route statt In-Page-Zustand
@@ -243,12 +238,10 @@ export default function Kopierwerk() {
 							)
 						}))
 					}
+					// Auf- und Zuklappen ist dasselbe An/Aus wie das Ankreuzen, nur auf
+					// der Liste der aufgeklappten Stationen.
 					onToggleExpanded={(stationId) =>
-						setExpandedStationIds((previous) =>
-							previous.includes(stationId)
-								? previous.filter((id) => id !== stationId)
-								: [...previous, stationId]
-						)
+						setExpandedStationIds((previous) => toggleStation(previous, stationId))
 					}
 					onCopyAssignmentsChange={(value) =>
 						setStationSelection((previous) => ({ ...previous, copyAssignments: value }))
