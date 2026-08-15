@@ -6,9 +6,7 @@ import {
 	materialChipSections,
 	sourceQuantity,
 	stationLoss,
-	toggleAll,
 	toggleChip,
-	toggleMaterial,
 	type CopyableMaterial
 } from './materialChoice';
 
@@ -19,7 +17,6 @@ function material(over: Partial<CopyableMaterial> = {}): CopyableMaterial {
 		category: 'Getränke',
 		supplier: 'Metro',
 		unit: 'Liter',
-		station_id: 's1',
 		station: { id: 's1', name: 'Ausschank' },
 		ordered_quantity: 100,
 		actual_quantity: null,
@@ -59,9 +56,12 @@ describe('Mengenquelle', () => {
  * sichtbar wird es hier.
  */
 describe('Positionen, die ohne Station ankommen', () => {
-	const ausschank = material({ id: 'm-bier', station_id: 's-ausschank' });
-	const grill = material({ id: 'm-kohle', station_id: 's-grill' });
-	const ohneStation = material({ id: 'm-funk', station_id: null, station: null });
+	const ausschank = material({
+		id: 'm-bier',
+		station: { id: 's-ausschank', name: 'Ausschank' }
+	});
+	const grill = material({ id: 'm-kohle', station: { id: 's-grill', name: 'Grill' } });
+	const ohneStation = material({ id: 'm-funk', station: null });
 	const alle = [ausschank, grill, ohneStation];
 	const alleIds = new Set(alle.map((m) => m.id));
 
@@ -80,12 +80,12 @@ describe('Positionen, die ohne Station ankommen', () => {
 		expect(loss.ids.has('m-bier')).toBe(true);
 	});
 
-	it('zählt im Satz nur die Positionen, die auch wirklich kopiert werden', () => {
+	// Abgewählt heißt: kommt gar nicht an. Marke und Satz führen dieselbe Menge,
+	// sonst stünden drei rote Zeilen über dem Satz „1 Position kommt …".
+	it('nimmt nur die Positionen auf, die auch wirklich kopiert werden', () => {
 		const loss = stationLoss(alle, new Set<string>(), new Set(['m-bier']));
 
-		// Beide hängen an abgewählten Stationen, aber nur „m-bier" fährt mit.
-		expect(loss.ids.size).toBe(2);
-		expect(loss.arriving).toBe(1);
+		expect([...loss.ids]).toEqual(['m-bier']);
 		expect(loss.notice).toBe(
 			'1 Position kommt ohne Station an, weil ihre Station nicht mitkopiert wird.'
 		);
@@ -94,7 +94,7 @@ describe('Positionen, die ohne Station ankommen', () => {
 	it('schreibt den Satz aus dem Ticket, sobald mehrere betroffen sind', () => {
 		const loss = stationLoss(alle, new Set<string>(), alleIds);
 
-		expect(loss.arriving).toBe(2);
+		expect(loss.ids.size).toBe(2);
 		expect(loss.notice).toBe(
 			'2 Positionen kommen ohne Station an, weil deren Station nicht mitkopiert wird.'
 		);
@@ -104,16 +104,13 @@ describe('Positionen, die ohne Station ankommen', () => {
 		const loss = stationLoss(alle, new Set(['s-ausschank', 's-grill']), alleIds);
 
 		expect(loss.ids.size).toBe(0);
-		expect(loss.arriving).toBe(0);
 		expect(loss.notice).toBeNull();
 	});
 
-	// Abgewählt heißt: kommt gar nicht an. Der Satz stünde sonst über einer
-	// Liste, in der nichts mehr betroffen ist.
 	it('schweigt, wenn keine der betroffenen Positionen gewählt ist', () => {
 		const loss = stationLoss(alle, new Set<string>(), new Set(['m-funk']));
 
-		expect(loss.ids.size).toBe(2);
+		expect(loss.ids.size).toBe(0);
 		expect(loss.notice).toBeNull();
 	});
 });
@@ -124,16 +121,9 @@ describe('Gruppen-Chips', () => {
 		id: 'm-wein',
 		category: 'Getränke',
 		supplier: 'Winzer',
-		station_id: 's-weinlaube',
 		station: { id: 's-weinlaube', name: 'Weinlaube' }
 	});
-	const funk = material({
-		id: 'm-funk',
-		category: null,
-		supplier: 'Metro',
-		station_id: null,
-		station: null
-	});
+	const funk = material({ id: 'm-funk', category: null, supplier: 'Metro', station: null });
 	const alle = [bier, wein, funk];
 
 	const section = (axis: string) => {
@@ -182,7 +172,6 @@ describe('Gruppen-Chips', () => {
 				id: 'm-most',
 				category: 'Getränke',
 				supplier: 'Metro',
-				station_id: 's-weinlaube',
 				station: { id: 's-weinlaube', name: 'Weinlaube' }
 			})
 		];
@@ -205,20 +194,5 @@ describe('Gruppen-Chips', () => {
 
 		expect([...toggleChip(new Set(['m-bier', 'm-wein', 'm-funk']), getraenke)]).toEqual(['m-funk']);
 		expect([...toggleChip(new Set(['m-bier']), getraenke)].sort()).toEqual(['m-bier', 'm-wein']);
-	});
-});
-
-describe('Einzelauswahl', () => {
-	const alle = [material({ id: 'm1' }), material({ id: 'm2' })];
-
-	it('schaltet eine Position an und wieder aus', () => {
-		expect([...toggleMaterial(new Set(['m1']), 'm2')].sort()).toEqual(['m1', 'm2']);
-		expect([...toggleMaterial(new Set(['m1', 'm2']), 'm1')]).toEqual(['m2']);
-	});
-
-	it('räumt „Alle/Keine" die Liste leer, sobald alles gewählt ist', () => {
-		expect([...toggleAll(alle, new Set(['m1', 'm2']))]).toEqual([]);
-		expect([...toggleAll(alle, new Set(['m1']))].sort()).toEqual(['m1', 'm2']);
-		expect([...toggleAll(alle, new Set())].sort()).toEqual(['m1', 'm2']);
 	});
 });

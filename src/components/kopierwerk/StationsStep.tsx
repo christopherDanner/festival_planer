@@ -5,6 +5,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import type { Station, StationShift } from '@/lib/shiftService';
 
+import { checkboxState, toggleAllIds, toggleId } from './selection';
+
 export interface StationsStepProps {
 	stations: Station[];
 	shifts: StationShift[];
@@ -43,13 +45,7 @@ export default function StationsStep({
 		return perStation;
 	}, [shifts]);
 
-	const allSelected = stations.length > 0 && selectedStationIds.size === stations.length;
-
-	const toggleStation = (id: string) => {
-		const next = new Set(selectedStationIds);
-		if (!next.delete(id)) next.add(id);
-		onSelectionChange(next);
-	};
+	const allIds = stations.map((station) => station.id);
 
 	return (
 		<div className="space-y-6">
@@ -65,12 +61,8 @@ export default function StationsStep({
 							<div className="flex items-center gap-2">
 								<Checkbox
 									id="all-stations"
-									checked={
-										allSelected ? true : selectedStationIds.size === 0 ? false : 'indeterminate'
-									}
-									onCheckedChange={() =>
-										onSelectionChange(allSelected ? new Set() : new Set(stations.map((s) => s.id)))
-									}
+									checked={checkboxState(allIds, selectedStationIds)}
+									onCheckedChange={() => onSelectionChange(toggleAllIds(allIds, selectedStationIds))}
 								/>
 								<Label htmlFor="all-stations" className="text-sm font-medium">
 									Alle Stationen
@@ -83,7 +75,9 @@ export default function StationsStep({
 										className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/30">
 										<Checkbox
 											checked={selectedStationIds.has(station.id)}
-											onCheckedChange={() => toggleStation(station.id)}
+											onCheckedChange={() =>
+												onSelectionChange(toggleId(selectedStationIds, station.id))
+											}
 										/>
 										<span className="flex-1 text-sm">{station.name}</span>
 										<span className="text-xs text-muted-foreground">

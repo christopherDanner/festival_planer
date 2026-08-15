@@ -159,9 +159,10 @@ export function stampCardHeading(
 	return { title: draft.name.trim() || 'Neues Fest', sub: parts.join(' · ') };
 }
 
-/** Was die Schritte 2 und 3 zusammengetragen haben. */
+/** Was die Schritte 2 und 3 zusammengetragen haben. Beide Auswahlen sind
+Mengen — auf dem Bildschirm ist es dieselbe Art von Häkchen. */
 export interface CopySelection {
-	stationIds: string[];
+	stationIds: ReadonlySet<string>;
 	copyAssignments: boolean;
 	materialIds: ReadonlySet<string>;
 	quantitySource: QuantitySource;
@@ -179,7 +180,7 @@ export function copyFestivalOptions(
 	selection: CopySelection
 ): CopyFestivalOptions {
 	return {
-		stationIds: selection.stationIds,
+		stationIds: [...selection.stationIds],
 		copyAssignments: selection.copyAssignments,
 		materialIds: [...selection.materialIds],
 		materialQuantitySource: selection.quantitySource,

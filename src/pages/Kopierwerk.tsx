@@ -148,7 +148,7 @@ export default function Kopierwerk() {
 						source.festival.id,
 						festivalId,
 						copyFestivalOptions(source.festival, draft, {
-							stationIds: [...stationIds],
+							stationIds,
 							copyAssignments,
 							materialIds,
 							quantitySource

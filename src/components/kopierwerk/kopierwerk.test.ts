@@ -160,7 +160,7 @@ describe('Fußzeile von Schritt 1', () => {
 
 describe('Kopier-Auftrag aus den Schritten 2 und 3', () => {
 	const selection = {
-		stationIds: ['s-ausschank', 's-grill'],
+		stationIds: new Set(['s-ausschank', 's-grill']),
 		copyAssignments: true,
 		materialIds: new Set(['m-bier', 'm-kohle']),
 		quantitySource: 'actual' as const

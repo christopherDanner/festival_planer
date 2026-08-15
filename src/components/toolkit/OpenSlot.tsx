@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-export interface OpenSlotProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface OpenSlotProps extends React.HTMLAttributes<HTMLElement> {
 	/**
 	 * `span` trägt dasselbe Rezept als reine Notiz — für Stellen, an denen die
 	 * rote Lücke nichts zum Anklicken ist (#95: „ohne Station" in der Zeile).
@@ -19,8 +19,6 @@ export function OpenSlot({ className, as = 'button', ...props }: OpenSlotProps) 
 		className,
 	);
 
-	if (as === 'span') {
-		return <span className={recipe} {...(props as React.HTMLAttributes<HTMLSpanElement>)} />;
-	}
+	if (as === 'span') return <span className={recipe} {...props} />;
 	return <button type="button" className={recipe} {...props} />;
 }

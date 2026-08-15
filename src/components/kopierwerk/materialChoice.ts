@@ -3,7 +3,12 @@ und die Frage, welche Position ohne Station im neuen Fest ankommt. Reines
 Logikmodul ohne React — die Werkbank fragt nur und stellt dar. */
 
 import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
-import { MATERIAL_AXES, groupMaterials, type GroupableMaterial } from '@/lib/materialGrouping';
+import {
+	MATERIAL_AXES,
+	groupMaterials,
+	type GroupableMaterial,
+	type MaterialAxis
+} from '@/lib/materialGrouping';
 
 /** Aus welcher Spalte die Menge der kopierten Position kommt. Der Typ hängt am
 Kopier-Service, damit Schalter und Auftrag nicht auseinanderlaufen. */
@@ -16,12 +21,13 @@ export const QUANTITY_SOURCES: readonly { value: QuantitySource; label: string }
 ];
 
 /** Was Schritt 3 von einer Position der Vorlage braucht — strukturell, damit
-Testfixturen ohne vollständige DB-Zeile auskommen. */
+Testfixturen ohne vollständige DB-Zeile auskommen. Die Station steht allein in
+`station` (von `GroupableMaterial`): Chips und Warnung müssen dieselbe
+Zuordnung lesen, sonst warnt die Zeile über eine Gruppe, in der sie nicht
+steht. */
 export interface CopyableMaterial extends GroupableMaterial {
 	id: string;
 	unit: string;
-	/** Die Zuordnung, nach der `copyFestivalData` umschlüsselt. */
-	station_id: string | null;
 }
 
 /**
@@ -35,23 +41,24 @@ export function sourceQuantity(material: CopyableMaterial, source: QuantitySourc
 
 /** Was Schritt 3 über die Kante „Material zeigt auf Stationen" zu sagen hat. */
 export interface StationLoss {
-	/** Positionen, deren Station nicht mitkopiert wird — sie tragen die rote
-	Notiz in der Zeile, ob gewählt oder nicht. */
+	/** Die Positionen, die ohne Station ankommen — sie tragen die rote Notiz in
+	der Zeile und stehen im Satz darüber. Eine Menge, kein zweiter Zähler:
+	sonst stünden drei rote Zeilen über dem Satz „1 Position kommt ohne Station
+	an". */
 	ids: ReadonlySet<string>;
-	/** Davon gewählt: nur diese kommen wirklich ohne Station an. */
-	arriving: number;
-	/** Der Satz über der Liste; `null`, solange keine davon ankommt. */
+	/** Der Satz über der Liste; `null`, solange keine Position betroffen ist. */
 	notice: string | null;
 }
 
 /**
- * Welche Position hängt an einer in Schritt 2 abgewählten Station? Genau die
- * verliert sie beim Kopieren: `copyFestivalData` schlägt `station_id` in der
- * Karte der kopierten Stationen nach und schreibt sonst `null`.
+ * Welche gewählte Position hängt an einer in Schritt 2 abgewählten Station?
+ * Genau die verliert sie beim Kopieren: `copyFestivalData` schlägt die Station
+ * in der Karte der kopierten Stationen nach und schreibt sonst `null`.
  *
- * Wer nie eine Station hatte, ist nicht betroffen — an ihm ändert die Auswahl
- * aus Schritt 2 nichts. Gezählt wird nur, was auch gewählt ist: eine abgewählte
- * Position kommt gar nicht an, über sie gibt es nichts zu warnen (#95).
+ * Zwei Einschränkungen, beide aus dem Wortlaut „kommt ohne Station **an**":
+ * Wer nie eine Station hatte, ist nicht betroffen — an ihm ändert Schritt 2
+ * nichts. Und eine abgewählte Position kommt gar nicht an, über sie gibt es
+ * nichts zu warnen. Abgewählt wird von hier aus nichts (Entscheid #64).
  */
 export function stationLoss(
 	materials: readonly CopyableMaterial[],
@@ -59,30 +66,37 @@ export function stationLoss(
 	selectedMaterialIds: ReadonlySet<string>
 ): StationLoss {
 	const ids = new Set<string>();
-	let arriving = 0;
 
 	for (const material of materials) {
-		if (!material.station_id || selectedStationIds.has(material.station_id)) continue;
-		ids.add(material.id);
-		if (selectedMaterialIds.has(material.id)) arriving += 1;
+		const stationId = material.station?.id;
+		if (!stationId || selectedStationIds.has(stationId)) continue;
+		if (selectedMaterialIds.has(material.id)) ids.add(material.id);
 	}
 
-	return { ids, arriving, notice: stationLossNotice(arriving) };
+	return { ids, notice: stationLossNotice(ids.size) };
 }
 
 /** Der Satz über der Liste — im Wortlaut des Tickets. */
-function stationLossNotice(arriving: number): string | null {
-	if (arriving === 0) return null;
-	return arriving === 1
+function stationLossNotice(count: number): string | null {
+	if (count === 0) return null;
+	return count === 1
 		? '1 Position kommt ohne Station an, weil ihre Station nicht mitkopiert wird.'
-		: `${arriving} Positionen kommen ohne Station an, weil deren Station nicht mitkopiert wird.`;
+		: `${count} Positionen kommen ohne Station an, weil deren Station nicht mitkopiert wird.`;
 }
 
-/** Die Achsen, nach denen Schritt 3 Chips anbietet — dieselben wie die
-Arbeitsliste, ohne ALLE (das ist der „Alle/Keine"-Umschalter über der Liste). */
-const CHIP_AXES = ['category', 'supplier', 'station'] as const;
+export type ChipAxis = Exclude<MaterialAxis, 'all'>;
 
-export type ChipAxis = (typeof CHIP_AXES)[number];
+/** Die Achsen, nach denen Schritt 3 Chips anbietet — dieselben wie die
+Arbeitsliste, ohne ALLE (das ist der „Alle/Keine"-Umschalter über der Liste).
+Reihenfolge aus dem Ticket, Beschriftung aus `MATERIAL_AXES`: eine Achse darf im
+Kopierwerk nicht anders heißen als in der Arbeitsliste. */
+const CHIP_AXES: readonly { value: ChipAxis; label: string }[] = (
+	['category', 'supplier', 'station'] as const
+).map((value) => {
+	const axis = MATERIAL_AXES.find((entry) => entry.value === value);
+	if (!axis) throw new Error(`Achse „${value}" fehlt in MATERIAL_AXES`);
+	return { value, label: axis.label };
+});
 
 /** Ein Chip schaltet die Positionen einer Gruppe gemeinsam um. */
 export interface MaterialChip {
@@ -113,10 +127,10 @@ export type ChipState = 'all' | 'some' | 'none';
 export function materialChipSections(
 	materials: readonly CopyableMaterial[]
 ): MaterialChipSection[] {
-	return CHIP_AXES.map((axis) => ({
-		axis,
-		label: MATERIAL_AXES.find((entry) => entry.value === axis)?.label ?? '',
-		chips: groupMaterials([...materials], axis).map((group) => ({
+	return CHIP_AXES.map(({ value, label }) => ({
+		axis: value,
+		label,
+		chips: groupMaterials([...materials], value).map((group) => ({
 			id: group.id,
 			label: group.name,
 			materialIds: group.materials.map((material) => material.id)
@@ -142,20 +156,4 @@ export function toggleChip(selected: ReadonlySet<string>, chip: MaterialChip): S
 		else next.add(id);
 	}
 	return next;
-}
-
-/** Einzelauswahl einer Position. */
-export function toggleMaterial(selected: ReadonlySet<string>, id: string): Set<string> {
-	const next = new Set(selected);
-	if (!next.delete(id)) next.add(id);
-	return next;
-}
-
-/** „Alle/Keine": nur eine vollständige Auswahl räumt leer, jede andere füllt auf. */
-export function toggleAll(
-	materials: readonly CopyableMaterial[],
-	selected: ReadonlySet<string>
-): Set<string> {
-	const all = materials.map((material) => material.id);
-	return all.every((id) => selected.has(id)) ? new Set() : new Set(all);
 }

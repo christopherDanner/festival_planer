@@ -3,6 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
 import { Stamp } from '@/components/toolkit/Stamp';
+import { ValueTag } from '@/components/toolkit/ValueTag';
 import { cn } from '@/lib/utils';
 
 import {
@@ -11,14 +12,13 @@ import {
 	materialChipSections,
 	sourceQuantity,
 	stationLoss,
-	toggleAll,
 	toggleChip,
-	toggleMaterial,
 	type ChipState,
 	type CopyableMaterial,
 	type MaterialChip,
 	type QuantitySource
 } from './materialChoice';
+import { checkboxState, toggleAllIds, toggleId } from './selection';
 
 export interface MaterialStepProps {
 	/** Die Positionen der Vorlage. */
@@ -57,8 +57,7 @@ export default function MaterialStep({
 }: MaterialStepProps) {
 	const loss = stationLoss(materials, selectedStationIds, selectedMaterialIds);
 	const sections = materialChipSections(materials);
-	const allSelected =
-		materials.length > 0 && materials.every((material) => selectedMaterialIds.has(material.id));
+	const allIds = materials.map((material) => material.id);
 
 	return (
 		<div className="border-2.5 border-tinte bg-white">
@@ -108,10 +107,8 @@ export default function MaterialStep({
 					<div className="flex flex-wrap items-center gap-3 border-b border-linie px-4 py-2.5">
 						<label className="flex cursor-pointer items-center gap-2.5 text-[12.5px] font-bold">
 							<Checkbox
-								checked={
-									allSelected ? true : selectedMaterialIds.size === 0 ? false : 'indeterminate'
-								}
-								onCheckedChange={() => onSelectionChange(toggleAll(materials, selectedMaterialIds))}
+								checked={checkboxState(allIds, selectedMaterialIds)}
+								onCheckedChange={() => onSelectionChange(toggleAllIds(allIds, selectedMaterialIds))}
 								className={TOOL_CHECKBOX}
 							/>
 							Alle / Keine
@@ -136,7 +133,7 @@ export default function MaterialStep({
 									<Checkbox
 										checked={selectedMaterialIds.has(material.id)}
 										onCheckedChange={() =>
-											onSelectionChange(toggleMaterial(selectedMaterialIds, material.id))
+											onSelectionChange(toggleId(selectedMaterialIds, material.id))
 										}
 										className={TOOL_CHECKBOX}
 									/>
@@ -177,8 +174,12 @@ export default function MaterialStep({
 const TOOL_CHECKBOX =
 	'h-[18px] w-[18px] data-[state=checked]:border-gruen data-[state=checked]:bg-gruen data-[state=checked]:text-white data-[state=indeterminate]:border-gruen data-[state=indeterminate]:bg-gruen data-[state=indeterminate]:text-white';
 
-/** Gruppen-Chip im Wertmarken-Rezept: ganz gewählt füllt er sich grün, teilweise
-steht die Marke grün auf Weiß, gar nicht gewählt bleibt sie grau auf Papier. */
+/**
+ * Gruppen-Chip als Wertmarke (`ValueTag`, ADR 0003 §4): ganz gewählt ist sie
+ * durchgedrückt grün, teilweise steht sie grün auf Weiß, gar nicht gewählt
+ * ruhig auf Papier. Der Knopf ist nur die Hülle — das Rezept gehört dem
+ * Toolkit, nicht dieser Seite.
+ */
 function GroupChip({
 	chip,
 	state,
@@ -195,22 +196,16 @@ function GroupChip({
 			data-chip-state={state}
 			aria-pressed={state !== 'none'}
 			onClick={onToggle}
-			className={cn(
-				'whitespace-nowrap border-1.5 px-[9px] py-[3px] text-[11.5px] font-bold',
+			className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte">
+			<ValueTag
+				tone={state === 'none' ? 'ink' : 'green'}
+				filled={state === 'all'}
 				// Tippziel ≥ 40px am Handy (DESIGN-VISION §6).
-				'max-[899px]:min-h-10 max-[899px]:px-3.5',
-				'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte',
-				chipTone(state)
-			)}>
-			{chip.label}
+				className="items-center max-[899px]:min-h-10 max-[899px]:px-3.5">
+				{chip.label}
+			</ValueTag>
 		</button>
 	);
-}
-
-function chipTone(state: ChipState): string {
-	if (state === 'all') return 'border-gruen bg-gruen text-white';
-	if (state === 'some') return 'border-gruen bg-white text-gruen';
-	return 'border-tinte-soft bg-papier text-tinte-soft';
 }
 
 /** Leerzustand: gestrichelter Rahmen, roter Stempelton, ein Satz — der Schritt

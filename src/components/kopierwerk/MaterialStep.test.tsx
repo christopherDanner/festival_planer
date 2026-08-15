@@ -11,7 +11,6 @@ function material(over: Partial<CopyableMaterial> = {}): CopyableMaterial {
 		category: 'Getränke',
 		supplier: 'Metro',
 		unit: 'Liter',
-		station_id: 's-ausschank',
 		station: { id: 's-ausschank', name: 'Ausschank' },
 		ordered_quantity: 100,
 		actual_quantity: null,
@@ -29,7 +28,6 @@ const kohle = material({
 	category: 'Brennstoff',
 	supplier: 'Lagerhaus',
 	unit: 'Sack',
-	station_id: 's-grill',
 	station: { id: 's-grill', name: 'Grill' }
 });
 const funk = material({
@@ -38,7 +36,6 @@ const funk = material({
 	category: null,
 	supplier: null,
 	unit: 'Stück',
-	station_id: null,
 	station: null
 });
 
@@ -172,6 +169,15 @@ describe('MaterialStep — Warnung „ohne Station"', () => {
 	// Der Entscheid aus #64: sichtbar warnen, nicht heimlich abwählen.
 	it('lässt die betroffene Position gewählt', () => {
 		expect(rowOf(render(ohneGrill), 'm-kohle')).toContain('data-state="checked"');
+	});
+
+	// Marke und Satz führen dieselbe Menge: eine abgewählte Position kommt gar
+	// nicht an, über sie steht auch nichts in Rot.
+	it('nimmt Marke und Satz zurück, sobald die Position abgewählt ist', () => {
+		const html = render({ ...ohneGrill, selectedMaterialIds: new Set(['m-bier', 'm-funk']) });
+
+		expect(rowOf(html, 'm-kohle')).not.toContain('ohne Station');
+		expect(html).not.toContain('ohne Station an');
 	});
 
 	it('schweigt, solange alle Stationen mitkommen', () => {
