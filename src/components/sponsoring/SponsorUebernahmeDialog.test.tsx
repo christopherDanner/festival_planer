@@ -147,10 +147,9 @@ describe('SponsorUebernahmeDialog', () => {
 
 		expect(document.body.textContent).toContain('Brauerei Schremser');
 		expect(document.body.textContent).not.toContain('Alle auswählen');
-		expect(knopf('Alle auswählen')).toBeNull();
 	});
 
-	it('übernimmt nur die angekreuzte Firma, mit ihrem Vorjahresbetrag', async () => {
+	it('übernimmt nur die angekreuzte Firma, mit ihrem Vorjahresbeitrag', async () => {
 		const quelle = await oeffneDialog();
 
 		await klick(haekchen('Brauerei Schremser'));

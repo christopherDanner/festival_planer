@@ -204,15 +204,12 @@ const SponsorUebernahmeDialog: React.FC<SponsorUebernahmeDialogProps> = ({
 						plans.length > 0 && (
 							<div className="space-y-2">
 								{/*
-									Hier gibt es bewusst kein "Alle auswählen" (#154). Der Dialog darf
-									Vorjahresbeträge mitnehmen, weil ein Mensch pro Firma entscheidet —
-									genau das rechtfertigt seine von der Kopierwerk-Semantik abweichende
-									Form (ADR 0008). Ein Knopf, der alle Firmen samt Beträgen in einem
-									Klick anlegt, hebt die Rechtfertigung auf: das Fest zeigte am Tag
-									seiner Anlage eingeworbenes Sponsoring, bei dem keine Firma gefragt
-									wurde. Der Massenfall ist mit der richtigen Semantik schon bedient —
-									das Kopierwerk bei der Fest-Anlage nimmt die Sponsoren als nackte
-									Verknüpfung ohne Beträge mit (#146). Die Reibung ist gewollt.
+									Hier steht bewusst kein "Alle auswählen" (#154): der Einzelentscheid
+									pro Firma ist genau die Rechtfertigung dafür, dass dieser Weg Werte
+									mitnehmen darf (siehe handleTransfer, ADR 0008) — ein Klick, der alle
+									Firmen samt Beträgen anlegt, hebt sie auf. Den Massenfall bedient
+									das Kopierwerk bei der Fest-Anlage, als nackte Verknüpfung ohne
+									Beträge (#146). Die Reibung ist gewollt, keine fehlende Bequemlichkeit.
 								*/}
 								<p className="text-sm font-medium">Sponsoren des Quellfests</p>
 								{plans.map((plan) => {
