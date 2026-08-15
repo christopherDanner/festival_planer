@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { groupRowsByStation, handoverStamp, handoverSummary, sourceFestivalOptions } from '../materialHandover';
+import {
+	groupRowsByStation,
+	handoverStamp,
+	handoverSummary,
+	searchHandoverRows,
+	sourceFestivalOptions
+} from '../materialHandover';
 import type { Festival } from '../festivalService';
 import type { MatchRow, MatchRowStatus } from '../materialMatcher';
 
@@ -207,5 +213,23 @@ describe('handoverSummary — die Fußleiste der Übernahme', () => {
 
 		expect(summary.failed).toBe(1);
 		expect(summary.saved).toBe(0);
+	});
+});
+
+describe('searchHandoverRows — die Suche der Werkzeugleiste', () => {
+	const rows = [
+		row({ name: 'Bier', stationName: 'Ausschank', supplier: 'Metro', category: 'Getränke' }),
+		row({ name: 'Kohle', stationName: 'Grill', supplier: 'Lagerhaus', category: 'Sonstiges' })
+	];
+
+	it('findet über Name, Lieferant, Kategorie und Station', () => {
+		expect(searchHandoverRows(rows, 'bier').map((r) => r.name)).toEqual(['Bier']);
+		expect(searchHandoverRows(rows, 'lagerhaus').map((r) => r.name)).toEqual(['Kohle']);
+		expect(searchHandoverRows(rows, 'getränke').map((r) => r.name)).toEqual(['Bier']);
+		expect(searchHandoverRows(rows, 'grill').map((r) => r.name)).toEqual(['Kohle']);
+	});
+
+	it('gibt bei leerer Suche alles zurück', () => {
+		expect(searchHandoverRows(rows, '   ')).toHaveLength(2);
 	});
 });

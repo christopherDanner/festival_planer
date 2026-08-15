@@ -79,6 +79,23 @@ export function groupRowsByStation(rows: MatchRow[]): HandoverGroup[] {
 		});
 }
 
+/**
+ * Die Suche der Werkzeugleiste über die Zeilen der Übernahme — dieselben vier
+ * Felder wie in der Arbeitsliste (`searchMaterials`): Name, Lieferant,
+ * Kategorie, Station. Sie läuft **vor** dem Gruppieren, damit die Reiter die
+ * Trefferzahl je Station zeigen.
+ */
+export function searchHandoverRows(rows: MatchRow[], term: string): MatchRow[] {
+	const needle = term.trim().toLowerCase();
+	if (!needle) return rows;
+
+	return rows.filter((r) =>
+		[r.name, r.supplier, r.category, r.stationName].some((field) =>
+			field?.toLowerCase().includes(needle)
+		)
+	);
+}
+
 /** Was der Stempel einer Zeile aussagt. Die drei aus #118 („✓ GESPEICHERT",
 „WIRD NEU ANGELEGT", „NICHT ÜBERNEHMEN") plus die drei Zustände, die der
 `materialSaveOrchestrator` ohnehin schon unterscheidet. */

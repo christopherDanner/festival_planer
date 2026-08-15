@@ -172,9 +172,12 @@ export function searchMaterials<T extends GroupableMaterial>(materials: T[], ter
 /**
  * Hält den Reiter-Zustand gültig: Achsenwechsel, Suche und Löschen können die
  * gewählte Gruppe verschwinden lassen — dann übernimmt der erste Reiter.
+ *
+ * Nimmt jede Gruppenliste mit `id` — die Übernahme (#118) hat eigene Gruppen,
+ * aber dieselbe Regel; zwei Fassungen davon liefen unweigerlich auseinander.
  */
 export function resolveActiveGroupId(
-	groups: MaterialGroup<GroupableMaterial>[],
+	groups: { id: string }[],
 	requested: string | null
 ): string | null {
 	if (requested && groups.some((g) => g.id === requested)) return requested;
