@@ -9,7 +9,7 @@ import type { Station, StationShift, ShiftAssignment, StationHelper } from '@/li
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
-import { festivalSponsoringTotal } from '@/lib/sponsoringTotals';
+import { festivalInKindTotal, festivalSponsoringTotal } from '@/lib/sponsoringTotals';
 import {
 	consumedDelta,
 	consumedValue,
@@ -129,6 +129,13 @@ export interface SponsoringMetric {
 	/** €-Summe des eingeworbenen Sponsorings (sponsoringTotals). */
 	total: number;
 	count: number;
+	/**
+	 * Sachwert des Fests — zweite Zahl neben dem Geld, nie darin (ADR 0008).
+	 * Dieselbe Funktion wie der Bereichskopf und der Tabellenfuß rechnen, damit
+	 * der Sprung vom Kasten in den Bereich nicht wie ein Rechenfehler aussieht.
+	 */
+	inKindTotal: number;
+	/** Leerzustand hängt an der Sponsoren-Anzahl, nicht an den Beträgen. */
 	isEmpty: boolean;
 }
 
@@ -136,6 +143,7 @@ export function deriveSponsoringMetric(sponsorings: SponsoringWithDetails[]): Sp
 	return {
 		total: festivalSponsoringTotal(sponsorings),
 		count: sponsorings.length,
+		inKindTotal: festivalInKindTotal(sponsorings),
 		isEmpty: sponsorings.length === 0
 	};
 }

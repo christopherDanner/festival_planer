@@ -10,6 +10,7 @@ import {
 	formatDeltaEuro
 } from './numberBoxes';
 import { formatEuro } from '@/lib/money';
+import { buildSponsoringOverviewFooter, buildSponsoringOverviewRows } from '@/lib/sponsoringTotals';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
 
@@ -337,11 +338,67 @@ describe('deriveSponsoringMetric', () => {
 		expect(m.isEmpty).toBe(false);
 	});
 
+	it('weist den Sachwert als zweite Zahl aus, ohne ihn ins Geld zu nehmen (ADR 0008)', () => {
+		const sponsorings = [
+			sponsoring({
+				id: 'x',
+				free_amount: 1000,
+				in_kind_description: 'Brotkorb',
+				in_kind_value: 190
+			}),
+			sponsoring({
+				id: 'y',
+				free_amount: 500,
+				in_kind_description: '6 Fl. Wein',
+				in_kind_value: 80
+			}),
+			sponsoring({ id: 'z', free_amount: 200 })
+		];
+		const m = deriveSponsoringMetric(sponsorings);
+		expect(m.total).toBe(1700);
+		expect(m.inKindTotal).toBe(270);
+		expect(m.count).toBe(3);
+	});
+
+	it('meldet 0 Sachwert, solange keine Sachleistung erfasst ist', () => {
+		expect(deriveSponsoringMetric([sponsoring({ free_amount: 500 })]).inKindTotal).toBe(0);
+	});
+
+	it('nennt dieselbe Sachwert-Zahl, die der Bereich in seinem Tabellenfuß zeigt', () => {
+		// Der Sprung vom Kasten in den Bereich darf nicht wie ein Rechenfehler
+		// aussehen — beide Wege müssen bei denselben Daten dieselbe Zahl nennen.
+		// Der dritte Datensatz ist der Fall, der sie auseinandertreiben würde:
+		// ein Schätzwert ohne Beschreibung, den die Zeile nicht als Sachleistung
+		// führt. Er zählt nirgends.
+		const sponsorings = [
+			sponsoring({
+				id: 'a',
+				free_amount: 1000,
+				in_kind_description: 'Brotkorb',
+				in_kind_value: 190
+			}),
+			sponsoring({ id: 'b', in_kind_description: '6 Fl. Wein', in_kind_value: 80 }),
+			sponsoring({ id: 'c', in_kind_value: 55 })
+		];
+		const footer = buildSponsoringOverviewFooter(buildSponsoringOverviewRows(sponsorings), []);
+
+		expect(deriveSponsoringMetric(sponsorings).inKindTotal).toBe(footer.inKindValue);
+		expect(footer.inKindValue).toBe(270);
+	});
+
 	it('keine Sponsoren → isEmpty', () => {
 		const m = deriveSponsoringMetric([]);
 		expect(m.total).toBe(0);
 		expect(m.count).toBe(0);
+		expect(m.inKindTotal).toBe(0);
 		expect(m.isEmpty).toBe(true);
+	});
+
+	it('hängt isEmpty an der Sponsoren-Anzahl, nicht an den Beträgen', () => {
+		const m = deriveSponsoringMetric([sponsoring({ free_amount: null })]);
+		expect(m.total).toBe(0);
+		expect(m.inKindTotal).toBe(0);
+		expect(m.isEmpty).toBe(false);
 	});
 });
 

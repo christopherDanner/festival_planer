@@ -23,7 +23,14 @@ export function assignmentValue(assignment: AssignedValue): number {
 	return assignment.value ?? assignment.category.value ?? 0;
 }
 
-/** Gesamtbeitrag eines Sponsorings: Σ zugewiesene Kategorie-Werte + Freibetrag. */
+/**
+ * Gesamtbeitrag eines Sponsorings: Σ zugewiesene Kategorie-Werte + Freibetrag.
+ *
+ * **Geld-only, für immer.** Der Sachwert einer Sachleistung wird hier nie
+ * addiert — Geld und geschätzter Sachwert sind nicht dieselbe Einheit
+ * (ADR 0008, DESIGN-VISION §5). Wer eine zweite Zahl braucht, stellt sie
+ * daneben (`festivalInKindTotal`), nicht hinein.
+ */
 export function sponsoringTotal(sponsoring: SponsoringValue): number {
 	const assigned = sponsoring.assignments.reduce((acc, a) => acc + assignmentValue(a), 0);
 	return assigned + (sponsoring.free_amount ?? 0);
@@ -37,8 +44,16 @@ export function festivalSponsoringTotal(sponsorings: SponsoringValue[]): number 
 /**
  * Sachwert eines Sponsorings: der geschätzte Wert seiner Sachleistung.
  * Zweite Zahl neben dem Geld — wird nie zum Gesamtbeitrag addiert (ADR 0008).
+ *
+ * Ohne Beschreibung gibt es keine Sachleistung (dieselbe Regel wie in
+ * `overviewInKind`) und damit auch keinen Sachwert: ein Schätzwert, zu dem
+ * niemand sagen kann, wofür er steht, ist keine Zahl, die man ausweist. Die
+ * Spalten sind einzeln nullable, der Zustand also darstellbar — zählte ihn der
+ * Dashboard-Kasten und der Tabellenfuß nicht, liefen die beiden Zahlen genau
+ * dort auseinander, wo die Unterzeile sie zusammenhalten soll.
  */
 export function sponsoringInKindValue(sponsoring: SponsoringWithDetails): number {
+	if (!sponsoring.in_kind_description) return 0;
 	return sponsoring.in_kind_value ?? 0;
 }
 
