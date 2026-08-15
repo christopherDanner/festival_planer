@@ -26,12 +26,21 @@ export interface Zettel {
 	descriptionInput: string | null;
 	/** Zeile unter dem Feld — sagt, woher der vorbelegte Wert kommt. */
 	hint: string;
+	/**
+	 * Sagt bei leerer Zelle, dass hier noch nichts steht; sonst `null`. Ohne
+	 * diese Zeile ist der Zettel über einer leeren Zelle nicht von dem über
+	 * einer zum Standardwert belegten zu unterscheiden — beide zeigen „200".
+	 */
+	stateLabel: string | null;
 	/** Die Zelle ist belegt — nur dann gibt es „Entfernen". */
 	recorded: boolean;
 }
 
 /** Freibetrag und Kategorien ohne Standardwert: der Wert muss getippt werden. */
 const NO_DEFAULT_HINT = 'Kein Standardwert — freier Betrag.';
+
+/** Zustand einer leeren Zelle — Freibetrag und Sachleistung werden erfasst, nicht zugewiesen. */
+const NOT_RECORDED = 'noch nicht erfasst';
 
 /** Betrag als Eingabe-Text in deutscher Schreibweise; `null` wird zum leeren Feld. */
 function amountInput(value: number | null): string {
@@ -46,24 +55,28 @@ function amountInput(value: number | null): string {
  */
 export function buildZettel(row: SponsoringOverviewRow, target: ZettelTarget): Zettel {
 	if (target.kind === 'freeAmount') {
+		const recorded = row.freeAmount != null;
 		return {
 			target,
 			title: 'Freibetrag',
 			valueInput: amountInput(row.freeAmount),
 			descriptionInput: null,
 			hint: NO_DEFAULT_HINT,
-			recorded: row.freeAmount != null
+			stateLabel: recorded ? null : NOT_RECORDED,
+			recorded
 		};
 	}
 
 	if (target.kind === 'inKind') {
+		const recorded = row.inKind != null;
 		return {
 			target,
 			title: 'Sachleistung',
 			valueInput: row.inKind ? amountInput(row.inKind.value) : '',
 			descriptionInput: row.inKind?.description ?? '',
 			hint: 'Zählt nie in die Geldsumme.',
-			recorded: row.inKind != null
+			stateLabel: recorded ? null : NOT_RECORDED,
+			recorded
 		};
 	}
 
@@ -79,6 +92,7 @@ export function buildZettel(row: SponsoringOverviewRow, target: ZettelTarget): Z
 		descriptionInput: null,
 		hint:
 			category.value != null ? `Standardwert ${formatEuro(category.value)}` : NO_DEFAULT_HINT,
+		stateLabel: position ? null : 'noch nicht zugewiesen',
 		recorded: position != null
 	};
 }
@@ -110,6 +124,17 @@ function keptAssignments(
 		.map((a) => ({ category_id: a.category_id, value: a.value }));
 }
 
+/**
+ * Ob „Übernehmen" überhaupt etwas zu schreiben hätte. Falsch heißt: das Feld
+ * ist leer und es gibt keinen Standardwert, der einspringen könnte — dann wäre
+ * die einzige mögliche Wirkung das Löschen, und das gehört dem Entfernen-Knopf
+ * (ADR 0009). Die Oberfläche sperrt den Knopf damit, statt still nichts zu tun.
+ */
+export function canApplyZettel(zettel: Zettel, input: ZettelInput): boolean {
+	if (zettel.target.kind === 'inKind') return (input.description ?? '').trim() !== '';
+	return true;
+}
+
 /** Was „Übernehmen" schreibt. */
 export function applyZettel(
 	sponsoring: SponsoringWithDetails,
@@ -117,30 +142,35 @@ export function applyZettel(
 	input: ZettelInput
 ): SponsoringWrite {
 	const value = parseCategoryValue(input.value);
+	const assignments = keptAssignments(sponsoring);
 
 	if (target.kind === 'freeAmount') {
-		return { updates: { free_amount: value }, assignments: keptAssignments(sponsoring) };
+		return { updates: { free_amount: value }, assignments };
 	}
 
 	if (target.kind === 'inKind') {
-		/* Bezeichnung und Schätzwert gehören zusammen (ADR 0008): ein Wert ohne
-		Bezeichnung bliebe in der Matrix unsichtbar, zählte aber im Sachwert des
-		Fests weiter — eine Zahl, die niemand zuordnen kann. */
-		const description = (input.description ?? '').trim() || null;
+		/* Ohne Bezeichnung gibt es keine Sachleistung: ein Schätzwert allein
+		bliebe in der Matrix unsichtbar, zählte aber im Sachwert des Fests weiter
+		— eine Zahl, die niemand zuordnen kann. Gelöscht wird hier trotzdem
+		nichts: eine geleerte Bezeichnung lässt eine erfasste Sachleistung stehen,
+		denn Entfernen ist nie ein Nebeneffekt (ADR 0009). */
+		const description = (input.description ?? '').trim();
+		if (description === '') return { updates: {}, assignments };
 		return {
-			updates: {
-				in_kind_description: description,
-				in_kind_value: description == null ? null : value
-			},
-			assignments: keptAssignments(sponsoring)
+			updates: { in_kind_description: description, in_kind_value: value },
+			assignments
 		};
 	}
 
 	const { category } = target;
+	const others = keptAssignments(sponsoring, category.id);
+	/* Ohne Standardwert und ohne Eingabe gibt es nichts zu übernehmen — eine
+	Zuweisung über € 0 sähe wie eine echte Zusage aus. */
+	if (value == null && category.value == null) return { updates: {}, assignments };
 	return {
 		updates: {},
 		assignments: [
-			...keptAssignments(sponsoring, category.id),
+			...others,
 			/* Auf dem Standardwert wird nichts überschrieben: die Zuweisung erbt
 			ihn (`value IS NULL`), bleibt schwarz-grün und folgt einer späteren
 			Änderung des Standardwerts. */

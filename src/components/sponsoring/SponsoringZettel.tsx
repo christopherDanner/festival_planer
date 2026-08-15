@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { Zettel, ZettelInput } from '@/lib/sponsoringZettel';
+import { canApplyZettel, type Zettel, type ZettelInput } from '@/lib/sponsoringZettel';
 
 export interface SponsoringZettelProps {
 	zettel: Zettel;
@@ -7,8 +7,6 @@ export interface SponsoringZettelProps {
 	onApply: (input: ZettelInput) => void;
 	/** „Entfernen" — der einzige Weg, der einen Wert löscht (ADR 0009). */
 	onRemove: () => void;
-	/** Escape und Klick außerhalb: schließen, ohne zu speichern. */
-	onClose: () => void;
 }
 
 /* Ein Platzhalter darf nicht wie ein Wert aussehen: blass und in normaler
@@ -27,14 +25,10 @@ const BUTTON =
  * beim Öffnen zeigt und was er schreibt, entscheidet `sponsoringZettel`.
  *
  * Er schwebt frei über der Tabelle und verdeckt dabei die Folgezeile; das ist
- * ausdrücklich abgenommen. Die Platzierung besorgt die Matrix.
+ * ausdrücklich abgenommen. Platzierung, Schließen und Fokus-Rückgabe besorgt
+ * der Popover der Matrix.
  */
-const SponsoringZettel: React.FC<SponsoringZettelProps> = ({
-	zettel,
-	onApply,
-	onRemove,
-	onClose
-}) => {
+const SponsoringZettel: React.FC<SponsoringZettelProps> = ({ zettel, onApply, onRemove }) => {
 	const hasDescription = zettel.descriptionInput != null;
 	const [value, setValue] = useState(zettel.valueInput);
 	const [description, setDescription] = useState(zettel.descriptionInput ?? '');
@@ -42,8 +36,9 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({
 	const descriptionRef = useRef<HTMLInputElement>(null);
 
 	/* Vorbelegt *und* selektiert: Übernehmen ohne Tippen weist den Standardwert
-	zu, Tippen ersetzt ihn ohne Löschen. Nur beim Öffnen — die Matrix gibt dem
-	Zettel je Zelle einen eigenen `key`. */
+	zu, Tippen ersetzt ihn ohne Löschen. Bei der Sachleistung beginnt der Fokus
+	in der Bezeichnung — ohne sie gibt es nichts zu speichern. Nur beim Öffnen:
+	die Matrix gibt dem Zettel je Zelle einen eigenen `key`. */
 	useEffect(() => {
 		const field = hasDescription ? descriptionRef.current : amountRef.current;
 		field?.focus();
@@ -59,12 +54,16 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({
 				e.preventDefault();
 				onApply({ value, description });
 			}}
-			onKeyDown={(e) => {
-				if (e.key === 'Escape') onClose();
-			}}
 		>
 			<div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[.06em] text-tinte-soft">
 				{zettel.title}
+				{/* Leere und belegte Zelle zeigen dasselbe Feld — den Unterschied
+				macht diese Zeile, nicht nur der fehlende Entfernen-Knopf (ADR 0009). */}
+				{zettel.stateLabel && (
+					<span className="ml-1.5 font-bold normal-case tracking-normal">
+						· {zettel.stateLabel}
+					</span>
+				)}
 			</div>
 
 			{hasDescription && (
@@ -91,7 +90,11 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({
 			<div className="mt-1.5 text-[11px] text-tinte-soft">{zettel.hint}</div>
 
 			<div className="mt-2 flex gap-1.5">
-				<button type="submit" className={`${BUTTON} bg-tinte text-papier`}>
+				<button
+					type="submit"
+					className={`${BUTTON} bg-tinte text-papier disabled:opacity-40`}
+					disabled={!canApplyZettel(zettel, { value, description })}
+				>
 					Übernehmen
 				</button>
 				{/* Entfernen ist nie ein Nebeneffekt des Klicks — es hat einen eigenen,

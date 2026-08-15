@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { buttonByLabel } from '@/lib/__tests__/domTesting';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
 	buildSponsoringOverviewFooter,
@@ -37,6 +38,18 @@ function render(rows: SponsoringOverviewRow[], categories: SponsoringCategory[])
 	return renderToStaticMarkup(matrix(rows, categories));
 }
 
+/* Der Zettel hängt als Popover im Portal an `document.body`, nicht im
+Container — die Griffe suchen deshalb im ganzen Dokument. Jede Montage wird
+danach wieder abgeräumt, sonst fände der nächste Test einen alten Zettel. */
+const roots: Root[] = [];
+
+afterEach(async () => {
+	await act(async () => {
+		roots.forEach((root) => root.unmount());
+	});
+	roots.length = 0;
+});
+
 /** Die Matrix im jsdom, um Zellklicks zu fahren. */
 async function mount(
 	rows: SponsoringOverviewRow[],
@@ -45,28 +58,27 @@ async function mount(
 ) {
 	const container = document.createElement('div');
 	document.body.appendChild(container);
+	const root = createRoot(container);
+	roots.push(root);
 	await act(async () => {
-		createRoot(container).render(matrix(rows, categories, handlers));
+		root.render(matrix(rows, categories, handlers));
 	});
-
-	const click = async (selector: string) => {
-		await act(async () => {
-			container.querySelector<HTMLElement>(selector)!.dispatchEvent(
-				new MouseEvent('mousedown', { bubbles: true })
-			);
-			container.querySelector<HTMLElement>(selector)!.click();
-		});
-	};
 
 	return {
 		container,
-		click,
-		cell: (label: string) => `[aria-label="${label}"]`,
-		zettel: () => container.querySelector('form[aria-label^="Zettel"]'),
+		/** Zelle anklicken — `pointerdown` zuerst, darauf hört Radix beim Schließen. */
+		click: async (label: string) => {
+			const target = container.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
+			await act(async () => {
+				target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+				target.click();
+			});
+		},
+		zettel: () => document.body.querySelector('form[aria-label^="Zettel"]'),
+		field: (label: string) =>
+			document.body.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!,
 		press: async (label: string) => {
-			const button = [...container.querySelectorAll('button')].find(
-				(b) => b.textContent === label
-			)!;
+			const button = buttonByLabel(document.body, label);
 			await act(async () => {
 				button.click();
 			});
@@ -237,13 +249,11 @@ describe('SponsoringMatrix — Zellklick öffnet den Zettel', () => {
 		const view = await mount(leereZeile(), [plakat]);
 
 		expect(view.zettel()).toBeNull();
-		await view.click(view.cell('Plakat bei Taxi Brandl'));
+		await view.click('Plakat bei Taxi Brandl');
 
 		expect(view.zettel()?.getAttribute('aria-label')).toBe('Zettel Plakat');
-		expect(view.container.querySelector<HTMLInputElement>('[aria-label="Betrag"]')!.value).toBe(
-			'200'
-		);
-		expect(view.container.textContent).toContain('Standardwert € 200');
+		expect(view.field('Betrag').value).toBe('200');
+		expect(view.zettel()?.textContent).toContain('Standardwert € 200');
 	});
 
 	it('weist mit zwei Klicks den Standardwert zu und schließt den Zettel', async () => {
@@ -251,7 +261,7 @@ describe('SponsoringMatrix — Zellklick öffnet den Zettel', () => {
 		const rows = leereZeile();
 		const view = await mount(rows, [plakat], { onApply });
 
-		await view.click(view.cell('Plakat bei Taxi Brandl'));
+		await view.click('Plakat bei Taxi Brandl');
 		await view.press('Übernehmen');
 
 		expect(onApply).toHaveBeenCalledWith(
@@ -267,7 +277,7 @@ describe('SponsoringMatrix — Zellklick öffnet den Zettel', () => {
 		const rows = belegteZeile();
 		const view = await mount(rows, [plakat], { onRemove });
 
-		await view.click(view.cell('Plakat bei Taxi Brandl'));
+		await view.click('Plakat bei Taxi Brandl');
 		await view.press('Entfernen');
 
 		expect(onRemove).toHaveBeenCalledWith(rows[0].sponsoringId, {
@@ -279,15 +289,13 @@ describe('SponsoringMatrix — Zellklick öffnet den Zettel', () => {
 	it('öffnet denselben Zettel über Freibetrag und Sachleistung', async () => {
 		const view = await mount(belegteZeile(), [plakat]);
 
-		await view.click(view.cell('Freibetrag bei Taxi Brandl'));
+		await view.click('Freibetrag bei Taxi Brandl');
 		expect(view.zettel()?.getAttribute('aria-label')).toBe('Zettel Freibetrag');
-		expect(view.container.textContent).toContain('Kein Standardwert');
+		expect(view.zettel()?.textContent).toContain('Kein Standardwert');
 
-		await view.click(view.cell('Sachleistung bei Taxi Brandl'));
+		await view.click('Sachleistung bei Taxi Brandl');
 		expect(view.zettel()?.getAttribute('aria-label')).toBe('Zettel Sachleistung');
-		expect(view.container.querySelector<HTMLInputElement>('[aria-label="Bezeichnung"]')!.value).toBe(
-			'Brotkorb'
-		);
+		expect(view.field('Bezeichnung').value).toBe('Brotkorb');
 	});
 
 	it('schließt bei einem Klick außerhalb, ohne zu schreiben', async () => {
@@ -295,9 +303,9 @@ describe('SponsoringMatrix — Zellklick öffnet den Zettel', () => {
 		const onRemove = vi.fn();
 		const view = await mount(belegteZeile(), [plakat], { onApply, onRemove });
 
-		await view.click(view.cell('Plakat bei Taxi Brandl'));
+		await view.click('Plakat bei Taxi Brandl');
 		await act(async () => {
-			document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+			document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
 		});
 
 		expect(view.zettel()).toBeNull();
@@ -306,13 +314,25 @@ describe('SponsoringMatrix — Zellklick öffnet den Zettel', () => {
 	});
 
 	it('lässt die Zeilenhöhe beim Öffnen unangetastet', async () => {
-		// Der Zettel schwebt neben der Tabelle, nicht in ihr — sonst spränge die
-		// Zeile beim Öffnen (Auflage aus #66/#69, gemessen 0 px).
+		// Der Zettel schwebt im Portal neben der Tabelle, nicht in ihr — sonst
+		// spränge die Zeile beim Öffnen (Auflage aus #66/#69, gemessen 0 px).
 		const view = await mount(leereZeile(), [plakat]);
-		await view.click(view.cell('Plakat bei Taxi Brandl'));
+		await view.click('Plakat bei Taxi Brandl');
 
 		expect(view.container.querySelector('tr.h-\\[43px\\]')).not.toBeNull();
 		expect(view.container.querySelector('table')!.contains(view.zettel())).toBe(false);
+	});
+
+	it('sagt am Zell-Knopf an, dass er einen Zettel öffnet', async () => {
+		// Kommt vom Popover-Baustein, nicht von uns (ADR 0003).
+		const view = await mount(leereZeile(), [plakat]);
+		const knopf = view.container.querySelector('[aria-label="Plakat bei Taxi Brandl"]')!;
+
+		expect(knopf.getAttribute('aria-haspopup')).toBe('dialog');
+		expect(knopf.getAttribute('aria-expanded')).toBe('false');
+
+		await view.click('Plakat bei Taxi Brandl');
+		expect(knopf.getAttribute('aria-expanded')).toBe('true');
 	});
 });
 

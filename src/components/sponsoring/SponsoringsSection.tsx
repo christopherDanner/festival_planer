@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +70,10 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 	const [notes, setNotes] = useState('');
 	const [saving, setSaving] = useState(false);
 
+	/* Der Stand, aus dem der nächste Schreibvorgang seine Zuweisungsliste baut —
+	die Zustandsvariable hinkt einen Render hinterher. */
+	const currentSponsorings = useRef<SponsoringWithDetails[]>([]);
+
 	const loadData = useCallback(async () => {
 		try {
 			const [sponsoringData, sponsorData, categoryData] = await Promise.all([
@@ -77,6 +81,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				getSponsors(),
 				getCategories(festivalId)
 			]);
+			currentSponsorings.current = sponsoringData;
 			setSponsorings(sponsoringData);
 			setSponsors(sponsorData);
 			setCategories(categoryData);
@@ -140,30 +145,41 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		}
 	};
 
-	/* Der einzige Schreibweg des Zettels. Danach wird neu geladen, damit Zeile,
-	Fuß, Maßband und Kopfzahl über denselben Rechenweg nachziehen (ADR 0006). */
-	const writeZettel = async (sponsoringId: string, write: SponsoringWrite) => {
-		try {
-			await updateSponsoring(sponsoringId, write.updates, write.assignments);
-			await loadData();
-		} catch (error) {
-			toast({
-				title: 'Fehler',
-				description: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
-				variant: 'destructive'
-			});
-		}
+	/* Schreibvorgänge des Zettels laufen nacheinander, und jeder baut seine
+	Zuweisungsliste erst dann. Der Grund: `updateSponsoring` ersetzt die
+	Zuweisungen vollständig — zwei schnell aufeinander folgende Zellklicks (der
+	Zettel kostet nur zwei) würden sonst beide vom Stand *vor* dem ersten
+	rechnen, und die erste Zuweisung wäre still wieder weg. */
+	const writeQueue = useRef<Promise<void>>(Promise.resolve());
+
+	const enqueueWrite = (
+		sponsoringId: string,
+		build: (sponsoring: SponsoringWithDetails) => SponsoringWrite
+	) => {
+		writeQueue.current = writeQueue.current.then(async () => {
+			const sponsoring = currentSponsorings.current.find((s) => s.id === sponsoringId);
+			if (!sponsoring) return;
+			const write = build(sponsoring);
+			try {
+				await updateSponsoring(sponsoringId, write.updates, write.assignments);
+				/* Neu laden, damit Zeile, Fuß, Maßband und Kopfzahl über denselben
+				Rechenweg nachziehen (ADR 0006). */
+				await loadData();
+			} catch (error) {
+				toast({
+					title: 'Fehler',
+					description: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
+					variant: 'destructive'
+				});
+			}
+		});
 	};
 
-	const handleApply = (sponsoringId: string, target: ZettelTarget, input: ZettelInput) => {
-		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
-		if (sponsoring) writeZettel(sponsoringId, applyZettel(sponsoring, target, input));
-	};
+	const handleApply = (sponsoringId: string, target: ZettelTarget, input: ZettelInput) =>
+		enqueueWrite(sponsoringId, (sponsoring) => applyZettel(sponsoring, target, input));
 
-	const handleRemove = (sponsoringId: string, target: ZettelTarget) => {
-		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
-		if (sponsoring) writeZettel(sponsoringId, clearZettel(sponsoring, target));
-	};
+	const handleRemove = (sponsoringId: string, target: ZettelTarget) =>
+		enqueueWrite(sponsoringId, (sponsoring) => clearZettel(sponsoring, target));
 
 	const handleDelete = async (sponsoring: SponsoringWithDetails) => {
 		if (

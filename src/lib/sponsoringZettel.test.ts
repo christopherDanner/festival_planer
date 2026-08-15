@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSponsoringOverviewRows } from './sponsoringTotals';
-import { applyZettel, buildZettel, clearZettel } from './sponsoringZettel';
+import { applyZettel, buildZettel, canApplyZettel, clearZettel } from './sponsoringZettel';
 import { makeAssignment, makeCategory, makeSponsoring } from './__tests__/sponsoringFactories';
 
 describe('buildZettel — Kategorie-Zelle', () => {
@@ -14,6 +14,24 @@ describe('buildZettel — Kategorie-Zelle', () => {
 		expect(zettel.valueInput).toBe('200');
 		expect(zettel.hint).toBe('Standardwert € 200');
 		expect(zettel.recorded).toBe(false);
+	});
+
+	it('sagt über einer leeren Zelle, dass noch nichts zugewiesen ist', () => {
+		// Sonst ist der Zettel über einer leeren Zelle von dem über einer zum
+		// Standardwert belegten nicht zu unterscheiden — beide zeigen „200".
+		const plakat = makeCategory('Plakat', 200);
+		const [leer] = buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+		const [belegt] = buildSponsoringOverviewRows([
+			makeSponsoring({
+				companyName: 'Taxi Brandl',
+				assignments: [makeAssignment({ category: plakat })]
+			})
+		]);
+
+		expect(buildZettel(leer, { kind: 'category', category: plakat }).stateLabel).toBe(
+			'noch nicht zugewiesen'
+		);
+		expect(buildZettel(belegt, { kind: 'category', category: plakat }).stateLabel).toBeNull();
 	});
 
 	it('zeigt bei belegter Zelle den zugewiesenen Wert und lässt Entfernen zu', () => {
@@ -94,6 +112,27 @@ describe('buildZettel — Sachleistung', () => {
 		expect(zettel.descriptionInput).toBe('');
 		expect(zettel.valueInput).toBe('');
 		expect(zettel.recorded).toBe(false);
+		expect(zettel.stateLabel).toBe('noch nicht erfasst');
+	});
+});
+
+describe('canApplyZettel', () => {
+	it('sperrt Übernehmen, solange die Sachleistung keine Bezeichnung hat', () => {
+		const [row] = buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+		const zettel = buildZettel(row, { kind: 'inKind' });
+
+		expect(canApplyZettel(zettel, { value: '80', description: ' ' })).toBe(false);
+		expect(canApplyZettel(zettel, { value: '80', description: 'Brotkorb' })).toBe(true);
+	});
+
+	it('lässt Kategorie und Freibetrag immer übernehmen', () => {
+		const plakat = makeCategory('Plakat', 200);
+		const [row] = buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+
+		expect(
+			canApplyZettel(buildZettel(row, { kind: 'category', category: plakat }), { value: '' })
+		).toBe(true);
+		expect(canApplyZettel(buildZettel(row, { kind: 'freeAmount' }), { value: '' })).toBe(true);
 	});
 });
 
@@ -146,6 +185,17 @@ describe('applyZettel — Kategorie', () => {
 
 		expect(write.assignments).toContainEqual({ category_id: social.id, value: 90 });
 		expect(write.assignments).toHaveLength(2);
+	});
+
+	it('legt bei leerem Feld und fehlendem Standardwert keine Null-Euro-Zuweisung an', () => {
+		// Ohne Standardwert gibt es nichts zu übernehmen; eine Zuweisung über € 0
+		// sähe wie eine echte Zusage aus.
+		const sonstiges = makeCategory('Sonstiges', null);
+		const sponsoring = makeSponsoring({ companyName: 'Taxi Brandl' });
+
+		const write = applyZettel(sponsoring, { kind: 'category', category: sonstiges }, { value: '' });
+
+		expect(write.assignments).toEqual([]);
 	});
 
 	it('ändert eine bereits zugewiesene Kategorie, statt sie ein zweites Mal anzulegen', () => {
@@ -225,9 +275,9 @@ describe('applyZettel / clearZettel — Sachleistung', () => {
 		});
 	});
 
-	it('lässt ohne Bezeichnung keinen Schätzwert zurück', () => {
-		// Ein Wert ohne Bezeichnung wäre in der Matrix unsichtbar, würde aber im
-		// Sachwert des Fests weiterzählen — eine Zahl, die niemand zuordnen kann.
+	it('rührt eine erfasste Sachleistung nicht an, wenn die Bezeichnung geleert wird', () => {
+		// Entfernen ist nie ein Nebeneffekt (ADR 0009): eine geleerte Bezeichnung
+		// darf die Sachleistung nicht löschen — dafür gibt es den Entfernen-Knopf.
 		const sponsoring = makeSponsoring({
 			companyName: 'Fleischerei Berger',
 			inKindDescription: 'Geschenkkorb',
@@ -236,7 +286,17 @@ describe('applyZettel / clearZettel — Sachleistung', () => {
 
 		const write = applyZettel(sponsoring, { kind: 'inKind' }, { value: '80', description: '  ' });
 
-		expect(write.updates).toEqual({ in_kind_description: null, in_kind_value: null });
+		expect(write.updates).toEqual({});
+	});
+
+	it('legt ohne Bezeichnung keinen einsamen Schätzwert an', () => {
+		// Ein Wert ohne Bezeichnung wäre in der Matrix unsichtbar, zählte aber im
+		// Sachwert des Fests weiter — eine Zahl, die niemand zuordnen kann.
+		const sponsoring = makeSponsoring({ companyName: 'Fleischerei Berger' });
+
+		const write = applyZettel(sponsoring, { kind: 'inKind' }, { value: '80', description: '' });
+
+		expect(write.updates).toEqual({});
 	});
 
 	it('entfernt Bezeichnung und Schätzwert gemeinsam', () => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { MoreVertical } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -6,12 +6,18 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ValueTag } from '@/components/toolkit/ValueTag';
 import SponsoringZettel from '@/components/sponsoring/SponsoringZettel';
 import { formatEuro } from '@/lib/money';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import type { SponsoringOverviewFooter, SponsoringOverviewRow } from '@/lib/sponsoringTotals';
-import { buildZettel, type ZettelInput, type ZettelTarget } from '@/lib/sponsoringZettel';
+import {
+	buildZettel,
+	type Zettel,
+	type ZettelInput,
+	type ZettelTarget
+} from '@/lib/sponsoringZettel';
 
 export interface SponsoringMatrixProps {
 	/** Die Preisliste des Fests — eine Spalte je Kategorie, in dieser Reihenfolge. */
@@ -25,19 +31,9 @@ export interface SponsoringMatrixProps {
 	onRemove: (sponsoringId: string, target: ZettelTarget) => void;
 }
 
-/** Der geöffnete Zettel: welche Zelle, und wo er unter ihr schwebt. */
-interface OpenZettel {
-	sponsoringId: string;
-	target: ZettelTarget;
-	top: number;
-	left: number;
-}
-
-const ZETTEL_WIDTH_PX = 205;
-
-/** Eindeutig je Zelle — der Zettel bekommt ihn als `key` und startet damit neu. */
-const targetKey = (target: ZettelTarget): string =>
-	target.kind === 'category' ? `category:${target.category.id}` : target.kind;
+/** Eindeutig je Zelle — sagt, welcher Zettel offen ist. */
+const cellKey = (sponsoringId: string, target: ZettelTarget): string =>
+	`${sponsoringId}:${target.kind === 'category' ? `category:${target.category.id}` : target.kind}`;
 
 /* Firma klebt links, Gesamt und ⋮ kleben rechts: bei Überhang verschwinden
 zuerst die rechten Spalten — man sähe sonst Kategorie-Werte ohne Zeilensumme
@@ -75,24 +71,48 @@ const CELL_ALIGN = {
 	end: 'justify-end'
 } as const;
 
+/* Der Zettel bringt seinen eigenen Rahmen mit; der Popover steuert nur noch
+Platzierung, Schließen und Fokus bei. */
+const ZETTEL_CONTENT = 'w-auto border-0 bg-transparent p-0 shadow-none';
+
 /**
  * Eine wertetragende Zelle: ihr ganzer Inhalt ist der Knopf, der den Zettel
- * öffnet. Er füllt die Zeilenhöhe, damit auch der Rand einer leeren Zelle trifft.
+ * öffnet. Er füllt die Zeilenhöhe, damit auch der Rand einer leeren Zelle
+ * trifft. Der Zettel hängt als Popover daran — Platzierung, Klick außerhalb,
+ * Escape und Fokus-Rückgabe kommen von Radix, nicht von uns (ADR 0003).
  */
-const CellButton: React.FC<{
+const ZettelCell: React.FC<{
 	label: string;
 	align: keyof typeof CELL_ALIGN;
-	onOpen: (anchor: HTMLElement) => void;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	zettel: Zettel;
+	onApply: (input: ZettelInput) => void;
+	onRemove: () => void;
 	children: React.ReactNode;
-}> = ({ label, align, onOpen, children }) => (
-	<button
-		type="button"
-		aria-label={label}
-		className={`flex ${ROW_HEIGHT} w-full min-w-0 items-center ${CELL_ALIGN[align]}`}
-		onClick={(e) => onOpen(e.currentTarget)}
-	>
-		{children}
-	</button>
+}> = ({ label, align, open, onOpenChange, zettel, onApply, onRemove, children }) => (
+	<Popover open={open} onOpenChange={onOpenChange}>
+		<PopoverTrigger asChild>
+			<button
+				type="button"
+				aria-label={label}
+				className={`flex ${ROW_HEIGHT} w-full min-w-0 items-center ${CELL_ALIGN[align]}`}
+			>
+				{children}
+			</button>
+		</PopoverTrigger>
+		{/* Schwebt unter der Zelle und verdeckt dabei die Folgezeile — ausdrücklich
+		abgenommen (ADR 0009). Den Fokus setzt der Zettel selbst: er selektiert das
+		vorbelegte Feld, was Radix' Standard-Fokus überschreiben würde. */}
+		<PopoverContent
+			align="start"
+			sideOffset={2}
+			className={ZETTEL_CONTENT}
+			onOpenAutoFocus={(e) => e.preventDefault()}
+		>
+			<SponsoringZettel zettel={zettel} onApply={onApply} onRemove={onRemove} />
+		</PopoverContent>
+	</Popover>
 );
 
 /**
@@ -115,44 +135,31 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	onApply,
 	onRemove
 }) => {
-	const wrapperRef = useRef<HTMLDivElement>(null);
-	const zettelRef = useRef<HTMLDivElement>(null);
-	const [open, setOpen] = useState<OpenZettel | null>(null);
+	/* Höchstens ein Zettel ist offen: der Klick auf eine andere Zelle schließt
+	den alten, ohne zu speichern (ADR 0009). */
+	const [openCell, setOpenCell] = useState<string | null>(null);
 
-	/* Der Zettel schwebt unter der Zelle, aber *außerhalb* des Tabellenrahmens:
-	dessen Querlauf würde ihn sonst abschneiden. Deshalb wird beim Öffnen einmal
-	gemessen — und beim Scrollen geschlossen, statt der Zelle nachzulaufen. */
-	const openAt = (sponsoringId: string, target: ZettelTarget, anchor: HTMLElement) => {
-		const wrapper = wrapperRef.current;
-		if (!wrapper) return;
-		const cell = anchor.getBoundingClientRect();
-		const frame = wrapper.getBoundingClientRect();
-		const left = Math.max(
-			0,
-			Math.min(cell.left - frame.left, Math.max(0, frame.width - ZETTEL_WIDTH_PX))
-		);
-		setOpen({ sponsoringId, target, top: cell.bottom - frame.top, left });
+	/** Die Requisiten einer wertetragenden Zelle — überall dieselbe Verdrahtung. */
+	const cell = (row: SponsoringOverviewRow, target: ZettelTarget) => {
+		const key = cellKey(row.sponsoringId, target);
+		return {
+			open: openCell === key,
+			onOpenChange: (open: boolean) => setOpenCell(open ? key : null),
+			zettel: buildZettel(row, target),
+			onApply: (input: ZettelInput) => {
+				onApply(row.sponsoringId, target, input);
+				setOpenCell(null);
+			},
+			onRemove: () => {
+				onRemove(row.sponsoringId, target);
+				setOpenCell(null);
+			}
+		};
 	};
 
-	/* Klick außerhalb schließt, ohne zu speichern (ADR 0009). Auf `mousedown`,
-	damit ein Klick auf eine andere Zelle zuerst den alten Zettel schließt. */
-	useEffect(() => {
-		if (!open) return;
-		const dismiss = (event: MouseEvent) => {
-			if (!zettelRef.current?.contains(event.target as Node)) setOpen(null);
-		};
-		document.addEventListener('mousedown', dismiss);
-		return () => document.removeEventListener('mousedown', dismiss);
-	}, [open]);
-
-	const openRow = open ? rows.find((r) => r.sponsoringId === open.sponsoringId) : undefined;
-
 	return (
-		<div ref={wrapperRef} className="relative">
-			<div
-				className="overflow-x-auto border-2.5 border-tinte bg-white"
-				onScroll={() => setOpen(null)}
-			>
+		<div>
+			<div className="overflow-x-auto border-2.5 border-tinte bg-white">
 				<table
 					className="w-full table-fixed border-collapse text-[13px]"
 					style={{
@@ -206,12 +213,10 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 									const position = row.positionsByCategoryId[category.id];
 									return (
 										<td key={category.id} className={`${BODY_CELL} text-center`}>
-											<CellButton
+											<ZettelCell
 												label={`${category.name} bei ${row.companyName}`}
 												align="center"
-												onOpen={(anchor) =>
-													openAt(row.sponsoringId, { kind: 'category', category }, anchor)
-												}
+												{...cell(row, { kind: 'category', category })}
 											>
 												{position ? (
 													<ValueTag
@@ -221,28 +226,28 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 												) : (
 													<UnrecordedMark />
 												)}
-											</CellButton>
+											</ZettelCell>
 										</td>
 									);
 								})}
 								<td className={`${BODY_CELL} text-right`}>
-									<CellButton
+									<ZettelCell
 										label={`Freibetrag bei ${row.companyName}`}
 										align="end"
-										onOpen={(anchor) => openAt(row.sponsoringId, { kind: 'freeAmount' }, anchor)}
+										{...cell(row, { kind: 'freeAmount' })}
 									>
 										{row.freeAmount != null ? (
 											<ValueTag tone="ink" value={formatEuro(row.freeAmount)} />
 										) : (
 											<UnrecordedMark />
 										)}
-									</CellButton>
+									</ZettelCell>
 								</td>
 								<td className={BODY_CELL}>
-									<CellButton
+									<ZettelCell
 										label={`Sachleistung bei ${row.companyName}`}
 										align="start"
-										onOpen={(anchor) => openAt(row.sponsoringId, { kind: 'inKind' }, anchor)}
+										{...cell(row, { kind: 'inKind' })}
 									>
 										{row.inKind ? (
 											/* Die Spalte wird nicht breiter (bei 6 Kategorien ist die Reserve
@@ -260,7 +265,7 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 										) : (
 											<UnrecordedMark />
 										)}
-									</CellButton>
+									</ZettelCell>
 								</td>
 								<td className={`${BODY_CELL} ${STICKY_TOTAL} z-10 bg-white text-right`}>
 									<span className="font-bold">{formatEuro(row.total)}</span>
@@ -323,30 +328,6 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 					)}
 				</table>
 			</div>
-
-			{/* Schwebt unter der Zelle und verdeckt dabei die Folgezeile — ausdrücklich
-			abgenommen (ADR 0009). Der eigene `key` je Zelle setzt die Felder neu. */}
-			{open && openRow && (
-				<div
-					ref={zettelRef}
-					className="absolute z-50"
-					style={{ top: `${open.top}px`, left: `${open.left}px` }}
-				>
-					<SponsoringZettel
-						key={`${open.sponsoringId}:${targetKey(open.target)}`}
-						zettel={buildZettel(openRow, open.target)}
-						onApply={(input) => {
-							onApply(open.sponsoringId, open.target, input);
-							setOpen(null);
-						}}
-						onRemove={() => {
-							onRemove(open.sponsoringId, open.target);
-							setOpen(null);
-						}}
-						onClose={() => setOpen(null)}
-					/>
-				</div>
-			)}
 		</div>
 	);
 };

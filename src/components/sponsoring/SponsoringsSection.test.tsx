@@ -1,16 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import { makeAssignment, makeCategory, makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
+import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
 
 const plakat = makeCategory('Plakat', 200);
+const social = makeCategory('Social', 100);
 
 const { service } = vi.hoisted(() => ({
 	service: {
 		sponsorings: [] as unknown[],
 		getSponsorings: vi.fn(),
-		updateSponsoring: vi.fn(() => Promise.resolve())
+		updateSponsoring: vi.fn(
+			(_sponsoringId: string, _updates: unknown, _assignments: unknown): Promise<void> =>
+				Promise.resolve()
+		)
 	}
 }));
 
@@ -19,7 +24,7 @@ vi.mock('@/lib/sponsorService', async (importOriginal) => {
 	return {
 		...actual,
 		getSponsors: () => Promise.resolve([]),
-		getCategories: () => Promise.resolve([plakat]),
+		getCategories: () => Promise.resolve([plakat, social]),
 		getSponsorings: service.getSponsorings,
 		updateSponsoring: service.updateSponsoring,
 		deleteSponsoring: () => Promise.resolve()
@@ -35,13 +40,24 @@ function serves(...states: SponsoringWithDetails[][]) {
 	service.getSponsorings.mockResolvedValue(states[states.length - 1]);
 }
 
+/* Der Zettel hängt als Popover im Portal an `document.body`; jede Montage wird
+danach abgeräumt, sonst findet der nächste Test einen alten. */
+const roots: Root[] = [];
+
+afterEach(async () => {
+	await act(async () => {
+		roots.forEach((root) => root.unmount());
+	});
+	roots.length = 0;
+});
+
 async function mount() {
 	const container = document.createElement('div');
 	document.body.appendChild(container);
+	const root = createRoot(container);
+	roots.push(root);
 	await act(async () => {
-		createRoot(container).render(
-			<SponsoringsSection festivalId="f1" festivalName="Feuerwehrfest" />
-		);
+		root.render(<SponsoringsSection festivalId="f1" festivalName="Feuerwehrfest" />);
 	});
 	await act(async () => {});
 
@@ -51,15 +67,17 @@ async function mount() {
 		kopfzahl: () => container.querySelector('.space-y-4')!.children[1].textContent ?? '',
 		/** Der Tabellenfuß mit den Spaltensummen. */
 		fuss: () => container.querySelector('tfoot')?.textContent ?? '',
-		click: async (selector: string) => {
+		field: (label: string) =>
+			document.body.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!,
+		click: async (label: string) => {
+			const target = container.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
 			await act(async () => {
-				container.querySelector<HTMLElement>(selector)!.click();
+				target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+				target.click();
 			});
 		},
 		press: async (label: string) => {
-			const button = [...container.querySelectorAll('button')].find(
-				(b) => b.textContent === label
-			)!;
+			const button = buttonByLabel(document.body, label);
 			await act(async () => {
 				button.click();
 			});
@@ -85,7 +103,7 @@ describe('SponsoringsSection — Zellklick schreibt', () => {
 		expect(view.kopfzahl()).toContain('€ 0');
 		expect(view.fuss()).not.toContain('€ 200');
 
-		await view.click('[aria-label="Plakat bei Taxi Brandl"]');
+		await view.click('Plakat bei Taxi Brandl');
 		await view.press('Übernehmen');
 
 		expect(service.updateSponsoring).toHaveBeenCalledWith(
@@ -103,12 +121,9 @@ describe('SponsoringsSection — Zellklick schreibt', () => {
 		serves([leer], [{ ...leer, free_amount: 150 }]);
 
 		const view = await mount();
-		await view.click('[aria-label="Freibetrag bei Taxi Brandl"]');
-		const feld = view.container.querySelector<HTMLInputElement>('[aria-label="Betrag"]')!;
+		await view.click('Freibetrag bei Taxi Brandl');
 		await act(async () => {
-			const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-			setValue.call(feld, '150');
-			feld.dispatchEvent(new Event('input', { bubbles: true }));
+			typeInto(view.field('Betrag'), '150');
 		});
 		await view.press('Übernehmen');
 
@@ -128,7 +143,7 @@ describe('SponsoringsSection — Zellklick schreibt', () => {
 		const view = await mount();
 		expect(view.container.textContent).toContain('+ € 80 Sachwert');
 
-		await view.click('[aria-label="Sachleistung bei Fleischerei Berger"]');
+		await view.click('Sachleistung bei Fleischerei Berger');
 		await view.press('Entfernen');
 
 		expect(service.updateSponsoring).toHaveBeenCalledWith(
@@ -137,6 +152,48 @@ describe('SponsoringsSection — Zellklick schreibt', () => {
 			[]
 		);
 		expect(view.container.textContent).not.toContain('Sachwert');
+	});
+
+	it('verliert bei zwei schnellen Zuweisungen die erste nicht', async () => {
+		// `updateSponsoring` ersetzt die Zuweisungen vollständig. Wer die zweite
+		// Zuweisung aus dem Stand *vor* dem ersten Schreibvorgang baut, löscht die
+		// erste wieder — und genau schnell geklickt wird hier (2 Klicks je Zelle).
+		const leer = makeSponsoring({ companyName: 'Taxi Brandl' });
+		const mitPlakat: SponsoringWithDetails = {
+			...leer,
+			assignments: [makeAssignment({ category: plakat })]
+		};
+		serves([leer], [mitPlakat]);
+
+		let ersterSchreibvorgangFertig!: () => void;
+		service.updateSponsoring.mockImplementationOnce(
+			() =>
+				new Promise<void>((resolve) => {
+					ersterSchreibvorgangFertig = resolve;
+				})
+		);
+
+		const view = await mount();
+		await view.click('Plakat bei Taxi Brandl');
+		await view.press('Übernehmen');
+
+		// Zweite Zelle, während der erste Schreibvorgang noch läuft.
+		await view.click('Social bei Taxi Brandl');
+		await view.press('Übernehmen');
+		expect(service.updateSponsoring).toHaveBeenCalledTimes(1);
+
+		await act(async () => {
+			ersterSchreibvorgangFertig();
+		});
+		await act(async () => {});
+
+		expect(service.updateSponsoring).toHaveBeenCalledTimes(2);
+		expect(service.updateSponsoring.mock.calls[1][2]).toEqual(
+			expect.arrayContaining([
+				{ category_id: plakat.id, value: null },
+				{ category_id: social.id, value: null }
+			])
+		);
 	});
 
 	it('führt keinen Bearbeiten-Weg neben dem Zettel mehr', async () => {

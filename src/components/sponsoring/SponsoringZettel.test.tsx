@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { buildSponsoringOverviewRows } from '@/lib/sponsoringTotals';
 import { buildZettel, type Zettel, type ZettelInput } from '@/lib/sponsoringZettel';
 import { makeAssignment, makeCategory, makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
+import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
 import SponsoringZettel from './SponsoringZettel';
 
 const plakat = makeCategory('Plakat', 200);
@@ -26,31 +27,27 @@ function belegterKategorieZettel(value: number | null = null): Zettel {
 	return buildZettel(row, { kind: 'category', category: plakat });
 }
 
+/** Zettel über der Sachleistungs-Zelle. */
+function sachleistungsZettel(erfasst: boolean): Zettel {
+	const [row] = buildSponsoringOverviewRows([
+		makeSponsoring({
+			companyName: 'Fleischerei Berger',
+			inKindDescription: erfasst ? 'Geschenkkorb Tombola' : null,
+			inKindValue: erfasst ? 80 : null
+		})
+	]);
+	return buildZettel(row, { kind: 'inKind' });
+}
+
 const noop = () => {};
 
-/** Feldeingabe so setzen, dass React sie sieht (kontrollierte Eingabe). */
-function typeInto(field: HTMLInputElement, text: string) {
-	const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-	setValue.call(field, text);
-	field.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
 const markup = (zettel: Zettel) =>
-	renderToStaticMarkup(
-		<SponsoringZettel zettel={zettel} onApply={noop} onRemove={noop} onClose={noop} />
-	);
+	renderToStaticMarkup(<SponsoringZettel zettel={zettel} onApply={noop} onRemove={noop} />);
 
-interface MountResult {
-	container: HTMLElement;
-	amount: HTMLInputElement;
-	button: (label: string) => HTMLButtonElement;
-}
-
-async function mount(zettel: Zettel, handlers: Partial<{
-	onApply: (input: ZettelInput) => void;
-	onRemove: () => void;
-	onClose: () => void;
-}> = {}): Promise<MountResult> {
+async function mount(
+	zettel: Zettel,
+	handlers: Partial<{ onApply: (input: ZettelInput) => void; onRemove: () => void }> = {}
+) {
 	const container = document.createElement('div');
 	document.body.appendChild(container);
 	await act(async () => {
@@ -59,15 +56,14 @@ async function mount(zettel: Zettel, handlers: Partial<{
 				zettel={zettel}
 				onApply={handlers.onApply ?? noop}
 				onRemove={handlers.onRemove ?? noop}
-				onClose={handlers.onClose ?? noop}
 			/>
 		);
 	});
 	return {
 		container,
 		amount: container.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!,
-		button: (label) =>
-			[...container.querySelectorAll('button')].find((b) => b.textContent === label)!
+		description: container.querySelector<HTMLInputElement>('[aria-label="Bezeichnung"]'),
+		button: (label: string) => buttonByLabel(container, label)
 	};
 }
 
@@ -81,6 +77,14 @@ describe('SponsoringZettel — Aufbau', () => {
 		expect(html).toContain('Übernehmen');
 	});
 
+	it('unterscheidet die leere von der belegten Zelle, obwohl beide „200" zeigen', () => {
+		// Auflage aus ADR 0009: leer und belegt dürfen im Zettel-Zustand nicht
+		// verwechselbar sein. Beide zeigen den Standardwert im Feld — den
+		// Unterschied macht die Zustandszeile (und der Entfernen-Knopf).
+		expect(markup(leererKategorieZettel())).toContain('noch nicht zugewiesen');
+		expect(markup(belegterKategorieZettel())).not.toContain('noch nicht zugewiesen');
+	});
+
 	it('bietet über einer leeren Zelle kein Entfernen an', () => {
 		expect(markup(leererKategorieZettel())).not.toContain('Entfernen');
 	});
@@ -90,14 +94,7 @@ describe('SponsoringZettel — Aufbau', () => {
 	});
 
 	it('führt bei der Sachleistung Bezeichnung und Schätzwert', () => {
-		const [row] = buildSponsoringOverviewRows([
-			makeSponsoring({
-				companyName: 'Fleischerei Berger',
-				inKindDescription: 'Geschenkkorb Tombola',
-				inKindValue: 80
-			})
-		]);
-		const html = markup(buildZettel(row, { kind: 'inKind' }));
+		const html = markup(sachleistungsZettel(true));
 
 		expect(html).toContain('value="Geschenkkorb Tombola"');
 		expect(html).toContain('value="80"');
@@ -107,8 +104,7 @@ describe('SponsoringZettel — Aufbau', () => {
 	it('setzt Platzhalter blass und in normaler Stärke, damit sie nicht wie Werte aussehen', () => {
 		// Auflage aus dem Entscheid-Prototyp: ein Platzhalter in Wertschrift ließ
 		// eine nicht zugewiesene Zelle wie eine zugewiesene aussehen (ADR 0009).
-		const [row] = buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
-		const html = markup(buildZettel(row, { kind: 'inKind' }));
+		const html = markup(sachleistungsZettel(false));
 
 		expect(html).toContain('placeholder:font-normal');
 		expect(html).toContain('placeholder:text-tinte-soft');
@@ -122,6 +118,12 @@ describe('SponsoringZettel — Bedienung', () => {
 		expect(document.activeElement).toBe(amount);
 		expect(amount.selectionStart).toBe(0);
 		expect(amount.selectionEnd).toBe('200'.length);
+	});
+
+	it('beginnt bei der Sachleistung in der Bezeichnung, weil ohne sie nichts geht', async () => {
+		const { description } = await mount(sachleistungsZettel(true));
+
+		expect(document.activeElement).toBe(description);
 	});
 
 	it('weist mit Übernehmen ohne Tippen den Standardwert zu', async () => {
@@ -150,6 +152,33 @@ describe('SponsoringZettel — Bedienung', () => {
 		expect(onApply).toHaveBeenCalledWith({ value: '400', description: '' });
 	});
 
+	it('sperrt Übernehmen, solange die Sachleistung keine Bezeichnung hat', async () => {
+		// Ohne Bezeichnung gäbe es nichts zu speichern; ein stiller Klick ins
+		// Leere wäre schlimmer als ein gesperrter Knopf.
+		const onApply = vi.fn();
+		const view = await mount(sachleistungsZettel(false), { onApply });
+
+		expect(view.button('Übernehmen').disabled).toBe(true);
+
+		await act(async () => {
+			typeInto(view.description!, 'Brotkorb');
+		});
+
+		expect(view.button('Übernehmen').disabled).toBe(false);
+	});
+
+	it('löscht eine erfasste Sachleistung nicht dadurch, dass die Bezeichnung geleert wird', async () => {
+		const onApply = vi.fn();
+		const view = await mount(sachleistungsZettel(true), { onApply });
+
+		await act(async () => {
+			typeInto(view.description!, '');
+		});
+
+		expect(view.button('Übernehmen').disabled).toBe(true);
+		expect(view.button('Entfernen').disabled).toBe(false);
+	});
+
 	it('entfernt nur auf den benannten Knopf, nie als Nebeneffekt', async () => {
 		const onRemove = vi.fn();
 		const { container, button } = await mount(belegterKategorieZettel(), { onRemove });
@@ -163,20 +192,5 @@ describe('SponsoringZettel — Bedienung', () => {
 			button('Entfernen').click();
 		});
 		expect(onRemove).toHaveBeenCalledTimes(1);
-	});
-
-	it('schließt mit Escape, ohne zu schreiben', async () => {
-		const onApply = vi.fn();
-		const onClose = vi.fn();
-		const { container } = await mount(leererKategorieZettel(), { onApply, onClose });
-
-		await act(async () => {
-			container
-				.querySelector('form')!
-				.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-		});
-
-		expect(onClose).toHaveBeenCalledTimes(1);
-		expect(onApply).not.toHaveBeenCalled();
 	});
 });
