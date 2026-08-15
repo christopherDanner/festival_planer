@@ -111,7 +111,6 @@ const SponsorUebernahmeDialog: React.FC<SponsorUebernahmeDialogProps> = ({
 		targetSponsorings.some((s) => s.sponsor_id === sponsorId);
 
 	const selectedPlans = plans.filter((p) => selected[p.sponsorId] && !alreadySponsoring(p.sponsorId));
-	const selectablePlans = plans.filter((p) => !alreadySponsoring(p.sponsorId));
 
 	const sourceTotalFor = (plan: SponsorTransferPlan): number => {
 		const sponsoring = sourceSponsorings.find((s) => s.sponsor_id === plan.sponsorId);
@@ -204,20 +203,18 @@ const SponsorUebernahmeDialog: React.FC<SponsorUebernahmeDialogProps> = ({
 					) : (
 						plans.length > 0 && (
 							<div className="space-y-2">
-								<div className="flex items-center justify-between">
-									<p className="text-sm font-medium">Sponsoren des Quellfests</p>
-									<Button
-										size="sm"
-										variant="ghost"
-										onClick={() =>
-											setSelected(
-												Object.fromEntries(selectablePlans.map((p) => [p.sponsorId, true]))
-											)
-										}
-										disabled={selectablePlans.length === 0}>
-										Alle auswählen
-									</Button>
-								</div>
+								{/*
+									Hier gibt es bewusst kein "Alle auswählen" (#154). Der Dialog darf
+									Vorjahresbeträge mitnehmen, weil ein Mensch pro Firma entscheidet —
+									genau das rechtfertigt seine von der Kopierwerk-Semantik abweichende
+									Form (ADR 0008). Ein Knopf, der alle Firmen samt Beträgen in einem
+									Klick anlegt, hebt die Rechtfertigung auf: das Fest zeigte am Tag
+									seiner Anlage eingeworbenes Sponsoring, bei dem keine Firma gefragt
+									wurde. Der Massenfall ist mit der richtigen Semantik schon bedient —
+									das Kopierwerk bei der Fest-Anlage nimmt die Sponsoren als nackte
+									Verknüpfung ohne Beträge mit (#146). Die Reibung ist gewollt.
+								*/}
+								<p className="text-sm font-medium">Sponsoren des Quellfests</p>
 								{plans.map((plan) => {
 									const taken = alreadySponsoring(plan.sponsorId);
 									return (
