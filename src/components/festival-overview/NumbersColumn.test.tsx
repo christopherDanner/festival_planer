@@ -1,24 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
+import { makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
 import NumbersColumn from './NumbersColumn';
-
-function sponsoring(over: Partial<SponsoringWithDetails> = {}): SponsoringWithDetails {
-	return {
-		id: 'sp1',
-		festival_id: 'f1',
-		sponsor_id: 'sponsor1',
-		free_amount: null,
-		notes: null,
-		in_kind_description: null,
-		in_kind_value: null,
-		copied_from_festival_id: null,
-		created_at: '',
-		updated_at: '',
-		sponsor: { id: 'sponsor1', company_name: 'Raiffeisen' },
-		assignments: []
-	} as SponsoringWithDetails;
-}
 
 const render = (sponsorings: SponsoringWithDetails[]) =>
 	renderToStaticMarkup(
@@ -36,14 +20,8 @@ const render = (sponsorings: SponsoringWithDetails[]) =>
 describe('NumbersColumn — Sponsoring-Kasten', () => {
 	it('zeigt die Geldzahl und darunter den Sachwert als eigene Unterzeile', () => {
 		const html = render([
-			{
-				...sponsoring(),
-				id: 'x',
-				free_amount: 4850,
-				in_kind_description: 'Brotkorb',
-				in_kind_value: 190
-			},
-			{ ...sponsoring(), id: 'y', in_kind_description: '6 Fl. Wein', in_kind_value: 80 }
+			makeSponsoring({ freeAmount: 4850, inKindDescription: 'Brotkorb', inKindValue: 190 }),
+			makeSponsoring({ inKindDescription: '6 Fl. Wein', inKindValue: 80 })
 		]);
 
 		expect(html).toContain('€ 4.850');
@@ -52,7 +30,7 @@ describe('NumbersColumn — Sponsoring-Kasten', () => {
 	});
 
 	it('schweigt über den Sachwert, wenn keine Sachleistung erfasst ist', () => {
-		const html = render([{ ...sponsoring(), free_amount: 4850 }]);
+		const html = render([makeSponsoring({ freeAmount: 4850 })]);
 
 		expect(html).toContain('€ 4.850');
 		expect(html).toContain('1 Sponsor');

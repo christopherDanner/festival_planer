@@ -10,7 +10,11 @@ import {
 	formatDeltaEuro
 } from './numberBoxes';
 import { formatEuro } from '@/lib/money';
-import { festivalInKindTotal } from '@/lib/sponsoringTotals';
+import {
+	buildSponsoringOverviewFooter,
+	buildSponsoringOverviewRows
+} from '@/lib/sponsoringTotals';
+import { makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
 
@@ -320,12 +324,17 @@ describe('deriveSponsoringMetric', () => {
 		expect(deriveSponsoringMetric([sponsoring({ free_amount: 500 })]).inKindTotal).toBe(0);
 	});
 
-	it('rechnet den Sachwert mit derselben Funktion wie der Bereich', () => {
+	it('nennt dieselbe Sachwert-Zahl, die der Bereich in seinem Tabellenfuß zeigt', () => {
+		// Der Sprung vom Kasten in den Bereich darf nicht wie ein Rechenfehler
+		// aussehen — beide Wege müssen bei denselben Daten dieselbe Zahl nennen.
 		const sponsorings = [
-			sponsoring({ id: 'x', in_kind_description: 'Brotkorb', in_kind_value: 190 }),
-			sponsoring({ id: 'y', in_kind_description: '6 Fl. Wein', in_kind_value: 80 })
+			makeSponsoring({ freeAmount: 1000, inKindDescription: 'Brotkorb', inKindValue: 190 }),
+			makeSponsoring({ inKindDescription: '6 Fl. Wein', inKindValue: 80 })
 		];
-		expect(deriveSponsoringMetric(sponsorings).inKindTotal).toBe(festivalInKindTotal(sponsorings));
+		const footer = buildSponsoringOverviewFooter(buildSponsoringOverviewRows(sponsorings), []);
+
+		expect(deriveSponsoringMetric(sponsorings).inKindTotal).toBe(footer.inKindValue);
+		expect(footer.inKindValue).toBe(270);
 	});
 
 	it('keine Sponsoren → isEmpty', () => {
