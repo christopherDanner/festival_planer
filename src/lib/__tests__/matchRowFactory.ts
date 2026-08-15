@@ -17,6 +17,8 @@ export interface MatchRowOpts {
 	unit?: string;
 	packagingUnit?: string | null;
 	amountPerPackaging?: number | null;
+	supplier?: string | null;
+	category?: string | null;
 	srcAggregateCount?: number;
 	sourceDetails?: MatchRow['sourceDetails'];
 	/** Position, die im Zielfest wirklich existiert — nur die ist löschbar. */
@@ -38,8 +40,8 @@ export function matchRow(opts: MatchRowOpts): MatchRow {
 		srcOrderedTotal: opts.srcOrdered ?? null,
 		srcActualTotal: opts.srcActual ?? null,
 		srcAggregateCount: opts.srcAggregateCount ?? (status === 'only-target' ? 0 : 1),
-		supplier: null,
-		category: null,
+		supplier: opts.supplier ?? null,
+		category: opts.category ?? null,
 		unit: opts.unit ?? 'Stück',
 		packagingUnit: opts.packagingUnit ?? null,
 		amountPerPackaging: opts.amountPerPackaging ?? null,

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
+import { matchRow, type MatchRowOpts } from '@/lib/__tests__/matchRowFactory';
 import { handoverStamp } from '@/lib/materialHandover';
-import type { MatchRow, MatchRowStatus } from '@/lib/materialMatcher';
 import type { SaveState } from '@/lib/materialSaveOrchestrator';
 import HandoverStampMark from './HandoverStampMark';
 
@@ -10,35 +10,12 @@ import HandoverStampMark from './HandoverStampMark';
    ist die Plakat-Darstellung des Auto-Save-Zustands — der Zustand selbst kommt aus
    `handoverStamp`, gespeichert wird weiterhin im `materialSaveOrchestrator`. */
 
-function row(over: { status?: MatchRowStatus; targetOrdered?: number } = {}): MatchRow {
-	return {
-		key: 'k',
-		status: over.status ?? 'match',
-		name: 'Bier',
-		normalizedName: 'bier',
-		stationName: 'Ausschank',
-		targetMaterial: null,
-		sourceMaterials: [],
-		srcOrderedTotal: null,
-		srcActualTotal: null,
-		srcAggregateCount: 0,
-		supplier: null,
-		category: null,
-		unit: 'Stück',
-		packagingUnit: null,
-		amountPerPackaging: null,
-		targetOrderedQuantity: over.targetOrdered ?? null,
-		sourceDetails: []
-	};
-}
-
-const render = (
-	over: { status?: MatchRowStatus; targetOrdered?: number },
-	desired = '',
-	state?: SaveState
-) =>
+const render = (over: Omit<MatchRowOpts, 'name'>, desired = '', state?: SaveState) =>
 	renderToStaticMarkup(
-		<HandoverStampMark stamp={handoverStamp(row(over), desired, state)} onRetry={() => {}} />
+		<HandoverStampMark
+			stamp={handoverStamp(matchRow({ name: 'Bier', ...over }), desired, state)}
+			onRetry={() => {}}
+		/>
 	);
 
 const parse = (html: string) => {

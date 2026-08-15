@@ -1,36 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
+import { matchRow as row } from '@/lib/__tests__/matchRowFactory';
 import { groupRowsByStation } from '@/lib/materialHandover';
-import type { MatchRow, MatchRowStatus } from '@/lib/materialMatcher';
+import type { MatchRow } from '@/lib/materialMatcher';
 import HandoverGroupTabs from './HandoverGroupTabs';
 
 /* Seam dieses Tests (aus #118 vor dem ersten Test festgehalten): `HandoverGroupTabs`
    ist der Reiter-Streifen der Übernahme — dieselbe Handschrift wie die Reiter der
    Arbeitsliste (#113), aber die Übernahme kennt kein Geld: ein Reiter trägt
    Station, Anzahl und wie viele Positionen neu angelegt würden. */
-
-function row(over: { name: string; station?: string | null; status?: MatchRowStatus }): MatchRow {
-	return {
-		key: `k-${over.name}`,
-		status: over.status ?? 'match',
-		name: over.name,
-		normalizedName: over.name.toLowerCase(),
-		stationName: over.station === undefined ? 'Ausschank' : over.station,
-		targetMaterial: null,
-		sourceMaterials: [],
-		srcOrderedTotal: null,
-		srcActualTotal: null,
-		srcAggregateCount: 0,
-		supplier: null,
-		category: null,
-		unit: 'Stück',
-		packagingUnit: null,
-		amountPerPackaging: null,
-		targetOrderedQuantity: null,
-		sourceDetails: []
-	};
-}
 
 const render = (rows: MatchRow[], active = 0) => {
 	const groups = groupRowsByStation(rows);
