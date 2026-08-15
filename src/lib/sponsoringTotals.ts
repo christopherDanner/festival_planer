@@ -22,7 +22,14 @@ export function assignmentValue(assignment: AssignedValue): number {
 	return assignment.value ?? assignment.category.value ?? 0;
 }
 
-/** Gesamtbeitrag eines Sponsorings: Σ zugewiesene Kategorie-Werte + Freibetrag. */
+/**
+ * Gesamtbeitrag eines Sponsorings: Σ zugewiesene Kategorie-Werte + Freibetrag.
+ *
+ * **Geld-only, für immer.** Der Sachwert einer Sachleistung wird hier nie
+ * addiert — Geld und geschätzter Sachwert sind nicht dieselbe Einheit
+ * (ADR 0008, DESIGN-VISION §5). Wer eine zweite Zahl braucht, stellt sie
+ * daneben (`festivalInKindTotal`), nicht hinein.
+ */
 export function sponsoringTotal(sponsoring: SponsoringValue): number {
 	const assigned = sponsoring.assignments.reduce((acc, a) => acc + assignmentValue(a), 0);
 	return assigned + (sponsoring.free_amount ?? 0);

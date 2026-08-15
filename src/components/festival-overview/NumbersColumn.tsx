@@ -175,6 +175,11 @@ const NumbersColumn: React.FC<NumbersColumnProps> = ({
 					{sponsoring.isEmpty
 						? 'Noch keine Sponsoren'
 						: `${sponsoring.count} ${sponsoring.count === 1 ? 'Sponsor' : 'Sponsoren'}`}
+					{/* Sachwert steht neben dem Geld, nie darin (ADR 0008) — und nur, wenn es
+					einen gibt, sonst stünde eine 0 gegen den stillen Tabellenfuß des Bereichs. */}
+					{sponsoring.inKindTotal > 0 && (
+						<div>+ {formatEuro(sponsoring.inKindTotal)} Sachwert</div>
+					)}
 				</NumBox>
 			</div>
 		</div>
