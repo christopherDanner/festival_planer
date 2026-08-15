@@ -1,6 +1,6 @@
 /** Tausenderpunkte, ohne auf eine Locale-Datenbank angewiesen zu sein. */
-function group(digits: number): string {
-	return String(digits).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+function groupThousands(wholeEuros: number): string {
+	return String(wholeEuros).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 /**
@@ -9,7 +9,7 @@ function group(digits: number): string {
  * Überfliegen, nicht Buchhaltung.
  */
 export function formatEuro(value: number): string {
-	return `€ ${group(Math.abs(Math.round(value)))}`;
+	return `€ ${groupThousands(Math.abs(Math.round(value)))}`;
 }
 
 /**
@@ -23,5 +23,5 @@ export function formatEuro(value: number): string {
 export function formatAmount(value: number): string {
 	const cents = Math.round(value * 100);
 	const abs = Math.abs(cents);
-	return `${cents < 0 ? '-' : ''}${group(Math.floor(abs / 100))},${String(abs % 100).padStart(2, '0')}`;
+	return `${cents < 0 ? '-' : ''}${groupThousands(Math.floor(abs / 100))},${String(abs % 100).padStart(2, '0')}`;
 }

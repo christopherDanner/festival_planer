@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deltaCell, packagingHint, taxLabel } from '../materialRow';
+import { deltaCell, taxCell } from '../materialRow';
 
 /** Ohne Gebinde: gespeicherte Menge = Basismenge. */
 const lose = { packaging_unit: null, amount_per_packaging: null };
@@ -42,37 +42,19 @@ describe('deltaCell — Verbraucht − Bestellt (#114)', () => {
 		});
 	});
 
-	it('stellt krumme Mengen auf zwei Stellen, statt Fließkomma-Reste zu zeigen', () => {
+	it('stellt krumme Mengen mit Komma, statt Fließkomma-Reste zu zeigen', () => {
 		// 0,3 − 0,1 ergibt binär 0.19999999999999998
-		expect(deltaCell({ ...lose, ordered_quantity: 0.1, actual_quantity: 0.3 }).text).toBe('+0.2');
+		expect(deltaCell({ ...lose, ordered_quantity: 0.1, actual_quantity: 0.3 }).text).toBe('+0,2');
 	});
 });
 
-describe('packagingHint — die Gebinde-Umrechnung unter der Menge (#114)', () => {
-	it('sagt, wie viele Gebinde die Menge braucht', () => {
-		expect(packagingHint(4, fass)).toBe('→ 4 × Fass');
-	});
-
-	it('rundet auf ganze Gebinde auf — ein angebrochenes Fass wird trotzdem geliefert', () => {
-		expect(packagingHint(1.02, fass)).toBe('→ 2 × Fass');
-	});
-
-	it('schweigt bei loser Ware — dort gibt es nichts umzurechnen', () => {
-		expect(packagingHint(7.5, lose)).toBeNull();
-	});
-
-	it('schweigt bei nicht erfasster Menge', () => {
-		expect(packagingHint(null, fass)).toBeNull();
-	});
-});
-
-describe('taxLabel — die MwSt-Spalte (#114)', () => {
+describe('taxCell — die MwSt-Spalte (#114)', () => {
 	it('schreibt den Steuersatz mit Prozentzeichen', () => {
-		expect(taxLabel({ tax_rate: 10 })).toBe('10 %');
-		expect(taxLabel({ tax_rate: 20 })).toBe('20 %');
+		expect(taxCell({ tax_rate: 10 })).toEqual({ text: '10 %', muted: false });
+		expect(taxCell({ tax_rate: 20 })).toEqual({ text: '20 %', muted: false });
 	});
 
-	it('nennt eine Position ohne Steuersatz „keine" — dort sind Netto und Brutto gleich', () => {
-		expect(taxLabel({ tax_rate: null })).toBe('keine');
+	it('nennt eine Position ohne Steuersatz gedämpft „keine" — dort sind Netto und Brutto gleich', () => {
+		expect(taxCell({ tax_rate: null })).toEqual({ text: 'keine', muted: true });
 	});
 });

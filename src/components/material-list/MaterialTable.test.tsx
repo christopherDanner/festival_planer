@@ -141,8 +141,13 @@ describe('MaterialTable — feste Spaltenbreiten (#114)', () => {
 		// Gemessen: ~1.085 px für elf Spalten, im ~1.136 px breiten Arbeitsbereich
 		// ohne Querscrollen (#114).
 		expect(renderTable(rows, false)).toContain('min-width:1085px');
-		expect(renderTable(rows, true)).toContain('min-width:1190px');
 		expect(renderTable(rows, false)).toContain('overflow-x-auto');
+	});
+
+	it('bleibt mit Station gleich breit — sie bekommt ihren Anteil aus den Textspalten', () => {
+		// Sonst stünde die Tabelle auf den Achsen LIEFERANT/KATEGORIE/ALLE
+		// dauerhaft im Querscroll.
+		expect(renderTable(rows, true)).toContain('min-width:1085px');
 	});
 
 	it('hält jede Zeile auf 56 px — im Zeilenmodus wächst sie sonst und schiebt alles nach unten', () => {
@@ -253,10 +258,10 @@ describe('MaterialTable — Zwischensumme im Fuß', () => {
 		expect(html).not.toContain('Gesamtkosten');
 	});
 
-	it('lässt den Fuß weg, solange keine Position einen Preis trägt', () => {
-		expect(renderTable([material({ unit_price: null })], false)).not.toContain(
-			'Zwischensumme (gefiltert)'
-		);
+	it('steht auch dann, wenn keine Position einen Preis trägt — der Kopf des Kastens tut es auch', () => {
+		const html = renderTable([material({ unit_price: null })], false);
+		expect(html).toContain('Zwischensumme (gefiltert)');
+		expect(html).toContain('0,00');
 	});
 
 	it('summiert brutto über die übergebenen (gefilterten) Positionen', () => {

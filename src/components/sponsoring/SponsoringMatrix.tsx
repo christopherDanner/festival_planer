@@ -7,6 +7,11 @@ import {
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { ValueTag } from '@/components/toolkit/ValueTag';
+import {
+	PAPER_TABLE_BODY_CELL,
+	PAPER_TABLE_FOOT_CELL,
+	PAPER_TABLE_HEAD_CELL
+} from '@/components/toolkit/PaperTable';
 import { formatEuro } from '@/lib/money';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
@@ -46,11 +51,9 @@ Kategorien hat. Damit passen 4 (952 px) und 6 (1128 px) hinein, 7 reißen mit
 const OTHER_COLUMNS_PX = 600;
 const CATEGORY_COLUMN_MIN_PX = 88;
 
-const HEAD_CELL =
-	'border-b-2 border-tinte bg-fusszeile px-2.5 py-2 text-left align-bottom text-[11px] font-bold uppercase tracking-[.05em]';
-const BODY_CELL = 'overflow-hidden px-2.5 align-middle tabular-nums';
-const FOOT_CELL =
-	'border-t-2 border-tinte bg-fusszeile px-2.5 py-2 align-middle font-extrabold tabular-nums';
+const HEAD_CELL = PAPER_TABLE_HEAD_CELL;
+const BODY_CELL = PAPER_TABLE_BODY_CELL;
+const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
 
 /** Gestrichelte „+"-Marke für alles, was an dieser Zeile noch nicht erfasst ist. */
 const UnrecordedMark: React.FC = () => <ValueTag tone="muted">+</ValueTag>;

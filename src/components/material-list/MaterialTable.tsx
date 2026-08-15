@@ -16,11 +16,18 @@ import {
 	toBaseQuantity,
 	fromBaseQuantity,
 	formatPackaging,
+	formatQuantity,
 	formatRequiredPackaging
 } from '@/lib/materialQuantity';
 import { grossPrice, netPrice, rowTotal, sumTotals } from '@/lib/materialCosts';
-import { deltaCell, packagingHint, taxLabel, type DeltaTone } from '@/lib/materialRow';
+import { deltaCell, taxCell, type DeltaTone } from '@/lib/materialRow';
 import { formatAmount } from '@/lib/money';
+import {
+	MissingValue,
+	PAPER_TABLE_BODY_CELL,
+	PAPER_TABLE_FOOT_CELL,
+	PAPER_TABLE_HEAD_CELL
+} from '@/components/toolkit/PaperTable';
 
 /* ------------------------------------------------------------------ */
 /*  Generic inline-editable cell (text / number)                      */
@@ -173,24 +180,23 @@ const COLUMNS: Column[] = [
 ];
 
 /** Breiten der Textspalten, wenn die Station dazukommt (#113): sie geben ihr
-die 9 % ab, die Zahlenspalten bleiben unangetastet. */
+die 9 % ab, die Zahlenspalten bleiben unangetastet — die Tabelle wird dadurch
+nicht breiter, nur die Namen bekommen weniger Platz. */
 const WIDTHS_WITH_STATION: Partial<Record<ColumnKey, string>> = {
 	material: '14%',
-	station: '9%',
 	supplier: '10%',
 	packaging: '8%'
 };
 
-/** Gemessene Mindestbreite der elf Spalten (#114): ~1.085 px, die in den
-~1.136 px des Arbeitsbereichs ohne Querscrollen passen. Die Station kommt oben
-drauf (9 % des Rasters ⇒ 1.085 / 0,91 ≈ 1.190 px); darunter scrollt der Kasten,
-statt die gemessenen Spalten zu stauchen. */
+/** Gemessene Mindestbreite der Spalten (#114): ~1.085 px, die in die ~1.136 px
+des Arbeitsbereichs ohne Querscrollen passen. Sie gilt mit wie ohne Station,
+weil die Station ihre 9 % aus den Textspalten bekommt. Darunter scrollt der
+Kasten, statt die Spalten weiter zu stauchen. */
 const MIN_WIDTH_PX = 1085;
-const MIN_WIDTH_WITH_STATION_PX = 1190;
 
 function columns(showStation: boolean): Column[] {
 	if (!showStation) return COLUMNS;
-	const station: Column = { key: 'station', label: 'Station', width: WIDTHS_WITH_STATION.station! };
+	const station: Column = { key: 'station', label: 'Station', width: '9%' };
 	return [COLUMNS[0], station, ...COLUMNS.slice(1)].map((column) => ({
 		...column,
 		width: WIDTHS_WITH_STATION[column.key] ?? column.width
@@ -201,17 +207,16 @@ function columns(showStation: boolean): Column[] {
 /*  Zellen                                                             */
 /* ------------------------------------------------------------------ */
 
-const HEAD_CELL =
-	'border-b-2 border-tinte bg-fusszeile px-2.5 py-2 text-left align-bottom text-[11px] font-bold uppercase tracking-[.05em] text-tinte';
-const BODY_CELL = 'overflow-hidden px-2.5 align-middle tabular-nums';
-const FOOT_CELL =
-	'border-t-2 border-tinte bg-fusszeile px-2.5 py-2 align-middle font-extrabold tabular-nums';
-
-/** Fehlender Wert: grauer Strich statt leerer Zelle. */
-const MissingValue = () => <span className="text-tinte-soft/60">–</span>;
+const HEAD_CELL = PAPER_TABLE_HEAD_CELL;
+const BODY_CELL = PAPER_TABLE_BODY_CELL;
+const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
 
 /** Preislücke: rot gestrichelt statt still leer — die Position zählt in keine
-Summe und das muss man in der Zeile sehen (#114). */
+Summe und das muss man in der Zeile sehen (#114).
+
+Bewusst kein `<OpenSlot>`: der trägt dieselbe Grafik, ist aber ein Knopf zum
+Besetzen. In der lesenden Tabelle führt die Zelle nirgendwohin — erst der
+Zeilenmodus (#115) macht sie zum Eingabefeld. */
 const PriceGap = () => (
 	<span className="inline-block border-1.5 border-dashed border-rot px-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-rot">
 		Fehlt
@@ -232,12 +237,14 @@ const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterial
 	material
 }) => {
 	if (stored == null) return <MissingValue />;
-	const hint = packagingHint(stored, material);
+	const hint = formatRequiredPackaging(stored, material);
 	return (
 		<>
-			<span className="font-medium">{toBaseQuantity(stored, material)}</span>{' '}
+			<span className="font-medium">{formatQuantity(toBaseQuantity(stored, material) ?? 0)}</span>{' '}
 			<span className="text-[10.5px] text-tinte-soft">{material.unit}</span>
-			{hint && <span className="block text-[10px] leading-tight text-tinte-soft">{hint}</span>}
+			{hint && (
+				<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
+			)}
 		</>
 	);
 };
@@ -403,10 +410,10 @@ export const MaterialMobileCard: React.FC<{
 					);
 				})()}
 			</div>
-			{material.unit_price != null && (
+			{rowTotal(material) != null && (
 				<div className="px-3 py-1.5 border-t flex items-center justify-between text-xs">
 					<span className="text-muted-foreground">{formatPackaging(material)}</span>
-					<span className="font-semibold">{formatAmount(rowTotal(material) ?? 0)} €</span>
+					<span className="font-semibold">{formatAmount(rowTotal(material)!)} €</span>
 				</div>
 			)}
 		</div>
@@ -476,7 +483,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 		<div className="overflow-x-auto bg-white">
 			<table
 				className="w-full table-fixed border-collapse text-[13px]"
-				style={{ minWidth: `${showStation ? MIN_WIDTH_WITH_STATION_PX : MIN_WIDTH_PX}px` }}
+				style={{ minWidth: `${MIN_WIDTH_PX}px` }}
 			>
 				<colgroup>
 					{cols.map((col) => (
@@ -512,23 +519,27 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 					))}
 				</tbody>
 
-				{hasCosts && (
-					<tfoot>
-						<tr>
-							{/* Beschriftung wie im Kopf des Kastens — dieselbe Zahl darf nicht
-							zwei Namen haben (ADR 0006). */}
-							<td colSpan={cols.length - 2} className={cn(FOOT_CELL, 'text-right')}>
-								Zwischensumme (gefiltert)
-							</td>
-							<td className={cn(FOOT_CELL, 'text-right')}>
-								<span className="font-display text-[15px] font-semibold">
-									{formatAmount(totalCost)}
-								</span>
-							</td>
-							<td className={FOOT_CELL} />
-						</tr>
-					</tfoot>
-				)}
+				{/* Der Fuß steht immer — auch wenn keine Position einen Preis trägt.
+				Der Kopf des Kastens nennt dort seine 0, und zwei Zahlen desselben
+				Namens dürfen nicht mal da sein und mal nicht (ADR 0006). */}
+				<tfoot>
+					<tr>
+						{/* Beschriftung wie im Kopf des Kastens — dieselbe Zahl darf nicht
+						zwei Namen haben (ADR 0006). */}
+						<td
+							colSpan={cols.findIndex((col) => col.key === 'total')}
+							className={cn(FOOT_CELL, 'text-right')}
+						>
+							Zwischensumme (gefiltert)
+						</td>
+						<td className={cn(FOOT_CELL, 'text-right')}>
+							<span className="font-display text-[15px] font-semibold">
+								{formatAmount(totalCost)}
+							</span>
+						</td>
+						<td className={FOOT_CELL} />
+					</tr>
+				</tfoot>
 			</table>
 		</div>
 	);
@@ -555,12 +566,18 @@ const Cell: React.FC<{
 					)}
 				</>
 			);
+		// `block`, weil die Ellipse an einem Inline-Element nicht greift: der
+		// lange Lieferantenname wäre sonst hart abgeschnitten.
 		case 'station':
-			return m.station?.name ? <span className="truncate">{m.station.name}</span> : <MissingValue />;
+			return m.station?.name ? (
+				<span className="block truncate">{m.station.name}</span>
+			) : (
+				<MissingValue />
+			);
 		case 'supplier':
-			return m.supplier ? <span className="truncate">{m.supplier}</span> : <MissingValue />;
+			return m.supplier ? <span className="block truncate">{m.supplier}</span> : <MissingValue />;
 		case 'packaging':
-			return <span className="truncate">{formatPackaging(m)}</span>;
+			return <span className="block truncate">{formatPackaging(m)}</span>;
 		case 'ordered':
 			return <QuantityCell stored={m.ordered_quantity} material={m} />;
 		case 'consumed':
@@ -569,12 +586,10 @@ const Cell: React.FC<{
 			const delta = deltaCell(m);
 			return <span className={DELTA_TONE[delta.tone]}>{delta.text}</span>;
 		}
-		case 'tax':
-			return m.tax_rate == null ? (
-				<span className="text-tinte-soft">{taxLabel(m)}</span>
-			) : (
-				<>{taxLabel(m)}</>
-			);
+		case 'tax': {
+			const tax = taxCell(m);
+			return <span className={cn(tax.muted && 'text-tinte-soft')}>{tax.text}</span>;
+		}
 		case 'net': {
 			const net = netPrice(m);
 			return net == null ? <PriceGap /> : <>{formatAmount(net)}</>;
