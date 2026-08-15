@@ -33,7 +33,7 @@ describe('HandoverStampMark — die drei Stempel aus #118', () => {
 	});
 
 	it('stempelt eine Zeile, die neu angelegt wird, grün durchgefärbt', () => {
-		const html = render({ status: 'only-source' });
+		const html = render({ status: 'only-source' }, '8');
 
 		expect(html).toContain('WIRD NEU ANGELEGT');
 		expect(html).toContain('bg-gruen');

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { matchRow } from '@/lib/__tests__/matchRowFactory';
 import type { MatchRow } from '@/lib/materialMatcher';
 import type { SaveState } from '@/lib/materialSaveOrchestrator';
-import HandoverTable, { HandoverCard, type HandoverRowsProps } from './HandoverTable';
+import HandoverTable, { HandoverCard, type HandoverTableProps } from './HandoverTable';
 
 /* Seam dieses Tests (aus #118 vor dem ersten Test festgehalten): `HandoverTable`
    ist die Tabelle der Übernahme — **Vorjahr als getönte Referenzspalten**,
@@ -25,7 +25,7 @@ const BIER = matchRow({
 	amountPerPackaging: 50
 });
 
-const props = (over: Partial<HandoverRowsProps> = {}): HandoverRowsProps => ({
+const props = (over: Partial<HandoverTableProps> = {}): HandoverTableProps => ({
 	rows: [BIER],
 	desiredByKey: { [BIER.key]: '900' },
 	statesByKey: {},
@@ -37,7 +37,7 @@ const props = (over: Partial<HandoverRowsProps> = {}): HandoverRowsProps => ({
 	...over
 });
 
-const render = (over: Partial<HandoverRowsProps> = {}) =>
+const render = (over: Partial<HandoverTableProps> = {}) =>
 	renderToStaticMarkup(<HandoverTable {...props(over)} />);
 
 const parse = (html: string) => {
@@ -93,11 +93,21 @@ describe('HandoverTable — der Auto-Save-Stempel', () => {
 		expect(parse(render()).textContent).toContain('✓ GESPEICHERT');
 	});
 
-	it('kündigt bei einer Zeile nur aus dem Quellfest das Anlegen an', () => {
+	it('kündigt das Anlegen an, sobald die Quellzeile eine Wunschmenge trägt', () => {
+		const spritzwein = matchRow({ name: 'Spritzwein', status: 'only-source', srcOrdered: 8 });
+		const host = parse(
+			render({ rows: [spritzwein], desiredByKey: { [spritzwein.key]: '8' } })
+		);
+
+		expect(host.textContent).toContain('WIRD NEU ANGELEGT');
+		expect(host.textContent).toContain('gibt es im Zielfest noch nicht');
+	});
+
+	it('verspricht ohne Wunschmenge nichts', () => {
 		const rows = [matchRow({ name: 'Spritzwein', status: 'only-source', srcOrdered: 8 })];
 		const host = parse(render({ rows, desiredByKey: {} }));
 
-		expect(host.textContent).toContain('WIRD NEU ANGELEGT');
+		expect(host.textContent).toContain('NICHT ÜBERNEHMEN');
 		expect(host.textContent).toContain('gibt es im Zielfest noch nicht');
 	});
 
@@ -135,13 +145,45 @@ describe('HandoverTable — Handgriffe an der Zeile', () => {
 		expect(host.querySelector('[data-siblings]')?.getAttribute('title')).toContain('Grill');
 	});
 
+	it('nennt Kategorie und Lieferant unter dem Namen statt in eigenen Spalten', () => {
+		const rows = [matchRow({ name: 'Bier', category: 'Getränke', supplier: 'Metro' })];
+		const host = parse(render({ rows, desiredByKey: {} }));
+
+		expect(host.textContent).toContain('Getränke · Metro');
+		expect([...host.querySelectorAll('th')].map((th) => th.textContent)).not.toContain('Lieferant');
+	});
+
+	it('schlüsselt eine über mehrere Stationen verteilte Referenzmenge auf', () => {
+		const rows = [
+			matchRow({
+				name: 'Bier',
+				srcOrdered: 1000,
+				srcAggregateCount: 2,
+				sourceDetails: [
+					{ stationName: 'Ausschank', ordered: 800, actual: null },
+					{ stationName: 'Grill', ordered: 200, actual: null }
+				]
+			})
+		];
+		const host = parse(render({ rows, desiredByKey: {} }));
+
+		expect(host.textContent).toContain('Σ2');
+		expect(host.querySelector('[data-aggregate]')?.getAttribute('title')).toContain(
+			'Ausschank: 800'
+		);
+	});
+
+	it('scrollt bei Bedarf im eigenen Rahmen, nicht mit der ganzen Seite', () => {
+		expect(render()).toContain('overflow-x-auto');
+	});
+
 	it('bleibt ohne runde Ecken', () => {
 		expect(render()).not.toContain('rounded');
 	});
 });
 
 describe('HandoverCard — dieselbe Zeile am Handy', () => {
-	const renderCard = (row: MatchRow, over: Partial<HandoverRowsProps> = {}) =>
+	const renderCard = (row: MatchRow, over: Partial<HandoverTableProps> = {}) =>
 		renderToStaticMarkup(
 			<HandoverCard
 				{...props(over)}
@@ -165,5 +207,12 @@ describe('HandoverCard — dieselbe Zeile am Handy', () => {
 
 		expect(html).not.toContain('<table');
 		expect(html).not.toContain('overflow-x-auto');
+	});
+
+	it('rechnet die getippte Menge ins Gebinde um und rechnet ohne sie gar nicht', () => {
+		expect(parse(renderCard(BIER)).textContent).toContain('18 Fass');
+
+		const leer = parse(renderCard(BIER, { desiredByKey: {} })).textContent ?? '';
+		expect(leer).not.toContain('NaN');
 	});
 });

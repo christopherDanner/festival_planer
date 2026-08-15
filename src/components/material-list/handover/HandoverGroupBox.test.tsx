@@ -28,26 +28,20 @@ describe('HandoverGroupBox — der Kopf des Kastens', () => {
 		expect(html).toContain('2 Positionen');
 	});
 
-	it('stempelt, wie viele Positionen der Station neu angelegt würden', () => {
+	it('stempelt, wie viele Positionen der Station es nur im Quellfest gibt', () => {
 		const html = render([
 			matchRow({ name: 'Bier' }),
 			matchRow({ name: 'Spritzwein', status: 'only-source' })
 		]);
 
-		expect(html).toContain('1 wird neu angelegt');
+		// Nicht „wird angelegt": angelegt wird erst mit einer Wunschmenge
+		// (CONTEXT.md), und die kennt der Kasten nicht.
+		expect(html).toContain('1 nur im Quellfest');
+		expect(html).not.toContain('angelegt');
 	});
 
-	it('setzt den Stempel bei mehreren in die Mehrzahl', () => {
-		const html = render([
-			matchRow({ name: 'Spritzwein', status: 'only-source' }),
-			matchRow({ name: 'Sturm', status: 'only-source' })
-		]);
-
-		expect(html).toContain('2 werden neu angelegt');
-	});
-
-	it('lässt den Stempel weg, wo nichts Neues dazukommt', () => {
-		expect(render([matchRow({ name: 'Bier' })])).not.toContain('neu angelegt');
+	it('lässt den Stempel weg, wo es nichts zu holen gibt', () => {
+		expect(render([matchRow({ name: 'Bier' })])).not.toContain('nur im Quellfest');
 	});
 
 	it('zeigt die durchgereichte Tabelle', () => {

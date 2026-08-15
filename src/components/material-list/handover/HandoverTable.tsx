@@ -4,26 +4,35 @@ import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
-import { handoverStamp, NO_STATION } from '@/lib/materialHandover';
+import { NO_STATION } from '@/lib/materialGrouping';
+import { handoverStamp } from '@/lib/materialHandover';
 import type { MatchRow } from '@/lib/materialMatcher';
 import type { SaveState } from '@/lib/materialSaveOrchestrator';
 import { formatPackaging, formatRequiredPackaging, fromBaseQuantity } from '@/lib/materialQuantity';
 
 import HandoverStampMark from './HandoverStampMark';
 
-export interface HandoverRowsProps {
-	rows: MatchRow[];
+/**
+ * Was eine einzelne Zeile der Übernahme zum Arbeiten braucht — Tabelle und
+ * Karte reichen es unverändert durch. Ein eigener Typ, weil die fünf Werte
+ * ohnehin immer zusammen reisen.
+ */
+export interface HandoverRowControls {
 	/** Die getippten Wunschmengen, je Zeilenschlüssel (Basiseinheiten). */
 	desiredByKey: Record<string, string>;
 	/** Speicherzustände aus dem `materialSaveOrchestrator`. */
 	statesByKey: Record<string, SaveState>;
-	/** Zeilen desselben Namens über alle Stationen — für die „2×"-Marke. */
-	siblingsByName: Map<string, MatchRow[]>;
 	onDesiredChange: (row: MatchRow, value: string) => void;
 	/** Auto-Save: beim Verlassen des Felds. */
 	onCommit: (row: MatchRow) => void;
 	onRetry: (row: MatchRow) => void;
 	onDelete: (row: MatchRow) => void;
+}
+
+export interface HandoverTableProps extends HandoverRowControls {
+	rows: MatchRow[];
+	/** Zeilen desselben Namens über alle Stationen — für die „2×"-Marke. */
+	siblingsByName: Map<string, MatchRow[]>;
 }
 
 const HEAD_CELL = 'border-b-2 border-tinte bg-papier-getoent px-2.5 py-2 text-[11px] font-bold uppercase tracking-[.05em] text-tinte';
@@ -39,9 +48,10 @@ const REFERENCE_CELL = 'bg-papier-getoent';
  * Gesteuert: Werte und Speicherzustände kommen herein, gespeichert wird im
  * `materialSaveOrchestrator` der Seite — die Tabelle löst nur aus.
  */
-const HandoverTable: React.FC<HandoverRowsProps> = ({ rows, siblingsByName, ...row }) => (
-	<div className="bg-white">
-		<table className="w-full border-collapse text-[13px]">
+const HandoverTable: React.FC<HandoverTableProps> = ({ rows, siblingsByName, ...controls }) => (
+	// Die Tabelle scrollt im eigenen Rahmen, nie die Seite (DESIGN-VISION §6).
+	<div className="overflow-x-auto bg-white">
+		<table className="w-full min-w-[720px] border-collapse text-[13px]">
 			<thead>
 				<tr>
 					<th rowSpan={2} className={cn(HEAD_CELL, 'text-left')}>
@@ -73,7 +83,7 @@ const HandoverTable: React.FC<HandoverRowsProps> = ({ rows, siblingsByName, ...r
 						key={r.key}
 						row={r}
 						siblings={siblingsByName.get(r.normalizedName) ?? [r]}
-						{...row}
+						{...controls}
 					/>
 				))}
 			</tbody>
@@ -81,12 +91,12 @@ const HandoverTable: React.FC<HandoverRowsProps> = ({ rows, siblingsByName, ...r
 	</div>
 );
 
-type RowProps = Omit<HandoverRowsProps, 'rows' | 'siblingsByName'> & {
+interface HandoverRowProps extends HandoverRowControls {
 	row: MatchRow;
 	siblings: MatchRow[];
-};
+}
 
-const HandoverRow: React.FC<RowProps> = ({
+const HandoverRow: React.FC<HandoverRowProps> = ({
 	row,
 	siblings,
 	desiredByKey,
@@ -104,11 +114,7 @@ const HandoverRow: React.FC<RowProps> = ({
 			<td className={cn(CELL, 'text-left')}>
 				<span className="font-bold">{row.name}</span>
 				<SiblingMark siblings={siblings} />
-				{row.status === 'only-source' && (
-					<span className="block text-[11px] text-tinte-soft">
-						gibt es im Zielfest noch nicht
-					</span>
-				)}
+				<RowSubline row={row} />
 			</td>
 			<td className={cn(CELL, 'text-left text-tinte-soft')}>
 				{formatPackaging({
@@ -117,25 +123,15 @@ const HandoverRow: React.FC<RowProps> = ({
 					amount_per_packaging: row.amountPerPackaging
 				})}
 			</td>
-			<ReferenceCell value={row.srcOrderedTotal} row={row} />
+			<ReferenceCell value={row.srcOrderedTotal} row={row} showAggregate />
 			<ReferenceCell value={row.srcActualTotal} row={row} />
 			<td className={cn(CELL, 'text-right')}>
-				<Input
-					type="number"
-					min="0"
-					step="any"
+				<DesiredInput
+					row={row}
 					value={desired}
-					onChange={(e) => onDesiredChange(row, e.target.value)}
-					onBlur={() => onCommit(row)}
-					onKeyDown={(e) => {
-						if (e.key === 'Enter') e.currentTarget.blur();
-					}}
-					placeholder="—"
-					aria-label={`Wunschmenge für ${row.name}`}
-					className={cn(
-						'ml-auto h-9 w-[86px] border-2 border-tinte bg-gelb px-2 text-right text-[13px] font-bold tabular-nums text-tinte max-[899px]:h-10',
-						FOCUS_INK
-					)}
+					onChange={(value) => onDesiredChange(row, value)}
+					onCommit={() => onCommit(row)}
+					className="ml-auto h-9 w-[86px] max-[899px]:h-10"
 				/>
 				<PackagingHint value={parseFloat(desired)} row={row} />
 			</td>
@@ -149,15 +145,89 @@ const HandoverRow: React.FC<RowProps> = ({
 	);
 };
 
+/**
+ * Kategorie und Lieferant unter dem Namen statt als zwei eigene Spalten: die
+ * Übernahme stellt Mengen gegenüber, und zwei weitere Spalten schöben das
+ * Eingabefeld aus dem Bild. Dazu der Hinweis, wo eine Zeile herkommt.
+ */
+const RowSubline: React.FC<{ row: MatchRow }> = ({ row }) => {
+	const parts = [row.category, row.supplier].filter(Boolean);
+	if (parts.length === 0 && row.status !== 'only-source') return null;
+	return (
+		<span className="block text-[11px] text-tinte-soft">
+			{parts.join(' · ')}
+			{parts.length > 0 && row.status === 'only-source' && ' · '}
+			{row.status === 'only-source' && 'gibt es im Zielfest noch nicht'}
+		</span>
+	);
+};
+
 /** Eine Referenzspalte des Quellfests: Menge, Einheit und die Gebinde-Zahl. */
-const ReferenceCell: React.FC<{ value: number | null; row: MatchRow }> = ({ value, row }) => (
+const ReferenceCell: React.FC<{
+	value: number | null;
+	row: MatchRow;
+	/** Nur an der Bestellt-Spalte: aus wie vielen Quellzeilen die Menge stammt. */
+	showAggregate?: boolean;
+}> = ({ value, row, showAggregate }) => (
 	<td className={cn(CELL, REFERENCE_CELL, 'text-right')}>
 		<span className={cn('font-medium', value == null && 'text-tinte-soft')}>
 			{formatQuantity(value)}
 		</span>{' '}
 		<span className="text-[11px] text-tinte-soft">{row.unit}</span>
+		{showAggregate && <AggregateMark row={row} />}
 		<PackagingHint value={value} row={row} />
 	</td>
+);
+
+/**
+ * „Σ2" — die Referenzmenge ist im Quellfest über mehrere Stationen verteilt;
+ * der Titel schlüsselt sie auf. Ohne die Marke stünde da eine Summe, deren
+ * Herkunft man nicht mehr sieht.
+ */
+const AggregateMark: React.FC<{ row: MatchRow }> = ({ row }) => {
+	if (row.srcAggregateCount < 2) return null;
+	const breakdown = row.sourceDetails
+		.map((d) => `${d.stationName ?? NO_STATION}: ${d.ordered}`)
+		.join(', ');
+	return (
+		<span
+			data-aggregate
+			title={`Im Quellfest verteilt auf ${breakdown}`}
+			className="ml-1 whitespace-nowrap border-1.5 border-tinte-soft px-1 text-[10px] font-bold text-tinte-soft">
+			Σ{row.srcAggregateCount}
+		</span>
+	);
+};
+
+/**
+ * Das gelbe Eingabefeld der Wunschmenge — an *einer* Stelle, damit Tabelle und
+ * Karte dieselben Regeln haben (Auto-Save beim Verlassen, Enter verlässt).
+ */
+const DesiredInput: React.FC<{
+	row: MatchRow;
+	value: string;
+	onChange: (value: string) => void;
+	onCommit: () => void;
+	className?: string;
+}> = ({ row, value, onChange, onCommit, className }) => (
+	<Input
+		type="number"
+		min="0"
+		step="any"
+		value={value}
+		onChange={(e) => onChange(e.target.value)}
+		onBlur={onCommit}
+		onKeyDown={(e) => {
+			if (e.key === 'Enter') e.currentTarget.blur();
+		}}
+		placeholder="—"
+		aria-label={`Wunschmenge für ${row.name}`}
+		className={cn(
+			'border-2 border-tinte bg-gelb px-2 text-right text-[13px] font-bold tabular-nums text-tinte',
+			FOCUS_INK,
+			className
+		)}
+	/>
 );
 
 /** „→ 16 Fass" — nur wo die Position überhaupt in Gebinden geführt wird. */
@@ -203,7 +273,7 @@ function formatQuantity(value: number | null): string {
 	return value == null ? '—' : String(value);
 }
 
-export interface HandoverCardProps extends Omit<HandoverRowsProps, 'rows' | 'siblingsByName'> {
+export interface HandoverCardProps extends HandoverRowControls {
 	row: MatchRow;
 	siblings: MatchRow[];
 }
@@ -225,7 +295,6 @@ export const HandoverCard: React.FC<HandoverCardProps> = ({
 }) => {
 	const desired = desiredByKey[row.key] ?? '';
 	const stamp = handoverStamp(row, desired, statesByKey[row.key]);
-	const context = { packaging_unit: row.packagingUnit, amount_per_packaging: row.amountPerPackaging };
 
 	return (
 		<div className="border-2 border-tinte bg-white">
@@ -242,6 +311,7 @@ export const HandoverCard: React.FC<HandoverCardProps> = ({
 							amount_per_packaging: row.amountPerPackaging
 						})}
 					</p>
+					<RowSubline row={row} />
 				</div>
 				{row.targetMaterial && <DeleteButton onClick={() => onDelete(row)} />}
 			</div>
@@ -249,38 +319,27 @@ export const HandoverCard: React.FC<HandoverCardProps> = ({
 			<div className="grid grid-cols-3 gap-px bg-linie">
 				<Tile label="Bestellt" tinted>
 					{formatQuantity(row.srcOrderedTotal)} <Unit>{row.unit}</Unit>
+					<AggregateMark row={row} />
+					<PackagingHint value={row.srcOrderedTotal} row={row} />
 				</Tile>
 				<Tile label="Verbraucht" tinted>
 					{formatQuantity(row.srcActualTotal)} <Unit>{row.unit}</Unit>
+					<PackagingHint value={row.srcActualTotal} row={row} />
 				</Tile>
 				<Tile label="Wunschmenge">
-					<Input
-						type="number"
-						min="0"
-						step="any"
+					<DesiredInput
+						row={row}
 						value={desired}
-						onChange={(e) => onDesiredChange(row, e.target.value)}
-						onBlur={() => onCommit(row)}
-						placeholder="—"
-						aria-label={`Wunschmenge für ${row.name}`}
-						className={cn(
-							'h-10 w-full border-2 border-tinte bg-gelb px-2 text-right text-[13px] font-bold tabular-nums text-tinte',
-							FOCUS_INK
-						)}
+						onChange={(value) => onDesiredChange(row, value)}
+						onCommit={() => onCommit(row)}
+						className="h-10 w-full"
 					/>
-					{formatRequiredPackaging(fromBaseQuantity(parseFloat(desired) || 0, context), context) && (
-						<span className="block text-[11px] text-tinte-soft">
-							→ {formatRequiredPackaging(fromBaseQuantity(parseFloat(desired), context), context)}
-						</span>
-					)}
+					<PackagingHint value={parseFloat(desired)} row={row} />
 				</Tile>
 			</div>
 
-			<div className="flex items-center gap-2 border-t border-linie px-3 py-2">
+			<div className="border-t border-linie px-3 py-2">
 				<HandoverStampMark stamp={stamp} onRetry={() => onRetry(row)} />
-				{row.status === 'only-source' && (
-					<span className="text-[11px] text-tinte-soft">gibt es im Zielfest noch nicht</span>
-				)}
 			</div>
 		</div>
 	);

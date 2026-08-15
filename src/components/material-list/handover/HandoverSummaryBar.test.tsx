@@ -10,15 +10,18 @@ import HandoverSummaryBar from './HandoverSummaryBar';
    ist die Fußleiste der Übernahme — sie zählt den ganzen Lauf, nicht den Reiter,
    und zwar über dieselben Stempel wie die Zeilen (`handoverSummary`). */
 
+const SPRITZWEIN = matchRow({ name: 'Spritzwein', status: 'only-source', srcOrdered: 8 });
 const ROWS = [
 	matchRow({ name: 'Bier', targetOrdered: 900 }),
 	matchRow({ name: 'Almdudler', targetOrdered: 300 }),
-	matchRow({ name: 'Spritzwein', status: 'only-source', srcOrdered: 8 }),
+	SPRITZWEIN,
 	matchRow({ name: 'Kotelett' })
 ];
 
 const render = (statesByKey: Record<string, SaveState> = {}) =>
-	renderToStaticMarkup(<HandoverSummaryBar summary={handoverSummary(ROWS, {}, statesByKey)} />);
+	renderToStaticMarkup(
+		<HandoverSummaryBar summary={handoverSummary(ROWS, { [SPRITZWEIN.key]: '8' }, statesByKey)} />
+	);
 
 const parse = (html: string) => {
 	const host = document.createElement('div');

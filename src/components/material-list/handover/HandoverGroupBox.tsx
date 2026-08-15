@@ -25,10 +25,12 @@ const HandoverGroupBox: React.FC<HandoverGroupBoxProps> = ({ group, children }) 
 			<span className="text-xs text-papier">
 				{group.count} {group.count === 1 ? 'Position' : 'Positionen'}
 			</span>
-			{group.newCount > 0 && (
+			{group.sourceOnlyCount > 0 && (
 				// Auf der grünen Fläche trägt der Stempel seine Farbe auf Weiß.
+				// „nur im Quellfest", nicht „wird angelegt": angelegt wird erst mit
+				// einer Wunschmenge (CONTEXT.md), und die kennt der Kasten nicht.
 				<Stamp tone="green" size="sm" tilt="none">
-					{group.newCount} {group.newCount === 1 ? 'wird' : 'werden'} neu angelegt
+					{group.sourceOnlyCount} nur im Quellfest
 				</Stamp>
 			)}
 		</Poster>

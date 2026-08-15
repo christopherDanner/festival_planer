@@ -4,6 +4,7 @@ was der Auto-Save-Stempel einer Zeile sagt. Gespeichert wird weiterhin im
 `materialSaveOrchestrator` — dieses Modul liest dessen Zustand nur ab. */
 
 import type { Festival } from './festivalService';
+import { NO_STATION } from './materialGrouping';
 import type { MatchRow } from './materialMatcher';
 import type { SaveState } from './materialSaveOrchestrator';
 
@@ -21,11 +22,6 @@ export function sourceFestivalOptions(festivals: Festival[], targetId: string | 
 		.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
 }
 
-/** Beschriftung der Zeilen, die keiner Station zugeordnet sind. Wortlaut wie in
-der Arbeitsliste (`materialGrouping`) — dieselbe Restgruppe darf nicht zwei
-Namen haben. */
-export const NO_STATION = 'Ohne Station';
-
 const NO_STATION_KEY = '__none__';
 
 /** Ein Stations-Kasten der Übernahme samt der Zahlen, die sein Reiter trägt. */
@@ -37,8 +33,12 @@ export interface HandoverGroup {
 	unassigned: boolean;
 	rows: MatchRow[];
 	count: number;
-	/** Zeilen, die es nur im Quellfest gibt — sie würden neu angelegt. */
-	newCount: number;
+	/**
+	 * Zeilen, die es nur im Quellfest gibt. Bewusst *nicht* „wird angelegt":
+	 * angelegt wird erst mit einer Wunschmenge (`CONTEXT.md`), und die kennt
+	 * diese Einteilung nicht. Der Reiter sagt damit, wo etwas zu holen wäre.
+	 */
+	sourceOnlyCount: number;
 }
 
 /**
@@ -71,7 +71,7 @@ export function groupRowsByStation(rows: MatchRow[]): HandoverGroup[] {
 			unassigned: bucket.unassigned,
 			rows: [...bucket.rows].sort((a, b) => a.name.localeCompare(b.name, 'de')),
 			count: bucket.rows.length,
-			newCount: bucket.rows.filter((r) => r.status === 'only-source').length
+			sourceOnlyCount: bucket.rows.filter((r) => r.status === 'only-source').length
 		}))
 		.sort((a, b) => {
 			if (a.unassigned !== b.unassigned) return a.unassigned ? 1 : -1;
@@ -127,12 +127,19 @@ function desiredQuantity(value: string): number | null {
 /**
  * Der Auto-Save-Stempel einer Zeile (#118). Er liest den Zustand ab, den der
  * `materialSaveOrchestrator` führt, und ergänzt ihn um das, was die Zeile selbst
- * schon weiß: eine Zeile nur im Quellfest wird angelegt, eine Bestellmenge im
- * Zielfest steht bereits.
+ * schon weiß: was im Zielfest steht und ob es die Position dort überhaupt gibt.
  *
- * `pending` gibt es, weil das Feld erst beim Verlassen speichert: eine gerade
- * getippte Menge ist weder übernommen noch ausgelassen, und „NICHT ÜBERNEHMEN"
- * neben einer eben getippten 18 wäre schlicht falsch.
+ * Zwei Regeln halten ihn ehrlich:
+ *
+ * - **Angelegt wird nur mit Wunschmenge** (`CONTEXT.md`: „Nur im Quellfest —
+ *   wird im Zielfest neu angelegt, wenn der User eine Wunschmenge einträgt").
+ *   Eine unberührte Quellzeile trägt darum „NICHT ÜBERNEHMEN", nicht „WIRD NEU
+ *   ANGELEGT" — sonst verspräche ein frisches Fest 60 Anlagen, bevor eine Zahl
+ *   getippt ist. Dass es die Position im Zielfest noch nicht gibt, sagt die
+ *   Zeile daneben.
+ * - **`pending`**, weil das Feld erst beim Verlassen speichert: eine getippte
+ *   Menge, die von der gespeicherten abweicht, ist weder übernommen noch
+ *   ausgelassen — „✓ GESPEICHERT" neben einer eben geänderten Zahl wäre falsch.
  */
 export function handoverStamp(
 	row: MatchRow,
@@ -144,11 +151,18 @@ export function handoverStamp(
 	}
 	if (saveState?.status === 'saving') return stamp('saving');
 	if (saveState?.status === 'saved') return stamp('saved');
-	// Angelegt wird erst beim Speichern — bis dahin *kündigt* der Stempel an,
-	// mit und ohne getippte Menge.
-	if (row.status === 'only-source') return stamp('new');
-	if (row.targetOrderedQuantity != null && row.targetOrderedQuantity > 0) return stamp('saved');
-	return stamp(desiredQuantity(desiredValue) == null ? 'skip' : 'pending');
+
+	const desired = desiredQuantity(desiredValue);
+	const stored = row.targetOrderedQuantity != null && row.targetOrderedQuantity > 0
+		? row.targetOrderedQuantity
+		: null;
+
+	if (desired == null) {
+		// Ein geleertes Feld löscht nichts — was im Zielfest steht, steht weiter.
+		return stamp(stored == null ? 'skip' : 'saved');
+	}
+	if (desired === stored) return stamp('saved');
+	return stamp(row.status === 'only-source' ? 'new' : 'pending');
 }
 
 function stamp(kind: HandoverStampKind): HandoverStamp {

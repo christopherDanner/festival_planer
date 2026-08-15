@@ -30,16 +30,16 @@ describe('HandoverGroupTabs — was ein Reiter trägt', () => {
 		expect(html).toMatch(/tabular-nums">2</);
 	});
 
-	it('kündigt an, wie viele Positionen der Station neu angelegt würden', () => {
+	it('sagt an, wie viele Positionen der Station es nur im Quellfest gibt', () => {
 		const html = render([row({ name: 'Bier' }), row({ name: 'Spritzwein', status: 'only-source' })]);
 
-		expect(html).toMatch(/text-gruen[^>]*>1 neu/);
+		expect(html).toMatch(/text-gruen[^>]*>1 nur Quelle/);
 	});
 
-	it('setzt einen Haken, wo nichts Neues dazukommt', () => {
+	it('setzt einen Haken, wo es nichts zu holen gibt', () => {
 		const html = render([row({ name: 'Bier' })]);
 
-		expect(html).not.toContain('neu');
+		expect(html).not.toContain('nur Quelle');
 		expect(html).toContain('✓');
 	});
 });

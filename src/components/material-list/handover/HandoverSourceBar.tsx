@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { Label } from '@/components/ui/label';
 import {
 	Select,
 	SelectContent,
@@ -7,6 +8,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@/components/ui/select';
+import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
 import { festYear } from '@/lib/festDates';
 import type { Festival } from '@/lib/festivalService';
 
@@ -42,11 +44,13 @@ const HandoverSourceBar: React.FC<HandoverSourceBarProps> = ({
 	return (
 		<div className="flex flex-wrap items-end gap-x-3 gap-y-2.5 border-2.5 border-tinte bg-white px-4 py-3">
 			<div className="min-w-[220px] flex-1 min-[900px]:flex-none">
-				<Kleinlabel htmlFor="handover-source">Quellfest</Kleinlabel>
+				<Label htmlFor="handover-source" variant="kleinlabel" className="mb-1 block">
+					Quellfest
+				</Label>
 				<Select value={selected?.id ?? ''} onValueChange={onSourceChange}>
 					<SelectTrigger
 						id="handover-source"
-						className="h-10 border-2 border-tinte bg-white text-[13px] font-bold text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte">
+						className={`h-10 border-2 border-tinte bg-white text-[13px] font-bold text-tinte ${FOCUS_INK}`}>
 						<SelectValue placeholder="Quellfest auswählen …">
 							{selected ? festivalLabel(selected) : null}
 						</SelectValue>
@@ -66,7 +70,9 @@ const HandoverSourceBar: React.FC<HandoverSourceBarProps> = ({
 			</span>
 
 			<div className="min-w-[220px] flex-1 min-[900px]:flex-none">
-				<Kleinlabel>Zielfest</Kleinlabel>
+				<Label variant="kleinlabel" className="mb-1 block">
+					Zielfest
+				</Label>
 				{/* Kein Feld: das Zielfest steht in der Route und ist unveränderlich (#118). */}
 				<p className="flex h-10 items-center border-2 border-linie bg-papier-getoent px-3 text-[13px] font-bold text-tinte">
 					{targetName}
@@ -80,17 +86,5 @@ const HandoverSourceBar: React.FC<HandoverSourceBarProps> = ({
 		</div>
 	);
 };
-
-/** Versalien-Kleinlabel der Handschrift (800, .06em), wie im Positions-Dialog. */
-const Kleinlabel: React.FC<{ htmlFor?: string; children: React.ReactNode }> = ({
-	htmlFor,
-	children
-}) => (
-	<label
-		htmlFor={htmlFor}
-		className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-[.06em] text-tinte-soft">
-		{children}
-	</label>
-);
 
 export default HandoverSourceBar;
