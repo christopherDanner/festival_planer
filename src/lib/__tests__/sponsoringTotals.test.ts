@@ -95,6 +95,18 @@ describe('Sachwert', () => {
 		expect(sponsoringInKindValue(sponsoring)).toBe(0);
 	});
 
+	it('zählt einen Schätzwert ohne Beschreibung nicht — ohne Sachleistung kein Sachwert', () => {
+		// Dieselbe Regel wie in der Zeile (`inKind` ist ohne Beschreibung null):
+		// zählte der Kasten die nackte Zahl und der Tabellenfuß nicht, liefen die
+		// beiden Zahlen genau dort auseinander, wo die Unterzeile sie zusammen-
+		// halten soll.
+		const nackterWert = makeSponsoring({ freeAmount: 100, inKindValue: 80 });
+
+		expect(sponsoringInKindValue(nackterWert)).toBe(0);
+		expect(festivalInKindTotal([nackterWert])).toBe(0);
+		expect(sponsoringTotal(nackterWert)).toBe(100);
+	});
+
 	it('summiert die Sachwerte eines Fests, ohne sie ins Geld zu addieren', () => {
 		const sponsorings = [
 			makeSponsoring({ freeAmount: 200, inKindDescription: 'Brotkorb', inKindValue: 40 }),

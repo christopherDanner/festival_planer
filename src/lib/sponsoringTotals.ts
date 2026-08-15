@@ -43,8 +43,16 @@ export function festivalSponsoringTotal(sponsorings: SponsoringValue[]): number 
 /**
  * Sachwert eines Sponsorings: der geschätzte Wert seiner Sachleistung.
  * Zweite Zahl neben dem Geld — wird nie zum Gesamtbeitrag addiert (ADR 0008).
+ *
+ * Ohne Beschreibung gibt es keine Sachleistung (dieselbe Regel wie in
+ * `overviewInKind`) und damit auch keinen Sachwert: ein Schätzwert, zu dem
+ * niemand sagen kann, wofür er steht, ist keine Zahl, die man ausweist. Die
+ * Spalten sind einzeln nullable, der Zustand also darstellbar — zählte ihn der
+ * Dashboard-Kasten und der Tabellenfuß nicht, liefen die beiden Zahlen genau
+ * dort auseinander, wo die Unterzeile sie zusammenhalten soll.
  */
 export function sponsoringInKindValue(sponsoring: SponsoringWithDetails): number {
+	if (!sponsoring.in_kind_description) return 0;
 	return sponsoring.in_kind_value ?? 0;
 }
 

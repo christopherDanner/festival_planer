@@ -10,11 +10,7 @@ import {
 	formatDeltaEuro
 } from './numberBoxes';
 import { formatEuro } from '@/lib/money';
-import {
-	buildSponsoringOverviewFooter,
-	buildSponsoringOverviewRows
-} from '@/lib/sponsoringTotals';
-import { makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
+import { buildSponsoringOverviewFooter, buildSponsoringOverviewRows } from '@/lib/sponsoringTotals';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
 
@@ -327,9 +323,18 @@ describe('deriveSponsoringMetric', () => {
 	it('nennt dieselbe Sachwert-Zahl, die der Bereich in seinem Tabellenfuß zeigt', () => {
 		// Der Sprung vom Kasten in den Bereich darf nicht wie ein Rechenfehler
 		// aussehen — beide Wege müssen bei denselben Daten dieselbe Zahl nennen.
+		// Der dritte Datensatz ist der Fall, der sie auseinandertreiben würde:
+		// ein Schätzwert ohne Beschreibung, den die Zeile nicht als Sachleistung
+		// führt. Er zählt nirgends.
 		const sponsorings = [
-			makeSponsoring({ freeAmount: 1000, inKindDescription: 'Brotkorb', inKindValue: 190 }),
-			makeSponsoring({ inKindDescription: '6 Fl. Wein', inKindValue: 80 })
+			sponsoring({
+				id: 'a',
+				free_amount: 1000,
+				in_kind_description: 'Brotkorb',
+				in_kind_value: 190
+			}),
+			sponsoring({ id: 'b', in_kind_description: '6 Fl. Wein', in_kind_value: 80 }),
+			sponsoring({ id: 'c', in_kind_value: 55 })
 		];
 		const footer = buildSponsoringOverviewFooter(buildSponsoringOverviewRows(sponsorings), []);
 
