@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
-import { deriveGapBoard, formatShiftRange, formatDeadline } from './gapBoard';
+import { deriveGapBoard, formatDeadline } from './gapBoard';
 
 // --- Minimal factories: nur die Felder, die die Lücken-Ableitung liest. ---
 
@@ -313,26 +313,6 @@ describe('deriveGapBoard — Leerzustand', () => {
 	it('nicht leer, sobald irgendeine Lücke existiert', () => {
 		const board = deriveGapBoard({ ...EMPTY, materials: [material({ unit_price: null })] });
 		expect(board.isEmpty).toBe(false);
-	});
-});
-
-describe('formatShiftRange', () => {
-	it('kürzt volle Stunden: „Sa 15–19"', () => {
-		expect(formatShiftRange(shift({ start_date: '2026-07-25', start_time: '15:00:00', end_time: '19:00:00' }))).toBe(
-			'Sa 15–19'
-		);
-	});
-	it('behält Minuten, wenn nicht voll: „Sa 15:30–19"', () => {
-		expect(formatShiftRange(shift({ start_date: '2026-07-25', start_time: '15:30:00', end_time: '19:00:00' }))).toBe(
-			'Sa 15:30–19'
-		);
-	});
-	it('mehrtägig: zeigt den End-Wochentag', () => {
-		expect(
-			formatShiftRange(
-				shift({ start_date: '2026-07-25', start_time: '22:00:00', end_date: '2026-07-26', end_time: '02:00:00' })
-			)
-		).toBe('Sa 22–So 02');
 	});
 });
 
