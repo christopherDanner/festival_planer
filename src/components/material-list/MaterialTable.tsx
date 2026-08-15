@@ -588,7 +588,7 @@ const Cell: React.FC<{
 		}
 		case 'tax': {
 			const tax = taxCell(m);
-			return <span className={cn(tax.muted && 'text-tinte-soft')}>{tax.text}</span>;
+			return <span className={tax.muted ? 'text-tinte-soft' : undefined}>{tax.text}</span>;
 		}
 		case 'net': {
 			const net = netPrice(m);
