@@ -55,7 +55,9 @@ const StationTabStrip: React.FC<StationTabStripProps> = ({ tabs, activeStationId
 				cn(
 					'block border-2 border-tinte px-3 pb-[9px] pt-2.5 text-left',
 					'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte',
-					active ? 'bg-gelb shadow-versatz' : 'bg-white hover:bg-papier-getoent'
+					// `fusszeile` ist der Papier-Ton des Prototyps (oklch(0.955 0.01 100)),
+					// derselbe wie an der Tab-Leiste des Fests.
+					active ? 'bg-gelb shadow-versatz' : 'bg-white hover:bg-fusszeile'
 				)
 			}
 		/>

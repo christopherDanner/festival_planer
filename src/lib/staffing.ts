@@ -30,6 +30,12 @@ export interface ShiftsMetric {
  * Stations-Ebene (`required_people` gegen `station_members`). Die beiden Ebenen
  * mischen sich nie — eine Station mit Schichten plant ihre Leute in den
  * Schichten.
+ *
+ * **Überbesetzung zählt nicht mit, und zwar je Schicht.** Ein Kopf zu viel in
+ * der Frühschicht füllt kein Loch in der Nachtschicht: sonst meldete der
+ * Stationskopf „voll besetzt", während direkt darunter ein roter freier Platz
+ * steht (#102). Auf Stationsebene bleibt die Kappung zusätzlich stehen, weil
+ * `station_members` dieselbe Falle hat.
  */
 export function stationStaffing(
 	station: Station,
@@ -39,12 +45,19 @@ export function stationStaffing(
 ): { required: number; assigned: number } {
 	const stationShifts = shifts.filter((s) => s.station_id === station.id);
 	if (stationShifts.length === 0) {
-		const assigned = stationHelpers.filter((sm) => sm.station_id === station.id).length;
-		return { required: station.required_people, assigned };
+		const helpers = stationHelpers.filter((sm) => sm.station_id === station.id).length;
+		return {
+			required: station.required_people,
+			assigned: Math.min(helpers, station.required_people)
+		};
 	}
-	const required = stationShifts.reduce((sum, s) => sum + s.required_people, 0);
-	const shiftIds = new Set(stationShifts.map((s) => s.id));
-	const assigned = assignments.filter((a) => shiftIds.has(a.station_shift_id)).length;
+	let required = 0;
+	let assigned = 0;
+	for (const shift of stationShifts) {
+		const filled = assignments.filter((a) => a.station_shift_id === shift.id).length;
+		required += shift.required_people;
+		assigned += Math.min(filled, shift.required_people);
+	}
 	return { required, assigned };
 }
 
@@ -59,9 +72,10 @@ export function deriveShiftsMetric(
 	let besetzt = 0;
 	let gesamt = 0;
 	for (const station of stations) {
+		// `stationStaffing` kappt die Überbesetzung bereits je Schicht.
 		const { required, assigned } = stationStaffing(station, shifts, assignments, stationHelpers);
 		gesamt += required;
-		besetzt += Math.min(assigned, required); // Überbesetzung nicht mitzählen
+		besetzt += assigned;
 	}
 	const fehlen = Math.max(0, gesamt - besetzt);
 	return { besetzt, gesamt, fehlen, status: statusColor(besetzt, gesamt), isEmpty: gesamt === 0 };

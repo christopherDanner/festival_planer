@@ -25,7 +25,10 @@ export interface StationTab {
 	status: AmpelStatus;
 }
 
-/** Ein Platz im Raster einer Zeile — belegt (mit Namen) oder frei. */
+/** Ein Platz im Raster einer Zeile. **Belegt ist er, wenn er einen Namen
+trägt** — nicht am `helperId`: eine Zuteilung ohne Helfer-Verweis wäre sonst
+ein freier Platz, auf den sich ein zweiter Helfer setzen dürfte. Entfernen
+lässt sich nur, was einen `helperId` hat. */
 export interface BoardSlot {
 	/** Laufende Nummer im Raster, 1-basiert. */
 	position: number;
@@ -90,6 +93,13 @@ export interface StationBoard {
 	members: BoardMember[];
 }
 
+/** Wer auf einem Platz sitzt. `helperId` fehlt nur, wenn die Zuteilung ihren
+Helfer-Verweis verloren hat — dann steht der Name da, aber ohne Griff. */
+interface Occupant {
+	helperId: string | null;
+	name: string;
+}
+
 /** „Hochauer Franz" — Nachname zuerst, wie überall sonst in der App. */
 function helperName(helper?: HelperRef | null): string {
 	if (!helper) return 'Unbekannt';
@@ -151,7 +161,7 @@ export function resolveFocusStationId(tabs: StationTab[], requested: string | nu
 /** Baut das Platz-Raster: erst die Belegten in ihrer Reihenfolge, dann freie
 Plätze bis zum Soll. Überzählige Belegte hängen hinten dran — wer zugeteilt
 ist, verschwindet nicht, bloß weil das Soll gesenkt wurde. */
-function buildSlots(occupants: { helperId: string; name: string }[], required: number): BoardSlot[] {
+function buildSlots(occupants: Occupant[], required: number): BoardSlot[] {
 	const count = Math.max(required, occupants.length);
 	return Array.from({ length: count }, (_, i) => {
 		const occupant = occupants[i];
@@ -168,7 +178,7 @@ function row(
 	time: string,
 	label: string,
 	required: number,
-	occupants: { helperId: string; name: string }[],
+	occupants: Occupant[],
 	shift: StationShift | null
 ): BoardRow {
 	const assigned = occupants.length;
@@ -240,7 +250,7 @@ export function buildStationBoard(
 		const occupants = assignments
 			.filter((a) => a.station_shift_id === shift.id)
 			.sort((a, b) => a.position - b.position)
-			.map((a) => ({ helperId: a.helper_id ?? '', name: helperName(a.helper) }));
+			.map((a) => ({ helperId: a.helper_id ?? null, name: helperName(a.helper) }));
 
 		const rows = days.get(shift.start_date) ?? [];
 		// Die Schicht über Mitternacht steht beim Starttag (Entscheid 4 aus #68).

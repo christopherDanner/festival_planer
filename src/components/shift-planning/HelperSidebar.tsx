@@ -168,7 +168,7 @@ const HelperSidebar: React.FC<HelperSidebarProps> = ({
 				<button
 					type="button"
 					onClick={onAddHelper}
-					className="block w-full border-t-2 border-tinte bg-white px-4 py-3 text-center text-xs font-bold uppercase tracking-[.04em] text-tinte-soft hover:bg-papier-getoent hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tinte">
+					className="block w-full border-t-2 border-tinte bg-white px-4 py-3 text-center text-xs font-bold uppercase tracking-[.04em] text-tinte-soft hover:bg-fusszeile hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tinte">
 					+ Neuen Helfer anlegen
 				</button>
 			)}

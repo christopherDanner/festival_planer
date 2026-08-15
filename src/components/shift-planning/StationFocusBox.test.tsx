@@ -217,6 +217,28 @@ describe('StationFocusBox — Station mit Schichten', () => {
 		expect(markup).toContain('Aigner Roman');
 	});
 
+	it('meldet nicht „voll besetzt", solange ein freier Platz im Kasten steht', () => {
+		// Frühschicht überbesetzt (3 auf 2), Nachtschicht halb leer: roh gezählt
+		// wären das 4/4 — Kopf und Tages-Zwischentitel widersprächen einander.
+		const markup = render(
+			station(),
+			[
+				shift({ id: 'sh-sa', required_people: 2, start_time: '11:00' }),
+				shift({ id: 'sh-spaet', required_people: 2, start_time: '19:00' })
+			],
+			[
+				assignment({ id: 'a1', station_shift_id: 'sh-sa', helper_id: 'h1', position: 1 }),
+				assignment({ id: 'a2', station_shift_id: 'sh-sa', helper_id: 'h2', position: 2 }),
+				assignment({ id: 'a3', station_shift_id: 'sh-sa', helper_id: 'h3', position: 3 }),
+				assignment({ id: 'a4', station_shift_id: 'sh-spaet', helper_id: 'h4', position: 1 })
+			]
+		);
+
+		expect(markup).toContain('1 Plätze offen');
+		expect(markup).not.toContain('voll besetzt');
+		expect(markup).toContain('+ HELFER HIERHER ZIEHEN');
+	});
+
 	it('bietet am Fuß das Anlegen einer Schicht an', () => {
 		expect(html()).toContain('+ Schicht anlegen');
 		expect(html()).not.toContain('Zeitfenster');

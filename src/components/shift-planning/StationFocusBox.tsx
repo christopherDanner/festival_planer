@@ -16,8 +16,6 @@ import type { StationShift } from '@/lib/shiftService';
 
 export interface StationFocusBoxProps {
 	board: StationBoard;
-	/** Ein Helfer ist ausgewählt — die Ablageflächen sind scharf gestellt. */
-	isSelecting?: boolean;
 	/** Nur diese Station auto-füllen; verdrahtet wird der Knopf in #108. */
 	onAutoFill: () => void;
 	onEditStation: () => void;
@@ -33,7 +31,11 @@ export interface StationFocusBoxProps {
 	onRemoveFromStation: (helperId: string) => void;
 }
 
-const OFFEN_TON = 'text-[11px] font-extrabold uppercase tracking-[.05em] tabular-nums';
+/** Kleiner Versalien-Zähler — Tages-Meta und Zeilen-Status tragen ihn. */
+const COUNTER_TEXT = 'text-[11px] font-extrabold uppercase tracking-[.05em] tabular-nums';
+
+/** Tippziel ≥ 40px am Handy (DESIGN-VISION §6). */
+const TOUCH_TARGET = 'max-[899px]:min-h-10 max-[899px]:min-w-10';
 
 /**
  * Fokus-Kasten des Schichtplans (#102): **eine** Station in voller Breite —
@@ -53,7 +55,6 @@ const OFFEN_TON = 'text-[11px] font-extrabold uppercase tracking-[.05em] tabular
  */
 const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 	board,
-	isSelecting = false,
 	onAutoFill,
 	onEditStation,
 	onDeleteStation,
@@ -71,8 +72,9 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 	const responsible = station.responsible_helper
 		? `${station.responsible_helper.last_name} ${station.responsible_helper.first_name}`
 		: null;
-	// Ohne Ort sagt der Kopf wenigstens, auf welcher Ebene diese Station plant.
-	const where = station.description || (board.hasShifts ? null : 'Ohne Schichten');
+	// Ohne Ort sagt der Kopf wenigstens, auf welcher Ebene diese Station plant
+	// („Ohne Schichten", Wortlaut des Entscheid-Prototyps).
+	const place = station.description || (board.hasShifts ? null : 'Ohne Schichten');
 
 	/** Zeile zeichnen — die Schicht-Zeilen und die Pseudo-Zeile sind dasselbe Bild. */
 	const renderRow = (row: BoardRow) => {
@@ -80,17 +82,14 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 		return (
 			<div
 				key={row.id}
-				className={cn(
-					'border-b border-linie px-3 py-3 last:border-b-0 min-[900px]:px-[18px]',
-					isSelecting && 'cursor-pointer bg-gelb/10'
-				)}
+				className="border-b border-linie px-3 py-3 last:border-b-0 min-[900px]:px-[18px]"
 				onDragOver={(e) => e.preventDefault()}
 				onDrop={(e) => (shift ? onDropOnShift(shift.id, e) : onDropOnStation(e))}
 			>
 				<div className="mb-2 flex flex-wrap items-baseline gap-2.5">
 					<time className="font-display text-lg font-semibold tracking-[.02em]">{row.time}</time>
 					<span className="text-xs font-semibold text-tinte-soft">{row.subtitle}</span>
-					<span className={cn('ml-auto', OFFEN_TON, row.open > 0 ? 'text-rot' : 'text-gruen')}>
+					<span className={cn('ml-auto', COUNTER_TEXT, row.open > 0 ? 'text-rot' : 'text-gruen')}>
 						{row.open > 0 ? `${row.open} OFFEN` : 'VOLL'}
 					</span>
 					{shift && (
@@ -105,7 +104,9 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 				</div>
 				<div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-[7px]">
 					{row.slots.map((slot) =>
-						slot.helperId ? (
+						// Belegt ist der Platz am Namen, nicht am `helperId` — sonst
+						// stünde eine Zuteilung ohne Helfer-Verweis als frei da.
+						slot.name ? (
 							<span
 								key={slot.position}
 								className="flex items-center gap-[7px] border-1.5 border-tinte bg-papier px-2.5 py-[7px] text-[12.5px] font-semibold"
@@ -114,23 +115,28 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 									{slot.position}
 								</span>
 								<span className="min-w-0 flex-1 truncate">{slot.name}</span>
-								<button
-									type="button"
-									aria-label={`${slot.name} von diesem Platz entfernen`}
-									onClick={() =>
-										shift
-											? onRemoveFromShift(shift.id, slot.helperId!)
-											: onRemoveFromStation(slot.helperId!)
-									}
-									className="-my-1 -mr-1.5 px-1.5 py-1 font-bold text-tinte-soft hover:text-rot focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
-								>
-									×
-								</button>
+								{slot.helperId && (
+									<button
+										type="button"
+										aria-label={`${slot.name} von diesem Platz entfernen`}
+										onClick={() =>
+											shift
+												? onRemoveFromShift(shift.id, slot.helperId)
+												: onRemoveFromStation(slot.helperId)
+										}
+										className={cn(
+											'-my-1 -mr-1.5 flex items-center justify-center px-1.5 py-1 font-bold text-tinte-soft hover:text-rot focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte',
+											TOUCH_TARGET
+										)}
+									>
+										×
+									</button>
+								)}
 							</span>
 						) : (
 							<OpenSlot
 								key={slot.position}
-								className="w-full justify-start gap-[7px]"
+								className={cn('w-full justify-start gap-[7px]', TOUCH_TARGET)}
 								onClick={() => (shift ? onAssignToShift(shift.id) : onAssignToStation())}
 							>
 								<span className="font-display text-[11px] font-semibold">{slot.position}</span>+
@@ -151,7 +157,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 					{station.name}
 				</h3>
 				<span className="text-[12.5px] text-papier">
-					{where && <>{where} · </>}
+					{place && <>{place} · </>}
 					{responsible && (
 						<>
 							<span aria-hidden className="text-gelb">
@@ -187,7 +193,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 				<React.Fragment key={day.date}>
 					<div
 						className={cn(
-							'flex flex-wrap items-baseline gap-2.5 border-b border-linie bg-papier-getoent px-3 py-[9px] min-[900px]:px-[18px]',
+							'flex flex-wrap items-baseline gap-2.5 border-b border-linie bg-fusszeile px-3 py-[9px] min-[900px]:px-[18px]',
 							// Der Plakat-Kopf bringt seine eigene Kante mit.
 							i > 0 && 'border-t-2 border-t-tinte'
 						)}
@@ -195,10 +201,10 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 						<h4 className="font-display text-[15px] font-semibold uppercase tracking-[.04em] text-gruen">
 							{day.title}
 						</h4>
-						<span className={cn(OFFEN_TON, 'text-tinte-soft')}>
+						<span className={cn(COUNTER_TEXT, 'text-tinte-soft')}>
 							{day.shiftCount} {day.shiftCount === 1 ? 'Schicht' : 'Schichten'}
 						</span>
-						<span className={cn(OFFEN_TON, day.open > 0 ? 'text-rot' : 'text-gruen')}>
+						<span className={cn(COUNTER_TEXT, day.open > 0 ? 'text-rot' : 'text-gruen')}>
 							{day.open > 0 ? `${day.open} offen` : 'voll besetzt'}
 						</span>
 					</div>
@@ -211,7 +217,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 			<button
 				type="button"
 				onClick={onAddShift}
-				className="block w-full border-t border-linie bg-white px-4 py-[11px] text-center text-xs font-bold uppercase tracking-[.04em] text-tinte-soft hover:bg-papier-getoent hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tinte"
+				className="block w-full border-t border-linie bg-white px-4 py-[11px] text-center text-xs font-bold uppercase tracking-[.04em] text-tinte-soft hover:bg-fusszeile hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tinte"
 			>
 				+ Schicht anlegen
 				{!board.hasShifts && ' — Station in Zeitfenster aufteilen'}
@@ -220,7 +226,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 			{/* Nur mit Schichten: ohne sie sind dieselben Leute schon das Raster. */}
 			{board.hasShifts && (
 				<div
-					className="flex flex-wrap items-center gap-2 border-t-2 border-tinte bg-papier-getoent px-3 py-2.5 min-[900px]:px-[18px]"
+					className="flex flex-wrap items-center gap-2 border-t-2 border-tinte bg-fusszeile px-3 py-2.5 min-[900px]:px-[18px]"
 					onDragOver={(e) => e.preventDefault()}
 					onDrop={onDropOnStation}
 				>
@@ -239,7 +245,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 					<button
 						type="button"
 						onClick={onAssignToStation}
-						className="px-2 py-1 text-[11px] font-bold text-tinte-soft hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
+						className="px-2 py-1 text-[11px] font-bold text-tinte-soft max-[899px]:min-h-10 hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
 					>
 						+ hinzufügen
 					</button>
@@ -274,7 +280,10 @@ function RowMenu({
 					type="button"
 					aria-label={label}
 					className={cn(
-						'flex h-8 w-8 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+						'flex h-9 w-9 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+						// Das ⋮ ist der einzige Weg zu Bearbeiten und Löschen — am Handy
+						// darf es kein 32px-Ziel sein (DESIGN-VISION §6).
+						TOUCH_TARGET,
 						onPoster
 							? 'text-white hover:bg-white/15 focus-visible:outline-papier'
 							: 'text-tinte-soft hover:text-tinte focus-visible:outline-tinte'

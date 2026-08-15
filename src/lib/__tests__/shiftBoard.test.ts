@@ -166,8 +166,10 @@ describe('buildStationTabs', () => {
 		const tabs = buildStationTabs(stations, shifts, assignments, helpers);
 		const metric = deriveShiftsMetric(stations, shifts, assignments, helpers);
 
+		// Ohne eigenes Nachkappen: die Regel liegt in `staffing`, beide Seiten
+		// lesen sie dort.
 		expect(tabs.reduce((sum, t) => sum + t.required, 0)).toBe(metric.gesamt);
-		expect(tabs.reduce((sum, t) => sum + Math.min(t.assigned, t.required), 0)).toBe(metric.besetzt);
+		expect(tabs.reduce((sum, t) => sum + t.assigned, 0)).toBe(metric.besetzt);
 	});
 });
 

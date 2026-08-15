@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useShiftPlanningData } from './hooks/useShiftPlanningData';
@@ -76,14 +76,17 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	// der erste Reiter.
 	const activeStationId = resolveFocusStationId(tabs, focusStationId);
 	const focusStation = tabs.find((t) => t.station.id === activeStationId)?.station ?? null;
-	const board = focusStation
-		? buildStationBoard(focusStation, data.stationShifts, data.assignments, data.stationHelpers)
-		: null;
-	const metric = deriveShiftsMetric(
-		data.stations,
-		data.stationShifts,
-		data.assignments,
-		data.stationHelpers
+	const board = useMemo(
+		() =>
+			focusStation
+				? buildStationBoard(focusStation, data.stationShifts, data.assignments, data.stationHelpers)
+				: null,
+		[focusStation, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	const metric = useMemo(
+		() =>
+			deriveShiftsMetric(data.stations, data.stationShifts, data.assignments, data.stationHelpers),
+		[data.stations, data.stationShifts, data.assignments, data.stationHelpers]
 	);
 
 	const handleTapSelect = (helper: Helper) => {
@@ -284,7 +287,6 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 							{board && (
 								<StationFocusBox
 									board={board}
-									isSelecting={Boolean(selectedHelper)}
 									onAutoFill={() =>
 										setDialogState({ type: 'autoAssign', station: board.station })
 									}

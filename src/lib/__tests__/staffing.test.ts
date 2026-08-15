@@ -88,6 +88,35 @@ describe('stationStaffing', () => {
 		expect(stationStaffing(s, [], [], helpers)).toEqual({ required: 3, assigned: 2 });
 	});
 
+	it('kappt die Überbesetzung je Schicht — ein Kopf zu viel füllt kein anderes Loch', () => {
+		const s = station({ id: 's1' });
+		const shifts = [
+			shift({ id: 'sh1', station_id: 's1', required_people: 2 }),
+			shift({ id: 'sh2', station_id: 's1', required_people: 2 })
+		];
+		const assignments = [
+			// sh1 überbesetzt (3 auf 2), sh2 halb leer (1 auf 2)
+			assignment({ id: 'a1', station_shift_id: 'sh1' }),
+			assignment({ id: 'a2', station_shift_id: 'sh1' }),
+			assignment({ id: 'a3', station_shift_id: 'sh1' }),
+			assignment({ id: 'a4', station_shift_id: 'sh2' })
+		];
+
+		// Roh gezählt wären es 4/4 — der Stationskopf meldete „voll besetzt",
+		// während unter ihm ein roter freier Platz steht.
+		expect(stationStaffing(s, shifts, assignments, [])).toEqual({ required: 4, assigned: 3 });
+	});
+
+	it('kappt sie auch auf der Stations-Ebene', () => {
+		const s = station({ id: 's1', required_people: 1 });
+		const helpers = [
+			stationHelper({ id: 'm1', station_id: 's1' }),
+			stationHelper({ id: 'm2', station_id: 's1', helper_id: 'p2' })
+		];
+
+		expect(stationStaffing(s, [], [], helpers)).toEqual({ required: 1, assigned: 1 });
+	});
+
 	it('zählt nur die eigenen Schichten und Zuteilungen', () => {
 		const s = station({ id: 's1' });
 		const shifts = [
