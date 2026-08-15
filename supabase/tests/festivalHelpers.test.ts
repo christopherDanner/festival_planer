@@ -14,7 +14,7 @@
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
-import { applyMigration, createTestDatabase } from './testDatabase';
+import { applyMigration, columnsOf, createTestDatabase } from './testDatabase';
 
 // Jeder Test hier startet ein echtes Postgres (WASM) und spielt die Migration
 // ab. Das dauert Sekunden statt Millisekunden — die 5s/10s der übrigen Suite
@@ -22,24 +22,6 @@ import { applyMigration, createTestDatabase } from './testDatabase';
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 const MIGRATION = '20260804000001_create_festival_helpers.sql';
-
-type ColumnRow = {
-	column_name: string;
-	data_type: string;
-	udt_name: string;
-	is_nullable: string;
-	column_default: string | null;
-};
-
-async function columnsOf(db: PGlite, table: string): Promise<Map<string, ColumnRow>> {
-	const result = await db.query<ColumnRow>(
-		`SELECT column_name, data_type, udt_name, is_nullable, column_default
-		   FROM information_schema.columns
-		  WHERE table_schema = 'public' AND table_name = $1`,
-		[table]
-	);
-	return new Map(result.rows.map((row) => [row.column_name, row]));
-}
 
 async function insertFestival(db: PGlite, name: string, startDate: string): Promise<string> {
 	const result = await db.query<{ id: string }>(

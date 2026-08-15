@@ -17,3 +17,22 @@ export async function applyMigration(db: PGlite, fileName: string): Promise<void
 	const sql = readFileSync(path.join(testsDir, '..', 'migrations', fileName), 'utf8');
 	await db.exec(sql);
 }
+
+export type ColumnRow = {
+	column_name: string;
+	data_type: string;
+	udt_name: string;
+	is_nullable: string;
+	column_default: string | null;
+};
+
+/** Die Spalten einer Tabelle, nach Spaltenname aufgeschlagen. */
+export async function columnsOf(db: PGlite, table: string): Promise<Map<string, ColumnRow>> {
+	const result = await db.query<ColumnRow>(
+		`SELECT column_name, data_type, udt_name, is_nullable, column_default
+		   FROM information_schema.columns
+		  WHERE table_schema = 'public' AND table_name = $1`,
+		[table]
+	);
+	return new Map(result.rows.map((row) => [row.column_name, row]));
+}
