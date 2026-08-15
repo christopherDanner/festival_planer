@@ -3,8 +3,16 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import FestivalBasicsStep from '@/components/kopierwerk/FestivalBasicsStep';
 import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
+import MaterialSelectionStep, {
+	type MaterialSelection
+} from '@/components/kopierwerk/MaterialSelectionStep';
 import StampCard from '@/components/kopierwerk/StampCard';
-import TemplateSelectionStep from '@/components/kopierwerk/TemplateSelectionStep';
+import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
+import {
+	stationPreviewRows,
+	toggleAllStations,
+	toggleStation
+} from '@/components/kopierwerk/stationChoice';
 import { loadTemplate, type LoadedTemplate } from '@/components/kopierwerk/loadTemplate';
 import {
 	draftToFestivalData,
@@ -25,6 +33,12 @@ type CopySelection = Omit<
 	CopyFestivalOptions,
 	'sourceFestivalStartDate' | 'targetFestivalStartDate'
 >;
+
+/** Was Schritt 2 zur Kopie beisteuert. */
+interface StationSelection {
+	stationIds: string[];
+	copyAssignments: boolean;
+}
 
 /**
  * Kopierwerk (`/festivals/neu`, Issue #93): eigene Route statt In-Page-Zustand
@@ -54,6 +68,13 @@ export default function Kopierwerk() {
 	const [template, setTemplate] = useState<LoadedTemplate | null>(null);
 	const [loadingTemplate, setLoadingTemplate] = useState(false);
 	const [saving, setSaving] = useState(false);
+	// Schritt 2: gewählt wird auf Stations-Ebene, das Aufklappen ist reine
+	// Vorschau (#64) — darum zwei getrennte Listen.
+	const [stationSelection, setStationSelection] = useState<StationSelection>({
+		stationIds: [],
+		copyAssignments: false
+	});
+	const [expandedStationIds, setExpandedStationIds] = useState<string[]>([]);
 
 	const { templateId } = draft;
 
@@ -74,7 +95,16 @@ export default function Kopierwerk() {
 		setLoadingTemplate(true);
 		loadTemplate(templateId)
 			.then((loaded) => {
-				if (current) setTemplate(loaded);
+				if (!current) return;
+				setTemplate(loaded);
+				// Eine frische Vorlage kommt vollständig — abgewählt wird, was nicht
+				// mitsoll. Die Aufklapper starten zu, sonst stünde die ganze Vorlage
+				// als Wand aus Schichten da.
+				setStationSelection((previous) => ({
+					...previous,
+					stationIds: loaded.stations.map((station) => station.id)
+				}));
+				setExpandedStationIds([]);
 			})
 			// Auch ein gelöschtes oder erfundenes Fest im Link landet hier: lieber ohne
 			// Vorlage weitermachen, als einen Kopier-Schritt anbieten, der ins Leere greift.
@@ -164,26 +194,80 @@ export default function Kopierwerk() {
 		void createNewFestival();
 	};
 
-	const workbench =
-		step === 'basics' || !template ? (
-			<FestivalBasicsStep
-				draft={draft}
-				templates={templates}
-				loadingTemplate={loadingTemplate}
-				saving={saving}
-				onChange={changeDraft}
-				onSubmit={submitBasics}
-			/>
-		) : (
-			<TemplateSelectionStep
-				stations={template.stations}
-				shifts={template.shifts}
+	const stationRows = useMemo(
+		() =>
+			template
+				? stationPreviewRows({
+						stations: template.stations,
+						shifts: template.shifts,
+						sourceStartDate: template.festival.start_date,
+						targetStartDate: draft.startDate
+					})
+				: [],
+		[template, draft.startDate]
+	);
+
+	const workbench = (() => {
+		if (step === 'basics' || !template) {
+			return (
+				<FestivalBasicsStep
+					draft={draft}
+					templates={templates}
+					loadingTemplate={loadingTemplate}
+					saving={saving}
+					onChange={changeDraft}
+					onSubmit={submitBasics}
+				/>
+			);
+		}
+
+		if (step === 'stations') {
+			return (
+				<StationsShiftsStep
+					rows={stationRows}
+					selectedStationIds={stationSelection.stationIds}
+					expandedStationIds={expandedStationIds}
+					copyAssignments={stationSelection.copyAssignments}
+					onToggleStation={(stationId) =>
+						setStationSelection((previous) => ({
+							...previous,
+							stationIds: toggleStation(previous.stationIds, stationId)
+						}))
+					}
+					onToggleAllStations={() =>
+						setStationSelection((previous) => ({
+							...previous,
+							stationIds: toggleAllStations(
+								stationRows.map((row) => row.id),
+								previous.stationIds
+							)
+						}))
+					}
+					onToggleExpanded={(stationId) =>
+						setExpandedStationIds((previous) =>
+							previous.includes(stationId)
+								? previous.filter((id) => id !== stationId)
+								: [...previous, stationId]
+						)
+					}
+					onCopyAssignmentsChange={(value) =>
+						setStationSelection((previous) => ({ ...previous, copyAssignments: value }))
+					}
+					onBack={() => setStep('basics')}
+					onNext={() => setStep('materials')}
+				/>
+			);
+		}
+
+		return (
+			<MaterialSelectionStep
 				materials={template.materials}
 				loading={saving}
-				onBack={() => setStep('basics')}
-				onSubmit={(selection) => void createNewFestival(selection)}
+				onBack={() => setStep('stations')}
+				onSubmit={(selection) => void createNewFestival({ ...stationSelection, ...selection })}
 			/>
 		);
+	})();
 
 	return (
 		<div className="min-h-screen">
