@@ -33,4 +33,13 @@ describe('Kopierwerk-Route', () => {
 		expect(html).toContain('Stationen &amp; Schichten');
 		expect(html).toContain('WEITER: STATIONEN →');
 	});
+
+	// Material ist seit #95 ein eigener Schritt der Karte, nicht mehr der
+	// zweite Kasten unter den Stationen.
+	it('führt Material als eigenen Schritt der Stempelkarte', () => {
+		const stampCard = (path?: string) => render(path).split('<aside')[1].split('</aside>')[0];
+
+		expect(stampCard('/festivals/neu?vorlage=fest-2026')).toContain('>Material<');
+		expect(stampCard()).not.toContain('Material');
+	});
 });
