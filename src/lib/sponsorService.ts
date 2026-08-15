@@ -322,21 +322,33 @@ export interface PreviousSponsoring {
  * Vorjahresbeitrag je Sponsoring-Id **des aktuellen Fests**. Wer fehlt, hat
  * keinen: ein von Hand eingetragenes Sponsoring kennt kein Quellfest (bewusst,
  * ADR 0008), und ein gelöschtes Quellfest hinterlässt `NULL`.
+ *
+ * Die Übersichts-Zeilen wollen davon nur den Betrag
+ * (`buildSponsoringOverviewRows(sponsorings, previousTotals)`); das Quellfest
+ * daneben braucht die Anzeige, die #69 baut. Umgeformt wird dort, nicht hier —
+ * der Leseweg gibt die Zahl nie ohne ihre Herkunft heraus.
  */
 export type PreviousSponsoringMap = Record<string, PreviousSponsoring>;
 
 /**
  * Dieselbe Geldregel-Form wie `SPONSORING_VALUES_SELECT`, zusätzlich die Firma —
  * über sie läuft die Zuordnung zwischen Ziel- und Quellfest. Wächst die
- * Geldregel, wächst sie hier automatisch mit.
+ * Geldregel, wächst sie hier automatisch mit. Das `festival_id` der Zuordnung
+ * steckt schon in `SPONSORING_VALUES_SELECT`; ein Test klagt beide Spalten ein,
+ * weil der Cast auf `PreviousSponsoringRow` sie sonst nur behauptet.
  */
 const PREVIOUS_SPONSORING_SELECT = `sponsor_id, ${SPONSORING_VALUES_SELECT}`;
 
 /** Quellfest-Sponsoring, so schmal wie Zuordnung und Geldregel es brauchen. */
 type PreviousSponsoringRow = SponsoringValue & { festival_id: string; sponsor_id: string };
 
-/** Firma + Fest — der Schlüssel, über den Zielfest und Quellfest sich treffen. */
-const sponsorAtFestival = (festivalId: string, sponsorId: string) => `${festivalId} ${sponsorId}`;
+/**
+ * Der Schlüssel, über den ein Sponsoring des Zielfests seine Zeile im Quellfest
+ * findet: Fest **und** Firma. Beides sind Ids, also dieselbe Sorte Zeichenkette —
+ * die Reihenfolge steht darum im Namen, damit ein Dreher nicht still ins Leere
+ * greift.
+ */
+const festivalAndSponsorKey = (festivalId: string, sponsorId: string) => `${festivalId} ${sponsorId}`;
 
 /**
  * Liest den *Vorjahresbeitrag* aller Sponsorings eines Fests — der einzige
@@ -380,7 +392,7 @@ export const getPreviousSponsorings = async (
 
 	const totals = new Map(
 		sourceSponsorings.map((s) => [
-			sponsorAtFestival(s.festival_id, s.sponsor_id),
+			festivalAndSponsorKey(s.festival_id, s.sponsor_id),
 			sponsoringTotal(s)
 		])
 	);
@@ -389,7 +401,7 @@ export const getPreviousSponsorings = async (
 	const previous: PreviousSponsoringMap = {};
 	for (const sponsoring of copied) {
 		const sourceFestivalId = sponsoring.copied_from_festival_id as string;
-		const total = totals.get(sponsorAtFestival(sourceFestivalId, sponsoring.sponsor_id));
+		const total = totals.get(festivalAndSponsorKey(sourceFestivalId, sponsoring.sponsor_id));
 		// Die Firma war beim Quellfest gar nicht erfasst — dann gibt es nichts zu
 		// zeigen. Eine 0 wäre eine Aussage, die niemand getroffen hat.
 		if (total === undefined) continue;
@@ -439,7 +451,9 @@ const querySourceFestivals = async (
  * Zeiger mit — verglichen wird mit dem, was zeitlich davor lag.
  *
  * `null` heißt „kein früheres Fest" und damit **kein Balken**, nur die Zahl.
- * Beim allerersten Fest ist das der Normalfall und kein Fehler.
+ * Beim allerersten Fest ist das der Normalfall und kein Fehler. Ein Fest, das
+ * es gar nicht (mehr) gibt, fällt in dieselbe Antwort: ohne eigenes Datum gibt
+ * es nichts, wogegen sich vergleichen ließe.
  */
 export const getPreviousFestivalTotal = async (festivalId: string): Promise<number | null> => {
 	const { data: own, error: ownError } = await supabase

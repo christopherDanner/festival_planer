@@ -215,9 +215,10 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		: sponsors.filter((s) => !sponsorings.some((sp) => sp.sponsor_id === s.id));
 
 	/* Vorjahresbeitrag je Sponsoring und Geldsumme des vorigen Fests kommen aus
-	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Solange es
-	den Leseweg nicht gibt, zeigt die Matrix den Leerfall: keine Vorjahr-Unterzeile
-	und — laut #69, Entscheid 5 — gar kein Maßband. */
+	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Den Leseweg
+	gibt es; angeschlossen wird er mit der Bereichs-Spec #69 — bis dahin zeigt die
+	Matrix den Leerfall: keine Vorjahr-Unterzeile und — laut #69, Entscheid 5 —
+	gar kein Maßband. */
 	const rows = buildSponsoringOverviewRows(sponsorings);
 	const footer = buildSponsoringOverviewFooter(rows, categories);
 	const total = festivalSponsoringTotal(sponsorings);

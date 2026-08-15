@@ -326,6 +326,10 @@ describe('getPreviousSponsorings', () => {
 		// fehlt eines, weicht der Vorjahresbeitrag von der Summe ab, die das
 		// Quellfest selbst zeigt.
 		const select = queriesFor('sponsorings')[1].select;
+		// Fest und Firma tragen die Zuordnung — der Cast auf die Zeilen-Form
+		// behauptet beide Spalten, nur diese Zusicherung prüft sie.
+		expect(select).toContain('festival_id');
+		expect(select).toContain('sponsor_id');
 		expect(select).toContain('free_amount');
 		expect(select).toContain('assignments:sponsoring_category_assignments');
 		expect(select).toContain('category:sponsoring_categories');
@@ -398,6 +402,14 @@ describe('getPreviousFestivalTotal', () => {
 		};
 
 		expect(await getPreviousFestivalTotal('fest-2026')).toBeNull();
+	});
+
+	it('behandelt ein unbekanntes Fest wie das erste: keine Vergleichszahl', async () => {
+		mocks.rows = { festivals: [], sponsorings: [] };
+
+		// Ohne eigenes Startdatum gibt es nichts, wogegen sich vergleichen ließe.
+		expect(await getPreviousFestivalTotal('gibt-es-nicht')).toBeNull();
+		expect(queriesFor('sponsorings')).toHaveLength(0);
 	});
 
 	it('überspringt ein soft-gelöschtes Fest und nimmt das davor', async () => {
