@@ -89,6 +89,59 @@ export type Database = {
 					}
 				];
 			};
+			festival_helpers: {
+				Row: {
+					created_at: string;
+					email: string | null;
+					festival_id: string;
+					first_name: string;
+					id: string;
+					last_name: string;
+					notes: string | null;
+					phone: string | null;
+					shift_preferences: string[];
+					source_member_id: string | null;
+					station_preferences: string[];
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					email?: string | null;
+					festival_id: string;
+					first_name: string;
+					id?: string;
+					last_name: string;
+					notes?: string | null;
+					phone?: string | null;
+					shift_preferences?: string[];
+					source_member_id?: string | null;
+					station_preferences?: string[];
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					email?: string | null;
+					festival_id?: string;
+					first_name?: string;
+					id?: string;
+					last_name?: string;
+					notes?: string | null;
+					phone?: string | null;
+					shift_preferences?: string[];
+					source_member_id?: string | null;
+					station_preferences?: string[];
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'festival_helpers_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					}
+				];
+			};
 			members: {
 				Row: {
 					created_at: string;

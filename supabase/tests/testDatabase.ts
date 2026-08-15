@@ -18,6 +18,16 @@ export async function applyMigration(db: PGlite, fileName: string): Promise<void
 	await db.exec(sql);
 }
 
+/** Ein Fest im Schemastand des Fixtures (type + visitor_count sind dort noch NOT NULL). */
+export async function insertFestival(db: PGlite, name: string, startDate: string): Promise<string> {
+	const result = await db.query<{ id: string }>(
+		`INSERT INTO festivals (name, type, start_date, visitor_count, user_id)
+		 VALUES ($1, 'Zeltfest', $2, '500', gen_random_uuid()) RETURNING id`,
+		[name, startDate]
+	);
+	return result.rows[0].id;
+}
+
 export type ColumnRow = {
 	column_name: string;
 	data_type: string;

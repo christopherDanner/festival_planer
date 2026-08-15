@@ -14,7 +14,7 @@
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
-import { applyMigration, columnsOf, createTestDatabase } from './testDatabase';
+import { applyMigration, columnsOf, createTestDatabase, insertFestival } from './testDatabase';
 
 // Jeder Test hier startet ein echtes Postgres (WASM) und spielt die Migration
 // ab. Das dauert Sekunden statt Millisekunden — die 5s/10s der übrigen Suite
@@ -22,15 +22,6 @@ import { applyMigration, columnsOf, createTestDatabase } from './testDatabase';
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 const MIGRATION = '20260804000001_create_festival_helpers.sql';
-
-async function insertFestival(db: PGlite, name: string, startDate: string): Promise<string> {
-	const result = await db.query<{ id: string }>(
-		`INSERT INTO festivals (name, type, start_date, visitor_count, user_id)
-		 VALUES ($1, 'Zeltfest', $2, '500', gen_random_uuid()) RETURNING id`,
-		[name, startDate]
-	);
-	return result.rows[0].id;
-}
 
 function isoDate(offsetDays: number): string {
 	const day = new Date();

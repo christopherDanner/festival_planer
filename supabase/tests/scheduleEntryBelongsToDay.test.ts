@@ -150,14 +150,29 @@ async function seedLegacyData(db: PGlite): Promise<LegacyData> {
 	};
 }
 
-/** Bestand von vor dem Umbau, danach die echte Migration darüber. */
-async function migratedDatabaseWithLegacyData(): Promise<{ db: PGlite; legacy: LegacyData }> {
+/** Der Stand direkt vor diesem Slice: Ablaufplan-Tabellen, Bestand, Helfer. */
+async function databaseBeforeMigration(): Promise<{ db: PGlite; legacy: LegacyData }> {
 	const db = await createTestDatabase();
 	await applyMigration(db, SCHEDULE_TABLES);
 	const legacy = await seedLegacyData(db);
 	await applyMigration(db, FESTIVAL_HELPERS);
+	return { db, legacy };
+}
+
+/** Bestand von vor dem Umbau, danach die echte Migration darüber. */
+async function migratedDatabaseWithLegacyData(): Promise<{ db: PGlite; legacy: LegacyData }> {
+	const { db, legacy } = await databaseBeforeMigration();
 	await applyMigration(db, MIGRATION);
 	return { db, legacy };
+}
+
+async function policiesOn(db: PGlite, table: string): Promise<unknown[]> {
+	const result = await db.query(
+		`SELECT policyname, cmd, roles::text[] AS roles, qual, with_check FROM pg_policies
+		  WHERE schemaname = 'public' AND tablename = $1 ORDER BY policyname, cmd`,
+		[table]
+	);
+	return result.rows;
 }
 
 type EntryRow = {
@@ -357,13 +372,8 @@ describe('Verantwortlicher ist ein Helfer', () => {
 });
 
 describe('Rein additiv', () => {
-	let db: PGlite;
-
-	beforeAll(async () => {
-		({ db } = await migratedDatabaseWithLegacyData());
-	});
-
 	it('lässt die alten Spalten stehen', async () => {
+		const { db } = await migratedDatabaseWithLegacyData();
 		const columns = await columnsOf(db, 'schedule_entries');
 
 		expect(columns.has('responsible_member_id')).toBe(true);
@@ -371,12 +381,18 @@ describe('Rein additiv', () => {
 		expect(columns.has('sort_order')).toBe(true);
 	});
 
-	it('legt keine neue RLS-Regel an (ADR 0002)', async () => {
-		const policies = await db.query<{ policyname: string; cmd: string }>(
-			`SELECT policyname, cmd FROM pg_policies WHERE schemaname = 'public' AND tablename = 'schedule_entries'`
-		);
+	// schedule_entries liegt innerhalb eines Fests und hat seine Regel schon
+	// (ADR 0002) — diese Migration fasst sie nicht an. Geprüft wird der
+	// Unterschied, nicht der Wortlaut: welche Policies auf der Tabelle liegen,
+	// hängt an Migrationen, die das Fixture gar nicht abspielt.
+	it('lässt die RLS-Regeln von schedule_entries, wie sie sind (ADR 0002)', async () => {
+		const { db } = await databaseBeforeMigration();
+		const before = await policiesOn(db, 'schedule_entries');
 
-		expect(policies.rows).toEqual([{ policyname: 'Users can manage their own schedule entries', cmd: 'ALL' }]);
+		await applyMigration(db, MIGRATION);
+
+		expect(before.length).toBeGreaterThan(0);
+		expect(await policiesOn(db, 'schedule_entries')).toEqual(before);
 	});
 });
 
