@@ -5,24 +5,27 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ArrowLeft } from 'lucide-react';
-import type { Station, StationShift } from '@/lib/shiftService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
 
-interface TemplateSelectionStepProps {
-	stations: Station[];
-	shifts: StationShift[];
+/** Was Schritt 3 zur Kopie beisteuert — die Stationen kommen aus Schritt 2. */
+export type MaterialSelection = Pick<CopyFestivalOptions, 'materialIds' | 'materialQuantitySource'>;
+
+interface MaterialSelectionStepProps {
 	materials: FestivalMaterialWithStation[];
 	loading: boolean;
 	onBack: () => void;
-	onSubmit: (options: Omit<CopyFestivalOptions, 'sourceFestivalStartDate' | 'targetFestivalStartDate'>) => void;
+	onSubmit: (selection: MaterialSelection) => void;
 }
 
-export default function TemplateSelectionStep({
-	stations, shifts, materials, loading, onBack, onSubmit,
-}: TemplateSelectionStepProps) {
-	const [selectedStationIds, setSelectedStationIds] = useState<Set<string>>(new Set(stations.map(s => s.id)));
-	const [copyAssignments, setCopyAssignments] = useState(false);
+/**
+ * Schritt 3 des Kopierwerks in der alten shadcn-Optik — die Stationen sind mit
+ * #94 in `StationsShiftsStep` gewandert, dieser Zettel führt nur noch das
+ * Material. In Werkzeug-Handschrift baut ihn #95 neu.
+ */
+export default function MaterialSelectionStep({
+	materials, loading, onBack, onSubmit,
+}: MaterialSelectionStepProps) {
 	const [selectedMaterialIds, setSelectedMaterialIds] = useState<Set<string>>(new Set(materials.map(m => m.id)));
 	const [quantitySource, setQuantitySource] = useState<'ordered' | 'actual'>('ordered');
 
@@ -31,19 +34,6 @@ export default function TemplateSelectionStep({
 	const materialStationNames = useMemo(() =>
 		[...new Set(materials.filter(m => m.station).map(m => m.station!.name))],
 	[materials]);
-
-	const allStationsSelected = stations.length > 0 && selectedStationIds.size === stations.length;
-	const noStationsSelected = selectedStationIds.size === 0;
-
-	const toggleAllStations = () => {
-		setSelectedStationIds(allStationsSelected ? new Set() : new Set(stations.map(s => s.id)));
-	};
-
-	const toggleStation = (id: string) => {
-		const next = new Set(selectedStationIds);
-		if (next.has(id)) next.delete(id); else next.add(id);
-		setSelectedStationIds(next);
-	};
 
 	const allMaterialsSelected = materials.length > 0 && selectedMaterialIds.size === materials.length;
 
@@ -86,16 +76,8 @@ export default function TemplateSelectionStep({
 					: 'bg-muted/30 border-border hover:bg-muted/50'
 		}`;
 
-	const shiftsPerStation = useMemo(() => {
-		const map: Record<string, number> = {};
-		for (const s of shifts) map[s.station_id] = (map[s.station_id] || 0) + 1;
-		return map;
-	}, [shifts]);
-
 	const handleSubmit = () => {
 		onSubmit({
-			stationIds: [...selectedStationIds],
-			copyAssignments,
 			materialIds: [...selectedMaterialIds],
 			materialQuantitySource: quantitySource,
 		});
@@ -103,51 +85,6 @@ export default function TemplateSelectionStep({
 
 	return (
 		<div className="space-y-6">
-			{/* Stations */}
-			<Card>
-				<CardHeader className="pb-3">
-					<CardTitle className="text-lg">Stationen</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					{stations.length === 0 ? (
-						<p className="text-sm text-muted-foreground">Keine Stationen vorhanden</p>
-					) : (
-						<>
-							<div className="flex items-center gap-2">
-								<Checkbox
-									id="all-stations"
-									checked={allStationsSelected ? true : noStationsSelected ? false : 'indeterminate'}
-									onCheckedChange={toggleAllStations}
-								/>
-								<Label htmlFor="all-stations" className="text-sm font-medium">Alle Stationen</Label>
-							</div>
-							<div className="border rounded-md divide-y max-h-[240px] overflow-y-auto">
-								{stations.map(s => (
-									<label key={s.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer">
-										<Checkbox
-											checked={selectedStationIds.has(s.id)}
-											onCheckedChange={() => toggleStation(s.id)}
-										/>
-										<span className="text-sm flex-1">{s.name}</span>
-										<span className="text-xs text-muted-foreground">
-											{s.required_people} Pers. · {shiftsPerStation[s.id] || 0} Schichten
-										</span>
-									</label>
-								))}
-							</div>
-							<div className="flex items-center gap-2 pt-1">
-								<Checkbox
-									id="copy-assignments"
-									checked={copyAssignments}
-									onCheckedChange={(v) => setCopyAssignments(!!v)}
-								/>
-								<Label htmlFor="copy-assignments" className="text-sm">Zuweisungen übernehmen</Label>
-							</div>
-						</>
-					)}
-				</CardContent>
-			</Card>
-
 			{/* Materials */}
 			<Card>
 				<CardHeader className="pb-3">
