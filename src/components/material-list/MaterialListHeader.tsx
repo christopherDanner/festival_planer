@@ -1,18 +1,9 @@
 import React from 'react';
-import { Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ModeToggle } from '@/components/toolkit/ModeToggle';
+import MaterialModeBar, { type MaterialMode } from './MaterialModeBar';
 
-/** Die zwei Modi des Bereichs Material: die Arbeitsliste selbst und die
-Material-Übernahme aus einem Quellfest. */
-export type MaterialMode = 'arbeitsliste' | 'uebernahme';
-
-const MODES = [
-	{ value: 'arbeitsliste' as const, label: 'ARBEITSLISTE' },
-	{ value: 'uebernahme' as const, label: 'ÜBERNAHME' }
-];
+export type { MaterialMode };
 
 export interface MaterialListHeaderProps {
 	mode: MaterialMode;
@@ -27,8 +18,11 @@ export interface MaterialListHeaderProps {
 }
 
 /**
- * Werkzeugleiste des Material-Bereichs (#113):
+ * Werkzeugleiste der Arbeitsliste (#113):
  * `[ARBEITSLISTE | ÜBERNAHME] [Suche …] [MATERIALLISTE] [BESTELLLISTE] [+ POSITION]`.
+ *
+ * Leiste, Umschalter und Suche kommen aus `MaterialModeBar` — die Übernahme
+ * trägt dieselbe (#118); hier stehen nur die Werkzeuge dieses Modus.
  *
  * Die drei Filter-Dropdowns von früher sind weg — die Achse (`MaterialAxisBar`)
  * ersetzt sie, die Suche bleibt.
@@ -43,25 +37,14 @@ const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({
 	onExport,
 	onExportOrderList
 }) => (
-	<div className="flex flex-wrap items-center gap-2 border-2.5 border-tinte bg-white px-3 py-2.5 min-[900px]:gap-2.5 min-[900px]:px-4">
-		<ModeToggle
-			options={MODES}
-			value={mode}
-			onValueChange={onModeChange}
-			aria-label="Material-Modus"
-		/>
-		{/* Unter 900px rutscht die Suche in eine eigene Zeile, damit die Knöpfe
-		nebeneinander bleiben (DESIGN-VISION §6, ein Breakpoint). */}
-		<div className="relative order-last w-full min-w-[170px] flex-1 min-[900px]:order-none min-[900px]:w-auto">
-			<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tinte-soft" />
-			<Input
-				value={searchTerm}
-				onChange={(e) => onSearchChange(e.target.value)}
-				placeholder={`Suche in ${positionCount} Positionen …`}
-				aria-label="Material suchen"
-				className="h-9 pl-9 text-[13px] max-[899px]:h-10"
-			/>
-		</div>
+	<MaterialModeBar
+		mode={mode}
+		onModeChange={onModeChange}
+		searchTerm={searchTerm}
+		onSearchChange={onSearchChange}
+		searchPlaceholder={`Suche in ${positionCount} Positionen …`}
+		searchLabel="Material suchen"
+	>
 		<Button variant="outline" size="sm" className="text-[12.5px] max-[899px]:min-h-10" onClick={onExport}>
 			MATERIALLISTE
 		</Button>
@@ -72,7 +55,7 @@ const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({
 		<Button size="sm" className="text-[12.5px] max-[899px]:min-h-10" onClick={onAddMaterial}>
 			+ POSITION
 		</Button>
-	</div>
+	</MaterialModeBar>
 );
 
 export default MaterialListHeader;
