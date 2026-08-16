@@ -30,6 +30,9 @@ interface HelperSidebarProps {
 	onDragStart: (helper: Helper) => void;
 	onDragEnd: () => void;
 	onTapSelect?: (helper: Helper) => void;
+	/** „+ Neuen Helfer anlegen" am Fuß der Liste — hier hin ist der Knopf aus
+	der Werkzeugleiste gewandert (#102); den Feinschliff der Liste macht #103. */
+	onAddHelper?: () => void;
 	onEditPreferences: (helper: Helper) => void;
 	onEditHelper: (helper: Helper) => void;
 	onDeleteHelper: (helper: Helper) => void;
@@ -58,6 +61,7 @@ const HelperSidebar: React.FC<HelperSidebarProps> = ({
 	onDragStart,
 	onDragEnd,
 	onTapSelect,
+	onAddHelper,
 	onEditPreferences,
 	onEditHelper,
 	onDeleteHelper
@@ -158,6 +162,16 @@ const HelperSidebar: React.FC<HelperSidebarProps> = ({
 					/>
 				))}
 			</div>
+			{/* Helfer entstehen in dieser Liste (ADR 0005) — seit #102 auch der
+			Knopf dafür, der vorher in der Werkzeugleiste stand. */}
+			{onAddHelper && (
+				<button
+					type="button"
+					onClick={onAddHelper}
+					className="block w-full border-t-2 border-tinte bg-white px-4 py-3 text-center text-xs font-bold uppercase tracking-[.04em] text-tinte-soft hover:bg-fusszeile hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tinte">
+					+ Neuen Helfer anlegen
+				</button>
+			)}
 		</div>
 	);
 };

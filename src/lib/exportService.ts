@@ -15,7 +15,7 @@ import {
 	posterTableTheme,
 	truncateToWidth
 } from '@/lib/pdfPoster';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
 
 export interface ExportData {
 	festivalName: string;
@@ -166,7 +166,7 @@ type StationColumn = ReturnType<typeof buildStationColumns>[number];
 /** Personen, die insgesamt auf einer Station stehen (Station + Schichten). */
 function assignedPeople(column: StationColumn): number {
 	return (
-		column.stationMemberNames.length +
+		column.stationHelperNames.length +
 		column.shiftBlocks.reduce((sum, block) => sum + block.names.length, 0)
 	);
 }
@@ -278,9 +278,9 @@ export function buildShiftPlanPdf(data: ExportData): jsPDF {
 			if (lines.length > 0) lines.push('');
 		};
 
-		if (col.stationMemberNames.length > 0) {
+		if (col.stationHelperNames.length > 0) {
 			separate();
-			for (const name of col.stationMemberNames) lines.push(name);
+			for (const name of col.stationHelperNames) lines.push(name);
     }
       
 		const totalAssigned = col.stationHelperNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);

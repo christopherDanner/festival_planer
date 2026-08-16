@@ -8,13 +8,14 @@ import type { Station, StationShift, ShiftAssignment, StationHelper } from '@/li
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import {
-	deriveShiftsMetric,
 	deriveMaterialOrdered,
 	deriveMaterialConsumed,
 	deriveSponsoringMetric,
 	formatDeltaEuro,
 	type DeltaTone
 } from './numberBoxes';
+// Dieselbe Zählregel wie die Fokus-Werkbank des Schichtplans (#102).
+import { deriveShiftsMetric } from '@/lib/staffing';
 import { formatEuro } from '@/lib/money';
 
 interface NumbersColumnProps {
