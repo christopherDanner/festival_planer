@@ -4,7 +4,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-import { allStationsState, type StationPreviewRow } from './stationChoice';
+import { checkboxState } from './selection';
+import { type StationPreviewRow } from './stationChoice';
 
 /** Maß der Werkzeug-Checkbox (Prototyp `.cbx`); grün gefüllt über die Variante. */
 const CHECKBOX = 'h-[18px] w-[18px]';
@@ -14,9 +15,9 @@ const TIPPZIEL = 'flex items-center max-[899px]:min-h-10';
 
 export interface StationsShiftsStepProps {
 	rows: StationPreviewRow[];
-	selectedStationIds: string[];
+	selectedStationIds: ReadonlySet<string>;
 	/** Aufgeklappte Stationen — reine Vorschau, keine Auswahl. */
-	expandedStationIds: string[];
+	expandedStationIds: ReadonlySet<string>;
 	copyAssignments: boolean;
 	onToggleStation: (stationId: string) => void;
 	onToggleAllStations: () => void;
@@ -48,7 +49,7 @@ export default function StationsShiftsStep({
 	onBack,
 	onNext
 }: StationsShiftsStepProps) {
-	const allState = allStationsState(
+	const allState = checkboxState(
 		rows.map((row) => row.id),
 		selectedStationIds
 	);
@@ -84,7 +85,7 @@ export default function StationsShiftsStep({
 
 					<ul>
 						{rows.map((row) => {
-							const open = expandedStationIds.includes(row.id);
+							const open = expandedStationIds.has(row.id);
 							const panelId = `schichten-${row.id}`;
 							return (
 								<li key={row.id} className="border-b border-linie last:border-b-0">
@@ -92,7 +93,7 @@ export default function StationsShiftsStep({
 										<Checkbox
 											id={`station-${row.id}`}
 											variant="gruen"
-											checked={selectedStationIds.includes(row.id)}
+											checked={selectedStationIds.has(row.id)}
 											onCheckedChange={() => onToggleStation(row.id)}
 											className={cn(CHECKBOX, FOCUS_INK)}
 										/>

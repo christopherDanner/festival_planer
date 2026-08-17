@@ -31,8 +31,8 @@ const render = (over: Partial<StationsShiftsStepProps> = {}) =>
 	renderToStaticMarkup(
 		<StationsShiftsStep
 			rows={[ausschank, kassa]}
-			selectedStationIds={['st-1', 'st-2']}
-			expandedStationIds={[]}
+			selectedStationIds={new Set(['st-1', 'st-2'])}
+			expandedStationIds={new Set()}
 			copyAssignments={false}
 			onToggleStation={() => {}}
 			onToggleAllStations={() => {}}
@@ -64,18 +64,18 @@ describe('Stations-Zeilen', () => {
 
 	it('trägt je Zeile einen Falt-Knopf, der seinen Zustand anschreibt', () => {
 		expect(render()).toContain('AUFKLAPPEN ▾');
-		expect(render({ expandedStationIds: ['st-1'] })).toContain('ZUKLAPPEN ▴');
+		expect(render({ expandedStationIds: new Set(['st-1']) })).toContain('ZUKLAPPEN ▴');
 	});
 
 	it('füllt die Checkbox einer gewählten Station grün', () => {
-		const html = render({ selectedStationIds: ['st-1'] });
+		const html = render({ selectedStationIds: new Set(['st-1']) });
 		expect(html).toContain('data-[state=checked]:bg-gruen');
 	});
 
 	// Gewählt wird auf Stations-Ebene (#64) — das Aufklappen ist reine Vorschau.
 	// Eine Checkbox je Station, dazu „Alle Stationen" und „Zuweisungen übernehmen".
 	it('gibt den Schichten keine eigene Checkbox', () => {
-		const html = render({ expandedStationIds: ['st-1'] });
+		const html = render({ expandedStationIds: new Set(['st-1']) });
 		expect(html.match(/role="checkbox"/g)).toHaveLength(4);
 	});
 });
@@ -86,7 +86,7 @@ describe('Schicht-Vorschau', () => {
 	});
 
 	it('nennt aufgeklappt alten Termin, Name, Plätze und neuen Termin samt Pfeil', () => {
-		const html = render({ expandedStationIds: ['st-1'] });
+		const html = render({ expandedStationIds: new Set(['st-1']) });
 		expect(html).toContain('Sa 11–15');
 		expect(html).toContain('Frühschoppen');
 		expect(html).toContain('4 Plätze');
@@ -96,7 +96,7 @@ describe('Schicht-Vorschau', () => {
 	});
 
 	it('sagt es, wenn eine Station gar keine Schichten hat', () => {
-		expect(render({ expandedStationIds: ['st-2'] })).toContain('Keine Schichten');
+		expect(render({ expandedStationIds: new Set(['st-2']) })).toContain('Keine Schichten');
 	});
 });
 
@@ -110,13 +110,13 @@ describe('„Alle Stationen"-Umschalter', () => {
 	});
 
 	it('steht im Zwischenzustand, wenn nur ein Teil gewählt ist', () => {
-		expect(tagWithId(render({ selectedStationIds: ['st-1'] }), 'alle-stationen')).toContain(
+		expect(tagWithId(render({ selectedStationIds: new Set(['st-1']) }), 'alle-stationen')).toContain(
 			'data-state="indeterminate"'
 		);
 	});
 
 	it('steht leer, wenn keine gewählt ist', () => {
-		expect(tagWithId(render({ selectedStationIds: [] }), 'alle-stationen')).toContain(
+		expect(tagWithId(render({ selectedStationIds: new Set() }), 'alle-stationen')).toContain(
 			'data-state="unchecked"'
 		);
 	});
@@ -143,7 +143,7 @@ describe('Handschrift', () => {
 	// Umbruch statt Abschneiden (#94): kein `truncate`, kein hartes Beschneiden —
 	// die Zeile darf über zwei Zeilen gehen, aber nichts verschlucken.
 	it('lässt die Zeile unter 900px umbrechen statt abschneiden', () => {
-		const html = render({ expandedStationIds: ['st-1'] });
+		const html = render({ expandedStationIds: new Set(['st-1']) });
 		expect(html).toContain('flex-wrap');
 		expect(html).not.toContain('truncate');
 		expect(html).not.toContain('overflow-hidden');

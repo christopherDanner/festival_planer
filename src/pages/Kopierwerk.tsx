@@ -3,19 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import FestivalBasicsStep from '@/components/kopierwerk/FestivalBasicsStep';
 import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
-import MaterialSelectionStep, {
-	type MaterialSelection
-} from '@/components/kopierwerk/MaterialSelectionStep';
+import MaterialStep from '@/components/kopierwerk/MaterialStep';
 import StampCard from '@/components/kopierwerk/StampCard';
 import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
-import {
-	stationPreviewRows,
-	toggleAllStations,
-	toggleStation,
-	type StationSelection
-} from '@/components/kopierwerk/stationChoice';
+import { stationPreviewRows } from '@/components/kopierwerk/stationChoice';
 import { loadTemplate, type LoadedTemplate } from '@/components/kopierwerk/loadTemplate';
 import {
+	copyFestivalOptions,
 	draftToFestivalData,
 	emptyFestivalDraft,
 	isDraftReady,
@@ -24,16 +18,13 @@ import {
 	type FestivalDraft,
 	type KopierwerkStepKey
 } from '@/components/kopierwerk/kopierwerk';
+import type { QuantitySource } from '@/components/kopierwerk/materialChoice';
+import { toggleAllIds, toggleId } from '@/components/kopierwerk/selection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
-import { copyFestivalData, type CopyFestivalOptions } from '@/lib/festivalCopyService';
+import { copyFestivalData } from '@/lib/festivalCopyService';
 import { FESTIVAL_LIST_PATH, festivalWorkspacePath, templateIdFromSearch } from '@/lib/festivalRoutes';
 import { createFestival, getUserFestivals, type Festival } from '@/lib/festivalService';
-
-type CopySelection = Omit<
-	CopyFestivalOptions,
-	'sourceFestivalStartDate' | 'targetFestivalStartDate'
->;
 
 /**
  * Kopierwerk (`/festivals/neu`, Issue #93): eigene Route statt In-Page-Zustand
@@ -41,9 +32,9 @@ type CopySelection = Omit<
  * Browser-Zurück führt auf die Wand.
  *
  * Links (bzw. unter 900px oben) die Stempelkarte, rechts die Werkbank des
- * aktuellen Schritts. Schritt 2 und 3 in eigener Handschrift sind #94/#95;
- * bis dahin hängt die bestehende Vorlagen-Auswahl an Schritt 2, damit das
- * Kopieren durchgehend funktionsfähig bleibt.
+ * aktuellen Schritts. Die Auswahl der Schritte 2 und 3 liegt hier und nicht in
+ * den Werkbänken: Schritt 3 braucht die gewählten Stationen für die Warnung
+ * „ohne Station" (#95), und ein Rücksprung darf keine Auswahl vergessen.
  */
 export default function Kopierwerk() {
 	const [searchParams] = useSearchParams();
@@ -63,13 +54,16 @@ export default function Kopierwerk() {
 	const [template, setTemplate] = useState<LoadedTemplate | null>(null);
 	const [loadingTemplate, setLoadingTemplate] = useState(false);
 	const [saving, setSaving] = useState(false);
-	// Schritt 2: gewählt wird auf Stations-Ebene, das Aufklappen ist reine
-	// Vorschau (#64) — darum zwei getrennte Listen.
-	const [stationSelection, setStationSelection] = useState<StationSelection>({
-		stationIds: [],
-		copyAssignments: false
-	});
-	const [expandedStationIds, setExpandedStationIds] = useState<string[]>([]);
+
+	// Die Auswahl der Schritte 2 und 3. Voreingestellt ist „alles mitnehmen" —
+	// eine Vorlage wird gewählt, um sie zu übernehmen.
+	const [stationIds, setStationIds] = useState<ReadonlySet<string>>(new Set());
+	const [copyAssignments, setCopyAssignments] = useState(false);
+	const [materialIds, setMaterialIds] = useState<ReadonlySet<string>>(new Set());
+	const [quantitySource, setQuantitySource] = useState<QuantitySource>('ordered');
+	// Gewählt wird in Schritt 2 auf Stations-Ebene, das Aufklappen ist reine
+	// Vorschau (#64) — darum neben der Auswahl eine eigene Menge.
+	const [expandedStationIds, setExpandedStationIds] = useState<ReadonlySet<string>>(new Set());
 
 	const { templateId } = draft;
 
@@ -92,14 +86,12 @@ export default function Kopierwerk() {
 			.then((loaded) => {
 				if (!current) return;
 				setTemplate(loaded);
-				// Eine frische Vorlage kommt vollständig — abgewählt wird, was nicht
-				// mitsoll. Die Aufklapper starten zu, sonst stünde die ganze Vorlage
-				// als Wand aus Schichten da.
-				setStationSelection((previous) => ({
-					...previous,
-					stationIds: loaded.stations.map((station) => station.id)
-				}));
-				setExpandedStationIds([]);
+				// Eine frisch geladene Vorlage kommt vollständig mit; abgewählt wird
+				// in den Schritten 2 und 3. Die Aufklapper starten zu, sonst stünde
+				// die ganze Vorlage als Wand aus Schichten da.
+				setStationIds(new Set(loaded.stations.map((station) => station.id)));
+				setMaterialIds(new Set(loaded.materials.map((material) => material.id)));
+				setExpandedStationIds(new Set());
 			})
 			// Auch ein gelöschtes oder erfundenes Fest im Link landet hier: lieber ohne
 			// Vorlage weitermachen, als einen Kopier-Schritt anbieten, der ins Leere greift.
@@ -118,8 +110,12 @@ export default function Kopierwerk() {
 		};
 	}, [templateId, toast]);
 
+	// Ohne geladene Vorlage gibt es nur Schritt 1 — auch wenn `step` noch auf
+	// einem späteren steht, etwa während ein Vorlagen-Wechsel lädt.
+	const currentStep: KopierwerkStepKey = template ? step : 'basics';
+
 	const steps = kopierwerkSteps({
-		current: step,
+		current: currentStep,
 		hasTemplate: templateId !== '',
 		scope: template
 			? {
@@ -143,26 +139,32 @@ export default function Kopierwerk() {
 	};
 
 	const createNewFestival = useCallback(
-		async (selection?: CopySelection) => {
+		async (withCopy: boolean) => {
 			if (!isDraftReady(draft)) return;
 			setSaving(true);
 			try {
 				const festivalId = await createFestival(draftToFestivalData(draft));
 
-				// `template` und nicht `selection` entscheidet: die Auswahl kommt aus
-				// Schritt 2, den es ohne geladene Vorlage gar nicht gibt — so kann kein
-				// Fest still ohne Kopie entstehen, während der Hinweis eine verspricht.
-				if (selection && template) {
-					await copyFestivalData(template.festival.id, festivalId, {
-						...selection,
-						sourceFestivalStartDate: template.festival.start_date,
-						targetFestivalStartDate: draft.startDate
-					});
+				// Kopiert wird nur mit geladener Vorlage: die Auswahl kommt aus den
+				// Schritten 2 und 3, die es ohne sie gar nicht gibt — so kann kein Fest
+				// still ohne Kopie entstehen, während der Hinweis eine verspricht.
+				const source = withCopy ? template : null;
+				if (source) {
+					await copyFestivalData(
+						source.festival.id,
+						festivalId,
+						copyFestivalOptions(source.festival, draft, {
+							stationIds,
+							copyAssignments,
+							materialIds,
+							quantitySource
+						})
+					);
 				}
 
 				toast({
 					title: 'Fest angelegt',
-					description: selection
+					description: source
 						? 'Das Fest wurde aus der Vorlage angelegt.'
 						: 'Stationen, Material und Ablauf legst du jetzt am Fest an.'
 				});
@@ -178,7 +180,7 @@ export default function Kopierwerk() {
 				setSaving(false);
 			}
 		},
-		[draft, navigate, template, toast]
+		[copyAssignments, draft, materialIds, navigate, quantitySource, stationIds, template, toast]
 	);
 
 	const submitBasics = () => {
@@ -186,7 +188,7 @@ export default function Kopierwerk() {
 			if (template) setStep('stations');
 			return;
 		}
-		void createNewFestival();
+		void createNewFestival(false);
 	};
 
 	const stationRows = useMemo(
@@ -202,65 +204,61 @@ export default function Kopierwerk() {
 		[template, draft.startDate]
 	);
 
-	const workbench = (() => {
-		if (step === 'basics' || !template) {
-			return (
-				<FestivalBasicsStep
-					draft={draft}
-					templates={templates}
-					loadingTemplate={loadingTemplate}
-					saving={saving}
-					onChange={changeDraft}
-					onSubmit={submitBasics}
-				/>
-			);
-		}
-
-		if (step === 'stations') {
-			return (
-				<StationsShiftsStep
-					rows={stationRows}
-					selectedStationIds={stationSelection.stationIds}
-					expandedStationIds={expandedStationIds}
-					copyAssignments={stationSelection.copyAssignments}
-					onToggleStation={(stationId) =>
-						setStationSelection((previous) => ({
-							...previous,
-							stationIds: toggleStation(previous.stationIds, stationId)
-						}))
-					}
-					onToggleAllStations={() =>
-						setStationSelection((previous) => ({
-							...previous,
-							stationIds: toggleAllStations(
-								stationRows.map((row) => row.id),
-								previous.stationIds
-							)
-						}))
-					}
-					// Auf- und Zuklappen ist dasselbe An/Aus wie das Ankreuzen, nur auf
-					// der Liste der aufgeklappten Stationen.
-					onToggleExpanded={(stationId) =>
-						setExpandedStationIds((previous) => toggleStation(previous, stationId))
-					}
-					onCopyAssignmentsChange={(value) =>
-						setStationSelection((previous) => ({ ...previous, copyAssignments: value }))
-					}
-					onBack={() => setStep('basics')}
-					onNext={() => setStep('materials')}
-				/>
-			);
-		}
-
-		return (
-			<MaterialSelectionStep
-				materials={template.materials}
-				loading={saving}
-				onBack={() => setStep('stations')}
-				onSubmit={(selection) => void createNewFestival({ ...stationSelection, ...selection })}
+	let workbench;
+	if (currentStep === 'stations' && template) {
+		workbench = (
+			<StationsShiftsStep
+				rows={stationRows}
+				selectedStationIds={stationIds}
+				expandedStationIds={expandedStationIds}
+				copyAssignments={copyAssignments}
+				onToggleStation={(stationId) =>
+					setStationIds((previous) => toggleId(previous, stationId))
+				}
+				onToggleAllStations={() =>
+					setStationIds((previous) =>
+						toggleAllIds(
+							stationRows.map((row) => row.id),
+							previous
+						)
+					)
+				}
+				// Auf- und Zuklappen ist dasselbe An/Aus wie das Ankreuzen, nur auf
+				// der Menge der aufgeklappten Stationen.
+				onToggleExpanded={(stationId) =>
+					setExpandedStationIds((previous) => toggleId(previous, stationId))
+				}
+				onCopyAssignmentsChange={setCopyAssignments}
+				onBack={() => setStep('basics')}
+				onNext={() => setStep('materials')}
 			/>
 		);
-	})();
+	} else if (currentStep === 'materials' && template) {
+		workbench = (
+			<MaterialStep
+				materials={template.materials}
+				selectedStationIds={stationIds}
+				selectedMaterialIds={materialIds}
+				quantitySource={quantitySource}
+				saving={saving}
+				onQuantitySourceChange={setQuantitySource}
+				onSelectionChange={setMaterialIds}
+				onBack={() => setStep('stations')}
+				onSubmit={() => void createNewFestival(true)}
+			/>
+		);
+	} else {
+		workbench = (
+			<FestivalBasicsStep
+				draft={draft}
+				templates={templates}
+				loadingTemplate={loadingTemplate}
+				saving={saving}
+				onChange={changeDraft}
+				onSubmit={submitBasics}
+			/>
+		);
+	}
 
 	return (
 		<div className="min-h-screen">
