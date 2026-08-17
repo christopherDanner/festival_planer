@@ -13,6 +13,7 @@ import type {
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { withoutPrice } from '@/lib/materialCosts';
+import { formatShiftRange } from '@/lib/shiftDates';
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
@@ -60,27 +61,6 @@ export interface GapBoardInput {
 	stationHelpers: StationHelperWithDetails[];
 	scheduleDays: ScheduleDayWithPhases[];
 	materials: FestivalMaterialWithStation[];
-}
-
-/** Wochentag-Kürzel eines Datum-Strings („2026-07-25" → „Sa"). */
-function weekday(date: string): string {
-	return WEEKDAYS[new Date(`${date}T00:00:00`).getDay()];
-}
-
-/** „15:00:00"/„15:00" → „15"; „15:30:00" → „15:30". */
-function shortHour(time: string): string {
-	const hhmm = time.slice(0, 5);
-	return hhmm.endsWith(':00') ? hhmm.slice(0, 2) : hhmm;
-}
-
-/** Schicht als kompakte Zeitspanne, z. B. „Sa 15–19" (mehrtägig: „Sa 22–So 02"). */
-export function formatShiftRange(shift: StationShift): string {
-	const start = `${weekday(shift.start_date)} ${shortHour(shift.start_time)}`;
-	const crossesDay = shift.end_date && shift.end_date !== shift.start_date;
-	const end = crossesDay
-		? `${weekday(shift.end_date as string)} ${shortHour(shift.end_time)}`
-		: shortHour(shift.end_time);
-	return `${start}–${end}`;
 }
 
 /** Frist als knapper Text, z. B. „Sa 26.7., 15:00" (ohne Zeit: „Sa 26.7."). */

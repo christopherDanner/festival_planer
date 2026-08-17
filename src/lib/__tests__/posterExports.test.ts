@@ -101,7 +101,7 @@ function shiftPlanData(): ExportData {
 				station_shift_id: 'sh-1',
 				station_id: 'st-1',
 				position: 0,
-				member: { id: 'm-1', first_name: 'Anna', last_name: 'Gruber' },
+				helper: { id: 'm-1', first_name: 'Anna', last_name: 'Gruber' },
 				...stamps
 			},
 			{
@@ -110,11 +110,11 @@ function shiftPlanData(): ExportData {
 				station_shift_id: 'sh-1',
 				station_id: 'st-1',
 				position: 1,
-				member: { id: 'm-2', first_name: 'Bernd', last_name: 'Huber' },
+				helper: { id: 'm-2', first_name: 'Bernd', last_name: 'Huber' },
 				...stamps
 			}
 		],
-		stationMembers: []
+		stationHelpers: []
 	};
 }
 
@@ -145,8 +145,8 @@ function scheduleOptions(overrides: Partial<ScheduleExportOptions> = {}): Schedu
 							type: 'task',
 							start_time: '08:00:00',
 							end_time: '10:00:00',
-							responsible_member_id: 'm-1',
-							responsible_member: { id: 'm-1', first_name: 'Anna', last_name: 'Gruber' },
+							responsible_helper_id: 'm-1',
+							responsible_helper: { id: 'm-1', first_name: 'Anna', last_name: 'Gruber' },
 							status: 'done',
 							description: null,
 							sort_order: 0,
@@ -170,8 +170,8 @@ function scheduleOptions(overrides: Partial<ScheduleExportOptions> = {}): Schedu
 							type: 'program',
 							start_time: '10:30:00',
 							end_time: null,
-							responsible_member_id: null,
-							responsible_member: null,
+							responsible_helper_id: null,
+							responsible_helper: null,
 							status: 'open',
 							description: null,
 							sort_order: 0,

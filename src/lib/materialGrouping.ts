@@ -64,6 +64,10 @@ const UNASSIGNED_KEY = '__none__';
 letzter Chip im Kasten. */
 export const NO_CATEGORY = 'Ohne Kategorie';
 
+/** Beschriftung der Positionen ohne Station. Die Übernahme (#118) kennt
+dieselbe Restgruppe — sie darf nicht zwei Namen haben. */
+export const NO_STATION = 'Ohne Station';
+
 /** Chip-*Wert* für „keine Kategorie". Bewusst kein Anzeigename: eine Kategorie,
 die wirklich „Ohne Kategorie" heißt, soll nicht mit den unzugeordneten
 Positionen verschmelzen. */
@@ -80,7 +84,7 @@ const AXIS_KEYS: Record<
 		// Stationen sind zwei Gruppen.
 		key: (m) => m.station?.id ?? null,
 		name: (m) => m.station?.name ?? '',
-		unassignedName: 'Ohne Station'
+		unassignedName: NO_STATION
 	},
 	supplier: {
 		key: (m) => blankToNull(m.supplier),
@@ -172,9 +176,12 @@ export function searchMaterials<T extends GroupableMaterial>(materials: T[], ter
 /**
  * Hält den Reiter-Zustand gültig: Achsenwechsel, Suche und Löschen können die
  * gewählte Gruppe verschwinden lassen — dann übernimmt der erste Reiter.
+ *
+ * Nimmt jede Gruppenliste mit `id` — die Übernahme (#118) hat eigene Gruppen,
+ * aber dieselbe Regel; zwei Fassungen davon liefen unweigerlich auseinander.
  */
 export function resolveActiveGroupId(
-	groups: MaterialGroup<GroupableMaterial>[],
+	groups: { id: string }[],
 	requested: string | null
 ): string | null {
 	if (requested && groups.some((g) => g.id === requested)) return requested;
