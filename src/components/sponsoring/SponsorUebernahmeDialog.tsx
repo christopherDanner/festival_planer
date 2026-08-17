@@ -111,7 +111,6 @@ const SponsorUebernahmeDialog: React.FC<SponsorUebernahmeDialogProps> = ({
 		targetSponsorings.some((s) => s.sponsor_id === sponsorId);
 
 	const selectedPlans = plans.filter((p) => selected[p.sponsorId] && !alreadySponsoring(p.sponsorId));
-	const selectablePlans = plans.filter((p) => !alreadySponsoring(p.sponsorId));
 
 	const sourceTotalFor = (plan: SponsorTransferPlan): number => {
 		const sponsoring = sourceSponsorings.find((s) => s.sponsor_id === plan.sponsorId);
@@ -204,20 +203,15 @@ const SponsorUebernahmeDialog: React.FC<SponsorUebernahmeDialogProps> = ({
 					) : (
 						plans.length > 0 && (
 							<div className="space-y-2">
-								<div className="flex items-center justify-between">
-									<p className="text-sm font-medium">Sponsoren des Quellfests</p>
-									<Button
-										size="sm"
-										variant="ghost"
-										onClick={() =>
-											setSelected(
-												Object.fromEntries(selectablePlans.map((p) => [p.sponsorId, true]))
-											)
-										}
-										disabled={selectablePlans.length === 0}>
-										Alle auswählen
-									</Button>
-								</div>
+								{/*
+									Hier steht bewusst kein "Alle auswählen" (#154): der Einzelentscheid
+									pro Firma ist genau die Rechtfertigung dafür, dass dieser Weg Werte
+									mitnehmen darf (siehe handleTransfer, ADR 0008) — ein Klick, der alle
+									Firmen samt Beträgen anlegt, hebt sie auf. Den Massenfall bedient
+									das Kopierwerk bei der Fest-Anlage, als nackte Verknüpfung ohne
+									Beträge (#146). Die Reibung ist gewollt, keine fehlende Bequemlichkeit.
+								*/}
+								<p className="text-sm font-medium">Sponsoren des Quellfests</p>
 								{plans.map((plan) => {
 									const taken = alreadySponsoring(plan.sponsorId);
 									return (
