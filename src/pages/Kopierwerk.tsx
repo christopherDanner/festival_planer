@@ -5,7 +5,8 @@ import FestivalBasicsStep from '@/components/kopierwerk/FestivalBasicsStep';
 import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
 import MaterialStep from '@/components/kopierwerk/MaterialStep';
 import StampCard from '@/components/kopierwerk/StampCard';
-import StationsStep from '@/components/kopierwerk/StationsStep';
+import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
+import { stationPreviewRows } from '@/components/kopierwerk/stationChoice';
 import { loadTemplate, type LoadedTemplate } from '@/components/kopierwerk/loadTemplate';
 import {
 	copyFestivalOptions,
@@ -18,6 +19,7 @@ import {
 	type KopierwerkStepKey
 } from '@/components/kopierwerk/kopierwerk';
 import type { QuantitySource } from '@/components/kopierwerk/materialChoice';
+import { toggleAllIds, toggleId } from '@/components/kopierwerk/selection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { copyFestivalData } from '@/lib/festivalCopyService';
@@ -33,7 +35,6 @@ import { createFestival, getUserFestivals, type Festival } from '@/lib/festivalS
  * aktuellen Schritts. Die Auswahl der Schritte 2 und 3 liegt hier und nicht in
  * den Werkbänken: Schritt 3 braucht die gewählten Stationen für die Warnung
  * „ohne Station" (#95), und ein Rücksprung darf keine Auswahl vergessen.
- * Schritt 2 in eigener Handschrift ist #94.
  */
 export default function Kopierwerk() {
 	const [searchParams] = useSearchParams();
@@ -60,6 +61,9 @@ export default function Kopierwerk() {
 	const [copyAssignments, setCopyAssignments] = useState(false);
 	const [materialIds, setMaterialIds] = useState<ReadonlySet<string>>(new Set());
 	const [quantitySource, setQuantitySource] = useState<QuantitySource>('ordered');
+	// Gewählt wird in Schritt 2 auf Stations-Ebene, das Aufklappen ist reine
+	// Vorschau (#64) — darum neben der Auswahl eine eigene Menge.
+	const [expandedStationIds, setExpandedStationIds] = useState<ReadonlySet<string>>(new Set());
 
 	const { templateId } = draft;
 
@@ -83,9 +87,11 @@ export default function Kopierwerk() {
 				if (!current) return;
 				setTemplate(loaded);
 				// Eine frisch geladene Vorlage kommt vollständig mit; abgewählt wird
-				// in den Schritten 2 und 3.
+				// in den Schritten 2 und 3. Die Aufklapper starten zu, sonst stünde
+				// die ganze Vorlage als Wand aus Schichten da.
 				setStationIds(new Set(loaded.stations.map((station) => station.id)));
 				setMaterialIds(new Set(loaded.materials.map((material) => material.id)));
+				setExpandedStationIds(new Set());
 			})
 			// Auch ein gelöschtes oder erfundenes Fest im Link landet hier: lieber ohne
 			// Vorlage weitermachen, als einen Kopier-Schritt anbieten, der ins Leere greift.
@@ -185,15 +191,43 @@ export default function Kopierwerk() {
 		void createNewFestival(false);
 	};
 
+	const stationRows = useMemo(
+		() =>
+			template
+				? stationPreviewRows({
+						stations: template.stations,
+						shifts: template.shifts,
+						sourceStartDate: template.festival.start_date,
+						targetStartDate: draft.startDate
+					})
+				: [],
+		[template, draft.startDate]
+	);
+
 	let workbench;
 	if (currentStep === 'stations' && template) {
 		workbench = (
-			<StationsStep
-				stations={template.stations}
-				shifts={template.shifts}
+			<StationsShiftsStep
+				rows={stationRows}
 				selectedStationIds={stationIds}
+				expandedStationIds={expandedStationIds}
 				copyAssignments={copyAssignments}
-				onSelectionChange={setStationIds}
+				onToggleStation={(stationId) =>
+					setStationIds((previous) => toggleId(previous, stationId))
+				}
+				onToggleAllStations={() =>
+					setStationIds((previous) =>
+						toggleAllIds(
+							stationRows.map((row) => row.id),
+							previous
+						)
+					)
+				}
+				// Auf- und Zuklappen ist dasselbe An/Aus wie das Ankreuzen, nur auf
+				// der Menge der aufgeklappten Stationen.
+				onToggleExpanded={(stationId) =>
+					setExpandedStationIds((previous) => toggleId(previous, stationId))
+				}
 				onCopyAssignmentsChange={setCopyAssignments}
 				onBack={() => setStep('basics')}
 				onNext={() => setStep('materials')}

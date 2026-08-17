@@ -4,6 +4,7 @@ import {
 } from '@/lib/shiftService';
 import { getHelpers, createHelper } from '@/lib/helperService';
 import { getMaterials, createMaterialsBulk } from '@/lib/materialService';
+import { shiftFestivalDate } from '@/lib/shiftDates';
 
 export interface CopyFestivalOptions {
 	stationIds: string[];
@@ -12,15 +13,6 @@ export interface CopyFestivalOptions {
 	materialQuantitySource: 'ordered' | 'actual';
 	sourceFestivalStartDate: string;
 	targetFestivalStartDate: string;
-}
-
-function computeDateOffset(sourceStart: string, shiftDate: string, targetStart: string): string {
-	const source = new Date(sourceStart);
-	const shift = new Date(shiftDate);
-	const target = new Date(targetStart);
-	const offsetMs = shift.getTime() - source.getTime();
-	const result = new Date(target.getTime() + offsetMs);
-	return result.toISOString().split('T')[0];
 }
 
 export async function copyFestivalData(
@@ -109,9 +101,12 @@ export async function copyFestivalData(
 				festival_id: targetFestivalId,
 				station_id: stationIdMap[s.station_id],
 				name: s.name,
-				start_date: computeDateOffset(options.sourceFestivalStartDate, s.start_date, options.targetFestivalStartDate),
+				// Dieselbe Versatz-Funktion, die die Vorschau in Schritt 2 des
+				// Kopierwerks anschreibt (#94) — sonst verspricht der Bildschirm
+				// Termine, die hier anders landen.
+				start_date: shiftFestivalDate(options.sourceFestivalStartDate, s.start_date, options.targetFestivalStartDate),
 				end_date: s.end_date
-					? computeDateOffset(options.sourceFestivalStartDate, s.end_date, options.targetFestivalStartDate)
+					? shiftFestivalDate(options.sourceFestivalStartDate, s.end_date, options.targetFestivalStartDate)
 					: undefined,
 				start_time: s.start_time,
 				end_time: s.end_time,

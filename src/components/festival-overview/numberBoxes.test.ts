@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type { Station, StationShift, ShiftAssignment, StationHelper } from '@/lib/shiftService';
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import {
-	deriveShiftsMetric,
 	deriveMaterialOrdered,
 	deriveMaterialConsumed,
 	deriveSponsoringMetric,
@@ -12,58 +10,8 @@ import {
 import { formatEuro } from '@/lib/money';
 
 // --- Fabriken (nur die Felder, die die Ableitungen lesen) --------------------
-
-function station(over: Partial<Station> = {}): Station {
-	return {
-		id: 's1',
-		festival_id: 'f1',
-		name: 'Bar',
-		required_people: 0,
-		created_at: '',
-		updated_at: '',
-		...over
-	};
-}
-
-function shift(over: Partial<StationShift> = {}): StationShift {
-	return {
-		id: 'sh1',
-		festival_id: 'f1',
-		station_id: 's1',
-		name: 'Schicht',
-		start_date: '2026-07-24',
-		start_time: '11:00',
-		end_time: '15:00',
-		required_people: 0,
-		created_at: '',
-		updated_at: '',
-		...over
-	};
-}
-
-function assignment(over: Partial<ShiftAssignment> = {}): ShiftAssignment {
-	return {
-		id: 'a1',
-		festival_id: 'f1',
-		station_shift_id: 'sh1',
-		station_id: 's1',
-		position: 0,
-		created_at: '',
-		updated_at: '',
-		...over
-	};
-}
-
-function stationHelper(over: Partial<StationHelper> = {}): StationHelper {
-	return {
-		id: 'm1',
-		festival_id: 'f1',
-		station_id: 's1',
-		helper_id: 'p1',
-		created_at: '',
-		...over
-	};
-}
+// Die Fabriken der Besetzungs-Zählung sind mit `deriveShiftsMetric` nach
+// `src/lib/__tests__/staffing.test.ts` gewandert (#102).
 
 function material(over: Partial<FestivalMaterial> = {}): FestivalMaterial {
 	return {
@@ -106,89 +54,6 @@ function sponsoring(over: Partial<SponsoringWithDetails> = {}): SponsoringWithDe
 		...(over as SponsoringWithDetails)
 	} as SponsoringWithDetails;
 }
-
-// --- Schichten besetzt -------------------------------------------------------
-
-describe('deriveShiftsMetric', () => {
-	it('summiert Soll/Ist über Schichten (besetzt/gesamt, fehlen)', () => {
-		const stations = [station({ id: 's1' })];
-		const shifts = [
-			shift({ id: 'sh1', station_id: 's1', required_people: 4 }),
-			shift({ id: 'sh2', station_id: 's1', required_people: 2 })
-		];
-		const assignments = [
-			assignment({ id: 'a1', station_shift_id: 'sh1' }),
-			assignment({ id: 'a2', station_shift_id: 'sh1' }),
-			assignment({ id: 'a3', station_shift_id: 'sh2' })
-		];
-		const m = deriveShiftsMetric(stations, shifts, assignments, []);
-		expect(m.gesamt).toBe(6);
-		expect(m.besetzt).toBe(3);
-		expect(m.fehlen).toBe(3);
-		expect(m.status).toBe('partial');
-		expect(m.isEmpty).toBe(false);
-	});
-
-	it('nutzt Stations-Ebene (required_people + StationHelpers), wenn keine Schichten', () => {
-		const stations = [station({ id: 's1', required_people: 3 })];
-		const stationHelpers = [
-			stationHelper({ id: 'm1', station_id: 's1', helper_id: 'p1' }),
-			stationHelper({ id: 'm2', station_id: 's1', helper_id: 'p2' })
-		];
-		const m = deriveShiftsMetric(stations, [], [], stationHelpers);
-		expect(m.gesamt).toBe(3);
-		expect(m.besetzt).toBe(2);
-		expect(m.fehlen).toBe(1);
-		expect(m.status).toBe('partial');
-	});
-
-	it('kappt Überbesetzung pro Station (besetzt nie > gesamt, fehlen bleibt korrekt)', () => {
-		const stations = [station({ id: 's1' }), station({ id: 's2' })];
-		const shifts = [
-			shift({ id: 'sh1', station_id: 's1', required_people: 2 }),
-			shift({ id: 'sh2', station_id: 's2', required_people: 4 })
-		];
-		const assignments = [
-			// s1 überbesetzt (3 auf 2) — zählt nur als 2 besetzt
-			assignment({ id: 'a1', station_shift_id: 'sh1' }),
-			assignment({ id: 'a2', station_shift_id: 'sh1' }),
-			assignment({ id: 'a3', station_shift_id: 'sh1' }),
-			// s2 gar nicht besetzt
-		];
-		const m = deriveShiftsMetric(stations, shifts, assignments, []);
-		expect(m.gesamt).toBe(6);
-		expect(m.besetzt).toBe(2);
-		expect(m.fehlen).toBe(4);
-	});
-
-	it('voll besetzt → status complete, fehlen 0', () => {
-		const stations = [station({ id: 's1' })];
-		const shifts = [shift({ id: 'sh1', station_id: 's1', required_people: 2 })];
-		const assignments = [
-			assignment({ id: 'a1', station_shift_id: 'sh1' }),
-			assignment({ id: 'a2', station_shift_id: 'sh1' })
-		];
-		const m = deriveShiftsMetric(stations, shifts, assignments, []);
-		expect(m.fehlen).toBe(0);
-		expect(m.status).toBe('complete');
-	});
-
-	it('nichts besetzt → status empty', () => {
-		const stations = [station({ id: 's1' })];
-		const shifts = [shift({ id: 'sh1', station_id: 's1', required_people: 2 })];
-		const m = deriveShiftsMetric(stations, shifts, [], []);
-		expect(m.besetzt).toBe(0);
-		expect(m.status).toBe('empty');
-	});
-
-	it('keine Stationen/Schichten → isEmpty (Leerzustand)', () => {
-		const m = deriveShiftsMetric([], [], [], []);
-		expect(m.gesamt).toBe(0);
-		expect(m.besetzt).toBe(0);
-		expect(m.fehlen).toBe(0);
-		expect(m.isEmpty).toBe(true);
-	});
-});
 
 // --- Material bestellt -------------------------------------------------------
 
