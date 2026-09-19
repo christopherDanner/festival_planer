@@ -110,6 +110,37 @@ export function PaperSheetFields({
 	);
 }
 
+/**
+ * Ein Hinweis auf dem Papier: weiße Werkzeugfläche, 2px Tinte, links die breite
+ * Kante — der Absatz, der neben der Lücke steht statt im Changelog. In #117 am
+ * Stammdaten-Hinweis des Positions-Zettels festgelegt; seit #108 liegt das
+ * Rezept hier, weil es die zweite Stelle erreicht hat (ADR 0003 §1).
+ *
+ * `wide` gehört hierher und nicht zum Aufrufer: es hängt am Raster von
+ * `PaperSheetFields`, genau wie bei `PaperSheetField`.
+ */
+export function PaperSheetNote({
+	wide,
+	children,
+	className
+}: {
+	/** Über beide Spalten von `PaperSheetFields`. */
+	wide?: boolean;
+	children: ReactNode;
+	className?: string;
+}) {
+	return (
+		<p
+			className={cn(
+				'border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed',
+				wide && 'min-[900px]:col-span-2',
+				className
+			)}>
+			{children}
+		</p>
+	);
+}
+
 export interface PaperSheetFieldProps {
 	label: ReactNode;
 	htmlFor?: string;

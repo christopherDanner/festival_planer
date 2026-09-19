@@ -28,7 +28,7 @@ const shift = (id: string, stationId: string): StationShift =>
 	({ id, festival_id: 'f1', station_id: stationId }) as StationShift;
 
 const assignment = (id: string, stationId: string): ShiftAssignment =>
-	({ id, festival_id: 'f1', station_id: stationId }) as ShiftAssignment;
+	({ id, festival_id: 'f1', station_id: stationId, helper_id: `h-${id}` }) as ShiftAssignment;
 
 const SHIFTS = [shift('sh-1', 'st-1'), shift('sh-2', 'st-2')];
 const ASSIGNMENTS = [
@@ -116,6 +116,16 @@ describe('AutoAssignDialog — Rückfrage vor dem Löschen', () => {
 		await click('[data-auto="loeschen-bestaetigen"]');
 
 		expect(onClear).toHaveBeenCalledTimes(1);
+		expect(onClear).toHaveBeenCalledWith(undefined);
+	});
+
+	it('gibt die Station mit, über die gefragt wurde — nicht die von irgendwann', async () => {
+		const { onClear } = await mount({ scope: autoAssignScope(station(), SHIFTS, ASSIGNMENTS) });
+
+		await click('[data-auto="loeschen"]');
+		await click('[data-auto="loeschen-bestaetigen"]');
+
+		expect(onClear).toHaveBeenCalledWith('st-1');
 	});
 
 	it('löscht nicht, wenn die Rückfrage abgebrochen wird', async () => {
@@ -134,9 +144,35 @@ describe('AutoAssignDialog — Rückfrage vor dem Löschen', () => {
 	});
 });
 
+describe('AutoAssignDialog — der Umfang bleibt beim Zumachen stehen', () => {
+	it('wechselt die Aufschrift nicht, während Radix noch ausblendet', async () => {
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		const zettel = (open: boolean, scope = autoAssignScope(station(), SHIFTS, ASSIGNMENTS)) => (
+			<AutoAssignDialog
+				open={open}
+				scope={scope}
+				isLoading={false}
+				onAssign={() => {}}
+				onClear={() => {}}
+				onOpenChange={() => {}}
+			/>
+		);
+
+		await act(async () => root.render(zettel(true)));
+		expect(document.body.textContent).toContain('nur Ausschank');
+
+		// Die Ansicht setzt den Umfang beim Schließen sofort auf „ganzes Fest"
+		// zurück — der Zettel hängt dann noch im Ausblenden.
+		await act(async () => root.render(zettel(false, autoAssignScope(null, SHIFTS, ASSIGNMENTS))));
+		expect(document.body.textContent).not.toContain('Alle Zuweisungen löschen');
+	});
+});
+
 describe('AutoAssignDialog — Zuteilen', () => {
-	it('gibt die Einstellung der Regler weiter und schließt', async () => {
-		const { onAssign, onOpenChange } = await mount();
+	it('gibt die Einstellung der Regler weiter', async () => {
+		const { onAssign } = await mount();
 
 		await type('#auto-max-shifts', '5');
 		await click('[data-auto="zuteilen"]');
@@ -146,7 +182,22 @@ describe('AutoAssignDialog — Zuteilen', () => {
 			maxShiftsPerHelper: 5,
 			respectPreferences: true
 		});
-		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	it('macht sich nicht selbst zu — der Lauf läuft noch', async () => {
+		// Sonst wäre „Zuteilen…" ein Zustand, den nie jemand zu sehen bekommt;
+		// zugemacht wird, wenn die Mutation durch ist.
+		const { onOpenChange } = await mount();
+
+		await click('[data-auto="zuteilen"]');
+
+		expect(onOpenChange).not.toHaveBeenCalled();
+	});
+
+	it('sagt an, dass es läuft, statt leer dazustehen', async () => {
+		await mount({ isLoading: true });
+
+		expect(document.querySelector('[data-auto="zuteilen"]')?.textContent).toBe('Zuteilen...');
 	});
 
 	it('bringt genau einen Schließen-Knopf mit — den im Plakat-Kopf', async () => {

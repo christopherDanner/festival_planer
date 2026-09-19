@@ -23,7 +23,8 @@ interface AutoAssignDialogProps {
 	/** Worüber der Lauf geht — ganzes Fest oder eine Station (`autoAssignScope`). */
 	scope: AutoAssignScope;
 	onAssign: (config: AutoAssignmentConfig) => void;
-	onClear: () => void;
+	/** Die Station, über die gefragt wurde; `undefined` heißt: das ganze Fest. */
+	onClear: (stationId?: string) => void;
 	isLoading: boolean;
 }
 
@@ -52,6 +53,16 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 		respectPreferences: true
 	});
 	const [confirmOpen, setConfirmOpen] = useState(false);
+	// Die Ansicht leitet den Umfang aus dem offenen Dialog ab und setzt ihn beim
+	// Schließen sofort auf „ganzes Fest" zurück — da blendet Radix aber noch aus.
+	// Der Zettel hält darum den zuletzt gezeigten Umfang fest: sonst wechselte
+	// im Verschwinden die Aufschrift, und die Rückfrage stünde über einer
+	// anderen Zahl als der, auf die geklickt wurde.
+	const [shown, setShown] = useState(scope);
+
+	useEffect(() => {
+		if (open) setShown(scope);
+	}, [open, scope]);
 
 	// Wer den Zettel zumacht, hat die Rückfrage nicht beantwortet — sie darf
 	// nicht allein zurückbleiben.
@@ -70,13 +81,12 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 					aria-describedby={undefined}
 					className="max-w-[560px] border-0 bg-transparent p-0 shadow-none sm:p-0">
 					<AutoAssignZettel
-						scope={scope}
+						scope={shown}
 						config={config}
 						onConfigChange={(patch) => setConfig((prev) => ({ ...prev, ...patch }))}
-						onAssign={() => {
-							onAssign(config);
-							onOpenChange(false);
-						}}
+						// Zugemacht wird erst, wenn der Lauf durch ist — sonst wäre
+						// „Zuteilen…" ein Zustand, den nie jemand sieht.
+						onAssign={() => onAssign(config)}
 						onClearRequest={() => setConfirmOpen(true)}
 						onCancel={() => onOpenChange(false)}
 						isLoading={isLoading}
@@ -88,14 +98,16 @@ const AutoAssignDialog: React.FC<AutoAssignDialogProps> = ({
 			<AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>{scope.clearLabel}</AlertDialogTitle>
-						<AlertDialogDescription>{scope.clearQuestion}</AlertDialogDescription>
+						<AlertDialogTitle>{shown.clearLabel}</AlertDialogTitle>
+						<AlertDialogDescription>{shown.clearQuestion}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel data-auto="loeschen-abbrechen">Abbrechen</AlertDialogCancel>
 						<AlertDialogAction
 							data-auto="loeschen-bestaetigen"
-							onClick={onClear}
+							// Gelöscht wird, wonach gefragt wurde — nicht, was gerade im
+							// Zwischenspeicher steht.
+							onClick={() => onClear(shown.station?.id)}
 							className={buttonVariants({ variant: 'destructive' })}>
 							Löschen
 						</AlertDialogAction>

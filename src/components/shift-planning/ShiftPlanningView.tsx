@@ -91,14 +91,11 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	);
 	// Der Umfang des nächsten Laufs: ohne Station das ganze Fest, mit Station nur
 	// deren Schichten („NUR DIESE STATION AUTO-FÜLLEN").
-	const scope = useMemo(
-		() =>
-			autoAssignScope(
-				dialogState.type === 'autoAssign' ? dialogState.station ?? null : null,
-				data.stationShifts,
-				data.assignments
-			),
-		[dialogState, data.stationShifts, data.assignments]
+	const autoFillStation =
+		dialogState.type === 'autoAssign' ? dialogState.station ?? null : null;
+	const assignmentScope = useMemo(
+		() => autoAssignScope(autoFillStation, data.stationShifts, data.assignments),
+		[autoFillStation, data.stationShifts, data.assignments]
 	);
 
 	const handleTapSelect = (helper: Helper) => {
@@ -506,11 +503,15 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			<AutoAssignDialog
 				open={dialogState.type === 'autoAssign'}
 				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
-				scope={scope}
+				scope={assignmentScope}
 				onAssign={(config) => {
 					// Einschränken heißt: dasselbe Verfahren über ein gefiltertes
 					// Schicht-Array (Entscheid 6 aus #68) — der Service bleibt unberührt.
-					if (scope.shifts.length === 0 || data.stations.length === 0 || data.helpers.length === 0) {
+					if (
+						assignmentScope.shifts.length === 0 ||
+						data.stations.length === 0 ||
+						data.helpers.length === 0
+					) {
 						toast({
 							title: 'Fehler',
 							description: 'Es müssen Schichten, Stationen und Helfer vorhanden sein.',
@@ -518,15 +519,20 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 						});
 						return;
 					}
-					actions.autoAssign.mutate({
-						stationShifts: scope.shifts,
-						stations: data.stations,
-						helpers: data.helpers,
-						config,
-						stationPreferences: data.stationPreferences
-					});
+					actions.autoAssign.mutate(
+						{
+							stationShifts: assignmentScope.shifts,
+							stations: data.stations,
+							helpers: data.helpers,
+							config,
+							stationPreferences: data.stationPreferences
+						},
+						// Erst wenn der Lauf durch ist — bis dahin steht „Zuteilen…"
+						// auf dem Knopf, statt dass der Zettel im Nichts verschwindet.
+						{ onSettled: () => setDialogState({ type: 'none' }) }
+					);
 				}}
-				onClear={() => actions.clearAssignments.mutate({ stationId: scope.station?.id })}
+				onClear={(stationId) => actions.clearAssignments.mutate({ stationId })}
 				isLoading={actions.autoAssign.isPending}
 			/>
 

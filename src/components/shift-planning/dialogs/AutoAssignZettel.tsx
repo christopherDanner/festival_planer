@@ -7,13 +7,11 @@ import {
 	FOCUS_INK,
 	PaperSheet,
 	PaperSheetField,
-	PaperSheetFields
+	PaperSheetFields,
+	PaperSheetNote
 } from '@/components/toolkit/PaperSheet';
 import type { AutoAssignScope } from '@/lib/autoAssignScope';
 import type { AutoAssignmentConfig } from '@/lib/automaticAssignmentService';
-
-/** Ein Hinweiszettel auf dem Papier: 2px Tinte, links die breite Kante. */
-const NOTE = 'border-2 border-l-[7px] border-tinte bg-papier px-3 py-2 text-xs leading-relaxed';
 
 export interface AutoAssignZettelProps {
 	/** Worüber dieser Lauf geht — Titel, Lösch-Knopf und Zahl (`autoAssignScope`). */
@@ -81,11 +79,11 @@ const AutoAssignZettel: React.FC<AutoAssignZettelProps> = ({
 		}>
 		<PaperSheetFields>
 			{scope.station && (
-				<p className={cn(NOTE, 'min-[900px]:col-span-2')}>
+				<PaperSheetNote wide>
 					Zugeteilt wird nur in <b>{scope.station.name}</b>. Die zwei Regler zählen trotzdem die
 					Schichten im <b>ganzen Fest</b> mit — sonst sammelte jemand in fünf Stationen je drei
 					Schichten.
-				</p>
+				</PaperSheetNote>
 			)}
 
 			<PaperSheetField label="Min. Schichten pro Person" htmlFor="auto-min-shifts">
@@ -114,11 +112,11 @@ const AutoAssignZettel: React.FC<AutoAssignZettelProps> = ({
 				/>
 			</PaperSheetField>
 
-			<p className={cn(NOTE, 'min-[900px]:col-span-2')}>
+			<PaperSheetNote wide>
 				Die automatische Zuteilung berücksichtigt nur Stationen, die den jeweiligen Schichten
 				zugewiesen wurden. Helfer mit Stationswünschen werden bevorzugt zugewiesen, solange
 				Schichten in ihren Wunschstationen frei sind. Die Schichten werden gleichmäßig verteilt.
-			</p>
+			</PaperSheetNote>
 		</PaperSheetFields>
 	</PaperSheet>
 );

@@ -24,7 +24,7 @@ const shift = (id: string, stationId: string): StationShift =>
 	({ id, festival_id: 'f1', station_id: stationId }) as StationShift;
 
 const assignment = (id: string, stationId: string): ShiftAssignment =>
-	({ id, festival_id: 'f1', station_id: stationId }) as ShiftAssignment;
+	({ id, festival_id: 'f1', station_id: stationId, helper_id: `h-${id}` }) as ShiftAssignment;
 
 const SHIFTS = [shift('sh-1', 'st-1'), shift('sh-2', 'st-1'), shift('sh-3', 'st-2')];
 const ASSIGNMENTS = [
@@ -95,6 +95,15 @@ describe('autoAssignScope — die Zahl in der Rückfrage', () => {
 
 	it('zählt null, wo nichts zu löschen ist — der Knopf hat dann keine Arbeit', () => {
 		expect(autoAssignScope(station({ id: 'st-9' }), SHIFTS, ASSIGNMENTS).clearCount).toBe(0);
+	});
+
+	it('zählt nur besetzte Plätze — eine Zeile ohne Helfer sieht niemand', () => {
+		// Der Fokus-Kasten hält einen Platz am *Namen* für belegt, die
+		// Auto-Zuteilung zählt über `helper_id`. Die Rückfrage verspricht
+		// dieselbe Zahl, sonst nennt sie mehr, als auf dem Brett steht.
+		const ohneHelfer = { id: 'a-9', festival_id: 'f1', station_id: 'st-1' } as ShiftAssignment;
+
+		expect(autoAssignScope(null, SHIFTS, [...ASSIGNMENTS, ohneHelfer]).clearCount).toBe(3);
 	});
 
 	it('warnt, dass sich das nicht rückgängig machen lässt', () => {

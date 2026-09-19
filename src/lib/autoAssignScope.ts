@@ -1,8 +1,9 @@
 import type { Station, StationShift } from './shiftService';
 
-/** Was das Löschen trifft, reicht die Station — mehr liest der Umfang nicht. */
+/** Was das Löschen trifft, liest der Umfang an Station und Helfer — mehr nicht. */
 interface AssignmentRef {
 	station_id: string;
+	helper_id?: string;
 }
 
 export interface AutoAssignScope {
@@ -39,9 +40,12 @@ export const autoAssignScope = (
 	assignments: AssignmentRef[]
 ): AutoAssignScope => {
 	const shifts = station ? stationShifts.filter((s) => s.station_id === station.id) : stationShifts;
-	const clearCount = station
-		? assignments.filter((a) => a.station_id === station.id).length
-		: assignments.length;
+	// Gezählt wird über `helper_id` wie in `performAutomaticAssignment`: eine
+	// Zeile ohne Helfer steht auf keinem Platz, die Rückfrage darf sie darum
+	// auch nicht mitzählen. Gelöscht wird sie trotzdem — sie ist Buchhaltung.
+	const clearCount = assignments.filter(
+		(a) => a.helper_id && (!station || a.station_id === station.id)
+	).length;
 	const zahl = `${clearCount} ${clearCount === 1 ? 'Zuweisung' : 'Zuweisungen'}`;
 	const wo = station ? `der Station „${station.name}"` : 'im ganzen Fest';
 

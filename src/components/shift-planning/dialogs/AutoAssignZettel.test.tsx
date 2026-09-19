@@ -28,7 +28,7 @@ const shift = (id: string, stationId: string): StationShift =>
 	({ id, festival_id: 'f1', station_id: stationId }) as StationShift;
 
 const assignment = (id: string, stationId: string): ShiftAssignment =>
-	({ id, festival_id: 'f1', station_id: stationId }) as ShiftAssignment;
+	({ id, festival_id: 'f1', station_id: stationId, helper_id: `h-${id}` }) as ShiftAssignment;
 
 const SHIFTS = [shift('sh-1', 'st-1'), shift('sh-2', 'st-2')];
 const ASSIGNMENTS = [assignment('a-1', 'st-1'), assignment('a-2', 'st-2')];

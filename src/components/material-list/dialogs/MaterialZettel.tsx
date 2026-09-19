@@ -19,7 +19,8 @@ import {
 	FOCUS_INK,
 	PaperSheet,
 	PaperSheetField,
-	PaperSheetFields
+	PaperSheetFields,
+	PaperSheetNote
 } from '@/components/toolkit/PaperSheet';
 import type { Station } from '@/lib/shiftService';
 import {
@@ -136,9 +137,9 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 			<PaperSheetFields>
 				{mode === 'edit' && (
 					// Der Hinweis steht neben der Lücke, nicht im Changelog.
-					<p className="border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed min-[900px]:col-span-2">
+					<PaperSheetNote wide>
 						Hier liegen die <b>Stammdaten</b> der Position. {ZEILEN_HINWEIS}
-					</p>
+					</PaperSheetNote>
 				)}
 
 				<PaperSheetField wide label="Bezeichnung" htmlFor="mat-name">
