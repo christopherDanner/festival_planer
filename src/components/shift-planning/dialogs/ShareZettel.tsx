@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ModeToggle } from '@/components/toolkit/ModeToggle';
 import { NameChip } from '@/components/toolkit/NameChip';
 import { FOCUS_INK, PaperSheet, PaperSheetField, PaperSheetFields } from '@/components/toolkit/PaperSheet';
+import { helperName } from '@/lib/shiftBoard';
 import type { Helper } from '@/lib/helperService';
 
 /** Was geteilt wird: das ganze Fest oder der Zettel einer Person. */
@@ -111,7 +112,7 @@ const ShareZettel: React.FC<ShareZettelProps> = ({
 									key={h.id}
 									onSelect={() => onSelectHelper(h.id)}
 									selected={h.id === selectedHelperId}>
-									{h.last_name} {h.first_name}
+									{helperName(h)}
 								</NameChip>
 							))}
 						</div>

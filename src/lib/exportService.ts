@@ -16,8 +16,14 @@ import {
 	setPosterInk,
 	truncateToWidth
 } from '@/lib/pdfPoster';
-import { buildStationBoards, type BoardRow, type ShiftPlanSource, type StationBoard } from '@/lib/shiftBoard';
-import { OPEN_SLOT } from '@/lib/shiftPlanText';
+import {
+	buildStationBoards,
+	slotLabel,
+	stationMetaText,
+	type BoardRow,
+	type ShiftPlanSource,
+	type StationBoard
+} from '@/lib/shiftBoard';
 import type { StationShift } from '@/lib/shiftService';
 
 export interface ExportData extends ShiftPlanSource {
@@ -194,9 +200,7 @@ function drawStationHead(doc: jsPDF, board: StationBoard, startY: number): numbe
 	});
 	y += 1.5;
 
-	const meta = [board.place, board.responsible && `Leitung: ${board.responsible}`]
-		.filter(Boolean)
-		.join(' · ');
+	const meta = stationMetaText(board);
 	if (meta) {
 		doc.setFont(POSTER_FONT.body, 'normal');
 		doc.setFontSize(8.5);
@@ -259,7 +263,7 @@ function drawDayHeading(
 /**
  * Die Schicht-Zeilen eines Tages als Frachtbrief-Tabelle: Zeit, Schicht, das
  * durchnummerierte Platz-Raster und der Offen-Zähler. Fehlende Besetzungen
- * stehen als {@link OPEN_SLOT} drin — eine Lücke, die niemand sieht, füllt auch
+ * beschriftet `slotLabel` als offen — eine Lücke, die niemand sieht, füllt auch
  * niemand.
  *
  * @returns y-Kante unter der Tabelle.
@@ -274,7 +278,7 @@ function drawShiftRows(doc: jsPDF, rows: BoardRow[], startY: number): number {
 		body: rows.map((row) => [
 			row.time,
 			row.shift ? row.shift.name : 'Keine Schichten',
-			row.slots.map((slot) => `${slot.position} ${slot.name ?? OPEN_SLOT}`).join('\n'),
+			row.slots.map(slotLabel).join('\n'),
 			row.open > 0 ? `${row.open} offen` : 'voll'
 		]),
 		columnStyles: {

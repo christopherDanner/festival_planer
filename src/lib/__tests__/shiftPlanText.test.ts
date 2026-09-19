@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { fullPlanText, helperPlanText, OPEN_SLOT } from '@/lib/shiftPlanText';
+import { fullPlanText, helperPlanText } from '@/lib/shiftPlanText';
+import { OPEN_SLOT } from '@/lib/shiftBoard';
 import { assignment, helper, shift, station, stationHelper } from './shiftFixtures';
 import type { ShiftPlanTextData } from '@/lib/shiftPlanText';
 
@@ -148,7 +149,7 @@ describe('helperPlanText — der Plan einer Person', () => {
 		expect(text).not.toContain(OPEN_SLOT);
 	});
 
-	it('weist eine Stationsmitgliedschaft ohne Schicht als solche aus', () => {
+	it('weist eine Stationsmitgliedschaft als solche aus', () => {
 		const text = helperPlanText(
 			data({
 				stations: [station({ required_people: 1 }), station({ id: 's2', name: 'Kassa' })],
@@ -161,8 +162,20 @@ describe('helperPlanText — der Plan einer Person', () => {
 		);
 
 		expect(text).toContain('=== KASSA ===');
-		expect(text).toContain('Stationsmitglied ohne Schicht');
+		expect(text).toContain('Stationsmitglied');
 		expect(text).toContain('Gesamt: 1 Zuweisung');
+	});
+
+	it('nennt die Mitgliedschaft nicht „ohne Schicht", wenn die Person dort Schichten hat', () => {
+		// Sonst stünde „ohne Schicht" direkt unter den eigenen Zeiten.
+		const text = helperPlanText(
+			{ ...zweiTage(), stationHelpers: [stationHelper({ helper_id: 'h1' })] },
+			helper()
+		);
+
+		expect(text).toContain('11–15 · Frühschoppen');
+		expect(text).toContain('Stationsmitglied');
+		expect(text).not.toContain('ohne Schicht');
 	});
 
 	it('sagt es, wenn die Person nirgends eingeteilt ist', () => {

@@ -2,7 +2,9 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-export interface NameChipProps extends React.HTMLAttributes<HTMLSpanElement> {
+/* `onSelect` ist auch ein DOM-Ereignis; die Marke belegt den Namen neu — bei
+ihr ist „auswählen" die Geste, nicht das Markieren von Text. */
+export interface NameChipProps extends Omit<React.HTMLAttributes<HTMLElement>, 'onSelect'> {
 	/** Zeigt die ×-Entfernen-Aktion und wird beim Klick gerufen */
 	onRemove?: () => void;
 	/** A11y-Label der Entfernen-Aktion, z. B. „Maria Huber entfernen" */
@@ -35,6 +37,7 @@ export function NameChip({
 	if (onSelect) {
 		return (
 			<button
+				{...props}
 				type="button"
 				aria-pressed={Boolean(selected)}
 				onClick={onSelect}

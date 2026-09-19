@@ -115,9 +115,36 @@ interface Occupant {
 }
 
 /** „Hochauer Franz" — Nachname zuerst, wie überall sonst in der App. */
-function helperName(helper?: HelperRef | null): string {
+export function helperName(helper?: HelperRef | null): string {
 	if (!helper) return 'Unbekannt';
 	return `${helper.last_name} ${helper.first_name}`.trim();
+}
+
+/**
+ * Ein unbesetzter Platz. Er wird auf Papier und im geteilten Text
+ * **ausgewiesen, nicht weggelassen** — eine Lücke, die niemand sieht, füllt
+ * auch niemand (#109). Auf dem Bildschirm ist dieselbe Lücke ein `<OpenSlot>`,
+ * weil man dort etwas hineinziehen kann.
+ */
+export const OPEN_SLOT = '– offen –';
+
+/** „1 Hochauer Franz" / „2 – offen –" — ein Platz als eine Zeile. */
+export function slotLabel(slot: BoardSlot): string {
+	return `${slot.position} ${slot.name ?? OPEN_SLOT}`;
+}
+
+/**
+ * Ort und Leitung einer Station als eine Zeile: „Zelt Nord · Leitung: Hochauer
+ * Franz". Leer, wenn die Station beides nicht hat.
+ *
+ * Der Verantwortliche steht ausgeschrieben statt als ♛: das Zeichen fehlt im
+ * Latin-Subset der eingebetteten PDF-Schriften und „hat auf Papier nichts zu
+ * suchen" (ADR 0012). Papier und Nachricht tragen darum denselben Wortlaut.
+ */
+export function stationMetaText(board: StationBoard): string {
+	return [board.place, board.responsible && `Leitung: ${board.responsible}`]
+		.filter(Boolean)
+		.join(' · ');
 }
 
 /** `11:00:00` → `11`, `11:30` → `11:30`. Sekunden und glatte Minuten fallen

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { helperName } from '@/lib/shiftBoard';
 import { fullPlanText, helperPlanText, type ShiftPlanTextData } from '@/lib/shiftPlanText';
 import type {
 	ShiftAssignmentWithHelper,
@@ -57,10 +58,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 
 	// Dieselbe Ordnung wie überall sonst: Nachname zuerst.
 	const sortedHelpers = useMemo(
-		() =>
-			[...helpers].sort((a, b) =>
-				`${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'de')
-			),
+		() => [...helpers].sort((a, b) => helperName(a).localeCompare(helperName(b), 'de')),
 		[helpers]
 	);
 	const selectedHelper = sortedHelpers.find((h) => h.id === selectedHelperId) ?? null;

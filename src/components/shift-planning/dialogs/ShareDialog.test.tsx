@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 
 import ShareDialog from './ShareDialog';
 import { assignment, helper, shift, station } from '@/lib/__tests__/shiftFixtures';
-import { OPEN_SLOT } from '@/lib/shiftPlanText';
+import { OPEN_SLOT } from '@/lib/shiftBoard';
 
 /* Seam dieses Tests (#109, vor dem ersten Test festgehalten): `ShareDialog` ist
    die Schale — sie hält Modus und gewählte Person, holt den Wortlaut bei

@@ -54,7 +54,7 @@ import { buildSchedulePdf, type ScheduleExportOptions } from '@/lib/scheduleExpo
 import { buildSponsoringOverviewPdf } from '@/lib/sponsoringExportService';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { SponsoringOverviewRow } from '@/lib/sponsoringTotals';
-import { OPEN_SLOT } from '@/lib/shiftPlanText';
+import { OPEN_SLOT } from '@/lib/shiftBoard';
 import { assignment, shift, station, stationHelper } from './shiftFixtures';
 
 /** Was auf dem Papier steht, seit dem letzten Test-Beginn. */
