@@ -73,9 +73,23 @@ export interface BoardMember {
 	name: string;
 }
 
+/** Die vier Listen, aus denen sich der Schichtplan eines Fests ableitet.
+Bildschirm, Papier und Text ziehen alle daraus — wer eine davon weglässt,
+zählt falsch. */
+export interface ShiftPlanSource {
+	stations: Station[];
+	stationShifts: StationShift[];
+	assignments: ShiftAssignmentWithHelper[];
+	stationHelpers: StationHelperWithDetails[];
+}
+
 /** Alles, was der Fokus-Kasten einer Station zeigt. */
 export interface StationBoard {
 	station: Station;
+	/** Ort der Station — ohne Ort „Ohne Schichten", sonst `null`. */
+	place: string | null;
+	/** „Hochauer Franz" oder `null` — wer die Station verantwortet. */
+	responsible: string | null;
 	hasShifts: boolean;
 	/** Tage mit Schichten, chronologisch; leer bei einer Station ohne Schichten. */
 	days: BoardDay[];
@@ -212,8 +226,13 @@ export function buildStationBoard(
 	stationHelpers: StationHelperWithDetails[]
 ): StationBoard {
 	const { required, assigned } = stationStaffing(station, shifts, assignments, stationHelpers);
+	const ownShifts = shifts.filter((s) => s.station_id === station.id);
 	const base = {
 		station,
+		// Ohne Ort sagt die Aufschrift wenigstens, auf welcher Ebene diese Station
+		// plant („Ohne Schichten", Wortlaut des Entscheid-Prototyps).
+		place: station.description || (ownShifts.length > 0 ? null : 'Ohne Schichten'),
+		responsible: station.responsible_helper ? helperName(station.responsible_helper) : null,
 		required,
 		assigned,
 		open: Math.max(0, required - assigned),
@@ -225,7 +244,6 @@ export function buildStationBoard(
 		.map((m) => ({ id: m.id, helperId: m.helper_id, name: helperName(m.helper) }))
 		.sort(byName);
 
-	const ownShifts = shifts.filter((s) => s.station_id === station.id);
 	if (ownShifts.length === 0) {
 		return {
 			...base,
@@ -273,4 +291,18 @@ export function buildStationBoard(
 		wholeFestRow: null,
 		members
 	};
+}
+
+/**
+ * Die Fokus-Kästen **aller** Stationen, in der Reihenfolge des Reiter-Streifens.
+ * Der Bildschirm zeigt einen davon; Papier und Text drucken sie hintereinander
+ * — dass alle drei dieselbe Gliederung und dieselbe Reihenfolge zeigen, ist die
+ * Bedingung dafür, dass der Ausdruck neben der Werkbank wiedererkennbar ist
+ * (#109).
+ */
+export function buildStationBoards(source: ShiftPlanSource): StationBoard[] {
+	const { stations, stationShifts, assignments, stationHelpers } = source;
+	return buildStationTabs(stations, stationShifts, assignments, stationHelpers).map((tab) =>
+		buildStationBoard(tab.station, stationShifts, assignments, stationHelpers)
+	);
 }

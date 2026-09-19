@@ -68,13 +68,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 	onRemoveFromShift,
 	onRemoveFromStation
 }) => {
-	const { station } = board;
-	const responsible = station.responsible_helper
-		? `${station.responsible_helper.last_name} ${station.responsible_helper.first_name}`
-		: null;
-	// Ohne Ort sagt der Kopf wenigstens, auf welcher Ebene diese Station plant
-	// („Ohne Schichten", Wortlaut des Entscheid-Prototyps).
-	const place = station.description || (board.hasShifts ? null : 'Ohne Schichten');
+	const { station, place, responsible } = board;
 
 	/** Zeile zeichnen — die Schicht-Zeilen und die Pseudo-Zeile sind dasselbe Bild. */
 	const renderRow = (row: BoardRow) => {
