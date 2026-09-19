@@ -39,6 +39,20 @@ export type RowDraftMaterial = {
 	amount_per_packaging: number | null | undefined;
 };
 
+/** Die geläufigen österreichischen Steuersätze; leer heißt „keine". */
+const TAX_RATES = ['', '10', '13', '20'];
+
+/**
+ * Die Auswahl des MwSt-Felds. Ein Satz, der nicht in der Liste steht, kommt
+ * dazu — sonst schluckte das Öffnen einer Zeile still den erfassten Wert und
+ * das Speichern schriebe einen anderen, als vorher dastand.
+ */
+export function taxOptions(current: number | null): string[] {
+	const rate = current == null ? '' : String(current);
+	if (TAX_RATES.includes(rate)) return TAX_RATES;
+	return [...TAX_RATES, rate].sort((a, b) => Number(a || 0) - Number(b || 0));
+}
+
 /** Ein Betrag, wie er im Preisfeld steht: auf Cent, mit Punkt — `<input
 type="number">` kennt kein Dezimalkomma. */
 function priceText(value: number | null): string {

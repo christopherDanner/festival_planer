@@ -21,6 +21,12 @@ import {
 } from '@/lib/materialQuantity';
 import { grossPrice, netPrice, rowTotal, sumTotals } from '@/lib/materialCosts';
 import { deltaCell, taxCell, type DeltaTone } from '@/lib/materialRow';
+import {
+	draftPreview,
+	taxOptions,
+	type RowDraft,
+	type RowDraftField
+} from '@/lib/materialRowDraft';
 import { formatAmount } from '@/lib/money';
 import {
 	MissingValue,
@@ -118,6 +124,23 @@ const InlineTaxSelect: React.FC<{
 /*  Props                                                              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Der Zeilenmodus, wie ihn die Tabelle braucht (#115). Den Zustand hält der
+ * `materialRowEditor` — die Tabelle malt ihn und meldet, was getippt wurde.
+ */
+export interface RowEditControls {
+	/** Die offenen Zeilen mit ihren Entwürfen, nach Position-ID. */
+	draftsById: Record<string, RowDraft>;
+	/** Eben gespeicherte Zeilen — der kurze grüne Blitz. */
+	savedIds: string[];
+	/** Die eben einzeln geöffnete Zeile; ihr erstes Feld bekommt den Fokus. */
+	focusId: string | null;
+	onStartEdit: (material: FestivalMaterialWithStation) => void;
+	onDraftChange: (id: string, field: RowDraftField, value: string) => void;
+	onSaveRow: (id: string) => void;
+	onCancelRow: (id: string) => void;
+}
+
 interface MaterialTableProps {
 	materials: FestivalMaterialWithStation[];
 	/**
@@ -132,6 +155,7 @@ interface MaterialTableProps {
 	onUpdateField: (id: string, field: string, value: any) => void;
 	/** Ebenfalls nur für die Handy-Karte (#116). */
 	onUpdateFields: (id: string, partial: Partial<FestivalMaterialWithStation>) => void;
+	rowEdit: RowEditControls;
 }
 
 /* ------------------------------------------------------------------ */
@@ -437,7 +461,7 @@ export const MaterialMobileCard: React.FC<{
  * Gerechnet wird in `materialCosts` (ADR 0006), umgerechnet in
  * `materialQuantity`, gelesen in `materialRow` — die Tabelle malt nur.
  */
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields, rowEdit }) => {
 	const isMobile = useIsMobile();
 
 	const totalCost = sumTotals(materials);
@@ -505,18 +529,51 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 				</thead>
 
 				<tbody>
-					{materials.map((m) => (
-						<tr key={m.id} className="h-[56px] border-b border-linie hover:bg-papier">
-							{cols.map((col) => (
-								<td
-									key={col.key}
-									className={cn(BODY_CELL, col.align === 'right' && 'text-right')}
-								>
-									<Cell column={col.key} material={m} onEdit={onEdit} onCopy={onCopy} onDelete={onDelete} />
-								</td>
-							))}
-						</tr>
-					))}
+					{materials.map((m) => {
+						const draft = rowEdit.draftsById[m.id];
+						const flash = rowEdit.savedIds.includes(m.id);
+						return (
+							<tr
+								key={m.id}
+								className={cn(
+									'h-[56px] border-b border-linie',
+									// Die offene Zeile trägt gelben Grund und einen Tinte-Strich
+									// oben und unten — als Innenschatten, damit sie dabei keinen
+									// Pixel höher wird (#114).
+									draft && 'bg-gelb/25 shadow-zeile-offen',
+									// Nach dem Speichern blitzt sie kurz grün und verlischt.
+									!draft && flash && 'bg-gruen/15 transition-colors duration-[900ms]',
+									!draft && !flash && 'hover:bg-papier'
+								)}
+							>
+								{cols.map((col) => (
+									<td
+										key={col.key}
+										className={cn(BODY_CELL, col.align === 'right' && 'text-right')}
+									>
+										{draft ? (
+											<EditingCell
+												column={col.key}
+												material={m}
+												draft={draft}
+												autoFocus={rowEdit.focusId === m.id}
+												rowEdit={rowEdit}
+											/>
+										) : (
+											<Cell
+												column={col.key}
+												material={m}
+												onEdit={onEdit}
+												onCopy={onCopy}
+												onDelete={onDelete}
+												onStartEdit={rowEdit.onStartEdit}
+											/>
+										)}
+									</td>
+								))}
+							</tr>
+						);
+					})}
 				</tbody>
 
 				{/* Der Fuß steht immer — auch wenn keine Position einen Preis trägt.
@@ -553,7 +610,8 @@ const Cell: React.FC<{
 	onEdit: (material: FestivalMaterialWithStation) => void;
 	onCopy: (material: FestivalMaterialWithStation) => void;
 	onDelete: (id: string) => void;
-}> = ({ column, material: m, onEdit, onCopy, onDelete }) => {
+	onStartEdit?: (material: FestivalMaterialWithStation) => void;
+}> = ({ column, material: m, onEdit, onCopy, onDelete, onStartEdit }) => {
 	switch (column) {
 		case 'material':
 			return (
@@ -605,7 +663,20 @@ const Cell: React.FC<{
 		}
 		case 'actions':
 			return (
-				<div className="flex justify-end">
+				<div className="flex items-center justify-end gap-0.5">
+					{/* Zwei Wege aus der Zeile: ✎ öffnet Mengen und Preise *hier* (#115),
+					⋮ führt zu den Stammdaten im Dialog (#117). */}
+					{onStartEdit && (
+						<button
+							type="button"
+							aria-label={`Mengen und Preise von ${m.name}`}
+							title="Mengen & Preise dieser Zeile"
+							onClick={() => onStartEdit(m)}
+							className={cn(ROW_BUTTON, 'border-tinte')}
+						>
+							<Pencil className="h-3.5 w-3.5" />
+						</button>
+					)}
 					<DropdownMenu>
 						<DropdownMenuTrigger
 							aria-label={`Menü für ${m.name}`}
@@ -614,8 +685,6 @@ const Cell: React.FC<{
 							<MoreVertical className="h-4 w-4" />
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							{/* Der Dialog trägt seit #117 nur die Stammdaten; Mengen und Preise
-							bekommen mit #115 ihren ✎-Knopf in dieser Spalte. */}
 							<DropdownMenuItem onSelect={() => onEdit(m)}>Bearbeiten</DropdownMenuItem>
 							<DropdownMenuItem onSelect={() => onCopy(m)}>Kopieren</DropdownMenuItem>
 							<DropdownMenuItem className="text-rot" onSelect={() => onDelete(m.id)}>
@@ -626,6 +695,151 @@ const Cell: React.FC<{
 				</div>
 			);
 	}
+};
+
+/* ------------------------------------------------------------------ */
+/*  Zeilenmodus (#115)                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Knöpfe in der Aktionsspalte — klein genug für die 5 %-Spalte, mit dem
+Fokus-Ring der Vision (§6). */
+const ROW_BUTTON =
+	'border-2 border-transparent bg-white px-1.5 py-0.5 font-extrabold leading-tight text-tinte hover:bg-gelb focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte';
+
+/** Eingabefeld einer offenen Zeile: rechtsbündig, tabellarische Ziffern, und
+im Fokus die 2px-Tinte-Outline mit Versatz (DESIGN-VISION §6). */
+const ROW_INPUT =
+	'h-7 w-full border-2 border-tinte bg-white px-1.5 text-right text-[13px] font-bold tabular-nums text-tinte focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-tinte';
+
+/** Die Zellen einer Zeile in Bearbeitung. Tippbar sind genau fünf: Bestellt,
+Verbraucht, MwSt, Netto und Brutto. Alles andere — auch Δ und Gesamt — kommt
+vom lesenden Zwilling, gefüttert mit dem Entwurf statt mit dem gespeicherten
+Stand, damit die Zeile beim Tippen mitrechnet, ohne zweimal zu rechnen. */
+const EditingCell: React.FC<{
+	column: ColumnKey;
+	material: FestivalMaterialWithStation;
+	draft: RowDraft;
+	autoFocus: boolean;
+	rowEdit: RowEditControls;
+}> = ({ column, material: m, draft, autoFocus, rowEdit }) => {
+	const field = (name: RowDraftField, label: string, value: string, extra?: React.ReactNode) => (
+		<>
+			<input
+				type="number"
+				step="any"
+				value={value}
+				autoFocus={autoFocus && name === 'ordered'}
+				aria-label={`${label} von ${m.name}`}
+				placeholder="–"
+				onChange={(e) => rowEdit.onDraftChange(m.id, name, e.target.value)}
+				onKeyDown={(e) => onRowKey(e, m.id, rowEdit)}
+				className={ROW_INPUT}
+			/>
+			{extra}
+		</>
+	);
+
+	switch (column) {
+		case 'material':
+			// Statt der Kategorie-Marke steht hier, was die Zeile jetzt kann — die
+			// Tastaturhilfe gehört dorthin, wo getippt wird.
+			return (
+				<>
+					<div className="truncate font-bold leading-tight">{m.name}</div>
+					<span className="mt-0.5 block truncate text-[10px] leading-tight text-tinte-soft">
+						Mengen &amp; Preise — Enter speichert · Esc bricht ab
+					</span>
+				</>
+			);
+		case 'ordered':
+			return field('ordered', 'Bestellt', draft.ordered, <PackagingHint draft={draft} material={m} which="ordered" />);
+		case 'consumed':
+			return field('actual', 'Verbraucht', draft.actual, <PackagingHint draft={draft} material={m} which="actual" />);
+		case 'tax':
+			return (
+				<select
+					value={draft.tax}
+					aria-label={`MwSt von ${m.name}`}
+					onChange={(e) => rowEdit.onDraftChange(m.id, 'tax', e.target.value)}
+					onKeyDown={(e) => onRowKey(e, m.id, rowEdit)}
+					className={cn(ROW_INPUT, 'text-left')}
+				>
+					{taxOptions(m.tax_rate).map((option) => (
+						<option key={option} value={option}>
+							{option === '' ? 'keine' : `${option} %`}
+						</option>
+					))}
+				</select>
+			);
+		case 'net':
+			return field('net', 'Netto', draft.net);
+		case 'gross':
+			return field('gross', 'Brutto', draft.gross);
+		case 'actions':
+			return (
+				<div className="flex items-center justify-end gap-0.5">
+					<button
+						type="button"
+						aria-label={`Zeile ${m.name} speichern`}
+						onClick={() => rowEdit.onSaveRow(m.id)}
+						className={cn(ROW_BUTTON, 'border-tinte bg-gelb')}
+					>
+						✓
+					</button>
+					<button
+						type="button"
+						aria-label={`Zeile ${m.name} abbrechen`}
+						onClick={() => rowEdit.onCancelRow(m.id)}
+						className={cn(ROW_BUTTON, 'border-tinte')}
+					>
+						✕
+					</button>
+				</div>
+			);
+		default:
+			// Δ, Gesamt, Material-Stammdaten: derselbe Zwilling, nur mit dem Entwurf
+			// als Stand — sonst stünde neben dem getippten Wert die alte Rechnung.
+			return (
+				<Cell
+					column={column}
+					material={draftPreview(draft, m)}
+					onEdit={() => {}}
+					onCopy={() => {}}
+					onDelete={() => {}}
+				/>
+			);
+	}
+};
+
+/** Enter speichert die Zeile, Esc bricht sie ab. Tab bleibt unangetastet — er
+soll in der Tabellenreihenfolge weiterspringen (#115). */
+function onRowKey(
+	event: React.KeyboardEvent<HTMLElement>,
+	id: string,
+	rowEdit: RowEditControls
+) {
+	if (event.key === 'Enter') {
+		event.preventDefault();
+		rowEdit.onSaveRow(id);
+	}
+	if (event.key === 'Escape') {
+		event.preventDefault();
+		rowEdit.onCancelRow(id);
+	}
+}
+
+/** Die Gebinde-Umrechnung unter dem Eingabefeld — sie rechnet beim Tippen mit. */
+const PackagingHint: React.FC<{
+	draft: RowDraft;
+	material: FestivalMaterialWithStation;
+	which: 'ordered' | 'actual';
+}> = ({ draft, material, which }) => {
+	const preview = draftPreview(draft, material);
+	const stored = which === 'ordered' ? preview.ordered_quantity : preview.actual_quantity;
+	const hint = formatRequiredPackaging(stored, material);
+	return hint ? (
+		<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
+	) : null;
 };
 
 export default MaterialTable;

@@ -19,11 +19,11 @@ eine Kennung, unter der ihr Entwurf liegt. */
 export type EditableRow = RowDraftMaterial & { id: string };
 
 /**
- * Ein Wechsel der Sicht, der offene Änderungen aus dem Bild nähme: Achse,
- * Reiter, Kategorie-Chip oder Suche. Mit ungespeicherten Zeilen wird gewarnt,
- * nicht still verworfen (#115).
+ * Ein Griff, der offene Änderungen aus dem Bild nähme: Achse, Reiter,
+ * Kategorie-Chip, Suche — oder der Schalter, der alle Zeilen wieder zumacht.
+ * Mit ungespeicherten Zeilen wird gewarnt, nicht still verworfen (#115).
  */
-export type ViewChange = 'axis' | 'group' | 'category' | 'search';
+export type ViewChange = 'axis' | 'group' | 'category' | 'search' | 'rows';
 
 /** Wie die Rückfrage ausgeht. */
 export type GuardAnswer = 'save' | 'discard' | 'back';
@@ -33,6 +33,10 @@ export interface RowEditorSnapshot {
 	draftsById: Record<string, RowDraft>;
 	/** Eben gespeicherte Zeilen — sie blitzen kurz grün auf. */
 	savedIds: string[];
+	/** Die zuletzt einzeln geöffnete Zeile; ihr erstes Feld bekommt den Fokus.
+	Beim Öffnen *aller* Zeilen bleibt sie leer — 76 Felder um den Fokus zu
+	streiten wäre schlimmer als keiner. */
+	focusId: string | null;
 	/** Zahlen der Sammel-Fußleiste: „n Zeilen offen, davon m geändert". */
 	open: number;
 	dirty: number;
@@ -74,6 +78,7 @@ export function createRowEditor(opts: CreateRowEditorOpts): RowEditor {
 	const listeners = new Set<() => void>();
 	let guard: ViewChange | null = null;
 	let pendingChange: (() => void) | null = null;
+	let focusId: string | null = null;
 	let cached: RowEditorSnapshot | null = null;
 
 	function notify() {
@@ -84,6 +89,7 @@ export function createRowEditor(opts: CreateRowEditorOpts): RowEditor {
 	function close(id: string) {
 		delete draftsById[id];
 		originById.delete(id);
+		if (focusId === id) focusId = null;
 	}
 
 	function dirtyIds(): string[] {
@@ -127,10 +133,12 @@ export function createRowEditor(opts: CreateRowEditorOpts): RowEditor {
 	return {
 		open(row) {
 			openRow(row);
+			focusId = row.id;
 			notify();
 		},
 		openAll(rows) {
 			for (const row of rows) openRow(row);
+			focusId = null;
 			notify();
 		},
 		edit(id, field, value) {
@@ -188,6 +196,7 @@ export function createRowEditor(opts: CreateRowEditorOpts): RowEditor {
 			cached = {
 				draftsById: { ...draftsById },
 				savedIds: [...savedIds],
+				focusId,
 				open: Object.keys(draftsById).length,
 				dirty: dirtyIds().length,
 				guard

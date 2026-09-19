@@ -91,6 +91,11 @@ export default {
         // keine Spaltenbreite kostet.
         "kante-links": "2px 0 0 oklch(var(--tinte))",
         "kante-rechts": "-2px 0 0 oklch(var(--tinte))",
+        // Tinte-Strich über und unter der Zeile in Bearbeitung (#115) — als
+        // Innenschatten, damit das Umschalten die Zeile keinen Pixel höher
+        // macht (Auflage aus #114: gemessen 44 → 56 px).
+        "zeile-offen":
+          "inset 0 2px 0 oklch(var(--tinte)), inset 0 -2px 0 oklch(var(--tinte))",
       },
       borderWidth: {
         "1.5": "1.5px",

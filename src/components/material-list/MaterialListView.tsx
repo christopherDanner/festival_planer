@@ -8,11 +8,14 @@ import MaterialAxisBar from './MaterialAxisBar';
 import MaterialGroupTabs from './MaterialGroupTabs';
 import MaterialGroupBox from './MaterialGroupBox';
 import MaterialTable from './MaterialTable';
+import RowEditBulkBar from './RowEditBulkBar';
+import RowEditGuardDialog from './RowEditGuardDialog';
 import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
 import OrderListExportDialog from './dialogs/OrderListExportDialog';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
+import { useRowEditor } from '@/hooks/useRowEditor';
 import {
 	groupMaterials,
 	searchMaterials,
@@ -80,6 +83,21 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	const activeCategory = resolveActiveCategory(groupChips, requestedCategory);
 	const visible = activeGroup ? filterByCategory(activeGroup.materials, activeCategory) : [];
 
+	// Zeilenmodus (#115): ✎ macht Mengen und Preise *einer* Zeile tippbar,
+	// mehrere dürfen offen sein, gespeichert wird über die Sammel-Fußleiste.
+	// Der Zustand liegt im `materialRowEditor`, nicht hier.
+	const { editor, snapshot } = useRowEditor({
+		onSave: (id, updates) => actions.updateMaterial.mutate({ id, updates })
+	});
+	const allRowsOpen = visible.length > 0 && visible.every((m) => snapshot.draftsById[m.id]);
+
+	// Achse, Reiter, Chip und Suche nehmen die offenen Zeilen aus dem Bild —
+	// mit ungespeicherten Änderungen fragt der Zeilenmodus erst nach.
+	const guarded =
+		<T,>(change: Parameters<typeof editor.requestViewChange>[0], set: (value: T) => void) =>
+		(value: T) =>
+			editor.requestViewChange(change, () => set(value));
+
 	// Die Bestellliste kennt nur zwei Achsen (CONTEXT.md): wer nach Station
 	// plant, bestellt für die Station; sonst beim Lieferanten. Der Reiter reist
 	// nur mit, wo er auf der Achse der Bestellliste auch ein Schlüssel ist.
@@ -129,11 +147,18 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 					if (mode === 'uebernahme') navigate(`/festivals/${festivalId}/material-uebernahme`);
 				}}
 				searchTerm={searchTerm}
-				onSearchChange={setSearchTerm}
+				onSearchChange={guarded('search', setSearchTerm)}
 				positionCount={materials.length}
 				onAddMaterial={() => openNewPosition()}
 				onExport={() => setDialogState({ type: 'export' })}
 				onExportOrderList={() => setDialogState({ type: 'order-export' })}
+				allRowsOpen={allRowsOpen}
+				onToggleAllRows={() => {
+					// Aufklappen ist harmlos; Zuklappen kann Getipptes kosten und
+					// läuft darum über dieselbe Rückfrage wie ein Sichtwechsel.
+					if (allRowsOpen) editor.requestViewChange('rows', () => editor.cancelAll());
+					else editor.openAll(visible);
+				}}
 			/>
 
 			{/* Der Bereichskopf folgt der Suche, nicht dem Reiter und nicht dem
@@ -142,13 +167,13 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 			*einen* Kasten. */}
 			<MaterialTotals materials={found} totalCount={materials.length} />
 
-			<MaterialAxisBar axis={axis} onAxisChange={setAxis} />
+			<MaterialAxisBar axis={axis} onAxisChange={guarded('axis', setAxis)} />
 
 			<MaterialGroupTabs
 				groups={groups}
 				axis={axis}
 				activeGroupId={activeGroupId}
-				onSelect={setRequestedGroupId}
+				onSelect={guarded('group', setRequestedGroupId)}
 			/>
 
 			{activeGroup && (
@@ -158,7 +183,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 					visibleMaterials={visible}
 					categories={groupChips}
 					activeCategory={activeCategory}
-					onCategoryChange={setRequestedCategory}
+					onCategoryChange={guarded('category', setRequestedCategory)}
 					onAddPosition={() => openNewPosition(prefillFromGroup(activeGroup, axis))}
 				>
 					<MaterialTable
@@ -195,9 +220,32 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 						onUpdateFields={(id, partial) => {
 							actions.updateMaterial.mutate({ id, updates: partial });
 						}}
+						rowEdit={{
+							draftsById: snapshot.draftsById,
+							savedIds: snapshot.savedIds,
+							focusId: snapshot.focusId,
+							onStartEdit: editor.open,
+							onDraftChange: editor.edit,
+							onSaveRow: editor.save,
+							onCancelRow: editor.cancel
+						}}
+					/>
+					{/* Die Fußleiste zählt den Kasten, nicht das Fest — offen ist, was
+					man vor sich sieht. */}
+					<RowEditBulkBar
+						open={snapshot.open}
+						dirty={snapshot.dirty}
+						onSaveAll={editor.saveAll}
+						onCancelAll={editor.cancelAll}
 					/>
 				</MaterialGroupBox>
 			)}
+
+			<RowEditGuardDialog
+				change={snapshot.guard}
+				dirty={snapshot.dirty}
+				onAnswer={editor.resolveGuard}
+			/>
 
 			<MaterialDialog
 				open={dialogState.type === 'material'}
