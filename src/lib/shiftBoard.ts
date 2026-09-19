@@ -113,8 +113,13 @@ function clockLabel(time: string): string {
 	return minutes && minutes !== '00' ? `${hours}:${minutes}` : hours;
 }
 
+/** Die Zeitangaben einer Schicht — mehr braucht die Aufschrift nicht. So kann
+der Schicht-Dialog (#106) das unfertige Formular durchreichen und zeigt damit
+vorab genau die Aufschrift, die die Zeile später trägt. */
+export type ShiftTimes = Pick<StationShift, 'start_date' | 'start_time' | 'end_date' | 'end_time'>;
+
 /** Ob eine Schicht über Mitternacht läuft: eigenes, abweichendes Enddatum. */
-function crossesMidnight(shift: StationShift): boolean {
+function crossesMidnight(shift: ShiftTimes): boolean {
 	return Boolean(shift.end_date) && shift.end_date !== shift.start_date;
 }
 
@@ -123,7 +128,7 @@ function crossesMidnight(shift: StationShift): boolean {
  * Zwischentitel darüber — außer bei einer Schicht über Mitternacht, die beim
  * **Starttag** steht und ihr zweites Datum darum selbst mitträgt: `23–02 +1`.
  */
-export function shiftTimeLabel(shift: StationShift): string {
+export function shiftTimeLabel(shift: ShiftTimes): string {
 	const span = `${clockLabel(shift.start_time)}–${clockLabel(shift.end_time)}`;
 	return crossesMidnight(shift) ? `${span} +1` : span;
 }

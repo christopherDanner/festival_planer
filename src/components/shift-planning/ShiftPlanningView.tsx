@@ -436,14 +436,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 					if (dialogState.type === 'stationShift' && dialogState.stationShift) {
 						actions.updateStationShift.mutate({
 							id: dialogState.stationShift.id,
-							updates: {
-								name: formData.name,
-								start_date: formData.start_date,
-								start_time: formData.start_time,
-								end_date: formData.end_date || null,
-								end_time: formData.end_time,
-								required_people: formData.required_people
-							}
+							updates: formData
 						});
 					} else if (dialogState.type === 'stationShift') {
 						actions.createStationShift.mutate({
