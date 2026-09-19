@@ -347,6 +347,9 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 						// benennt das, sonst sähe die Geste aus wie „ausblenden".
 						if (confirm(removeHelperMessage(helper))) {
 							actions.deleteHelper.mutate(helper.id);
+							// Sonst bliebe ein gelöschter Helfer ausgewählt und ließe sich
+							// auf einen freien Platz setzen.
+							setSelectedHelper((current) => (current?.id === helper.id ? null : current));
 						}
 					}}
 				/>
