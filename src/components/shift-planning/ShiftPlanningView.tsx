@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 import { exportToExcel, exportToPdf } from '@/lib/exportService';
 import { buildStationBoard, buildStationTabs, resolveFocusStationId } from '@/lib/shiftBoard';
+import { autoAssignScope } from '@/lib/autoAssignScope';
 import { deriveShiftsMetric } from '@/lib/staffing';
 import type { Station, StationShift, ShiftAssignmentWithHelper } from '@/lib/shiftService';
 import { removeHelperMessage, type Helper } from '@/lib/helperService';
@@ -87,6 +88,17 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		() =>
 			deriveShiftsMetric(data.stations, data.stationShifts, data.assignments, data.stationHelpers),
 		[data.stations, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	// Der Umfang des nächsten Laufs: ohne Station das ganze Fest, mit Station nur
+	// deren Schichten („NUR DIESE STATION AUTO-FÜLLEN").
+	const scope = useMemo(
+		() =>
+			autoAssignScope(
+				dialogState.type === 'autoAssign' ? dialogState.station ?? null : null,
+				data.stationShifts,
+				data.assignments
+			),
+		[dialogState, data.stationShifts, data.assignments]
 	);
 
 	const handleTapSelect = (helper: Helper) => {
@@ -494,17 +506,11 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			<AutoAssignDialog
 				open={dialogState.type === 'autoAssign'}
 				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
+				scope={scope}
 				onAssign={(config) => {
-					// „Nur diese Station auto-füllen" heißt: dasselbe Verfahren über ein
-					// gefiltertes Schicht-Array (Entscheid 6 aus #68). Die Regler zählen
-					// weiter übers ganze Fest — sonst sammelt jemand in fünf Stationen je
-					// drei Schichten. Der eigene Dialog dafür kommt in #108.
-					const station = dialogState.type === 'autoAssign' ? dialogState.station : undefined;
-					const stationShifts = station
-						? data.stationShifts.filter((s) => s.station_id === station.id)
-						: data.stationShifts;
-
-					if (stationShifts.length === 0 || data.stations.length === 0 || data.helpers.length === 0) {
+					// Einschränken heißt: dasselbe Verfahren über ein gefiltertes
+					// Schicht-Array (Entscheid 6 aus #68) — der Service bleibt unberührt.
+					if (scope.shifts.length === 0 || data.stations.length === 0 || data.helpers.length === 0) {
 						toast({
 							title: 'Fehler',
 							description: 'Es müssen Schichten, Stationen und Helfer vorhanden sein.',
@@ -513,14 +519,14 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 						return;
 					}
 					actions.autoAssign.mutate({
-						stationShifts,
+						stationShifts: scope.shifts,
 						stations: data.stations,
 						helpers: data.helpers,
 						config,
 						stationPreferences: data.stationPreferences
 					});
 				}}
-				onClear={() => actions.clearAssignments.mutate()}
+				onClear={() => actions.clearAssignments.mutate({ stationId: scope.station?.id })}
 				isLoading={actions.autoAssign.isPending}
 			/>
 
