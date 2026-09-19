@@ -41,7 +41,8 @@ export interface RosterGroup {
 	chips: RosterChip[];
 }
 
-export interface HelperRoster {
+/** Die Helferliste, wie sie am Bildschirm steht. */
+export interface Roster {
 	/** Alle Helfer des Fests, ungefiltert — für die Auskunft der leeren Liste. */
 	total: number;
 	/**
@@ -86,7 +87,7 @@ export function buildHelperRoster({
 	focusStationId,
 	search,
 	filter
-}: HelperRosterInput): HelperRoster {
+}: HelperRosterInput): Roster {
 	const needle = search.trim().toLowerCase();
 
 	const found = helpers
