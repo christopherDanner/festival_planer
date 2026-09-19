@@ -121,8 +121,9 @@ describe('stationDeletionMessage — die Station reißt ihre Schichten mit', () 
 		expect(text).not.toMatch(/\d/);
 	});
 
-	it('sagt, dass sich das nicht zurückholen lässt', () => {
+	it('warnt auch bei der leeren Station — dort ist der Satz alles, was bleibt', () => {
 		expect(stationDeletionMessage(board([shift()]))).toContain('nicht rückgängig');
+		expect(stationDeletionMessage(board([]))).toContain('nicht rückgängig');
 	});
 });
 
@@ -159,5 +160,6 @@ describe('shiftDeletionMessage — die Schicht nennt Tag, Zeit und Besetzung', (
 
 		expect(text).toContain('unbesetzt');
 		expect(text).not.toContain('0 Zuteilungen');
+		expect(text).toContain('nicht rückgängig');
 	});
 });

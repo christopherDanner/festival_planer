@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Poster } from '@/components/toolkit/Poster';
 import { NameChip } from '@/components/toolkit/NameChip';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
-import ShiftRowMenu from './ShiftRowMenu';
+import FocusBoxMenu from './FocusBoxMenu';
 import type { BoardRow, StationBoard } from '@/lib/shiftBoard';
 import { shiftDeletionMessage, stationDeletionMessage } from '@/lib/shiftDeletion';
 import type { StationShift } from '@/lib/shiftService';
@@ -90,7 +90,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 						{row.open > 0 ? `${row.open} OFFEN` : 'VOLL'}
 					</span>
 					{shift && (
-						<ShiftRowMenu
+						<FocusBoxMenu
 							subject="Schicht"
 							label={`Menü der Schicht ${row.time}`}
 							deleteMessage={shiftDeletionMessage(shift, row.assigned)}
@@ -175,7 +175,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 					>
 						Nur diese Station auto-füllen
 					</button>
-					<ShiftRowMenu
+					<FocusBoxMenu
 						subject="Station"
 						label="Menü der Station"
 						deleteMessage={stationDeletionMessage(board)}

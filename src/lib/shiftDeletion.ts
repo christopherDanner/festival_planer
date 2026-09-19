@@ -12,39 +12,43 @@ import type { StationShift } from '@/lib/shiftService';
 
 const UNWIDERRUFLICH = 'Das lässt sich nicht rückgängig machen.';
 
-function zaehl(n: number, einzahl: string, mehrzahl: string): string {
+/** „3 Schichten", „1 Zuteilung" — ein Posten mit richtigem Numerus. */
+function posten(n: number, einzahl: string, mehrzahl: string): string {
 	return `${n} ${n === 1 ? einzahl : mehrzahl}`;
 }
 
-/** „samt 3 Schichten und 7 Zuteilungen" — leere Posten fallen weg, statt als
-Null dazustehen. */
-function samt(teile: string[]): string {
-	if (teile.length === 0) return '';
-	return ` — samt ${teile.join(' und ')}`;
+/** Was an einer Station hängt und mit ihr fällt. Beide Arten von Zuteilung
+zählen mit — die auf einer Schicht und die Stationsmitgliedschaft ohne Schicht;
+die Cascade nimmt ohnehin beide. */
+function cascadeCounts(board: StationBoard): { shifts: number; assignments: number } {
+	const rows = board.days.flatMap((day) => day.rows);
+	return {
+		shifts: rows.length,
+		assignments:
+			rows.reduce((sum, row) => sum + row.assigned, 0) +
+			(board.wholeFestRow?.assigned ?? 0) +
+			board.members.length
+	};
 }
 
 /**
  * Was das Löschen einer Station mitreißt: **alle ihre Schichten und
- * Zuteilungen** (die Datenbank räumt sie per Cascade weg). Mitgezählt werden
- * beide Arten von Zuteilung — die auf einer Schicht und die
- * Stationsmitgliedschaft ohne Schicht; gelöscht werden ohnehin beide.
+ * Zuteilungen** (die Datenbank räumt sie per Cascade weg).
  */
 export function stationDeletionMessage(board: StationBoard): string {
-	const shifts = board.days.reduce((sum, day) => sum + day.shiftCount, 0);
-	const assignments =
-		board.days.reduce((sum, day) => sum + day.rows.reduce((s, row) => s + row.assigned, 0), 0) +
-		(board.wholeFestRow?.assigned ?? 0) +
-		board.members.length;
-
-	const teile = [
-		shifts > 0 ? zaehl(shifts, 'Schicht', 'Schichten') : null,
-		assignments > 0 ? zaehl(assignments, 'Zuteilung', 'Zuteilungen') : null
+	const { shifts, assignments } = cascadeCounts(board);
+	// Leere Posten fallen weg, statt als Null dazustehen.
+	const mit = [
+		shifts > 0 ? posten(shifts, 'Schicht', 'Schichten') : null,
+		assignments > 0 ? posten(assignments, 'Zuteilung', 'Zuteilungen') : null
 	].filter((t): t is string => t !== null);
 
-	if (teile.length === 0) {
-		return `„${board.station.name}" wird gelöscht. Die Station trägt weder Schichten noch Zuteilungen.`;
+	// Auch die leere Station verschwindet endgültig — gerade dort ist der Satz
+	// die einzige Warnung, die bleibt.
+	if (mit.length === 0) {
+		return `„${board.station.name}" wird gelöscht. Die Station trägt weder Schichten noch Zuteilungen. ${UNWIDERRUFLICH}`;
 	}
-	return `„${board.station.name}" wird gelöscht${samt(teile)}. ${UNWIDERRUFLICH}`;
+	return `„${board.station.name}" wird gelöscht — samt ${mit.join(' und ')}. ${UNWIDERRUFLICH}`;
 }
 
 /**
@@ -57,6 +61,6 @@ export function shiftDeletionMessage(shift: StationShift, assigned: number): str
 	const wann = `${formatFestDayLong(shift.start_date)} (${shiftTimeLabel(shift)})`;
 	const schicht = `Die Schicht ${name}am ${wann}`;
 
-	if (assigned === 0) return `${schicht} wird gelöscht. Sie ist unbesetzt.`;
-	return `${schicht} wird gelöscht${samt([zaehl(assigned, 'Zuteilung', 'Zuteilungen')])}. ${UNWIDERRUFLICH}`;
+	if (assigned === 0) return `${schicht} wird gelöscht. Sie ist unbesetzt. ${UNWIDERRUFLICH}`;
+	return `${schicht} wird gelöscht — samt ${posten(assigned, 'Zuteilung', 'Zuteilungen')}. ${UNWIDERRUFLICH}`;
 }

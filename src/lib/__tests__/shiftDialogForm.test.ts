@@ -6,6 +6,7 @@ import {
 	canSaveStation,
 	crossesMidnight,
 	emptyShiftForm,
+	endDateProblem,
 	emptyStationForm,
 	shiftFormFrom,
 	shiftPayload,
@@ -139,9 +140,13 @@ describe('Schicht-Dialog — Felder und Abgabe', () => {
 		expect(shiftPayload(vollstaendig({ end_date: '' })).end_date).toBeNull();
 	});
 
-	it('weist ein Enddatum vor dem Startdatum ab', () => {
+	it('weist ein Enddatum vor dem Startdatum ab und sagt auch, warum', () => {
 		expect(canSaveShift(vollstaendig({ end_date: '2026-07-24' }))).toBe(false);
+		expect(endDateProblem(vollstaendig({ end_date: '2026-07-24' }))).toContain('vor dem Startdatum');
+
 		expect(canSaveShift(vollstaendig({ end_date: '2026-07-25' }))).toBe(true);
+		expect(endDateProblem(vollstaendig({ end_date: '2026-07-25' }))).toBeNull();
+		expect(endDateProblem(vollstaendig())).toBeNull();
 	});
 
 	it('erkennt die Schicht über Mitternacht am abweichenden Enddatum', () => {

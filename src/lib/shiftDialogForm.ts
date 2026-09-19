@@ -113,15 +113,24 @@ export function crossesMidnight(form: ShiftForm): boolean {
 	return form.end_date !== '' && form.end_date !== form.start_date;
 }
 
+/**
+ * Was am Enddatum nicht stimmt, im Klartext — `null`, wenn es passt. Ein
+ * Enddatum vor dem Start wäre keine Schicht, sondern eine kaputte Zeile im
+ * Fokus-Kasten. Der Satz steht hier neben der Regel, damit ein gesperrter
+ * Speichern-Knopf nicht wortlos bleibt. (ISO-Daten vergleichen sich als Text.)
+ */
+export function endDateProblem(form: ShiftForm): string | null {
+	if (form.end_date === '' || form.end_date >= form.start_date) return null;
+	return 'Das Enddatum liegt vor dem Startdatum.';
+}
+
 export function canSaveShift(form: ShiftForm): boolean {
 	const gefuellt =
 		form.name.trim() !== '' &&
 		form.start_date !== '' &&
 		form.start_time !== '' &&
 		form.end_time !== '';
-	// Ein Enddatum vor dem Start wäre keine Schicht, sondern eine kaputte Zeile
-	// im Fokus-Kasten. ISO-Daten vergleichen sich als Text richtig.
-	return gefuellt && (form.end_date === '' || form.end_date >= form.start_date);
+	return gefuellt && endDateProblem(form) === null;
 }
 
 export function shiftPayload(form: ShiftForm): ShiftPayload {

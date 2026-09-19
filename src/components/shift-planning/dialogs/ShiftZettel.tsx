@@ -7,10 +7,16 @@ import {
 	FOCUS_INK,
 	PaperSheet,
 	PaperSheetField,
-	PaperSheetFields
+	PaperSheetFields,
+	PaperSheetNote
 } from '@/components/toolkit/PaperSheet';
 import { shiftTimeLabel } from '@/lib/shiftBoard';
-import { canSaveShift, crossesMidnight, type ShiftForm } from '@/lib/shiftDialogForm';
+import {
+	canSaveShift,
+	crossesMidnight,
+	endDateProblem,
+	type ShiftForm
+} from '@/lib/shiftDialogForm';
 
 export interface ShiftZettelProps {
 	mode: 'create' | 'edit';
@@ -45,6 +51,7 @@ const ShiftZettel: React.FC<ShiftZettelProps> = ({
 	TitleTag = 'h2'
 }) => {
 	const ueberMitternacht = crossesMidnight(form);
+	const problem = endDateProblem(form);
 
 	return (
 		<PaperSheet
@@ -131,14 +138,19 @@ const ShiftZettel: React.FC<ShiftZettelProps> = ({
 					/>
 				</PaperSheetField>
 
-				{ueberMitternacht && (
-					// Die Auskunft steht neben dem Feld, das sie auslöst — im
-					// Fokus-Kasten sieht man erst nach dem Speichern, wo die Schicht
-					// gelandet ist.
-					<p className="border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed min-[900px]:col-span-2">
-						Läuft über Mitternacht: Die Schicht steht beim <b>Starttag</b> und trägt dort{' '}
-						<b className="font-display tracking-[.02em]">{shiftTimeLabel(form)}</b>.
-					</p>
+				{/* Die Auskunft steht neben dem Feld, das sie auslöst — im Fokus-Kasten
+				sieht man erst nach dem Speichern, wo die Schicht gelandet ist. Stimmt
+				das Datum nicht, gilt der Fehler: eine Vorschau auf eine Zeile, die so
+				nie entsteht, wäre schlimmer als gar keine. */}
+				{problem ? (
+					<PaperSheetNote ton="warnung">{problem}</PaperSheetNote>
+				) : (
+					ueberMitternacht && (
+						<PaperSheetNote>
+							Läuft über Mitternacht: Die Schicht steht beim <b>Starttag</b> und trägt dort{' '}
+							<b className="font-display tracking-[.02em]">{shiftTimeLabel(form)}</b>.
+						</PaperSheetNote>
+					)
 				)}
 			</PaperSheetFields>
 		</PaperSheet>

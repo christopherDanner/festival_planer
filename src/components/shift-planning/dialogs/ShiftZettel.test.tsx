@@ -126,6 +126,15 @@ describe('ShiftZettel — Feldschnitt', () => {
 	it('schweigt zur Nachtschicht, solange das Enddatum der Starttag ist', () => {
 		expect(render({ form: gefuellt({ end_date: '2026-07-25' }) })).not.toContain('+1');
 	});
+
+	it('sagt beim Enddatum vor dem Start, was nicht stimmt — statt nur den Knopf zu sperren', () => {
+		const html = render({ form: gefuellt({ end_date: '2026-07-24' }) });
+
+		expect(html).toContain('Das Enddatum liegt vor dem Startdatum.');
+		// Eine Vorschau auf eine Zeile, die so nie entsteht, wäre schlimmer als
+		// gar keine.
+		expect(html).not.toContain('Starttag');
+	});
 });
 
 describe('ShiftZettel — Fußleiste', () => {
