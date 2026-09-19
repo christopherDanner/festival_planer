@@ -293,15 +293,9 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 									onEditStation={() =>
 										setDialogState({ type: 'station', station: board.station })
 									}
-									onDeleteStation={() => {
-										if (
-											confirm(
-												'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
-											)
-										) {
-											actions.deleteStation.mutate(board.station.id);
-										}
-									}}
+									// Die Rückfrage stellt das ⋮-Menü — sie kennt dort die
+									// Tragweite, die der Fokus-Kasten zeigt (#106).
+									onDeleteStation={() => actions.deleteStation.mutate(board.station.id)}
 									onAddShift={() =>
 										setDialogState({ type: 'stationShift', station: board.station })
 									}
@@ -312,11 +306,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 											stationShift: shift
 										})
 									}
-									onDeleteShift={(shiftId) => {
-										if (confirm('Sind Sie sicher, dass Sie diese Schicht löschen möchten?')) {
-											actions.deleteStationShift.mutate(shiftId);
-										}
-									}}
+									onDeleteShift={(shiftId) => actions.deleteStationShift.mutate(shiftId)}
 									onAssignToShift={handleTapAssignToShift}
 									onAssignToStation={() => handleTapAssignToStation(board.station.id)}
 									onDropOnShift={handleDrop}
