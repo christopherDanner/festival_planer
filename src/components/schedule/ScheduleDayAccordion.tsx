@@ -2,12 +2,15 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Plus, ListPlus } from 'lucide-react';
 import SchedulePhaseSection from './SchedulePhaseSection';
 import ScheduleEntryTable from './ScheduleEntryTable';
-import { groupEntriesByPhase } from './scheduleGrouping';
+import { groupEntriesByPhase } from '@/lib/scheduleGrouping';
 import type {
 	ScheduleDayWithEntries,
 	SchedulePhase,
 	ScheduleEntryWithHelper,
 } from '@/lib/scheduleService';
+
+/** Einzug samt Akzentlinie — beide Blöcke unter dem Tag hängen an derselben. */
+const UNDER_DAY = 'mt-1 ml-1 sm:ml-4 pl-2 sm:pl-5 border-l-2 border-primary/15';
 
 interface ScheduleDayAccordionProps {
 	day: ScheduleDayWithEntries;
@@ -53,10 +56,13 @@ const ScheduleDayAccordion = ({
 		year: 'numeric',
 	});
 
-	const movePhase = (index: number, direction: 'up' | 'down') => {
+	// Über die Phasen-ID statt über einen Index: umgestellt wird `day.phases`,
+	// angeklickt wird eine Gruppe — zwei Listen, deren Gleichlauf nirgends steht.
+	const movePhase = (phaseId: string, direction: 'up' | 'down') => {
 		const newOrder = [...day.phases];
+		const index = newOrder.findIndex(p => p.id === phaseId);
 		const targetIndex = direction === 'up' ? index - 1 : index + 1;
-		if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+		if (index < 0 || targetIndex < 0 || targetIndex >= newOrder.length) return;
 		const [moved] = newOrder.splice(index, 1);
 		newOrder.splice(targetIndex, 0, moved);
 		onReorderPhases(day.id, newOrder.map(p => p.id));
@@ -83,16 +89,17 @@ const ScheduleDayAccordion = ({
 						</div>
 					</div>
 					<div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+						{/* Zwei Plus-Zeichen nebeneinander — hier muss dranstehen, welches was tut. */}
 						<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Eintrag hinzufügen" onClick={() => onAddEntry(day.id, null)}>
 							<ListPlus className="h-4 w-4" />
 						</Button>
-						<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Phase hinzufügen" onClick={(e) => { e.stopPropagation(); onAddPhase(day.id); }}>
+						<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Phase hinzufügen" onClick={() => onAddPhase(day.id)}>
 							<Plus className="h-4 w-4" />
 						</Button>
-						<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Tag bearbeiten" onClick={() => onEditDay(day)}>
+						<Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditDay(day)}>
 							<Pencil className="h-3.5 w-3.5" />
 						</Button>
-						<Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive" aria-label="Tag löschen" onClick={() => onDeleteDay(day.id)}>
+						<Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive" onClick={() => onDeleteDay(day.id)}>
 							<Trash2 className="h-3.5 w-3.5" />
 						</Button>
 					</div>
@@ -101,7 +108,7 @@ const ScheduleDayAccordion = ({
 
 			{/* Einträge ohne Phase — direkt unter dem Tag, ohne Zwischentitel */}
 			{ungrouped && (
-				<div className="mt-1 ml-1 sm:ml-4 pl-2 sm:pl-5 border-l-2 border-primary/15 py-2 sm:py-3">
+				<div className={`${UNDER_DAY} py-2 sm:py-3`}>
 					<ScheduleEntryTable
 						entries={ungrouped.entries}
 						onEdit={onEditEntry}
@@ -114,7 +121,7 @@ const ScheduleDayAccordion = ({
 
 			{/* Phases content — indented with left accent line */}
 			{phaseGroups.length > 0 && (
-			<div className="mt-1 ml-1 sm:ml-4 pl-2 sm:pl-5 border-l-2 border-primary/15 space-y-3 sm:space-y-6 py-2 sm:py-4">
+			<div className={`${UNDER_DAY} space-y-3 sm:space-y-6 py-2 sm:py-4`}>
 				{phaseGroups.map((group, index) => (
 					<SchedulePhaseSection
 						key={group.phase.id}
@@ -129,8 +136,8 @@ const ScheduleDayAccordion = ({
 						isMobile={isMobile}
 						isFirst={index === 0}
 						isLast={index === phaseGroups.length - 1}
-						onMoveUp={() => movePhase(index, 'up')}
-						onMoveDown={() => movePhase(index, 'down')}
+						onMoveUp={() => movePhase(group.phase.id, 'up')}
+						onMoveDown={() => movePhase(group.phase.id, 'down')}
 					/>
 				))}
 			</div>

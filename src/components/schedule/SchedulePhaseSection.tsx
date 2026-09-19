@@ -70,7 +70,6 @@ const SchedulePhaseSection = ({
 							variant="ghost"
 							size="icon"
 							className={`h-7 w-7 ${isFirst ? 'invisible' : ''}`}
-							aria-label="Phase nach oben"
 							onClick={onMoveUp}
 						>
 							<ChevronUp className="h-3.5 w-3.5" />
@@ -79,22 +78,20 @@ const SchedulePhaseSection = ({
 							variant="ghost"
 							size="icon"
 							className={`h-7 w-7 ${isLast ? 'invisible' : ''}`}
-							aria-label="Phase nach unten"
 							onClick={onMoveDown}
 						>
 							<ChevronDown className="h-3.5 w-3.5" />
 						</Button>
-						<Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Eintrag hinzufügen" onClick={() => onAddEntry(phase.schedule_day_id, phase.id)}>
+						<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onAddEntry(phase.schedule_day_id, phase.id)}>
 							<Plus className="h-3.5 w-3.5" />
 						</Button>
-						<Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Phase bearbeiten" onClick={() => onEditPhase(phase)}>
+						<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditPhase(phase)}>
 							<Pencil className="h-3.5 w-3.5" />
 						</Button>
 						<Button
 							variant="ghost"
 							size="icon"
 							className="h-7 w-7 text-destructive/70 hover:text-destructive"
-							aria-label="Phase löschen"
 							onClick={() => onDeletePhase(phase.id)}
 						>
 							<Trash2 className="h-3.5 w-3.5" />

@@ -1,7 +1,8 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Pencil, Trash2, Info } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
+import EntryDescriptionHint from './EntryDescriptionHint';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
@@ -148,13 +149,7 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus }: Schedule
 							: ''}
 					</span>
 					<div className="flex items-center gap-2">
-						{entry.description && (
-							// Der Tooltip gehört an ein HTML-Element — das SVG von lucide
-							// nimmt kein `title`.
-							<span title={entry.description} className="inline-flex">
-								<Info className="h-3.5 w-3.5 text-muted-foreground/60" />
-							</span>
-						)}
+						<EntryDescriptionHint description={entry.description} />
 						{entry.type === 'task' && (
 							<Checkbox
 								checked={isDone}

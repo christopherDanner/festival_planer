@@ -3,8 +3,8 @@ import {
 	scheduleDay as day,
 	scheduleEntry as entry,
 	schedulePhase as phase
-} from '@/lib/__tests__/scheduleFactories';
-import { groupEntriesByPhase } from './scheduleGrouping';
+} from './scheduleFactories';
+import { groupEntriesByPhase } from '../scheduleGrouping';
 
 describe('groupEntriesByPhase', () => {
 	it('stellt Einträge ohne Phase direkt unter den Tag — vor die Phasen', () => {
@@ -72,7 +72,7 @@ describe('groupEntriesByPhase', () => {
 		expect(groups[0].entries.map((e) => e.id)).toEqual(['früh', 'spät', 'ohne']);
 	});
 
-	it('hängt Einträge einer unbekannten Phase unter den Tag, statt sie zu verlieren', () => {
+	it('hängt Einträge einer fremden Phase unter den Tag, statt sie zu verlieren', () => {
 		const groups = groupEntriesByPhase(
 			day({ phases: [], entries: [entry({ id: 'e1', schedule_phase_id: 'weg' })] })
 		);

@@ -1,12 +1,14 @@
 /** Gruppierung Tag → Phase für den Ablaufplan (ADR 0007).
 Die Abfrage liefert alle Einträge am Tag nebeneinander; welche davon unter
-welchem Zwischentitel stehen, entscheidet die Ansicht. Reine Logik ohne React. */
+welchem Zwischentitel stehen, entscheidet die Darstellung. Reine Logik ohne
+React — und damit an derselben Stelle wie `materialCosts` (ADR 0006): Bildschirm
+und Papier teilen sich eine Fassung, sonst drucken sie anders, als sie zeigen. */
 
 import type {
 	ScheduleDayWithEntries,
 	ScheduleEntryWithHelper,
 	SchedulePhase
-} from '@/lib/scheduleService';
+} from './scheduleService';
 
 /** Ein Block unter einem Ablauf-Tag; `phase === null` heißt „direkt unter dem Tag". */
 export interface EntryGroup {
@@ -19,8 +21,13 @@ export interface EntryGroup {
  * (nur wenn es welche gibt), dann jede Phase in der Reihenfolge der Tagesliste.
  *
  * Leere Phasen bleiben stehen — sie sind benannte Gruppen, die man umbenennen
- * und löschen können muss. Ein Eintrag, dessen Phase nicht am Tag hängt, landet
- * unter dem Tag statt aus der Ansicht zu fallen.
+ * und löschen können muss.
+ *
+ * Zeigt ein Eintrag auf eine Phase, die nicht an *diesem* Tag hängt, landet er
+ * unter dem Tag. Der Fremdschlüssel verhindert das nicht — er kennt nur
+ * `schedule_phases`, nicht „Phase dieses Tages" — und ein Eintrag, der
+ * stattdessen ganz aus der Darstellung fiele, wäre am Bildschirm wie auf Papier
+ * unauffindbar.
  */
 export function groupEntriesByPhase(day: ScheduleDayWithEntries): EntryGroup[] {
 	const phases = day.phases ?? [];

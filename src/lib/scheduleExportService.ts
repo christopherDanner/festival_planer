@@ -13,7 +13,7 @@ import {
   posterTableTheme
 } from '@/lib/pdfPoster';
 import type { ScheduleDayWithEntries, ScheduleEntryWithHelper } from '@/lib/scheduleService';
-import { groupEntriesByPhase } from '@/components/schedule/scheduleGrouping';
+import { groupEntriesByPhase } from '@/lib/scheduleGrouping';
 
 export interface ScheduleExportOptions {
   festivalName: string;
