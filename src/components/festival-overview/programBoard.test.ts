@@ -1,62 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import { scheduleDay as day, scheduleEntry as entry } from '@/lib/__tests__/scheduleFactories';
 import {
 	formatProgramTime,
 	programDayTitle,
 	getProgramByDay,
 	countProgramRows
 } from './programBoard';
-
-// Minimal factory for a schedule entry — nur die Felder, die der Poster liest.
-function entry(
-	over: Partial<ScheduleDayWithPhases['phases'][number]['entries'][number]> = {}
-): ScheduleDayWithPhases['phases'][number]['entries'][number] {
-	return {
-		id: 'e1',
-		schedule_phase_id: 'p1',
-		festival_id: 'f1',
-		title: 'Eintrag',
-		type: 'program',
-		start_time: null,
-		end_time: null,
-		responsible_helper_id: null,
-		status: null,
-		description: null,
-		sort_order: 0,
-		created_at: '',
-		updated_at: '',
-		...over
-	};
-}
-
-function day(
-	over: Partial<ScheduleDayWithPhases> & { entries?: ScheduleDayWithPhases['phases'][number]['entries'] }
-): ScheduleDayWithPhases {
-	const { entries = [], ...rest } = over;
-	return {
-		id: 'd1',
-		festival_id: 'f1',
-		date: '2026-07-24',
-		label: null,
-		is_auto_generated: false,
-		sort_order: 0,
-		created_at: '',
-		updated_at: '',
-		phases: [
-			{
-				id: 'p1',
-				schedule_day_id: 'd1',
-				festival_id: 'f1',
-				name: 'Phase',
-				sort_order: 0,
-				created_at: '',
-				updated_at: '',
-				entries
-			}
-		],
-		...rest
-	};
-}
 
 describe('formatProgramTime', () => {
 	it('kürzt Sekunden auf HH:MM', () => {
@@ -93,14 +42,14 @@ describe('getProgramByDay', () => {
 		expect(result[0].rows.map((r) => r.title)).toEqual(['Eröffnung']);
 	});
 
-	it('sortiert Zeilen nach Startzeit, leere Zeiten ans Ende', () => {
+	it('übernimmt die Reihenfolge des Tages — gereiht hat schon der Service', () => {
 		const days = [
 			day({
 				id: 'd1',
 				entries: [
-					entry({ id: 'a', type: 'program', title: 'Später', start_time: '19:30:00', sort_order: 0 }),
-					entry({ id: 'b', type: 'program', title: 'Ohne Zeit', start_time: null, sort_order: 1 }),
-					entry({ id: 'c', type: 'program', title: 'Früh', start_time: '11:00:00', sort_order: 2 })
+					entry({ id: 'c', type: 'program', title: 'Früh', start_time: '11:00:00' }),
+					entry({ id: 'a', type: 'program', title: 'Später', start_time: '19:30:00' }),
+					entry({ id: 'b', type: 'program', title: 'Ohne Zeit', start_time: null })
 				]
 			})
 		];
@@ -109,22 +58,17 @@ describe('getProgramByDay', () => {
 		expect(rows.map((r) => r.time)).toEqual(['11:00', '19:30', '']);
 	});
 
-	it('mischt Programmpunkte aus mehreren Phasen eines Tages', () => {
-		const d = day({ id: 'd1', entries: [] });
-		d.phases = [
-			{
-				...d.phases[0],
-				id: 'p1',
-				entries: [entry({ id: 'a', type: 'program', title: 'Nachmittag', start_time: '15:00:00' })]
-			},
-			{
-				...d.phases[0],
-				id: 'p2',
-				entries: [entry({ id: 'b', type: 'program', title: 'Vormittag', start_time: '10:00:00' })]
-			}
+	it('nimmt die Programmpunkte des Tages, auch ohne Phase', () => {
+		const days = [
+			day({
+				id: 'd1',
+				entries: [
+					entry({ id: 'a', type: 'program', title: 'Vormittag', schedule_phase_id: null }),
+					entry({ id: 'b', type: 'program', title: 'Nachmittag', schedule_phase_id: 'p1' })
+				]
+			})
 		];
-		const rows = getProgramByDay([d])[0].rows;
-		expect(rows.map((r) => r.title)).toEqual(['Vormittag', 'Nachmittag']);
+		expect(getProgramByDay(days)[0].rows.map((r) => r.title)).toEqual(['Vormittag', 'Nachmittag']);
 	});
 
 	it('leere Eingabe → leeres Array', () => {
@@ -135,7 +79,10 @@ describe('getProgramByDay', () => {
 describe('countProgramRows', () => {
 	it('summiert alle Zeilen über alle Tage', () => {
 		const programDays = getProgramByDay([
-			day({ id: 'd1', entries: [entry({ id: 'a', type: 'program' }), entry({ id: 'b', type: 'program' })] }),
+			day({
+				id: 'd1',
+				entries: [entry({ id: 'a', type: 'program' }), entry({ id: 'b', type: 'program' })]
+			}),
 			day({ id: 'd2', date: '2026-07-25', entries: [entry({ id: 'c', type: 'program' })] })
 		]);
 		expect(countProgramRows(programDays)).toBe(3);

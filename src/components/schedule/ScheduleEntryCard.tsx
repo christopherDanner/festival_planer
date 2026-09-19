@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Pencil, Trash2, Info, ChevronUp, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, Info } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
@@ -10,13 +10,9 @@ interface ScheduleEntryCardProps {
 	onEdit: (entry: ScheduleEntryWithHelper) => void;
 	onDelete: (id: string) => void;
 	onToggleStatus: (entry: ScheduleEntryWithHelper) => void;
-	isFirst: boolean;
-	isLast: boolean;
-	onMoveUp: () => void;
-	onMoveDown: () => void;
 }
 
-const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, isLast, onMoveUp, onMoveDown }: ScheduleEntryCardProps) => {
+const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus }: ScheduleEntryCardProps) => {
 	const isMobile = useIsMobile();
 
 	const formatTime = () => {
@@ -36,31 +32,9 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 		: 'border-l-4 border-l-violet-500';
 
 	if (isMobile) {
-		const canMove = !(isFirst && isLast);
 		return (
 			<div className={`border bg-card p-2 ${borderClass}`}>
 				<div className="flex items-start gap-1.5">
-					{/* Move buttons */}
-					{canMove && (
-						<div className="flex flex-col shrink-0 -ml-1">
-							<Button
-								variant="ghost"
-								size="icon"
-								className={`h-6 w-6 ${isFirst ? 'invisible' : ''}`}
-								onClick={onMoveUp}
-							>
-								<ChevronUp className="h-3.5 w-3.5" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								className={`h-6 w-6 ${isLast ? 'invisible' : ''}`}
-								onClick={onMoveDown}
-							>
-								<ChevronDown className="h-3.5 w-3.5" />
-							</Button>
-						</div>
-					)}
 					<div className="flex-1 min-w-0">
 						<div className="flex items-center gap-1.5 mb-0.5">
 							{entry.type === 'task' ? (
@@ -116,29 +90,9 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 
 	return (
 		<div className={`border bg-card p-3 ${borderClass}`}>
-			{/* Top row: time badge, move buttons, action buttons */}
+			{/* Top row: type badge, time badge, action buttons */}
 			<div className="flex items-center justify-between mb-2">
 				<div className="flex items-center gap-2">
-					{/* Move buttons */}
-					<div className="flex flex-col -my-1">
-						<Button
-							variant="ghost"
-							size="icon"
-							className={`h-5 w-5 ${isFirst ? 'invisible' : ''}`}
-							onClick={onMoveUp}
-						>
-							<ChevronUp className="h-3 w-3" />
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon"
-							className={`h-5 w-5 ${isLast ? 'invisible' : ''}`}
-							onClick={onMoveDown}
-						>
-							<ChevronDown className="h-3 w-3" />
-						</Button>
-					</div>
-
 					{/* Type badge */}
 					{entry.type === 'task' ? (
 						<Badge
@@ -195,10 +149,11 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 					</span>
 					<div className="flex items-center gap-2">
 						{entry.description && (
-							<Info
-								className="h-3.5 w-3.5 text-muted-foreground/60"
-								title={entry.description}
-							/>
+							// Der Tooltip gehört an ein HTML-Element — das SVG von lucide
+							// nimmt kein `title`.
+							<span title={entry.description} className="inline-flex">
+								<Info className="h-3.5 w-3.5 text-muted-foreground/60" />
+							</span>
 						)}
 						{entry.type === 'task' && (
 							<Checkbox

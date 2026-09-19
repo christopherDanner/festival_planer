@@ -2,17 +2,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import ScheduleEntryTable from './ScheduleEntryTable';
-import type { SchedulePhaseWithEntries, ScheduleEntryWithHelper } from '@/lib/scheduleService';
+import type { SchedulePhase, ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
 interface SchedulePhaseSectionProps {
-	phase: SchedulePhaseWithEntries;
-	onEditPhase: (phase: SchedulePhaseWithEntries) => void;
+	phase: SchedulePhase;
+	/** Die Einträge dieser Phase — gruppiert hat sie die Ansicht, nicht die Abfrage. */
+	entries: ScheduleEntryWithHelper[];
+	onEditPhase: (phase: SchedulePhase) => void;
 	onDeletePhase: (id: string) => void;
 	onEditEntry: (entry: ScheduleEntryWithHelper) => void;
 	onDeleteEntry: (id: string) => void;
 	onToggleEntryStatus: (entry: ScheduleEntryWithHelper) => void;
-	onAddEntry: (phaseId: string) => void;
-	onReorderEntries: (phaseId: string, orderedIds: string[]) => void;
+	onAddEntry: (dayId: string, phaseId: string | null) => void;
 	isMobile: boolean;
 	isFirst: boolean;
 	isLast: boolean;
@@ -22,20 +23,20 @@ interface SchedulePhaseSectionProps {
 
 const SchedulePhaseSection = ({
 	phase,
+	entries,
 	onEditPhase,
 	onDeletePhase,
 	onEditEntry,
 	onDeleteEntry,
 	onToggleEntryStatus,
 	onAddEntry,
-	onReorderEntries,
 	isMobile,
 	isFirst,
 	isLast,
 	onMoveUp,
 	onMoveDown,
 }: SchedulePhaseSectionProps) => {
-	const tasks = phase.entries.filter((e) => e.type === 'task');
+	const tasks = entries.filter((e) => e.type === 'task');
 	const doneTasks = tasks.filter((e) => e.status === 'done');
 	const hasProgress = tasks.length > 0;
 
@@ -59,7 +60,7 @@ const SchedulePhaseSection = ({
 							</Badge>
 						)}
 						<span className="hidden sm:inline text-xs text-muted-foreground">
-							{phase.entries.length} {phase.entries.length === 1 ? 'Eintrag' : 'Einträge'}
+							{entries.length} {entries.length === 1 ? 'Eintrag' : 'Einträge'}
 						</span>
 					</div>
 
@@ -69,6 +70,7 @@ const SchedulePhaseSection = ({
 							variant="ghost"
 							size="icon"
 							className={`h-7 w-7 ${isFirst ? 'invisible' : ''}`}
+							aria-label="Phase nach oben"
 							onClick={onMoveUp}
 						>
 							<ChevronUp className="h-3.5 w-3.5" />
@@ -77,20 +79,22 @@ const SchedulePhaseSection = ({
 							variant="ghost"
 							size="icon"
 							className={`h-7 w-7 ${isLast ? 'invisible' : ''}`}
+							aria-label="Phase nach unten"
 							onClick={onMoveDown}
 						>
 							<ChevronDown className="h-3.5 w-3.5" />
 						</Button>
-						<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onAddEntry(phase.id)}>
+						<Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Eintrag hinzufügen" onClick={() => onAddEntry(phase.schedule_day_id, phase.id)}>
 							<Plus className="h-3.5 w-3.5" />
 						</Button>
-						<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditPhase(phase)}>
+						<Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Phase bearbeiten" onClick={() => onEditPhase(phase)}>
 							<Pencil className="h-3.5 w-3.5" />
 						</Button>
 						<Button
 							variant="ghost"
 							size="icon"
 							className="h-7 w-7 text-destructive/70 hover:text-destructive"
+							aria-label="Phase löschen"
 							onClick={() => onDeletePhase(phase.id)}
 						>
 							<Trash2 className="h-3.5 w-3.5" />
@@ -102,11 +106,10 @@ const SchedulePhaseSection = ({
 			{/* Entries */}
 			<div className="ml-1">
 				<ScheduleEntryTable
-					entries={phase.entries}
+					entries={entries}
 					onEdit={onEditEntry}
 					onDelete={onDeleteEntry}
 					onToggleStatus={onToggleEntryStatus}
-					onReorder={(orderedIds) => onReorderEntries(phase.id, orderedIds)}
 					isMobile={isMobile}
 				/>
 			</div>

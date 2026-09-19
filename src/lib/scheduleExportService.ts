@@ -12,11 +12,12 @@ import {
   posterTableEnd,
   posterTableTheme
 } from '@/lib/pdfPoster';
-import type { ScheduleDayWithPhases, ScheduleEntryWithMember } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries, ScheduleEntryWithHelper } from '@/lib/scheduleService';
+import { groupEntriesByPhase } from '@/components/schedule/scheduleGrouping';
 
 export interface ScheduleExportOptions {
   festivalName: string;
-  days: ScheduleDayWithPhases[];
+  days: ScheduleDayWithEntries[];
   selectedDayIds: Set<string>;
   selectedPhaseIds: Set<string>;
   entryTypeFilter: 'all' | 'task' | 'program';
@@ -69,11 +70,16 @@ export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
       note: day.label ?? undefined
     }) + 3;
 
-    const filteredPhases = day.phases.filter(p => selectedPhaseIds.has(p.id));
+    // Die Gruppierung Tag → Phase macht die Ansicht, auch auf Papier. Der Block
+    // ohne Phase steht direkt unter dem Tag und lässt sich nicht abwählen — es
+    // gibt kein Häkchen für ihn.
+    const groups = groupEntriesByPhase(day).filter(
+      g => g.phase === null || selectedPhaseIds.has(g.phase.id)
+    );
 
-    for (const phase of filteredPhases) {
+    for (const group of groups) {
       // Filter entries by type
-      const entries = phase.entries.filter(e => {
+      const entries = group.entries.filter(e => {
         if (entryTypeFilter === 'all') return true;
         return e.type === entryTypeFilter;
       });
@@ -86,24 +92,26 @@ export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
         y = POSTER_MARGIN;
       }
 
-      // Phase header — Akzentschrift, davor der Stempel, wenn alles steht.
-      const done = entries.filter(e => e.status === 'done').length;
-      doc.setFont(POSTER_FONT.accent, 'normal');
-      doc.setFontSize(12);
-      doc.setTextColor(...POSTER_COLOR.tinte);
-      doc.text(phase.name.toUpperCase(), margin, y);
-      if (done === entries.length) {
-        // Rechts am Seitenrand angeschlagen — ein langer Phasenname würde den
-        // Stempel sonst über den Rahmen hinausschieben.
-        drawStamp(doc, {
-          x: margin + width,
-          y: y - 3.6,
-          label: 'Erledigt',
-          tone: 'gruen',
-          align: 'right'
-        });
+      if (group.phase) {
+        // Phase header — Akzentschrift, davor der Stempel, wenn alles steht.
+        const done = entries.filter(e => e.status === 'done').length;
+        doc.setFont(POSTER_FONT.accent, 'normal');
+        doc.setFontSize(12);
+        doc.setTextColor(...POSTER_COLOR.tinte);
+        doc.text(group.phase.name.toUpperCase(), margin, y);
+        if (done === entries.length) {
+          // Rechts am Seitenrand angeschlagen — ein langer Phasenname würde den
+          // Stempel sonst über den Rahmen hinausschieben.
+          drawStamp(doc, {
+            x: margin + width,
+            y: y - 3.6,
+            label: 'Erledigt',
+            tone: 'gruen',
+            align: 'right'
+          });
+        }
+        y += 3;
       }
-      y += 3;
 
       // Build table data
       const head = [['Zeit', 'Typ', 'Eintrag', 'Verantwortlich']];
@@ -138,7 +146,7 @@ export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
         },
         didParseCell: (hookData) => {
           if (hookData.section !== 'body') return;
-          const entry: ScheduleEntryWithMember | undefined = entries[hookData.row.index];
+          const entry: ScheduleEntryWithHelper | undefined = entries[hookData.row.index];
           // Typ als Wertmarke: Aufgabe getönt, Programm in Gelb. Der Ton muss
           // dunkler sein als die Wechselzeile, sonst verschwindet die Marke.
           if (hookData.column.index === 1) {
