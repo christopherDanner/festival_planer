@@ -8,7 +8,7 @@ Stationsmitgliedschaft. Die Ampel zählt enger. Wer in der Ausschank-Fußzeile
 steht, ohne in einer Schicht zu sein, gilt hier also als zugeteilt, obwohl ihn
 die Ampel nicht mitzählt. Das ist kein Fehler, der zu „reparieren" wäre. */
 
-import type { Helper } from '@/lib/helperService';
+import { helperName, type Helper } from '@/lib/helperService';
 import type { ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
 
 /** Der Segment-Schalter über der Liste: `Alle · Frei · Zugeteilt`. */
@@ -67,10 +67,10 @@ export interface HelperRosterInput {
 const matchesFilter = (chip: RosterChip, filter: HelperFilter): boolean =>
 	filter === 'all' || (filter === 'assigned') === chip.assigned;
 
-function group(id: RosterGroup['id'], label: string, chips: RosterChip[], split: boolean): RosterGroup[] {
-	if (chips.length === 0) return [];
-	return [{ id, title: split ? `${label} (${chips.length})` : null, chips }];
-}
+/** Jedes Wort der Eingabe muss im Namen vorkommen, in beliebiger Reihenfolge —
+sonst fände „Franz Hochauer" niemanden, weil die Marke „Hochauer Franz" heißt. */
+const matchesSearch = (chip: RosterChip, terms: string[]): boolean =>
+	terms.every((term) => chip.name.toLowerCase().includes(term));
 
 /**
  * Baut die Helferliste, wie sie am Bildschirm steht: erst die Suche, dann die
@@ -88,7 +88,7 @@ export function buildHelperRoster({
 	search,
 	filter
 }: HelperRosterInput): Roster {
-	const needle = search.trim().toLowerCase();
+	const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
 
 	const found = helpers
 		.map((helper): RosterChip => {
@@ -96,12 +96,12 @@ export function buildHelperRoster({
 			const isMember = stationHelpers.some((m) => m.helper_id === helper.id);
 			return {
 				helper,
-				name: `${helper.last_name} ${helper.first_name}`.trim(),
+				name: helperName(helper),
 				shiftCount,
 				assigned: shiftCount > 0 || isMember
 			};
 		})
-		.filter((chip) => chip.name.toLowerCase().includes(needle))
+		.filter((chip) => matchesSearch(chip, terms))
 		.sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
 	const shown = found.filter((chip) => matchesFilter(chip, filter));
@@ -110,18 +110,28 @@ export function buildHelperRoster({
 	const wishes = (chip: RosterChip) =>
 		Boolean(focusStationId) && (chip.helper.station_preferences ?? []).includes(focusStationId);
 	const wishing = shown.filter(wishes);
+	// Ohne Wünschende gibt es kein „weitere": die Liste bleibt ungeteilt und
+	// trägt gar keine Aufschrift, statt eine Null hinzuschreiben.
 	const split = wishing.length > 0;
 
 	return {
 		total: helpers.length,
+		// Über dieselbe Regel wie die Liste selbst — sonst könnten Knopfzahl und
+		// Markenzahl auseinanderlaufen.
 		counts: {
 			all: found.length,
-			free: found.filter((chip) => !chip.assigned).length,
-			assigned: found.filter((chip) => chip.assigned).length
+			free: found.filter((chip) => matchesFilter(chip, 'free')).length,
+			assigned: found.filter((chip) => matchesFilter(chip, 'assigned')).length
 		},
 		groups: [
-			...group('wish', 'Wünschen sich diese Station', wishing, split),
-			...group('rest', 'Weitere', shown.filter((chip) => !wishes(chip)), split)
+			{ id: 'wish' as const, label: 'Wünschen sich diese Station', chips: wishing },
+			{ id: 'rest' as const, label: 'Weitere', chips: shown.filter((chip) => !wishes(chip)) }
 		]
+			.filter((group) => group.chips.length > 0)
+			.map(({ id, label, chips }) => ({
+				id,
+				title: split ? `${label} (${chips.length})` : null,
+				chips
+			}))
 	};
 }

@@ -102,7 +102,21 @@ describe('HelperRoster — die Spalte', () => {
 	it('erscheint erst ab 900px — die Liste am Handy ist der eigene Schnitt (#105)', () => {
 		const html = render();
 
-		expect(html).toMatch(/class="[^"]*hidden[^"]*min-\[900px\]:block/);
+		expect(html).toMatch(/class="[^"]*hidden[^"]*min-\[900px\]:flex/);
+	});
+
+	it('scrollt die Marken im eigenen Rahmen, statt unter den Fensterrand zu laufen', () => {
+		const html = render({
+			helpers: Array.from({ length: 40 }, (_, i) =>
+				helper({ id: `h${i}`, last_name: `Helfer${String(i).padStart(2, '0')}` })
+			)
+		});
+
+		expect(html).toContain('max-h-[calc(100vh-1.5rem)]');
+		expect(html).toContain('overflow-y-auto');
+		// Suche, Schalter und der Anlege-Knopf stehen außerhalb des Scrollfelds.
+		expect(html.indexOf('overflow-y-auto')).toBeGreaterThan(html.indexOf('Helfer suchen'));
+		expect(html.indexOf('overflow-y-auto')).toBeLessThan(html.indexOf('+ Neuen Helfer anlegen'));
 	});
 
 	it('schreibt die fokussierte Station in den Kopf', () => {
@@ -123,8 +137,10 @@ describe('HelperRoster — die Spalte', () => {
 		expect(html).not.toContain('Helfer für');
 	});
 
-	it('sagt nirgends „Mitglied" — das heißt in einem Verein etwas anderes', () => {
-		expect(render()).not.toContain('Mitglied');
+	it('trägt den Kopf in der Schriftgröße des Prototyps, nicht in der der Gruppen', () => {
+		// `text-xs` und `text-[10.5px]` an derselben Klassenliste hätten sich
+		// gegenseitig weggeräumt — der Kopf ist 12px, eine Gruppen-Aufschrift 10.5px.
+		expect(render()).toMatch(/text-xs[^>]*tracking-\[\.07em\][^>]*>Helfer für Ausschank</);
 	});
 });
 

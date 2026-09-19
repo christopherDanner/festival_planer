@@ -176,6 +176,14 @@ describe('buildHelperRoster — die Suche', () => {
 	it('übergeht Leerraum an den Rändern', () => {
 		expect(names({ helpers: zwei, search: '  leitner ' })).toEqual(['Leitner Maria']);
 	});
+
+	it('findet auch, wer den Vornamen zuerst tippt — die Marke heißt andersherum', () => {
+		expect(names({ helpers: zwei, search: 'franz hochauer' })).toEqual(['Hochauer Franz']);
+	});
+
+	it('verlangt jedes getippte Wort, statt beim ersten Treffer aufzuhören', () => {
+		expect(names({ helpers: zwei, search: 'franz leitner' })).toEqual([]);
+	});
 });
 
 describe('buildHelperRoster — Gruppierung nach Wunsch-Passung', () => {

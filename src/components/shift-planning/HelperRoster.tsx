@@ -31,7 +31,7 @@ export interface HelperRosterProps {
 	onRemoveHelper: (helper: Helper) => void;
 }
 
-/** Aufschrift einer Gruppe und des Kopfes: klein, fett, Versalien. */
+/** Aufschrift einer Gruppe: klein, fett, Versalien. */
 const CAPTION = 'text-[10.5px] font-extrabold uppercase tracking-[.06em]';
 
 /**
@@ -63,11 +63,16 @@ const HelperRoster: React.FC<HelperRosterProps> = ({
 	onEditHelper,
 	onRemoveHelper
 }) => (
-	<aside className="hidden sticky top-3 border-2.5 border-tinte bg-white min-[900px]:block">
-		<h3 className={cn('border-b-2 border-tinte bg-papier-getoent px-3 py-2.5 text-xs tracking-[.07em]', CAPTION)}>
+	// Die Spalte klebt oben und **scrollt in sich**: bei 40 Helfern liefe sie
+	// sonst unter den Fensterrand und nähme den Anlege-Knopf mit (DESIGN-VISION
+	// §6 — was scrollt, scrollt im eigenen Rahmen).
+	<aside className="hidden sticky top-3 max-h-[calc(100vh-1.5rem)] flex-col border-2.5 border-tinte bg-white min-[900px]:flex">
+		<h3 className="shrink-0 border-b-2 border-tinte bg-papier-getoent px-3 py-2.5 text-xs font-extrabold uppercase tracking-[.07em]">
 			{focusStationName ? `Helfer für ${focusStationName}` : 'Helfer'}
 		</h3>
-		<div className="grid gap-2 px-3 py-2.5">
+		{/* Suche und Schalter bleiben stehen — sie sind der Weg zurück, wenn die
+		Marken unten scrollen. */}
+		<div className="grid shrink-0 gap-2 px-3 pb-1 pt-2.5">
 			<Input
 				value={search}
 				onChange={(e) => onSearchChange(e.target.value)}
@@ -85,7 +90,9 @@ const HelperRoster: React.FC<HelperRosterProps> = ({
 				onValueChange={onFilterChange}
 				aria-label="Zuteilungs-Filter"
 			/>
+		</div>
 
+		<div className="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto px-3 py-1.5">
 			{roster.groups.map((group) => (
 				<React.Fragment key={group.id}>
 					{group.title && (
@@ -117,17 +124,18 @@ const HelperRoster: React.FC<HelperRosterProps> = ({
 						: 'Kein Helfer passt zu Suche und Filter.'}
 				</p>
 			)}
-
-			{/* Helfer entstehen in dieser Liste (ADR 0005) — seit #102 auch der
-			Knopf dafür, der vorher in der Werkzeugleiste stand. */}
-			<button
-				type="button"
-				onClick={onAddHelper}
-				className="mt-1 block w-full border-2 border-dashed border-tinte-soft px-2.5 py-2 text-left text-xs font-bold text-tinte-soft hover:border-tinte hover:bg-fusszeile hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
-			>
-				+ Neuen Helfer anlegen …
-			</button>
 		</div>
+
+		{/* Helfer entstehen in dieser Liste (ADR 0005) — seit #102 auch der Knopf
+		dafür, der vorher in der Werkzeugleiste stand. Er steht außerhalb des
+		Scrollfelds: wer einen neuen Helfer braucht, soll ihn nicht suchen müssen. */}
+		<button
+			type="button"
+			onClick={onAddHelper}
+			className="m-3 mt-1.5 block shrink-0 border-2 border-dashed border-tinte-soft px-2.5 py-2 text-left text-xs font-bold text-tinte-soft hover:border-tinte hover:bg-fusszeile hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
+		>
+			+ Neuen Helfer anlegen …
+		</button>
 	</aside>
 );
 
@@ -170,10 +178,9 @@ function HelperMark({
 			>
 				{chip.name}
 			</button>
-			{/* Nur die Schicht-Zuteilungen: die Plakette beantwortet „wen hab ich
-			noch nicht ausgenutzt?" — eine Stationsmitgliedschaft sagt dazu nichts. */}
+			{/* Was die Plakette zählt und was nicht, steht in `helperRoster`. */}
 			{chip.shiftCount > 0 && (
-				<span className="font-display bg-tinte px-[5px] py-px text-[10.5px] font-semibold tracking-[.03em] text-white">
+				<span className="font-display bg-tinte px-[5px] py-px text-[10.5px] font-semibold tabular-nums tracking-[.03em] text-white">
 					<span aria-hidden>{chip.shiftCount}</span>
 					<span className="sr-only">{chip.shiftCount} Schicht-Zuteilungen</span>
 				</span>
