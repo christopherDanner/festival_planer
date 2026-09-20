@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Station, StationShift } from '@/lib/shiftService';
-import { allStationsState, stationPreviewRows, toggleAllStations, toggleStation } from './stationChoice';
+import {
+	allStationsState,
+	stationPreviewRows,
+	toggleAllStations,
+	toggleStation,
+	withHelperCopy
+} from './stationChoice';
 
 /** Fest 2026: Fr 24.07. – So 26.07.; Fest 2027 startet Fr 23.07. */
 const SOURCE_START = '2026-07-24';
@@ -124,5 +130,25 @@ describe('Auswahl auf Stations-Ebene', () => {
 		expect(toggleAllStations(alle, ['st-2'])).toEqual(alle);
 		expect(toggleAllStations(alle, alle)).toEqual([]);
 		expect(toggleAllStations(alle, [])).toEqual(alle);
+	});
+});
+
+describe('withHelperCopy', () => {
+	const stationIds = ['st-1', 'st-2'];
+	const gewaehlt = { stationIds, copyHelpers: true, copyAssignments: true };
+
+	it('schaltet „Helfer übernehmen" um, ohne die Stationen anzurühren', () => {
+		expect(withHelperCopy({ ...gewaehlt, copyHelpers: false }, true)).toEqual(gewaehlt);
+		expect(withHelperCopy(gewaehlt, true)).toEqual(gewaehlt);
+	});
+
+	// Ohne kopierte Helfer gibt es nichts, woran eine Zuteilung hängen könnte
+	// (ADR 0005) — das Häkchen bliebe sonst unsichtbar gesetzt stehen.
+	it('nimmt die Zuteilungen mit, wenn die Helfer abgewählt werden', () => {
+		expect(withHelperCopy(gewaehlt, false)).toEqual({
+			stationIds,
+			copyHelpers: false,
+			copyAssignments: false
+		});
 	});
 });

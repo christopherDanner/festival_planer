@@ -12,6 +12,7 @@ import {
 	stationPreviewRows,
 	toggleAllStations,
 	toggleStation,
+	withHelperCopy,
 	type StationSelection
 } from '@/components/kopierwerk/stationChoice';
 import { loadTemplate, type LoadedTemplate } from '@/components/kopierwerk/loadTemplate';
@@ -67,6 +68,7 @@ export default function Kopierwerk() {
 	// Vorschau (#64) — darum zwei getrennte Listen.
 	const [stationSelection, setStationSelection] = useState<StationSelection>({
 		stationIds: [],
+		copyHelpers: false,
 		copyAssignments: false
 	});
 	const [expandedStationIds, setExpandedStationIds] = useState<string[]>([]);
@@ -222,6 +224,7 @@ export default function Kopierwerk() {
 					rows={stationRows}
 					selectedStationIds={stationSelection.stationIds}
 					expandedStationIds={expandedStationIds}
+					copyHelpers={stationSelection.copyHelpers}
 					copyAssignments={stationSelection.copyAssignments}
 					onToggleStation={(stationId) =>
 						setStationSelection((previous) => ({
@@ -242,6 +245,9 @@ export default function Kopierwerk() {
 					// der Liste der aufgeklappten Stationen.
 					onToggleExpanded={(stationId) =>
 						setExpandedStationIds((previous) => toggleStation(previous, stationId))
+					}
+					onCopyHelpersChange={(value) =>
+						setStationSelection((previous) => withHelperCopy(previous, value))
 					}
 					onCopyAssignmentsChange={(value) =>
 						setStationSelection((previous) => ({ ...previous, copyAssignments: value }))

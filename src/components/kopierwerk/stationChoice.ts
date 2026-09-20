@@ -15,7 +15,24 @@ import type { Station, StationShift } from '@/lib/shiftService';
  * Was Schritt 2 zur Kopie beisteuert — der Ausschnitt aus `CopyFestivalOptions`,
  * den diese Werkbank füllt. Das Material kommt aus Schritt 3.
  */
-export type StationSelection = Pick<CopyFestivalOptions, 'stationIds' | 'copyAssignments'>;
+export type StationSelection = Pick<
+	CopyFestivalOptions,
+	'stationIds' | 'copyHelpers' | 'copyAssignments'
+>;
+
+/**
+ * „Helfer übernehmen" umschalten. Fällt der Schalter, fallen die Zuteilungen
+ * mit: ohne kopierte Helfer gibt es nichts, woran eine Zuteilung hängen könnte
+ * (ADR 0005), und ein unsichtbar gesetztes Häkchen würde beim Wiedereinschalten
+ * mehr kopieren, als die Oberfläche zeigt.
+ */
+export function withHelperCopy(selection: StationSelection, copyHelpers: boolean): StationSelection {
+	return {
+		...selection,
+		copyHelpers,
+		copyAssignments: copyHelpers && selection.copyAssignments
+	};
+}
 
 /** Eine Schicht in der Vorschau — read-only, ohne eigene Auswahl. */
 export interface ShiftPreview {

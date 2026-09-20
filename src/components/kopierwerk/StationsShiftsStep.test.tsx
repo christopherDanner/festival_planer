@@ -33,10 +33,12 @@ const render = (over: Partial<StationsShiftsStepProps> = {}) =>
 			rows={[ausschank, kassa]}
 			selectedStationIds={['st-1', 'st-2']}
 			expandedStationIds={[]}
+			copyHelpers={false}
 			copyAssignments={false}
 			onToggleStation={() => {}}
 			onToggleAllStations={() => {}}
 			onToggleExpanded={() => {}}
+			onCopyHelpersChange={() => {}}
 			onCopyAssignmentsChange={() => {}}
 			onBack={() => {}}
 			onNext={() => {}}
@@ -73,10 +75,11 @@ describe('Stations-Zeilen', () => {
 	});
 
 	// Gewählt wird auf Stations-Ebene (#64) — das Aufklappen ist reine Vorschau.
-	// Eine Checkbox je Station, dazu „Alle Stationen" und „Zuweisungen übernehmen".
+	// Eine Checkbox je Station, dazu „Alle Stationen", „Helfer übernehmen" und
+	// „Zuteilungen übernehmen".
 	it('gibt den Schichten keine eigene Checkbox', () => {
 		const html = render({ expandedStationIds: ['st-1'] });
-		expect(html.match(/role="checkbox"/g)).toHaveLength(4);
+		expect(html.match(/role="checkbox"/g)).toHaveLength(5);
 	});
 });
 
@@ -122,12 +125,40 @@ describe('„Alle Stationen"-Umschalter', () => {
 	});
 });
 
-describe('„Zuweisungen übernehmen"', () => {
-	it('verspricht nur, was der Kopier-Service tut', () => {
+describe('„Helfer übernehmen"', () => {
+	// Weil ein Helfer dem Fest gehört (ADR 0005), ist die Fest-Kopie der einzige
+	// Weg, letztjährige Helfer zu holen — kopiert wird die ganze Liste.
+	it('nennt den Schalter und was er holt', () => {
 		const html = render();
-		expect(html).toContain('Zuweisungen übernehmen');
-		expect(html).toContain('Helfer bleiben sonst leer.');
-		expect(html).not.toContain('Präferenz');
+		expect(html).toContain('Helfer übernehmen');
+		expect(html).toContain('Die ganze Helferliste der Vorlage');
+	});
+
+	// #100: `copyFestivalData` schlüsselt die Wünsche jetzt wirklich um, also
+	// darf die Oberfläche es auch versprechen.
+	it('verspricht die mitwandernden Wünsche', () => {
+		expect(render()).toContain('Wünsche wandern auf die neuen Stationen und Schichten mit');
+	});
+});
+
+describe('„Zuteilungen übernehmen"', () => {
+	it('nennt, was daran hängt', () => {
+		const html = render({ copyHelpers: true });
+		expect(html).toContain('Zuteilungen übernehmen');
+		expect(html).toContain('Stationen, Schichten und Verantwortliche');
+	});
+
+	// Ohne kopierte Helfer gibt es nichts, woran eine Zuteilung hängen könnte.
+	it('ist ohne übernommene Helfer ausgegraut und sagt warum', () => {
+		const html = render({ copyHelpers: false });
+		expect(tagWithId(html, 'zuteilungen-uebernehmen')).toContain('data-disabled');
+		expect(html).toContain('Braucht die übernommenen Helfer.');
+	});
+
+	it('ist mit übernommenen Helfern bedienbar', () => {
+		const html = render({ copyHelpers: true });
+		expect(tagWithId(html, 'zuteilungen-uebernehmen')).not.toContain('data-disabled');
+		expect(html).not.toContain('Braucht die übernommenen Helfer.');
 	});
 });
 

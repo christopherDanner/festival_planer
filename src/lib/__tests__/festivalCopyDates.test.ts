@@ -66,6 +66,7 @@ import { copiedShiftDateLabel } from '../shiftDates';
 const copy = async () => {
 	await copyFestivalData('quelle', 'ziel', {
 		stationIds: ['st-1'],
+		copyHelpers: false,
 		copyAssignments: false,
 		materialIds: [],
 		materialQuantitySource: 'ordered',
