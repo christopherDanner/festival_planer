@@ -67,7 +67,7 @@ export const performAutomaticAssignment = async (
 
 		stationShifts.forEach((stationShift) => {
 			const currentAssignments = existingAssignments.filter(
-				(a) => a.station_shift_id === stationShift.id && a.helper_id
+				(a) => a.station_shift_id === stationShift.id
 			).length;
 
 			const remainingSlots = stationShift.required_people - currentAssignments;

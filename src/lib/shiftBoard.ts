@@ -250,7 +250,7 @@ export function buildStationBoard(
 		const occupants = assignments
 			.filter((a) => a.station_shift_id === shift.id)
 			.sort((a, b) => a.position - b.position)
-			.map((a) => ({ helperId: a.helper_id ?? null, name: helperName(a.helper) }));
+			.map((a) => ({ helperId: a.helper_id, name: helperName(a.helper) }));
 
 		const rows = days.get(shift.start_date) ?? [];
 		// Die Schicht über Mitternacht steht beim Starttag (Entscheid 4 aus #68).
