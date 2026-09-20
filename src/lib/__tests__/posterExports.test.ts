@@ -101,6 +101,7 @@ function shiftPlanData(): ExportData {
 				station_shift_id: 'sh-1',
 				station_id: 'st-1',
 				position: 0,
+				helper_id: 'm-1',
 				helper: { id: 'm-1', first_name: 'Anna', last_name: 'Gruber' },
 				...stamps
 			},
@@ -110,6 +111,7 @@ function shiftPlanData(): ExportData {
 				station_shift_id: 'sh-1',
 				station_id: 'st-1',
 				position: 1,
+				helper_id: 'm-2',
 				helper: { id: 'm-2', first_name: 'Bernd', last_name: 'Huber' },
 				...stamps
 			}
