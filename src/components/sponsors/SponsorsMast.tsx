@@ -13,6 +13,10 @@ import {
 export interface SponsorsMastProps {
 	/** Größe des Sponsorenbestands; `null`, solange er lädt (dann keine Zählzeile). */
 	sponsorCount: number | null;
+	/** Wie viele Firmen das Bezugsfest sponsern — nur mit `referenceYear` sichtbar. */
+	sponsoringCount?: number;
+	/** Jahr des Bezugsfests; null zwischen zwei Festen (dann nur die Firmenzahl). */
+	referenceYear?: number | null;
 	/** Kompakt-Mast unter 900px: „Abmelden" wandert ins ⋮. */
 	compact?: boolean;
 	/** Klick auf den Wordmark — der einzige Zurück-Weg dieser Seite. */
@@ -22,10 +26,15 @@ export interface SponsorsMastProps {
 }
 
 /**
- * Zählzeile des Sponsorenbestands. Der Historie-Slice (#158) hängt hier
- * „· {m} sponsern {Jahr}" an; bis dahin steht nur die Bestandsgröße.
+ * Zählzeile des Sponsorenbestands: „40 Firmen · 12 sponsern 2026". Zwischen
+ * zwei Festen gibt es kein Bezugsfest — dann bleibt es bei der Firmenzahl,
+ * statt ein Jahr zu erfinden (#158).
  */
-const sponsorCountLine = (count: number) => `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
+function sponsorCountLine(count: number, sponsoringCount: number, year: number | null): string {
+	const firmen = `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
+	if (year === null) return firmen;
+	return `${firmen} · ${sponsoringCount} ${sponsoringCount === 1 ? 'sponsert' : 'sponsern'} ${year}`;
+}
 
 /**
  * Mast der Sponsoren-Stammdaten (#101 Entscheid 2): eigener Kopf statt
@@ -34,6 +43,8 @@ const sponsorCountLine = (count: number) => `${count} ${count === 1 ? 'Firma' : 
  */
 export default function SponsorsMast({
 	sponsorCount,
+	sponsoringCount = 0,
+	referenceYear = null,
 	compact,
 	onOpenFestivalList,
 	onAddSponsor,
@@ -56,7 +67,11 @@ export default function SponsorsMast({
 	return (
 		<Mast
 			title="Sponsoren"
-			when={sponsorCount === null ? undefined : sponsorCountLine(sponsorCount)}
+			when={
+				sponsorCount === null
+					? undefined
+					: sponsorCountLine(sponsorCount, sponsoringCount, referenceYear)
+			}
 			compact={compact}
 			onWordmarkClick={onOpenFestivalList}
 			end={
