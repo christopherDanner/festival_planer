@@ -255,6 +255,15 @@ describe('materialRowDraft — ob eine offene Zeile geändert ist (#115)', () =>
 		expect(isDirty(editDraft(draftFromMaterial(position), 'gross', '12.00'), position)).toBe(true);
 	});
 
+	it('nennt einen Preis mit mehr als zwei Nachkommastellen ungeändert — das Feld zeigt ihn auf Cent', () => {
+		// 41,67 € pro 50-Liter-Fass sind 0,8334 € je Liter. Das Feld kann nur
+		// „0,83" zeigen; würde das als Änderung zählen, zählte die Fußleiste eine
+		// unberührte Zeile mit und „ALLE SPEICHERN" rundete sie still zurück.
+		const position = material({ unit_price: 0.8334, tax_rate: 20, price_is_net: true });
+
+		expect(isDirty(draftFromMaterial(position), position)).toBe(false);
+	});
+
 	it('nennt eine Zeile ohne Preis ungeändert, auch wenn man in Brutto getippt und wieder gelöscht hat', () => {
 		const position = material({ unit_price: null, price_is_net: true });
 		const draft = editDraft(editDraft(draftFromMaterial(position), 'gross', '9'), 'gross', '');
