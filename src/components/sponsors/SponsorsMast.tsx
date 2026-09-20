@@ -13,10 +13,12 @@ import {
 export interface SponsorsMastProps {
 	/** Größe des Sponsorenbestands; `null`, solange er lädt (dann keine Zählzeile). */
 	sponsorCount: number | null;
-	/** Wie viele Firmen das Bezugsfest sponsern — nur mit `referenceYear` sichtbar. */
-	sponsoringCount?: number;
-	/** Jahr des Bezugsfests; null zwischen zwei Festen (dann nur die Firmenzahl). */
-	referenceYear?: number | null;
+	/**
+	 * Wie viele Firmen das Bezugsfest sponsern, samt dessen Jahr. Entfällt
+	 * zwischen zwei Festen (kein Bezugsfest) und solange der Bestand lädt —
+	 * dann bleibt es bei der Firmenzahl.
+	 */
+	referenceSponsoring?: { count: number; year: number };
 	/** Kompakt-Mast unter 900px: „Abmelden" wandert ins ⋮. */
 	compact?: boolean;
 	/** Klick auf den Wordmark — der einzige Zurück-Weg dieser Seite. */
@@ -30,10 +32,14 @@ export interface SponsorsMastProps {
  * zwei Festen gibt es kein Bezugsfest — dann bleibt es bei der Firmenzahl,
  * statt ein Jahr zu erfinden (#158).
  */
-function sponsorCountLine(count: number, sponsoringCount: number, year: number | null): string {
+function sponsorCountLine(
+	count: number,
+	referenceSponsoring: { count: number; year: number } | undefined
+): string {
 	const firmen = `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
-	if (year === null) return firmen;
-	return `${firmen} · ${sponsoringCount} ${sponsoringCount === 1 ? 'sponsert' : 'sponsern'} ${year}`;
+	if (!referenceSponsoring) return firmen;
+	const { count: sponsoring, year } = referenceSponsoring;
+	return `${firmen} · ${sponsoring} ${sponsoring === 1 ? 'sponsert' : 'sponsern'} ${year}`;
 }
 
 /**
@@ -43,8 +49,7 @@ function sponsorCountLine(count: number, sponsoringCount: number, year: number |
  */
 export default function SponsorsMast({
 	sponsorCount,
-	sponsoringCount = 0,
-	referenceYear = null,
+	referenceSponsoring,
 	compact,
 	onOpenFestivalList,
 	onAddSponsor,
@@ -68,9 +73,7 @@ export default function SponsorsMast({
 		<Mast
 			title="Sponsoren"
 			when={
-				sponsorCount === null
-					? undefined
-					: sponsorCountLine(sponsorCount, sponsoringCount, referenceYear)
+				sponsorCount === null ? undefined : sponsorCountLine(sponsorCount, referenceSponsoring)
 			}
 			compact={compact}
 			onWordmarkClick={onOpenFestivalList}

@@ -61,16 +61,22 @@ export default function SponsorsView({
 	onSignOut,
 	onSelectSponsor
 }: SponsorsViewProps) {
+	// Ohne Bezugsfest gibt es kein „heuer" — ein stehengebliebenes Segment würde
+	// den Frachtbrief zuschneiden, ohne dass noch ein Schalter das erklärt.
+	const active = referenceYear === null ? 'alle' : segment;
 	const matches = filterSponsors(sponsors, searchTerm);
-	const shown = filterSponsorsBySegment(matches, history, segment);
+	const shown = filterSponsorsBySegment(matches, history, active);
 
 	return (
 		<div
 			style={{ '--sponsors-toolbar-h': `${TOOLBAR_HEIGHT_PX}px` } as CSSProperties}>
 			<SponsorsMast
 				sponsorCount={sponsors.length}
-				sponsoringCount={countSponsorSegments(sponsors, history).sponsert}
-				referenceYear={referenceYear}
+				referenceSponsoring={
+					referenceYear === null
+						? undefined
+						: { count: countSponsorSegments(sponsors, history).sponsert, year: referenceYear }
+				}
 				compact={compact}
 				onOpenFestivalList={onOpenFestivalList}
 				onAddSponsor={onAddSponsor}
@@ -81,7 +87,7 @@ export default function SponsorsView({
 				onSearchChange={onSearchChange}
 				shown={shown.length}
 				total={sponsors.length}
-				segment={segment}
+				segment={active}
 				onSegmentChange={onSegmentChange}
 				segmentCounts={countSponsorSegments(matches, history)}
 				referenceYear={referenceYear}

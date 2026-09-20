@@ -148,6 +148,16 @@ describe('SponsorsView', () => {
 		expect(html).not.toContain('undefined');
 	});
 
+	it('nimmt ohne Bezugsfest ein stehengebliebenes Segment zurück', () => {
+		// Fällt das Bezugsfest zwischen zwei Ladevorgängen weg, gäbe es sonst
+		// einen zugeschnittenen Frachtbrief ohne Schalter, der ihn erklärt.
+		const html = render({ referenceYear: null, segment: 'sponsert' });
+		expect(html).toContain('Baumeister Deim');
+		expect(html).toContain('Elektro Pichler');
+		expect(html).toContain('Zeltverleih Festkultur');
+		expect(html).toContain('3 von 3');
+	});
+
 	it('gibt der Werkzeugleiste und dem Tabellenkopf dieselbe Höhe vor', () => {
 		const html = render();
 		expect(html).toContain('--sponsors-toolbar-h:59px');

@@ -1,5 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
+import { festYear } from '@/lib/festDates';
 import { getUserFestivals, type Festival } from '@/lib/festivalService';
+import { fetchAllRows } from '@/lib/restPaging';
 import {
 	buildSponsorHistory,
 	referenceFestival,
@@ -13,6 +15,8 @@ export interface SponsorHistoryLoad {
 	history: SponsorHistoryMap;
 	/** Das Bezugsfest für „heuer" — null zwischen zwei Festen. */
 	referenceFestival: Festival | null;
+	/** Jahr des Bezugsfests, wie es an Schalter und Zählzeile geht; null ohne Bezugsfest. */
+	referenceYear: number | null;
 }
 
 /** Nur die Verknüpfung; Beträge gehen die Historie nichts an (rein informativ). */
@@ -30,41 +34,20 @@ export async function getSponsorHistory(today: Date = new Date()): Promise<Spons
 
 	return {
 		history: buildSponsorHistory(links, festivals, reference?.id ?? null),
-		referenceFestival: reference
+		referenceFestival: reference,
+		referenceYear: reference ? festYear(reference.start_date) : null
 	};
 }
 
-/** Zeilen je Antwort. Die REST-Schicht deckelt selbst — siehe `getSponsorshipLinks`. */
-const PAGE_SIZE = 1000;
-
 /**
  * Alle Verknüpfungen Firma ↔ Fest, ohne Fest-Filter: die Historie ist
- * festübergreifend.
- *
- * Geblättert wird, weil die REST-Schicht eine Antwort deckelt (PostgREST:
- * standardmäßig 1000 Zeilen) und der Sponsorenbestand monoton wächst (ADR 0010)
- * — eine gedeckelte Antwort würde still zu wenig zählen und die Löschsperre
- * (#159) auf eine falsche Zahl stellen. `count` nennt die wahre Gesamtzahl;
- * solange Zeilen fehlen, kommt die nächste Seite. Im Normalfall bleibt es bei
- * der einen Abfrage.
+ * festübergreifend. Geblättert wird über `fetchAllRows`, weil der
+ * Sponsorenbestand monoton wächst (ADR 0010) und eine gedeckelte Antwort still
+ * zu wenig zählen würde — eine falsche Zahl in der Zeile ist schlimmer als
+ * keine. Im Normalfall bleibt es bei der einen Abfrage.
  */
-async function getSponsorshipLinks(): Promise<SponsorshipLink[]> {
-	const rows: SponsorshipLink[] = [];
-	let total: number | null = null;
-
-	for (;;) {
-		const { data, error, count } = await supabase
-			.from('sponsorings')
-			.select(LINK_SELECT, { count: 'exact' })
-			.range(rows.length, rows.length + PAGE_SIZE - 1);
-
-		if (error) throw new Error(error.message);
-		const page = (data ?? []) as SponsorshipLink[];
-		rows.push(...page);
-		total ??= count;
-
-		// Fertig, sobald alle Treffer da sind. `page.length === 0` fängt den Fall,
-		// dass die Zeilen unter uns weggelöscht wurden — sonst liefe das ewig.
-		if (total === null || rows.length >= total || page.length === 0) return rows;
-	}
+function getSponsorshipLinks(): Promise<SponsorshipLink[]> {
+	return fetchAllRows<SponsorshipLink>((from, to) =>
+		supabase.from('sponsorings').select(LINK_SELECT, { count: 'exact' }).range(from, to)
+	);
 }

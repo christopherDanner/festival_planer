@@ -16,7 +16,6 @@ import { useAuth } from '@/components/AuthProvider';
 import MastPanel from '@/components/sponsors/MastPanel';
 import SponsorsMast from '@/components/sponsors/SponsorsMast';
 import SponsorsView from '@/components/sponsors/SponsorsView';
-import { festYear } from '@/lib/festDates';
 import type { SponsorHistoryMap, SponsorSegment } from '@/lib/sponsorHistory';
 import { getSponsorHistory } from '@/lib/sponsorHistoryService';
 import {
@@ -69,9 +68,7 @@ const Sponsors = () => {
 			const [data, historyLoad] = await Promise.all([getSponsors(), getSponsorHistory()]);
 			setSponsors(data);
 			setHistory(historyLoad.history);
-			setReferenceYear(
-				historyLoad.referenceFestival ? festYear(historyLoad.referenceFestival.start_date) : null
-			);
+			setReferenceYear(historyLoad.referenceYear);
 		} catch (error) {
 			toast({
 				title: 'Fehler',

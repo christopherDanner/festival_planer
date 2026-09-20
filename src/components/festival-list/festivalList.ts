@@ -1,4 +1,4 @@
-import { festDayStart } from '@/lib/festDates';
+import { festDayStart, upcomingFestivals } from '@/lib/festDates';
 import type { FestivalMetrics } from '@/lib/festivalMetrics';
 import type { Festival } from '@/lib/festivalService';
 import { formatEuro } from '@/lib/money';
@@ -24,9 +24,10 @@ export function arrangeFestivalWall(
 	today: Date = new Date()
 ): FestivalWallRanks {
 	const day = (festival: Festival) => festDayStart(festival.start_date).getTime();
-	const now = festDayStart(today).getTime();
-	const upcoming = festivals.filter((f) => day(f) >= now).sort((a, b) => day(a) - day(b));
-	const past = festivals.filter((f) => day(f) < now).sort((a, b) => day(b) - day(a));
+	// „Bevorstehend" ist die Ableitung aus `festDates`; vergangen ist der Rest.
+	const upcoming = upcomingFestivals(festivals, today);
+	const isUpcoming = new Set<Festival>(upcoming);
+	const past = festivals.filter((f) => !isUpcoming.has(f)).sort((a, b) => day(b) - day(a));
 
 	return {
 		next: upcoming[0] ?? null,

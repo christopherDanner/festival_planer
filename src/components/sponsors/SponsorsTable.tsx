@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { sponsorHistoryOf, type SponsorHistory, type SponsorHistoryMap } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
 import { MissingValue } from '@/components/toolkit/PaperTable';
+import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import MastPanel from './MastPanel';
 
 export interface SponsorsTableProps {
@@ -27,10 +28,13 @@ const CellValue = ({ children }: { children: string | null }) =>
  */
 function HistoryCell({ history }: { history: SponsorHistory }) {
 	if (history.festivalCount === 0) {
+		// Dasselbe Rezept wie die rote Lücke im Schichtplan (`OpenSlot`), nur
+		// enger gesetzt: in einer Frachtbrief-Zeile darf die Marke die Zeilenhöhe
+		// nicht treiben. Nichts zum Anklicken, also `span`.
 		return (
-			<span className="inline-block whitespace-nowrap border-[1.5px] border-dashed border-rot px-1.5 py-px text-[11px] font-bold uppercase tracking-[.04em] text-rot">
+			<OpenSlot as="span" className="px-1.5 py-px text-[11px] tracking-[.04em]">
 				NOCH NIE
-			</span>
+			</OpenSlot>
 		);
 	}
 
