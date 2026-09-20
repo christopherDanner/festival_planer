@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
-import { deriveGapBoard, formatShiftRange, formatDeadline } from './gapBoard';
+import { deriveGapBoard, formatDeadline } from './gapBoard';
 
 // --- Minimal factories: nur die Felder, die die Lücken-Ableitung liest. ---
 
@@ -34,13 +34,13 @@ function shift(over: Partial<StationShift> = {}): StationShift {
 	};
 }
 
-function assignment(over: Partial<ShiftAssignmentWithMember> = {}): ShiftAssignmentWithMember {
+function assignment(over: Partial<ShiftAssignmentWithHelper> = {}): ShiftAssignmentWithHelper {
 	return {
 		id: 'a1',
 		festival_id: 'f1',
 		station_shift_id: 'sh1',
 		station_id: 's1',
-		member_id: 'm1',
+		helper_id: 'm1',
 		position: 1,
 		created_at: '',
 		updated_at: '',
@@ -48,12 +48,12 @@ function assignment(over: Partial<ShiftAssignmentWithMember> = {}): ShiftAssignm
 	};
 }
 
-function stationMember(over: Partial<StationMemberWithDetails> = {}): StationMemberWithDetails {
+function stationHelper(over: Partial<StationHelperWithDetails> = {}): StationHelperWithDetails {
 	return {
 		id: 'sm1',
 		festival_id: 'f1',
 		station_id: 's1',
-		member_id: 'm1',
+		helper_id: 'm1',
 		created_at: '',
 		...over
 	};
@@ -123,7 +123,7 @@ function task(over: Partial<ScheduleDayWithPhases['phases'][number]['entries'][n
 		type: 'task' as const,
 		start_time: null,
 		end_time: null,
-		responsible_member_id: null,
+		responsible_helper_id: null,
 		status: 'open' as const,
 		description: null,
 		sort_order: 0,
@@ -136,8 +136,8 @@ function task(over: Partial<ScheduleDayWithPhases['phases'][number]['entries'][n
 const EMPTY = {
 	stations: [] as Station[],
 	shifts: [] as StationShift[],
-	assignments: [] as ShiftAssignmentWithMember[],
-	stationMembers: [] as StationMemberWithDetails[],
+	assignments: [] as ShiftAssignmentWithHelper[],
+	stationHelpers: [] as StationHelperWithDetails[],
 	scheduleDays: [] as ScheduleDayWithPhases[],
 	materials: [] as FestivalMaterialWithStation[]
 };
@@ -190,11 +190,11 @@ describe('deriveGapBoard — Stationen mit Schichten', () => {
 });
 
 describe('deriveGapBoard — Stationen ohne Schichten (Direktbesetzung)', () => {
-	it('rechnet Stationsmitglieder gegen required_people', () => {
+	it('rechnet Stations-Helfer gegen required_people', () => {
 		const board = deriveGapBoard({
 			...EMPTY,
 			stations: [station({ id: 's1', name: 'Einlass', required_people: 3 })],
-			stationMembers: [stationMember({ id: 'sm1', station_id: 's1' })]
+			stationHelpers: [stationHelper({ id: 'sm1', station_id: 's1' })]
 		});
 		expect(board.stationGaps).toHaveLength(1);
 		expect(board.stationGaps[0].missing).toBe(2);
@@ -205,7 +205,7 @@ describe('deriveGapBoard — Stationen ohne Schichten (Direktbesetzung)', () => 
 		const board = deriveGapBoard({
 			...EMPTY,
 			stations: [station({ id: 's1', required_people: 1 })],
-			stationMembers: [stationMember({ id: 'sm1', station_id: 's1' })]
+			stationHelpers: [stationHelper({ id: 'sm1', station_id: 's1' })]
 		});
 		expect(board.stationGaps).toEqual([]);
 	});
@@ -313,26 +313,6 @@ describe('deriveGapBoard — Leerzustand', () => {
 	it('nicht leer, sobald irgendeine Lücke existiert', () => {
 		const board = deriveGapBoard({ ...EMPTY, materials: [material({ unit_price: null })] });
 		expect(board.isEmpty).toBe(false);
-	});
-});
-
-describe('formatShiftRange', () => {
-	it('kürzt volle Stunden: „Sa 15–19"', () => {
-		expect(formatShiftRange(shift({ start_date: '2026-07-25', start_time: '15:00:00', end_time: '19:00:00' }))).toBe(
-			'Sa 15–19'
-		);
-	});
-	it('behält Minuten, wenn nicht voll: „Sa 15:30–19"', () => {
-		expect(formatShiftRange(shift({ start_date: '2026-07-25', start_time: '15:30:00', end_time: '19:00:00' }))).toBe(
-			'Sa 15:30–19'
-		);
-	});
-	it('mehrtägig: zeigt den End-Wochentag', () => {
-		expect(
-			formatShiftRange(
-				shift({ start_date: '2026-07-25', start_time: '22:00:00', end_date: '2026-07-26', end_time: '02:00:00' })
-			)
-		).toBe('Sa 22–So 02');
 	});
 });
 

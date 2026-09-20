@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
 import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import GapColumn from './GapColumn';
@@ -74,7 +74,7 @@ function dayWithOpenTask(): ScheduleDayWithPhases {
 						type: 'task',
 						start_time: '09:00:00',
 						end_time: null,
-						responsible_member_id: null,
+						responsible_helper_id: null,
 						status: 'open',
 						description: null,
 						sort_order: 0,
@@ -90,8 +90,8 @@ function dayWithOpenTask(): ScheduleDayWithPhases {
 const NONE = {
 	stations: [] as Station[],
 	shifts: [] as StationShift[],
-	assignments: [] as ShiftAssignmentWithMember[],
-	stationMembers: [] as StationMemberWithDetails[],
+	assignments: [] as ShiftAssignmentWithHelper[],
+	stationHelpers: [] as StationHelperWithDetails[],
 	scheduleDays: [] as ScheduleDayWithPhases[],
 	materials: [] as FestivalMaterialWithStation[]
 };

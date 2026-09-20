@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pencil, Trash2, Info, ChevronUp, ChevronDown } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import type { ScheduleEntryWithMember } from '@/lib/scheduleService';
+import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
 interface ScheduleEntryCardProps {
-	entry: ScheduleEntryWithMember;
-	onEdit: (entry: ScheduleEntryWithMember) => void;
+	entry: ScheduleEntryWithHelper;
+	onEdit: (entry: ScheduleEntryWithHelper) => void;
 	onDelete: (id: string) => void;
-	onToggleStatus: (entry: ScheduleEntryWithMember) => void;
+	onToggleStatus: (entry: ScheduleEntryWithHelper) => void;
 	isFirst: boolean;
 	isLast: boolean;
 	onMoveUp: () => void;
@@ -83,9 +83,9 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 						<div className={`text-sm font-medium ${isDone ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
 							{entry.title}
 						</div>
-						{entry.responsible_member && (
+						{entry.responsible_helper && (
 							<div className="text-[11px] text-muted-foreground mt-0.5">
-								{entry.responsible_member.last_name} {entry.responsible_member.first_name}
+								{entry.responsible_helper.last_name} {entry.responsible_helper.first_name}
 							</div>
 						)}
 					</div>
@@ -186,11 +186,11 @@ const ScheduleEntryCard = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, i
 			</div>
 
 			{/* Bottom row: responsible + description/status */}
-			{(entry.responsible_member || entry.type === 'task' || entry.description) && (
+			{(entry.responsible_helper || entry.type === 'task' || entry.description) && (
 				<div className="flex items-center justify-between mt-2 text-sm">
 					<span className="text-muted-foreground">
-						{entry.responsible_member
-							? `${entry.responsible_member.last_name} ${entry.responsible_member.first_name}`
+						{entry.responsible_helper
+							? `${entry.responsible_helper.last_name} ${entry.responsible_helper.first_name}`
 							: ''}
 					</span>
 					<div className="flex items-center gap-2">
