@@ -21,17 +21,32 @@ export type StationSelection = Pick<
 >;
 
 /**
+ * Die eine Regel der beiden Übernahme-Schalter (ADR 0005): ohne kopierte Helfer
+ * gibt es nichts, woran eine Zuteilung hängen könnte. Sie steht hier und nicht
+ * an den Schaltern, damit sie nicht an der Oberfläche allein hängt — das
+ * Ausgrauen ist nur ihre Darstellung.
+ */
+const withCopySwitches = (
+	selection: StationSelection,
+	copyHelpers: boolean,
+	copyAssignments: boolean
+): StationSelection => ({ ...selection, copyHelpers, copyAssignments: copyHelpers && copyAssignments });
+
+/**
  * „Helfer übernehmen" umschalten. Fällt der Schalter, fallen die Zuteilungen
- * mit: ohne kopierte Helfer gibt es nichts, woran eine Zuteilung hängen könnte
- * (ADR 0005), und ein unsichtbar gesetztes Häkchen würde beim Wiedereinschalten
- * mehr kopieren, als die Oberfläche zeigt.
+ * mit — ein unsichtbar gesetztes Häkchen würde beim Wiedereinschalten mehr
+ * kopieren, als die Oberfläche zeigt.
  */
 export function withHelperCopy(selection: StationSelection, copyHelpers: boolean): StationSelection {
-	return {
-		...selection,
-		copyHelpers,
-		copyAssignments: copyHelpers && selection.copyAssignments
-	};
+	return withCopySwitches(selection, copyHelpers, selection.copyAssignments);
+}
+
+/** „Zuteilungen übernehmen" umschalten — greift nur mit übernommenen Helfern. */
+export function withAssignmentCopy(
+	selection: StationSelection,
+	copyAssignments: boolean
+): StationSelection {
+	return withCopySwitches(selection, selection.copyHelpers, copyAssignments);
 }
 
 /** Eine Schicht in der Vorschau — read-only, ohne eigene Auswahl. */

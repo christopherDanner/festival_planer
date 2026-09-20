@@ -139,6 +139,15 @@ describe('„Helfer übernehmen"', () => {
 	it('verspricht die mitwandernden Wünsche', () => {
 		expect(render()).toContain('Wünsche wandern auf die neuen Stationen und Schichten mit');
 	});
+
+	// Die Fest-Kopie ist der einzige Weg, letztjährige Helfer zu holen — eine
+	// Vorlage ohne Stationen darf daraus keine Sackgasse machen.
+	it('steht auch bei einer Vorlage ohne Stationen bereit', () => {
+		const html = render({ rows: [] });
+		expect(html).toContain('Helfer übernehmen');
+		// Ohne Station gibt es keine Zuteilung, die man übernehmen könnte.
+		expect(html).not.toContain('Zuteilungen übernehmen');
+	});
 });
 
 describe('„Zuteilungen übernehmen"', () => {

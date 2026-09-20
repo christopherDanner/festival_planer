@@ -2,7 +2,7 @@ import {
 	getStations, getStationShifts, getStationHelpers, getShiftAssignments,
 	createStationsBulk, createStationShiftsBulk, assignHelperToStation, assignHelperToStationShift
 } from '@/lib/shiftService';
-import { getHelpers, createHelper, updateHelperPreferences } from '@/lib/helperService';
+import { getHelpers, createHelpersBulk, updateHelperPreferences } from '@/lib/helperService';
 import { getMaterials, createMaterialsBulk } from '@/lib/materialService';
 import { shiftFestivalDate } from '@/lib/shiftDates';
 
@@ -49,15 +49,19 @@ export async function copyFestivalData(
 	// wenn Stationen und Schichten stehen — vorher gäbe es nichts, worauf sie
 	// zeigen könnten.
 	const sourceHelpers = options.copyHelpers ? await getHelpers(sourceFestivalId) : [];
-	for (const helper of sourceHelpers) {
-		helperIdMap[helper.id] = await createHelper(targetFestivalId, {
+	const newHelperIds = await createHelpersBulk(
+		targetFestivalId,
+		sourceHelpers.map(helper => ({
 			first_name: helper.first_name,
 			last_name: helper.last_name,
 			email: helper.email,
 			phone: helper.phone,
 			notes: helper.notes
-		});
-	}
+		}))
+	);
+	sourceHelpers.forEach((old, i) => {
+		helperIdMap[old.id] = newHelperIds[i];
+	});
 
 	// Step 2: Copy stations
 	if (options.stationIds.length > 0) {
@@ -108,10 +112,11 @@ export async function copyFestivalData(
 			});
 		}
 
-		// Wünsche auf die neuen Stationen/Schichten umschlüsseln. Erst hier, weil
-		// beide Maps stehen müssen; wessen Station oder Schicht in Schritt 2
-		// abgewählt wurde, fällt still raus statt als Karteileiche mitzukommen
-		// (ADR 0005: Wünsche haben keine Fremdschlüssel).
+		// Step 4: Remap the copied helpers' preferences. Erst hier, weil beide
+		// Maps stehen müssen; wessen Station oder Schicht in Schritt 2 abgewählt
+		// wurde, fällt still raus statt als Karteileiche mitzukommen (ADR 0005:
+		// Wünsche haben keine Fremdschlüssel). Ohne gewählte Station gibt es
+		// nichts umzuschlüsseln — darum steht der Block hier drinnen.
 		for (const helper of sourceHelpers) {
 			const stationPreferences = remapIds(helper.station_preferences, stationIdMap);
 			const shiftPreferences = remapIds(helper.shift_preferences, shiftIdMap);
@@ -126,7 +131,7 @@ export async function copyFestivalData(
 			);
 		}
 
-		// Step 4: Copy assignments if requested
+		// Step 5: Copy assignments if requested
 		if (copyAssignments) {
 			// Station helpers
 			const allStationHelpers = await getStationHelpers(sourceFestivalId);
@@ -157,7 +162,7 @@ export async function copyFestivalData(
 		}
 	}
 
-	// Step 5: Copy materials
+	// Step 6: Copy materials
 	if (options.materialIds.length > 0) {
 		const allMaterials = await getMaterials(sourceFestivalId);
 		const selectedMaterials = allMaterials.filter(m => options.materialIds.includes(m.id));

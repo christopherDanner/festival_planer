@@ -29,8 +29,10 @@ interface CopySwitchProps {
  */
 function CopySwitch({ id, label, hint, checked, disabled, onChange }: CopySwitchProps) {
 	return (
-		<div className={cn('flex flex-wrap items-center gap-x-5 gap-y-1', disabled && 'opacity-55')}>
-			<div className="flex items-center gap-2.5">
+		<div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+			{/* Gedimmt wird nur der Schalter selbst — der Hinweis daneben sagt
+			gerade dann, was fehlt, und muss darum voll lesbar bleiben. */}
+			<div className={cn('flex items-center gap-2.5', disabled && 'opacity-55')}>
 				<Checkbox
 					id={id}
 					variant="gruen"
@@ -106,7 +108,7 @@ export default function StationsShiftsStep({
 
 			{rows.length === 0 ? (
 				<p className="px-4 py-6 text-[12.5px] text-tinte-soft">
-					Die Vorlage hat keine Stationen — es gibt hier nichts zu wählen.
+					Die Vorlage hat keine Stationen — zu übernehmen bleiben ihre Helfer.
 				</p>
 			) : (
 				<>
@@ -186,33 +188,40 @@ export default function StationsShiftsStep({
 						})}
 					</ul>
 
-					{/* Zwei Schalter, der zweite hängt am ersten (ADR 0005): ohne
-					kopierte Helfer gibt es nichts, woran eine Zuteilung hängen könnte. */}
-					<div className="grid gap-2 border-b border-linie px-4 py-3">
-						<CopySwitch
-							id="helfer-uebernehmen"
-							label="Helfer übernehmen"
-							// Nicht nur die zugeteilten: wer denselben Stamm, aber einen
-							// frischen Plan will, tippt sonst jeden Namen neu (#100).
-							hint="Die ganze Helferliste der Vorlage — Wünsche wandern auf die neuen Stationen und Schichten mit."
-							checked={copyHelpers}
-							onChange={onCopyHelpersChange}
-						/>
-						<CopySwitch
-							id="zuteilungen-uebernehmen"
-							label="Zuteilungen übernehmen"
-							hint={
-								copyHelpers
-									? 'Stationen, Schichten und Verantwortliche.'
-									: 'Braucht die übernommenen Helfer.'
-							}
-							checked={copyAssignments}
-							disabled={!copyHelpers}
-							onChange={onCopyAssignmentsChange}
-						/>
-					</div>
 				</>
 			)}
+
+			{/* Zwei Schalter, der zweite hängt am ersten (ADR 0005): ohne kopierte
+			Helfer gibt es nichts, woran eine Zuteilung hängen könnte. Sie stehen
+			außerhalb der Stationsliste, weil die Fest-Kopie der einzige Weg ist,
+			letztjährige Helfer zu holen — eine Vorlage ohne Stationen darf daraus
+			keine Sackgasse machen. */}
+			<div className="grid gap-2 border-b border-linie px-4 py-3">
+				<CopySwitch
+					id="helfer-uebernehmen"
+					label="Helfer übernehmen"
+					// Nicht nur die zugeteilten: wer denselben Stamm, aber einen
+					// frischen Plan will, tippt sonst jeden Namen neu (#100).
+					hint="Die ganze Helferliste der Vorlage — Wünsche wandern auf die neuen Stationen und Schichten mit."
+					checked={copyHelpers}
+					onChange={onCopyHelpersChange}
+				/>
+				{/* Ohne Station gibt es keine Zuteilung, die man übernehmen könnte. */}
+				{rows.length > 0 && (
+					<CopySwitch
+						id="zuteilungen-uebernehmen"
+						label="Zuteilungen übernehmen"
+						hint={
+							copyHelpers
+								? 'Stationen, Schichten und Verantwortliche.'
+								: 'Braucht die übernommenen Helfer.'
+						}
+						checked={copyAssignments}
+						disabled={!copyHelpers}
+						onChange={onCopyAssignmentsChange}
+					/>
+				)}
+			</div>
 
 			<div className="flex flex-wrap justify-between gap-2.5 border-t-2.5 border-tinte px-4 py-3">
 				<Button variant="ghost" onClick={onBack} className="h-10 px-4 text-[12.5px]">

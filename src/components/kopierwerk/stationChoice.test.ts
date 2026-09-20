@@ -6,6 +6,7 @@ import {
 	stationPreviewRows,
 	toggleAllStations,
 	toggleStation,
+	withAssignmentCopy,
 	withHelperCopy
 } from './stationChoice';
 
@@ -150,5 +151,21 @@ describe('withHelperCopy', () => {
 			copyHelpers: false,
 			copyAssignments: false
 		});
+	});
+});
+
+describe('withAssignmentCopy', () => {
+	const stationIds = ['st-1'];
+
+	it('schaltet „Zuteilungen übernehmen" um', () => {
+		const mitHelfern = { stationIds, copyHelpers: true, copyAssignments: false };
+		expect(withAssignmentCopy(mitHelfern, true)).toEqual({ ...mitHelfern, copyAssignments: true });
+	});
+
+	// Dieselbe Regel wie oben, von der anderen Seite: die Oberfläche graut den
+	// Schalter aus, die Auswahl selbst lässt ihn gar nicht erst zu.
+	it('bleibt ohne übernommene Helfer leer', () => {
+		const ohneHelfer = { stationIds, copyHelpers: false, copyAssignments: false };
+		expect(withAssignmentCopy(ohneHelfer, true)).toEqual(ohneHelfer);
 	});
 });

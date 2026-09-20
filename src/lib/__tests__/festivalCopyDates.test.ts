@@ -57,7 +57,7 @@ vi.mock('../shiftService', () => ({
 	assignHelperToStationShift: async () => {}
 }));
 
-vi.mock('../helperService', () => ({ getHelpers: async () => [], createHelper: async () => 'h' }));
+vi.mock('../helperService', () => ({ getHelpers: async () => [], createHelpersBulk: async () => [] }));
 vi.mock('../materialService', () => ({ getMaterials: async () => [], createMaterialsBulk: async () => [] }));
 
 import { copyFestivalData } from '../festivalCopyService';

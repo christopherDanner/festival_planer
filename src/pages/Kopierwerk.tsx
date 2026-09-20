@@ -12,6 +12,7 @@ import {
 	stationPreviewRows,
 	toggleAllStations,
 	toggleStation,
+	withAssignmentCopy,
 	withHelperCopy,
 	type StationSelection
 } from '@/components/kopierwerk/stationChoice';
@@ -250,7 +251,7 @@ export default function Kopierwerk() {
 						setStationSelection((previous) => withHelperCopy(previous, value))
 					}
 					onCopyAssignmentsChange={(value) =>
-						setStationSelection((previous) => ({ ...previous, copyAssignments: value }))
+						setStationSelection((previous) => withAssignmentCopy(previous, value))
 					}
 					onBack={() => setStep('basics')}
 					onNext={() => setStep('materials')}

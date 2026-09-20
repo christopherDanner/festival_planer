@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 	shiftAssignments: [] as Array<{ festivalId: string; stationShiftId: string; helperId: string }>,
 	createdStations: [] as any[],
 	createdShifts: [] as any[],
+	bulkCalls: 0,
 	nextHelperId: 0
 }));
 
@@ -122,10 +123,16 @@ vi.mock('../helperService', () => ({
 					}
 				]
 			: [],
-	createHelper: async (festivalId: string, helper: { first_name: string; last_name: string }) => {
-		mocks.createdHelpers.push({ festivalId, ...helper });
-		mocks.nextHelperId += 1;
-		return `h-neu-${mocks.nextHelperId}`;
+	createHelpersBulk: async (
+		festivalId: string,
+		helpers: Array<{ first_name: string; last_name: string }>
+	) => {
+		mocks.bulkCalls += 1;
+		return helpers.map((helper) => {
+			mocks.createdHelpers.push({ festivalId, ...helper });
+			mocks.nextHelperId += 1;
+			return `h-neu-${mocks.nextHelperId}`;
+		});
 	},
 	updateHelperPreferences: async (
 		festivalId: string,
@@ -155,6 +162,11 @@ const options = (over: Partial<CopyFestivalOptions> = {}): CopyFestivalOptions =
 	...over
 });
 
+/** Erster Helfer der Quell-Liste (Hans Huber) in seiner neuen Zeile. */
+const HANS_IM_ZIELFEST = 'h-neu-1';
+/** Zweiter (Eva Ebner) — sie hängt an der Schicht der gewählten Station. */
+const EVA_IM_ZIELFEST = 'h-neu-2';
+
 beforeEach(() => {
 	mocks.createdHelpers = [];
 	mocks.preferenceUpdates = [];
@@ -162,6 +174,7 @@ beforeEach(() => {
 	mocks.shiftAssignments = [];
 	mocks.createdStations = [];
 	mocks.createdShifts = [];
+	mocks.bulkCalls = 0;
 	mocks.nextHelperId = 0;
 });
 
@@ -181,6 +194,14 @@ describe('„Helfer übernehmen"', () => {
 		expect(mocks.createdHelpers.every((h) => h.festivalId === 'ziel')).toBe(true);
 	});
 
+	// Geschlossen statt Zeile für Zeile: sonst wären es so viele Abfragen wie
+	// Helfer, während Stationen, Schichten und Material längst gebündelt gehen.
+	it('legt die Liste in einem Zug an', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ copyHelpers: true }));
+
+		expect(mocks.bulkCalls).toBe(1);
+	});
+
 	// „Präferenzen kommen mit" — über dieselben Maps, die Stationen und
 	// Schichten ohnehin aufbauen.
 	it('schlüsselt die Wünsche auf die neuen Stationen und Schichten um', async () => {
@@ -188,7 +209,7 @@ describe('„Helfer übernehmen"', () => {
 
 		expect(mocks.preferenceUpdates).toContainEqual({
 			festivalId: 'ziel',
-			helperId: 'h-neu-1',
+			helperId: HANS_IM_ZIELFEST,
 			stationPreferences: ['st-neu-0'],
 			shiftPreferences: ['sh-neu-0']
 		});
@@ -199,10 +220,9 @@ describe('„Helfer übernehmen"', () => {
 	it('lässt Wünsche auf abgewählte Stationen und Schichten still fallen', async () => {
 		await copyFestivalData('quelle', 'ziel', options({ copyHelpers: true }));
 
-		const ohneZuteilung = mocks.createdHelpers.findIndex((h) => h.last_name === 'Zuteilung');
-		expect(
-			mocks.preferenceUpdates.find((u) => u.helperId === `h-neu-${ohneZuteilung + 1}`)
-		).toBeUndefined();
+		// „Ohne Zuteilung" wünscht sich nur Abgewähltes — von seinen Wünschen
+		// bleibt nichts, also wird an seiner Zeile auch nichts geschrieben.
+		expect(mocks.preferenceUpdates.map((u) => u.helperId)).toEqual([HANS_IM_ZIELFEST]);
 	});
 });
 
@@ -213,17 +233,19 @@ describe('„Helfer übernehmen" + „Zuteilungen übernehmen"', () => {
 		await copyFestivalData('quelle', 'ziel', beides);
 
 		expect(mocks.stationAssignments).toEqual([
-			{ festivalId: 'ziel', stationId: 'st-neu-0', helperId: 'h-neu-1' }
+			{ festivalId: 'ziel', stationId: 'st-neu-0', helperId: HANS_IM_ZIELFEST }
 		]);
 		expect(mocks.shiftAssignments).toEqual([
-			{ festivalId: 'ziel', stationShiftId: 'sh-neu-0', helperId: 'h-neu-2' }
+			{ festivalId: 'ziel', stationShiftId: 'sh-neu-0', helperId: EVA_IM_ZIELFEST }
 		]);
 	});
 
 	it('setzt den Verantwortlichen der neuen Station auf den neuen Helfer', async () => {
 		await copyFestivalData('quelle', 'ziel', beides);
 
-		expect(mocks.createdStations[0]).toMatchObject({ responsible_helper_id: 'h-neu-1' });
+		expect(mocks.createdStations[0]).toMatchObject({
+			responsible_helper_id: HANS_IM_ZIELFEST
+		});
 	});
 
 	// Eine Kopie, keine Verschiebung: am Quellfest wird nichts angefasst.
