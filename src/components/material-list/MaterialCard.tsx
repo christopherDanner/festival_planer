@@ -9,11 +9,19 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@/components/ui/select';
 import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
 import { MissingValue } from '@/components/toolkit/PaperTable';
+import { KEINE } from '@/lib/materialDialogForm';
 import { formatAmount } from '@/lib/money';
 import { grossPrice, netPrice, rowTotal } from '@/lib/materialCosts';
-import { deltaCell, taxCell } from '@/lib/materialRow';
+import { deltaCell, taxCell, TAX_RATES } from '@/lib/materialRow';
 import {
 	formatPackaging,
 	formatQuantity,
@@ -23,7 +31,7 @@ import {
 import { rowDraftPreview, type RowDraft, type RowField } from '@/lib/materialRowEdit';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
-import { DELTA_TONE, PriceGap } from './MaterialMarks';
+import { DELTA_TONE, PackagingHint, PriceGap } from './MaterialMarks';
 
 export interface MaterialCardProps {
 	material: FestivalMaterialWithStation;
@@ -42,9 +50,6 @@ export interface MaterialCardProps {
 	onCopy: () => void;
 	onDelete: () => void;
 }
-
-/** Die Steuersätze des Zeilenmodus — dieselbe Liste wie im Stammdaten-Dialog. */
-const TAX_RATES = ['10', '13', '20'];
 
 /**
  * Eine Material-Position am Handy (#116): **Karte statt querscrollender
@@ -171,22 +176,11 @@ const MaterialCard: React.FC<MaterialCardProps> = ({
 			<div className="grid grid-cols-3 gap-px border-t border-linie bg-linie">
 				<Tile label="MwSt" className={tile}>
 					{draft ? (
-						<select
-							aria-label={`MwSt für ${m.name}`}
+						<TaxField
+							name={m.name}
 							value={draft.taxRate}
-							onChange={(e) => onDraftChange('taxRate', e.target.value)}
-							onKeyDown={keys}
-							className={cn(
-								'min-h-10 w-full border-2 border-tinte bg-white px-1 text-[13px] font-bold text-tinte',
-								FOCUS_INK
-							)}>
-							<option value="">keine</option>
-							{TAX_RATES.map((rate) => (
-								<option key={rate} value={rate}>
-									{rate} %
-								</option>
-							))}
-						</select>
+							onChange={(value) => onDraftChange('taxRate', value)}
+						/>
 					) : (
 						<TaxValue material={m} />
 					)}
@@ -254,10 +248,6 @@ const Quantity: React.FC<{ stored: number | null; material: FestivalMaterialWith
 	return <span>{formatQuantity(toBaseQuantity(stored, material) ?? 0)}</span>;
 };
 
-/** „→ 4 × Fass" unter der Menge — beim Bestellen braucht man die Gebindezahl. */
-const PackagingHint: React.FC<{ hint: string | null }> = ({ hint }) =>
-	hint ? <span className="mt-0.5 block text-[10px] leading-tight text-tinte-soft">→ {hint}</span> : null;
-
 const TaxValue: React.FC<{ material: FestivalMaterialWithStation }> = ({ material }) => {
 	const tax = taxCell(material);
 	return <span className={tax.muted ? 'text-tinte-soft' : undefined}>{tax.text}</span>;
@@ -292,8 +282,16 @@ const PriceTile: React.FC<{
 	</Tile>
 );
 
-/** Ein Zahlenfeld des Zeilenmodus: rechtsbündig mit tabellarischen Ziffern
-(#115), Antippziel ≥ 40 px (DESIGN-VISION §6). */
+/**
+ * Ein Zahlenfeld des Zeilenmodus: rechtsbündig mit tabellarischen Ziffern
+ * (#115), Antippziel ≥ 40 px (DESIGN-VISION §6).
+ *
+ * Bewusst `type="text"` mit `inputMode="decimal"`: ein Zahlenfeld gibt für
+ * „2," und „12." den leeren Text zurück, und die gekoppelte Preisseite fiele
+ * beim Tippen jedes Kommas kurz auf leer. Der Entwurf ist Text, gerade damit
+ * ein halb getippter Wert stehen bleibt (`materialRowEdit`); die Tastatur des
+ * Handys bleibt trotzdem die Zehnertastatur.
+ */
 const NumberField: React.FC<{
 	label: string;
 	value: string;
@@ -301,9 +299,8 @@ const NumberField: React.FC<{
 	onKeyDown: (e: React.KeyboardEvent) => void;
 }> = ({ label, value, onChange, onKeyDown }) => (
 	<Input
-		type="number"
+		type="text"
 		inputMode="decimal"
-		step="any"
 		aria-label={label}
 		value={value}
 		onChange={(e) => onChange(e.target.value)}
@@ -315,6 +312,42 @@ const NumberField: React.FC<{
 		)}
 	/>
 );
+
+/**
+ * Das MwSt-Feld der Karte. Die Sätze kommen aus `materialRow`, damit ein neuer
+ * Satz nicht an zwei Stellen nachgetragen werden muss; ein gespeicherter Satz
+ * außerhalb der Liste steht trotzdem in der Auswahl, sonst zeigte das Feld für
+ * ihn nichts an.
+ *
+ * `KEINE` ist der Sentinel des Stammdaten-Dialogs: Radix kennt keinen leeren
+ * Wert, und zwei Sentinel für dieselbe Leere wären einer zu viel.
+ */
+const TaxField: React.FC<{
+	name: string;
+	value: string;
+	onChange: (value: string) => void;
+}> = ({ name, value, onChange }) => {
+	const rates = TAX_RATES.map(({ rate }) => String(rate));
+	const offered = value && !rates.includes(value) ? [...rates, value] : rates;
+
+	return (
+		<Select value={value || KEINE} onValueChange={(next) => onChange(next === KEINE ? '' : next)}>
+			<SelectTrigger
+				aria-label={`MwSt für ${name}`}
+				className={cn('h-10 border-2 border-tinte bg-white px-2 text-[13px] font-bold', FOCUS_INK)}>
+				<SelectValue placeholder="keine" />
+			</SelectTrigger>
+			<SelectContent>
+				<SelectItem value={KEINE}>keine</SelectItem>
+				{offered.map((rate) => (
+					<SelectItem key={rate} value={rate}>
+						{rate} %
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
+	);
+};
 
 const IconButton: React.FC<{
 	label: string;

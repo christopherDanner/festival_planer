@@ -72,10 +72,6 @@ const MaterialCardList: React.FC<MaterialCardListProps> = ({
 				</span>
 			</div>
 
-			{/* Die Fußleiste klebt — ohne diesen Platzhalter verdeckte sie die
-			letzte Karte. */}
-			{cards.summary.open >= 2 && <div className="h-14" aria-hidden />}
-
 			<MaterialCardFooterBar
 				open={cards.summary.open}
 				dirty={cards.summary.dirty}

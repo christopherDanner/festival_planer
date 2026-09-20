@@ -28,18 +28,24 @@ const MaterialCardFooterBar: React.FC<MaterialCardFooterBarProps> = ({
 	if (open < 2) return null;
 
 	return (
-		<div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 flex flex-wrap items-center gap-2 border-y-2 border-tinte bg-gelb px-3 py-2">
-			<span className="text-[12px] font-bold">
-				<b className="font-display text-[15px] font-semibold tabular-nums">{open}</b> Karten offen,
-				davon <span className="tabular-nums">{dirty}</span> geändert
-			</span>
-			<div className="ml-auto flex gap-2">
-				<FooterButton onClick={onDiscardAll}>Alle verwerfen</FooterButton>
-				<FooterButton onClick={onSaveAll} primary>
-					Alle {open} speichern
-				</FooterButton>
+		<>
+			{/* Die Leiste klebt und liegt damit außerhalb des Flusses — ohne diesen
+			Platzhalter verdeckte sie die letzte Karte. Er steht hier, damit die
+			Schwelle „ab zwei Karten" nur an einer Stelle steht. */}
+			<div className="h-14" aria-hidden />
+			<div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 flex flex-wrap items-center gap-2 border-y-2 border-tinte bg-gelb px-3 py-2">
+				<span className="text-[12px] font-bold">
+					<b className="font-display text-[15px] font-semibold tabular-nums">{open}</b> Karten
+					offen, davon <span className="tabular-nums">{dirty}</span> geändert
+				</span>
+				<div className="ml-auto flex gap-2">
+					<FooterButton onClick={onDiscardAll}>Alle verwerfen</FooterButton>
+					<FooterButton onClick={onSaveAll} primary>
+						Alle {open} speichern
+					</FooterButton>
+				</div>
 			</div>
-		</div>
+		</>
 	);
 };
 

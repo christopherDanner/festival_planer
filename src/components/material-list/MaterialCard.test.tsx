@@ -142,7 +142,7 @@ describe('MaterialCard — die Kacheln, lesend (#116)', () => {
 		const html = render(material({ ordered_quantity: 10, unit_price: 2 }));
 
 		expect(html).not.toContain('<input');
-		expect(html).not.toContain('<select');
+		expect(html).not.toContain('MwSt für Bier');
 	});
 });
 
@@ -187,7 +187,13 @@ describe('MaterialCard — der Zeilenmodus auf der Karte (#116)', () => {
 		expect(html).toContain('Netto € für Bier');
 		expect(html).toContain('Brutto € für Bier');
 		expect(html.match(/<input/g)).toHaveLength(4);
-		expect(html.match(/<select/g)).toHaveLength(1);
+	});
+
+	it('nimmt das Dezimalkomma an — ein Zahlenfeld schluckte „2," beim Tippen', () => {
+		const html = render(row, { draft });
+
+		expect(html).not.toContain('type="number"');
+		expect(html.match(/inputMode="decimal"/g)).toHaveLength(4);
 	});
 
 	it('stellt ✓ und ✕ in die Kartenkopfzeile, statt ✎ und ⋮ stehen zu lassen', () => {

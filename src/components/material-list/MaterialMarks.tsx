@@ -1,8 +1,15 @@
 import { type DeltaTone } from '@/lib/materialRow';
 
-/** Die zwei Auszeichnungen, die die Positionstabelle (#114) und die Handy-Karte
+/** Die Auszeichnungen, die die Positionstabelle (#114) und die Handy-Karte
 (#116) teilen. Sie stehen hier und nicht zweimal nebeneinander — dieselbe Lücke
 darf an beiden Orten nicht verschieden aussehen (ADR 0003 §2). */
+
+/** „→ 4 × Fass" unter einer Menge — beim Bestellen braucht man die Gebindezahl,
+nicht die Stückzahl. Ohne Gebinde steht dort nichts. */
+export const PackagingHint = ({ hint }: { hint: string | null }) =>
+	hint ? (
+		<span className="mt-0.5 block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
+	) : null;
 
 /** Preislücke: rot gestrichelt statt still leer — die Position zählt in keine
 Summe und das muss man an ihr sehen (#114).

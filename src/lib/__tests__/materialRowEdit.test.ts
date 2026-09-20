@@ -227,6 +227,20 @@ describe('materialRowEdit — geändert oder nicht (#116)', () => {
 	it('nennt den Wechsel der Preisquelle eine Änderung — er kippt price_is_net', () => {
 		expect(isRowDraftDirty(editRowDraft(startRowDraft(r), 'gross', '12'), r)).toBe(true);
 	});
+
+	it('lässt einen Preis unter Cent-Genauigkeit die Karte nicht sofort „geändert" nennen', () => {
+		// Das Feld zeigt 0,105 € als „0.11"; verglichen wird gegen die frisch
+		// geöffnete Karte, nicht gegen die gespeicherte Zahl.
+		const genau = row({ ordered_quantity: 1, unit_price: 0.105, tax_rate: null });
+
+		expect(isRowDraftDirty(startRowDraft(genau), genau)).toBe(false);
+	});
+
+	it('lässt eine Menge mit langem Nachkomma-Rest die Karte nicht „geändert" nennen', () => {
+		const krumm = row({ ...fass, ordered_quantity: 1 / 3 });
+
+		expect(isRowDraftDirty(startRowDraft(krumm), krumm)).toBe(false);
+	});
 });
 
 describe('materialRowEdit — die Sammel-Fußleiste zählt (#116)', () => {

@@ -5,19 +5,17 @@ import {
 	editRowDraft,
 	rowDraftUpdates,
 	startRowDraft,
+	type OpenRowDraft,
 	type RowDraft,
 	type RowDraftUpdates,
 	type RowField
 } from '@/lib/materialRowEdit';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
-/** Eine offene Karte: ihr Entwurf und die Position, aus der er stammt. Die
-Position reist mit, damit „geändert" auch dann noch beantwortbar ist, wenn die
-Karte aus der sichtbaren Liste gefiltert wurde. */
-interface OpenCard {
-	draft: RowDraft;
-	row: FestivalMaterialWithStation;
-}
+/** Eine offene Karte. Die Position reist im Entwurf mit, damit „geändert" auch
+dann noch beantwortbar ist, wenn die Karte aus der sichtbaren Liste gefiltert
+wurde. */
+type OpenCard = OpenRowDraft<FestivalMaterialWithStation>;
 
 export interface MaterialCardDrafts {
 	/** Entwurf je Positions-Id; fehlt einer, liest die Karte nur. */

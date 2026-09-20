@@ -208,7 +208,9 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 					visibleMaterials={visible}
 					categories={groupChips}
 					activeCategory={activeCategory}
-					onCategoryChange={setRequestedCategory}
+					// Der Chip nimmt Karten aus der Sicht wie ein Gruppenwechsel —
+					// darum durch dieselbe Rückfrage (#115).
+					onCategoryChange={(category) => cards.attempt(() => setRequestedCategory(category))}
 					onAddPosition={() => openNewPosition(prefillFromGroup(activeGroup, axis))}
 				>
 					{isMobile ? (

@@ -24,7 +24,7 @@ import {
 	PAPER_TABLE_HEAD_CELL
 } from '@/components/toolkit/PaperTable';
 
-import { DELTA_TONE, PriceGap } from './MaterialMarks';
+import { DELTA_TONE, PackagingHint, PriceGap } from './MaterialMarks';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -125,14 +125,11 @@ const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterial
 	material
 }) => {
 	if (stored == null) return <MissingValue />;
-	const hint = formatRequiredPackaging(stored, material);
 	return (
 		<>
 			<span className="font-medium">{formatQuantity(toBaseQuantity(stored, material) ?? 0)}</span>{' '}
 			<span className="text-[10.5px] text-tinte-soft">{material.unit}</span>
-			{hint && (
-				<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
-			)}
+			<PackagingHint hint={formatRequiredPackaging(stored, material)} />
 		</>
 	);
 };

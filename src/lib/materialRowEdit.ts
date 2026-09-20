@@ -46,6 +46,13 @@ export interface RowDraftUpdates {
 	price_is_net: boolean;
 }
 
+/** Eine offene Zeile: ihr Entwurf und die Position, aus der er stammt. Die
+beiden reisen überall zusammen — einzeln ist keiner von beiden zu gebrauchen. */
+export interface OpenRowDraft<T extends EditableRow = EditableRow> {
+	draft: RowDraft;
+	row: T;
+}
+
 /** Was die Karte neben den Feldern zeigt, während getippt wird. */
 export interface RowDraftPreview {
 	delta: { text: string; tone: DeltaTone };
@@ -137,25 +144,31 @@ export function rowDraftUpdates(draft: RowDraft, row: EditableRow): RowDraftUpda
 	};
 }
 
-/** Ob die Karte etwas zu speichern hat. Verglichen wird, was ankäme — nicht der
-Text: „10" und „10.00" sind derselbe Preis, und eine unberührte Karte darf die
-Sammel-Fußleiste nicht auf „geändert" stellen. */
+/**
+ * Ob die Karte etwas zu speichern hat. Verglichen wird, was ankäme — nicht der
+ * Text: „10" und „10.00" sind derselbe Preis, und eine unberührte Karte darf die
+ * Sammel-Fußleiste nicht auf „geändert" stellen.
+ *
+ * Verglichen wird gegen die **frisch geöffnete** Karte, nicht gegen die
+ * gespeicherten Zahlen. Die Felder zeigen Beträge auf Cent und Mengen auf drei
+ * Stellen; ein Preis von 0,105 € stünde dort als 0,11 und machte damit jede
+ * unberührte Karte sofort „geändert".
+ */
 export function isRowDraftDirty(draft: RowDraft, row: EditableRow): boolean {
 	const next = rowDraftUpdates(draft, row);
+	const fresh = rowDraftUpdates(startRowDraft(row), row);
 	return (
-		!sameNumber(next.ordered_quantity, row.ordered_quantity) ||
-		!sameNumber(next.actual_quantity, row.actual_quantity) ||
-		!sameNumber(next.tax_rate, row.tax_rate) ||
-		!sameNumber(next.unit_price, row.unit_price) ||
-		next.price_is_net !== row.price_is_net
+		!sameNumber(next.ordered_quantity, fresh.ordered_quantity) ||
+		!sameNumber(next.actual_quantity, fresh.actual_quantity) ||
+		!sameNumber(next.tax_rate, fresh.tax_rate) ||
+		!sameNumber(next.unit_price, fresh.unit_price) ||
+		next.price_is_net !== fresh.price_is_net
 	);
 }
 
 /** Die Zahlen der Sammel-Fußleiste: „n Karten offen, davon m geändert" (#116).
 Den Wortlaut trägt die Leiste selbst — hier stehen nur die Zahlen. */
-export function draftsSummary(
-	open: { draft: RowDraft; row: EditableRow }[]
-): { open: number; dirty: number } {
+export function draftsSummary(open: OpenRowDraft[]): { open: number; dirty: number } {
 	return {
 		open: open.length,
 		dirty: open.filter(({ draft, row }) => isRowDraftDirty(draft, row)).length
