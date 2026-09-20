@@ -143,8 +143,13 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 			<MaterialListHeader
 				mode="arbeitsliste"
 				onModeChange={(mode) => {
-					// Der Umschalter navigiert, er blendet nicht um (Entscheid aus #66).
-					if (mode === 'uebernahme') navigate(`/festivals/${festivalId}/material-uebernahme`);
+					// Der Umschalter navigiert, er blendet nicht um (Entscheid aus #66) —
+					// und nimmt dabei offene Zeilen mit, fragt also wie jeder Sichtwechsel.
+					if (mode === 'uebernahme') {
+						editor.requestViewChange('mode', () =>
+							navigate(`/festivals/${festivalId}/material-uebernahme`)
+						);
+					}
 				}}
 				searchTerm={searchTerm}
 				onSearchChange={guarded('search', setSearchTerm)}

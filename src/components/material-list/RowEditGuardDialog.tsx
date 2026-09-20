@@ -26,6 +26,7 @@ const CHANGE_WORDS: Record<ViewChange, string> = {
 	group: 'Den Reiter zu wechseln',
 	category: 'Die Kategorie zu filtern',
 	search: 'Die Suche zu ändern',
+	mode: 'In die Übernahme zu wechseln',
 	rows: 'Die Zeilen zuzuklappen'
 };
 

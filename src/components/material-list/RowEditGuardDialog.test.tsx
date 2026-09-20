@@ -42,17 +42,17 @@ describe('RowEditGuardDialog — warnen statt still verwerfen (#115)', () => {
 		expect(text).toContain('1 geänderte Zeile');
 	});
 
-	it('nennt den Reiter, die Kategorie und die Suche beim Namen', async () => {
-		await mount({ change: 'group' });
-		expect(document.body.textContent).toContain('Reiter');
-		document.body.innerHTML = '';
-
-		await mount({ change: 'category' });
-		expect(document.body.textContent).toContain('Kategorie');
-		document.body.innerHTML = '';
-
-		await mount({ change: 'search' });
-		expect(document.body.textContent).toContain('Suche');
+	/** Jeder Griff, der offene Zeilen aus dem Bild nähme, hat sein eigenes Wort —
+	„Ungespeicherte Zeilen" allein sagt nicht, was man gerade angefasst hat. */
+	it.each([
+		['group', 'Reiter'],
+		['category', 'Kategorie'],
+		['search', 'Suche'],
+		['mode', 'Übernahme'],
+		['rows', 'zuzuklappen']
+	] as const)('nennt %s beim Namen', async (change, wort) => {
+		await mount({ change });
+		expect(document.body.textContent).toContain(wort);
 	});
 
 	it('bietet Speichern, Verwerfen und Zurück an', async () => {

@@ -20,10 +20,11 @@ export type EditableRow = RowDraftMaterial & { id: string };
 
 /**
  * Ein Griff, der offene Änderungen aus dem Bild nähme: Achse, Reiter,
- * Kategorie-Chip, Suche — oder der Schalter, der alle Zeilen wieder zumacht.
- * Mit ungespeicherten Zeilen wird gewarnt, nicht still verworfen (#115).
+ * Kategorie-Chip, Suche, der Sprung in die Übernahme — oder der Schalter, der
+ * alle Zeilen wieder zumacht. Mit ungespeicherten Zeilen wird gewarnt, nicht
+ * still verworfen (#115).
  */
-export type ViewChange = 'axis' | 'group' | 'category' | 'search' | 'rows';
+export type ViewChange = 'axis' | 'group' | 'category' | 'search' | 'mode' | 'rows';
 
 /** Wie die Rückfrage ausgeht. */
 export type GuardAnswer = 'save' | 'discard' | 'back';
