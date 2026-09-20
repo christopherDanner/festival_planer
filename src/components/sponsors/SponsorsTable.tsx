@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { sponsorHistoryOf, type SponsorHistory, type SponsorHistoryMap } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
+import { MissingValue } from '@/components/toolkit/PaperTable';
 import MastPanel from './MastPanel';
 
 export interface SponsorsTableProps {
@@ -13,9 +14,6 @@ export interface SponsorsTableProps {
 	/** Zeilenklick — Übergangsweg ins Firmendaten-Formular, bis #159 das ⋮ bringt. */
 	onSelect: (sponsor: Sponsor) => void;
 }
-
-/** Fehlender Wert: graues „–" statt einer leeren Zelle. */
-const MissingValue = () => <span className="text-tinte-soft/60">–</span>;
 
 const CellValue = ({ children }: { children: string | null }) =>
 	children ? <>{children}</> : <MissingValue />;

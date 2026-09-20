@@ -4,6 +4,8 @@ import {
 	buildSponsoringOverviewRows,
 	festivalInKindTotal,
 	festivalSponsoringTotal,
+	filterSponsoringOverviewRows,
+	sponsoringFooterLabel,
 	sponsoringInKindValue,
 	sponsoringTotal
 } from '../sponsoringTotals';
@@ -241,5 +243,54 @@ describe('buildSponsoringOverviewFooter', () => {
 		expect(footer.perCategoryId).toEqual({ [ungenutzt.id]: 0 });
 		expect(footer.total).toBe(0);
 		expect(footer.inKindValue).toBe(0);
+	});
+});
+
+describe('filterSponsoringOverviewRows', () => {
+	const rows = () =>
+		buildSponsoringOverviewRows([
+			makeSponsoring({ companyName: 'Brauerei Wieselburger', freeAmount: 850 }),
+			makeSponsoring({ companyName: 'Bäckerei Leitner', freeAmount: 100 }),
+			makeSponsoring({ companyName: 'Raiffeisenbank Scheibbs', freeAmount: 450 })
+		]);
+
+	it('gibt ohne Suchbegriff alle Zeilen zurück', () => {
+		expect(filterSponsoringOverviewRows(rows(), '')).toHaveLength(3);
+	});
+
+	it('behandelt einen Suchbegriff aus reinen Leerzeichen wie keinen', () => {
+		expect(filterSponsoringOverviewRows(rows(), '   ')).toHaveLength(3);
+	});
+
+	it('trifft den Firmennamen als Teiltreffer, ohne Rücksicht auf Groß/Klein und Randleerzeichen', () => {
+		// dieselbe Matching-Regel wie filterSponsors und die Material-Übernahme (#151)
+		const treffer = filterSponsoringOverviewRows(rows(), '  bÄCKerei ');
+		expect(treffer.map((r) => r.companyName)).toEqual(['Bäckerei Leitner']);
+	});
+
+	it('lässt bei keinem Treffer nichts übrig', () => {
+		expect(filterSponsoringOverviewRows(rows(), 'gibtsnicht')).toEqual([]);
+	});
+
+	it('rührt die Zeilen selbst nicht an — der Fuß rechnet über dieselben Werte', () => {
+		const alle = rows();
+		const treffer = filterSponsoringOverviewRows(alle, 'raiffeisen');
+		expect(treffer[0]).toBe(alle.find((r) => r.companyName === 'Raiffeisenbank Scheibbs'));
+	});
+});
+
+describe('sponsoringFooterLabel', () => {
+	it('lässt die Beschriftung nackt, solange alle Firmen sichtbar sind', () => {
+		expect(sponsoringFooterLabel('Σ je Kategorie', 14, 14)).toBe('Σ je Kategorie');
+	});
+
+	it('nennt den gefilterten Zustand mit Zahl — sonst ist die Summe eine stille Lüge', () => {
+		expect(sponsoringFooterLabel('Σ je Kategorie', 3, 14)).toBe(
+			'Σ je Kategorie · 3 von 14 Firmen'
+		);
+	});
+
+	it('beschriftet auch den Fuß der Karten-Liste nach derselben Regel', () => {
+		expect(sponsoringFooterLabel('Gesamtsumme', 1, 14)).toBe('Gesamtsumme · 1 von 14 Firmen');
 	});
 });

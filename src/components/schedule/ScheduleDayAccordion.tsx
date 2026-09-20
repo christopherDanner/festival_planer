@@ -4,7 +4,7 @@ import SchedulePhaseSection from './SchedulePhaseSection';
 import type {
 	ScheduleDayWithPhases,
 	SchedulePhaseWithEntries,
-	ScheduleEntryWithMember,
+	ScheduleEntryWithHelper,
 } from '@/lib/scheduleService';
 
 interface ScheduleDayAccordionProps {
@@ -14,9 +14,9 @@ interface ScheduleDayAccordionProps {
 	onEditPhase: (phase: SchedulePhaseWithEntries) => void;
 	onDeletePhase: (id: string) => void;
 	onAddPhase: (dayId: string) => void;
-	onEditEntry: (entry: ScheduleEntryWithMember) => void;
+	onEditEntry: (entry: ScheduleEntryWithHelper) => void;
 	onDeleteEntry: (id: string) => void;
-	onToggleEntryStatus: (entry: ScheduleEntryWithMember) => void;
+	onToggleEntryStatus: (entry: ScheduleEntryWithHelper) => void;
 	onAddEntry: (phaseId: string) => void;
 	onReorderPhases: (dayId: string, orderedIds: string[]) => void;
 	onReorderEntries: (phaseId: string, orderedIds: string[]) => void;

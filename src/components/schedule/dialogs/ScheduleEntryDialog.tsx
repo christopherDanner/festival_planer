@@ -15,14 +15,14 @@ interface ScheduleEntryDialogProps {
 		type: 'task' | 'program';
 		start_time: string | null;
 		end_time: string | null;
-		responsible_member_id: string | null;
+		responsible_helper_id: string | null;
 		status: 'open' | 'done' | null;
 		description: string | null;
 		sort_order?: number;
 	} | null;
 	schedulePhaseId: string;
 	festivalId: string;
-	members: Array<{ id: string; first_name: string; last_name: string }>;
+	helpers: Array<{ id: string; first_name: string; last_name: string }>;
 	sortOrder: number;
 	onSave: (data: {
 		schedule_phase_id: string;
@@ -31,7 +31,7 @@ interface ScheduleEntryDialogProps {
 		type: 'task' | 'program';
 		start_time: string | null;
 		end_time: string | null;
-		responsible_member_id: string | null;
+		responsible_helper_id: string | null;
 		status: 'open' | 'done' | null;
 		description: string | null;
 		sort_order: number;
@@ -44,7 +44,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 	entry,
 	schedulePhaseId,
 	festivalId,
-	members,
+	helpers,
 	sortOrder,
 	onSave
 }) => {
@@ -53,7 +53,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 		type: 'task' as string,
 		start_time: '',
 		end_time: '',
-		responsible_member_id: '' as string,
+		responsible_helper_id: '' as string,
 		description: ''
 	});
 
@@ -64,7 +64,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 				type: entry.type,
 				start_time: entry.start_time || '',
 				end_time: entry.end_time || '',
-				responsible_member_id: entry.responsible_member_id || '',
+				responsible_helper_id: entry.responsible_helper_id || '',
 				description: entry.description || ''
 			});
 		} else {
@@ -73,7 +73,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 				type: 'task',
 				start_time: '',
 				end_time: '',
-				responsible_member_id: '',
+				responsible_helper_id: '',
 				description: ''
 			});
 		}
@@ -91,7 +91,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 			type,
 			start_time: form.start_time || null,
 			end_time: form.end_time || null,
-			responsible_member_id: form.responsible_member_id && form.responsible_member_id !== '__none__' ? form.responsible_member_id : null,
+			responsible_helper_id: form.responsible_helper_id && form.responsible_helper_id !== '__none__' ? form.responsible_helper_id : null,
 			status: type === 'task' ? (entry?.status || 'open') : null,
 			description: form.description || null,
 			sort_order: entry ? entry.sort_order ?? sortOrder : sortOrder
@@ -153,18 +153,18 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 					<div>
 						<Label htmlFor="entry-responsible">Verantwortlich</Label>
 						<Select
-							value={form.responsible_member_id || '__none__'}
+							value={form.responsible_helper_id || '__none__'}
 							onValueChange={(value) =>
-								setForm((prev) => ({ ...prev, responsible_member_id: value === '__none__' ? '' : value }))
+								setForm((prev) => ({ ...prev, responsible_helper_id: value === '__none__' ? '' : value }))
 							}>
 							<SelectTrigger id="entry-responsible">
 								<SelectValue placeholder="Kein Verantwortlicher" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
-								{members.map((member) => (
-									<SelectItem key={member.id} value={member.id}>
-										{member.last_name} {member.first_name}
+								{helpers.map((helper) => (
+									<SelectItem key={helper.id} value={helper.id}>
+										{helper.last_name} {helper.first_name}
 									</SelectItem>
 								))}
 							</SelectContent>

@@ -4,24 +4,25 @@ import { cn } from '@/lib/utils';
 import { Ruler } from '@/components/toolkit/Ruler';
 import type { AmpelStatus } from '@/components/toolkit/status';
 import type { FestivalTab } from '@/components/festival/FestivalTabBar';
-import type { Station, StationShift, ShiftAssignment, StationMember } from '@/lib/shiftService';
+import type { Station, StationShift, ShiftAssignment, StationHelper } from '@/lib/shiftService';
 import type { FestivalMaterial } from '@/lib/materialService';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import {
-	deriveShiftsMetric,
 	deriveMaterialOrdered,
 	deriveMaterialConsumed,
 	deriveSponsoringMetric,
 	formatDeltaEuro,
 	type DeltaTone
 } from './numberBoxes';
+// Dieselbe Zählregel wie die Fokus-Werkbank des Schichtplans (#102).
+import { deriveShiftsMetric } from '@/lib/staffing';
 import { formatEuro } from '@/lib/money';
 
 interface NumbersColumnProps {
 	stations: Station[];
 	shifts: StationShift[];
 	assignments: ShiftAssignment[];
-	stationMembers: StationMember[];
+	stationHelpers: StationHelper[];
 	materials: FestivalMaterial[];
 	sponsorings: SponsoringWithDetails[];
 	/** Absprung in einen Fest-Tab (Pfeil je Kasten). */
@@ -98,12 +99,12 @@ const NumbersColumn: React.FC<NumbersColumnProps> = ({
 	stations,
 	shifts,
 	assignments,
-	stationMembers,
+	stationHelpers,
 	materials,
 	sponsorings,
 	onTabChange
 }) => {
-	const schichten = deriveShiftsMetric(stations, shifts, assignments, stationMembers);
+	const schichten = deriveShiftsMetric(stations, shifts, assignments, stationHelpers);
 	const bestellt = deriveMaterialOrdered(materials);
 	const verbraucht = deriveMaterialConsumed(materials);
 	const sponsoring = deriveSponsoringMetric(sponsorings);

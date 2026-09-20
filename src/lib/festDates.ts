@@ -5,6 +5,8 @@ const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 const MONTH_FORMAT = new Intl.DateTimeFormat('de-AT', { month: 'long' });
 
+const WEEKDAY_LONG_FORMAT = new Intl.DateTimeFormat('de-AT', { weekday: 'long' });
+
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -46,6 +48,16 @@ export function formatFestDateRange(startDate: string, endDate?: string | null):
 	const sameMonth =
 		start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
 	return `${formatDay(start, !sameMonth)} – ${formatDay(end, true)}`;
+}
+
+/**
+ * „Samstag 25. Juli" — der ausgeschriebene Tages-Zwischentitel. Steht über den
+ * Schichten eines Tages auf der Fokus-Werkbank (#102) und, in derselben
+ * Sprache, über den Ablauf-Einträgen des Programmzettels.
+ */
+export function formatFestDayLong(date: string | Date): string {
+	const d = festDayStart(date);
+	return `${WEEKDAY_LONG_FORMAT.format(d)} ${d.getDate()}. ${MONTH_FORMAT.format(d)}`;
 }
 
 /**
