@@ -1,26 +1,21 @@
-import React, { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import React from 'react';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Pencil, Trash2, Package, Copy } from 'lucide-react';
+import { MoreVertical, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import {
 	toBaseQuantity,
-	fromBaseQuantity,
 	formatPackaging,
 	formatQuantity,
 	formatRequiredPackaging
 } from '@/lib/materialQuantity';
 import { grossPrice, netPrice, rowTotal, sumTotals } from '@/lib/materialCosts';
-import { deltaCell, taxCell, type DeltaTone } from '@/lib/materialRow';
+import { deltaCell, taxCell } from '@/lib/materialRow';
 import { formatAmount } from '@/lib/money';
 import {
 	MissingValue,
@@ -29,90 +24,7 @@ import {
 	PAPER_TABLE_HEAD_CELL
 } from '@/components/toolkit/PaperTable';
 
-/* ------------------------------------------------------------------ */
-/*  Generic inline-editable cell (text / number)                      */
-/* ------------------------------------------------------------------ */
-
-/** Nur noch für die Handy-Karte; die Tabelle liest seit #114 bloß, getippt wird
-im Zeilenmodus (#115). Die Karte kommt mit #116 an die Reihe. */
-const InlineEditCell: React.FC<{
-	value: string;
-	onSave: (value: string) => void;
-	type?: 'text' | 'number';
-	placeholder?: string;
-	className?: string;
-	inputClassName?: string;
-}> = ({ value, onSave, type = 'text', placeholder, className, inputClassName }) => {
-	const [editing, setEditing] = useState(false);
-	const [inputValue, setInputValue] = useState('');
-	const inputRef = useRef<HTMLInputElement>(null);
-
-	const startEdit = () => {
-		setInputValue(value);
-		setEditing(true);
-		setTimeout(() => inputRef.current?.focus(), 0);
-	};
-
-	const commit = () => {
-		setEditing(false);
-		if (inputValue !== value) onSave(inputValue);
-	};
-
-	if (editing) {
-		return (
-			<Input
-				ref={inputRef}
-				type={type}
-				step={type === 'number' ? 'any' : undefined}
-				value={inputValue}
-				onChange={(e) => setInputValue(e.target.value)}
-				onBlur={commit}
-				onKeyDown={(e) => {
-					if (e.key === 'Enter') commit();
-					if (e.key === 'Escape') setEditing(false);
-					if (e.key === 'Tab') { commit(); } // Don't prevent default — let browser move focus
-				}}
-				className={inputClassName || 'h-7 w-full text-sm px-1'}
-				placeholder={placeholder}
-			/>
-		);
-	}
-
-	return (
-		<span
-			onClick={startEdit}
-			className={`cursor-pointer hover:bg-primary/5 rounded px-1 py-0.5 -mx-1 inline-block min-w-[30px] ${className || ''}`}
-			title="Klicken zum Bearbeiten"
-		>
-			{value || <span className="text-muted-foreground/40">{placeholder || '–'}</span>}
-		</span>
-	);
-};
-
-/* ------------------------------------------------------------------ */
-/*  Inline tax-rate select                                             */
-/* ------------------------------------------------------------------ */
-
-const InlineTaxSelect: React.FC<{
-	value: number | null;
-	onSave: (value: number | null) => void;
-}> = ({ value, onSave }) => {
-	return (
-		<select
-			value={value != null ? String(value) : ''}
-			onChange={(e) => {
-				const v = e.target.value;
-				onSave(v ? Number(v) : null);
-			}}
-			className="h-7 text-xs bg-transparent border rounded px-1 cursor-pointer hover:bg-primary/5"
-		>
-			<option value="">Keine MwSt</option>
-			<option value="10">10%</option>
-			<option value="13">13%</option>
-			<option value="20">20%</option>
-		</select>
-	);
-};
+import { DELTA_TONE, PriceGap } from './MaterialMarks';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -128,10 +40,6 @@ interface MaterialTableProps {
 	onEdit: (material: FestivalMaterialWithStation) => void;
 	onDelete: (id: string) => void;
 	onCopy: (material: FestivalMaterialWithStation) => void;
-	/** Nur noch für die Handy-Karte — die Tabelle schreibt seit #114 nicht mehr. */
-	onUpdateField: (id: string, field: string, value: any) => void;
-	/** Ebenfalls nur für die Handy-Karte (#116). */
-	onUpdateFields: (id: string, partial: Partial<FestivalMaterialWithStation>) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -211,26 +119,6 @@ const HEAD_CELL = PAPER_TABLE_HEAD_CELL;
 const BODY_CELL = PAPER_TABLE_BODY_CELL;
 const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
 
-/** Preislücke: rot gestrichelt statt still leer — die Position zählt in keine
-Summe und das muss man in der Zeile sehen (#114).
-
-Bewusst kein `<OpenSlot>`: der trägt dieselbe Grafik, ist aber ein Knopf zum
-Besetzen. In der lesenden Tabelle führt die Zelle nirgendwohin — erst der
-Zeilenmodus (#115) macht sie zum Eingabefeld. */
-const PriceGap = () => (
-	<span className="inline-block border-1.5 border-dashed border-rot px-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-rot">
-		Fehlt
-	</span>
-);
-
-const DELTA_TONE: Record<DeltaTone, string> = {
-	// Mehr verbraucht als bestellt hat mehr gekostet als geplant.
-	over: 'font-bold text-rot',
-	under: 'font-bold text-gruen',
-	zero: 'text-tinte-soft',
-	none: 'text-tinte-soft/60'
-};
-
 /** Menge in Basiseinheiten samt Einheit, darunter die Gebinde-Umrechnung. */
 const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterialWithStation }> = ({
 	stored,
@@ -250,177 +138,6 @@ const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterial
 };
 
 /* ------------------------------------------------------------------ */
-/*  Mobile card                                                        */
-/* ------------------------------------------------------------------ */
-
-/** Exportiert, damit die Station-Regel aus #113 auch für die Karte prüfbar ist —
-`useIsMobile` entscheidet erst im Browser, ein Server-Rendern der Tabelle käme
-nie hier vorbei. Die Karte behält ihre Inline-Felder bis #116. */
-export const MaterialMobileCard: React.FC<{
-	material: FestivalMaterialWithStation;
-	showStation: boolean;
-	onEdit: () => void;
-	onDelete: () => void;
-	onCopy: () => void;
-	onUpdateField: (field: string, value: any) => void;
-	onUpdateFields: (partial: Partial<FestivalMaterialWithStation>) => void;
-}> = ({ material, showStation, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
-	const diff = deltaCell(material);
-	return (
-		<div className="border bg-card overflow-hidden">
-			<div className="flex items-start justify-between gap-2 p-3 pb-2">
-				<div className="min-w-0">
-					<p className="font-medium text-sm">{material.name}</p>
-					<div className="flex flex-wrap gap-1 mt-1.5">
-						{material.category && (
-							<Badge variant="outline" className="text-[10px] px-1.5 py-0">{material.category}</Badge>
-						)}
-						{showStation && material.station?.name && (
-							<Badge variant="secondary" className="text-[10px] px-1.5 py-0">{material.station.name}</Badge>
-						)}
-						{material.supplier && (
-							<Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">{material.supplier}</Badge>
-						)}
-					</div>
-				</div>
-				<div className="flex gap-0.5 shrink-0">
-					<Button variant="ghost" size="icon" className="h-7 w-7" onClick={onCopy} title="Kopieren">
-						<Copy className="h-3.5 w-3.5" />
-					</Button>
-					<Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
-						<Pencil className="h-3.5 w-3.5" />
-					</Button>
-					<Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive" onClick={onDelete}>
-						<Trash2 className="h-3.5 w-3.5" />
-					</Button>
-				</div>
-			</div>
-			<div className="grid grid-cols-3 gap-px bg-border/50">
-				<div className="bg-card px-3 py-2">
-					<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-						Bestellt ({material.unit}) <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
-					</span>
-					<div className="text-sm font-medium mt-0.5">
-						<InlineEditCell
-							value={String(toBaseQuantity(material.ordered_quantity, material) ?? 0)}
-							onSave={(v) =>
-								onUpdateField('ordered_quantity', v ? fromBaseQuantity(Number(v), material) : 0)
-							}
-							type="number"
-							inputClassName="h-6 w-full text-sm px-1"
-						/>
-					</div>
-					{formatRequiredPackaging(material.ordered_quantity, material) && (
-						<span className="text-[10px] text-muted-foreground">
-							→ {formatRequiredPackaging(material.ordered_quantity, material)}
-						</span>
-					)}
-				</div>
-				<div className="bg-card px-3 py-2">
-					<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-						Verbraucht ({material.unit}) <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
-					</span>
-					<div className="text-sm font-medium mt-0.5">
-						<InlineEditCell
-							value={
-								material.actual_quantity != null
-									? String(toBaseQuantity(material.actual_quantity, material) ?? '')
-									: ''
-							}
-							onSave={(v) =>
-								onUpdateField(
-									'actual_quantity',
-									v ? fromBaseQuantity(Number(v), material) : null
-								)
-							}
-							type="number"
-							placeholder="–"
-							inputClassName="h-6 w-full text-sm px-1"
-						/>
-					</div>
-					{material.actual_quantity != null && formatRequiredPackaging(material.actual_quantity, material) && (
-						<span className="text-[10px] text-muted-foreground">
-							→ {formatRequiredPackaging(material.actual_quantity, material)}
-						</span>
-					)}
-				</div>
-				<div className="bg-card px-3 py-2">
-					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">Differenz</span>
-					<p className={`text-sm mt-0.5 ${DELTA_TONE[diff.tone]}`}>{diff.text}</p>
-				</div>
-			</div>
-			<div className="grid grid-cols-3 gap-px bg-border/50 border-t">
-				<div className="bg-card px-3 py-2">
-					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">MwSt</span>
-					<div className="text-sm font-medium mt-0.5">
-						<InlineTaxSelect
-							value={material.tax_rate}
-							onSave={(v) => onUpdateField('tax_rate', v)}
-						/>
-					</div>
-				</div>
-				{(() => {
-					const net = netPrice(material);
-					const gross = grossPrice(material);
-					const netIsSource = material.price_is_net || material.unit_price == null;
-					const grossIsSource = !material.price_is_net || material.unit_price == null;
-					return (
-						<>
-							<div className="bg-card px-3 py-2">
-								<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-									Netto € <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
-								</span>
-								<div className="text-sm font-medium mt-0.5">
-									<InlineEditCell
-										value={net != null ? net.toFixed(2) : ''}
-										onSave={(v) =>
-											onUpdateFields({
-												unit_price: v ? Number(v) : null,
-												price_is_net: true
-											})
-										}
-										type="number"
-										placeholder="–"
-										inputClassName="h-6 w-full text-sm px-1"
-										className={netIsSource ? '' : 'text-muted-foreground italic'}
-									/>
-								</div>
-							</div>
-							<div className="bg-card px-3 py-2">
-								<span className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-									Brutto € <Pencil className="h-2.5 w-2.5 text-muted-foreground/40" />
-								</span>
-								<div className="text-sm font-medium mt-0.5">
-									<InlineEditCell
-										value={gross != null ? gross.toFixed(2) : ''}
-										onSave={(v) =>
-											onUpdateFields({
-												unit_price: v ? Number(v) : null,
-												price_is_net: false
-											})
-										}
-										type="number"
-										placeholder="–"
-										inputClassName="h-6 w-full text-sm px-1"
-										className={grossIsSource ? '' : 'text-muted-foreground italic'}
-									/>
-								</div>
-							</div>
-						</>
-					);
-				})()}
-			</div>
-			{rowTotal(material) != null && (
-				<div className="px-3 py-1.5 border-t flex items-center justify-between text-xs">
-					<span className="text-muted-foreground">{formatPackaging(material)}</span>
-					<span className="font-semibold">{formatAmount(rowTotal(material)!)} €</span>
-				</div>
-			)}
-		</div>
-	);
-};
-
-/* ------------------------------------------------------------------ */
 /*  Main table component                                               */
 /* ------------------------------------------------------------------ */
 
@@ -436,12 +153,13 @@ export const MaterialMobileCard: React.FC<{
  *
  * Gerechnet wird in `materialCosts` (ADR 0006), umgerechnet in
  * `materialQuantity`, gelesen in `materialRow` — die Tabelle malt nur.
+ *
+ * Am Handy steht sie nicht: dort stapelt `MaterialCardList` Karten (#116), weil
+ * die elf Spalten sonst drei Bildschirmbreiten Wischen kosteten. Umgeschaltet
+ * wird eine Ebene höher, in der Arbeitsliste.
  */
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
-	const isMobile = useIsMobile();
-
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy }) => {
 	const totalCost = sumTotals(materials);
-	const hasCosts = materials.some((m) => m.unit_price != null);
 	const cols = columns(showStation);
 
 	if (materials.length === 0) {
@@ -449,31 +167,6 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 			<div className="flex flex-col items-center gap-2 border border-dashed border-linie py-12">
 				<Package className="h-8 w-8 text-tinte-soft/40" />
 				<p className="text-sm text-tinte-soft">Keine Materialien vorhanden</p>
-			</div>
-		);
-	}
-
-	if (isMobile) {
-		return (
-			<div className="space-y-2">
-				{materials.map((m) => (
-					<MaterialMobileCard
-						key={m.id}
-						material={m}
-						showStation={showStation}
-						onEdit={() => onEdit(m)}
-						onDelete={() => onDelete(m.id)}
-						onCopy={() => onCopy(m)}
-						onUpdateField={(field, value) => onUpdateField(m.id, field, value)}
-						onUpdateFields={(partial) => onUpdateFields(m.id, partial)}
-					/>
-				))}
-				{hasCosts && (
-					<div className="border bg-card p-3 flex items-center justify-between">
-						<span className="font-semibold text-sm">Zwischensumme (gefiltert)</span>
-						<span className="font-semibold text-sm">{formatAmount(totalCost)} €</span>
-					</div>
-				)}
 			</div>
 		);
 	}

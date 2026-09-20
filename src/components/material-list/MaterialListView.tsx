@@ -6,11 +6,16 @@ import MaterialListHeader from './MaterialListHeader';
 import MaterialTotals from './MaterialTotals';
 import MaterialAxisBar from './MaterialAxisBar';
 import MaterialGroupTabs from './MaterialGroupTabs';
+import MaterialGroupDrawer from './MaterialGroupDrawer';
 import MaterialGroupBox from './MaterialGroupBox';
 import MaterialTable from './MaterialTable';
+import MaterialCardList from './MaterialCardList';
+import UnsavedCardsDialog from './UnsavedCardsDialog';
+import { useMaterialCardDrafts } from './hooks/useMaterialCardDrafts';
 import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
 import OrderListExportDialog from './dialogs/OrderListExportDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
 import {
@@ -46,8 +51,16 @@ interface MaterialListViewProps {
  */
 const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festivalName }) => {
 	const navigate = useNavigate();
+	const isMobile = useIsMobile();
 	const { materials, stations, isLoading } = useMaterialListData(festivalId);
 	const actions = useMaterialListActions(festivalId);
+
+	// Die offenen Karten des Zeilenmodus am Handy (#116). Sie hängen hier und
+	// nicht an der Kartenliste, weil Achsen-Umschalter und Gruppen-Schublade
+	// darüber stehen und durch dieselbe Rückfrage müssen.
+	const cards = useMaterialCardDrafts((id, updates) =>
+		actions.updateMaterial.mutate({ id, updates })
+	);
 
 	const [dialogState, setDialogState] = useState<DialogState>({ type: null });
 	const [searchTerm, setSearchTerm] = useState('');
@@ -106,6 +119,32 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 		setDialogState({ type: 'material' });
 	};
 
+	/** ⋮ → Stammdaten-Dialog (#117) — aus Tabellenzeile wie aus Karte derselbe Weg. */
+	const openPosition = (material: FestivalMaterialWithStation) => {
+		setPrefill(undefined);
+		setDialogState({ type: 'material', material });
+	};
+
+	const copyPosition = (material: FestivalMaterialWithStation) => {
+		actions.createMaterial.mutate({
+			festival_id: material.festival_id,
+			name: `${material.name} (Kopie)`,
+			category: material.category,
+			station_id: material.station_id,
+			supplier: material.supplier,
+			unit: material.unit,
+			packaging_unit: material.packaging_unit,
+			amount_per_packaging: material.amount_per_packaging,
+			ordered_quantity: material.ordered_quantity,
+			actual_quantity: null,
+			unit_price: material.unit_price,
+			tax_rate: material.tax_rate,
+			price_is_net: material.price_is_net,
+			price_per: material.price_per,
+			notes: material.notes
+		});
+	};
+
 	if (isLoading) {
 		return (
 			<div className="space-y-4">
@@ -142,14 +181,25 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 			*einen* Kasten. */}
 			<MaterialTotals materials={found} totalCount={materials.length} />
 
-			<MaterialAxisBar axis={axis} onAxisChange={setAxis} />
+			{/* Der Achsen-Umschalter bleibt am Handy oben als Knöpfe wie am Desktop
+			(#116) — nur die Gruppen-Auswahl darunter wechselt die Gestalt. */}
+			<MaterialAxisBar axis={axis} onAxisChange={(next) => cards.attempt(() => setAxis(next))} />
 
-			<MaterialGroupTabs
-				groups={groups}
-				axis={axis}
-				activeGroupId={activeGroupId}
-				onSelect={setRequestedGroupId}
-			/>
+			{isMobile ? (
+				<MaterialGroupDrawer
+					groups={groups}
+					axis={axis}
+					activeGroupId={activeGroupId}
+					onSelect={(id) => cards.attempt(() => setRequestedGroupId(id))}
+				/>
+			) : (
+				<MaterialGroupTabs
+					groups={groups}
+					axis={axis}
+					activeGroupId={activeGroupId}
+					onSelect={setRequestedGroupId}
+				/>
+			)}
 
 			{activeGroup && (
 				<MaterialGroupBox
@@ -161,43 +211,30 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 					onCategoryChange={setRequestedCategory}
 					onAddPosition={() => openNewPosition(prefillFromGroup(activeGroup, axis))}
 				>
-					<MaterialTable
-						materials={visible}
-						// Im Stations-Kasten wäre die Station in jeder Zeile dieselbe.
-						showStation={axis !== 'station'}
-						onEdit={(material) => {
-							setPrefill(undefined);
-							setDialogState({ type: 'material', material });
-						}}
-						onDelete={(id) => actions.deleteMaterial.mutate(id)}
-						onCopy={(material) => {
-							actions.createMaterial.mutate({
-								festival_id: material.festival_id,
-								name: `${material.name} (Kopie)`,
-								category: material.category,
-								station_id: material.station_id,
-								supplier: material.supplier,
-								unit: material.unit,
-								packaging_unit: material.packaging_unit,
-								amount_per_packaging: material.amount_per_packaging,
-								ordered_quantity: material.ordered_quantity,
-								actual_quantity: null,
-								unit_price: material.unit_price,
-								tax_rate: material.tax_rate,
-								price_is_net: material.price_is_net,
-								price_per: material.price_per,
-								notes: material.notes
-							});
-						}}
-						onUpdateField={(id, field, value) => {
-							actions.updateMaterial.mutate({ id, updates: { [field]: value } });
-						}}
-						onUpdateFields={(id, partial) => {
-							actions.updateMaterial.mutate({ id, updates: partial });
-						}}
-					/>
+					{isMobile ? (
+						// Am Handy Karten statt der querscrollenden Tabelle (#116).
+						<MaterialCardList
+							materials={visible}
+							showStation={axis !== 'station'}
+							cards={cards}
+							onEdit={openPosition}
+							onCopy={copyPosition}
+							onDelete={(id) => actions.deleteMaterial.mutate(id)}
+						/>
+					) : (
+						<MaterialTable
+							materials={visible}
+							// Im Stations-Kasten wäre die Station in jeder Zeile dieselbe.
+							showStation={axis !== 'station'}
+							onEdit={openPosition}
+							onDelete={(id) => actions.deleteMaterial.mutate(id)}
+							onCopy={copyPosition}
+						/>
+					)}
 				</MaterialGroupBox>
 			)}
+
+			<UnsavedCardsDialog cards={cards} />
 
 			<MaterialDialog
 				open={dialogState.type === 'material'}
