@@ -119,6 +119,10 @@ export default {
             height: "var(--radix-accordion-content-height)",
           },
         },
+        "blitz-gruen": {
+          from: { backgroundColor: "oklch(var(--gruen) / 0.15)" },
+          to: { backgroundColor: "transparent" },
+        },
         "accordion-up": {
           from: {
             height: "var(--radix-accordion-content-height)",
@@ -131,6 +135,11 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        // Die eben gespeicherte Zeile (#115): sofort grün, dann verklingen. Als
+        // Keyframe und nicht als `transition`, weil eine Übergangsregel, die im
+        // selben Bild wie die Farbe dazukommt, nicht anspringt — die Zeile
+        // blendete langsam *nach* Grün und spränge dann hart zurück.
+        "blitz-gruen": "blitz-gruen 0.9s ease-out forwards",
       },
     },
   },

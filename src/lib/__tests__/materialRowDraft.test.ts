@@ -194,6 +194,33 @@ describe('materialRowDraft — was das Speichern der Zeile übernimmt (#115)', (
 		expect(draftUpdate(draft, position).ordered_quantity).toBe(0);
 	});
 
+	it('lässt einen unberührten Preis genau so stehen, wie er gespeichert ist', () => {
+		// 41,67 € pro 50-Liter-Fass sind 0,8334 € je Liter; das Feld kann nur
+		// „0.83" zeigen. Wer an so einer Zeile nur die Bestellmenge ändert, darf
+		// den Preis nicht mit auf Cent gekürzt zurückschreiben — der Fehler fiele
+		// erst in der Zwischensumme auf, und dann ist die Nachkommastelle weg.
+		const position = material({ unit_price: 0.8334, tax_rate: 20, price_is_net: true });
+		const draft = editDraft(draftFromMaterial(position), 'ordered', '500');
+
+		expect(draftUpdate(draft, position).unit_price).toBe(0.8334);
+	});
+
+	it('lässt den unberührten Preis auch stehen, wenn nur die MwSt wechselt', () => {
+		// Die MwSt rechnet die *Gegenseite* neu — die getippte Seite bleibt, was
+		// sie war, und mit ihr der gespeicherte Preis.
+		const position = material({ unit_price: 0.8334, tax_rate: 20, price_is_net: true });
+		const draft = editDraft(draftFromMaterial(position), 'tax', '10');
+
+		expect(draftUpdate(draft, position)).toMatchObject({ unit_price: 0.8334, tax_rate: 10 });
+	});
+
+	it('nimmt den getippten Preis, sobald jemand das Feld anfasst', () => {
+		const position = material({ unit_price: 0.8334, tax_rate: 20, price_is_net: true });
+		const draft = editDraft(draftFromMaterial(position), 'net', '0.9');
+
+		expect(draftUpdate(draft, position).unit_price).toBe(0.9);
+	});
+
 	it('löscht den Preis, wenn beide Preisfelder leer bleiben — die Zeile wird zur Preislücke', () => {
 		const position = material({ unit_price: 10, tax_rate: 20, price_is_net: true });
 		const draft = editDraft(draftFromMaterial(position), 'net', '');

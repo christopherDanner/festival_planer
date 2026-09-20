@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import MaterialTable, { MaterialMobileCard, type RowEditControls } from './MaterialTable';
+import MaterialTable, { MaterialMobileCard } from './MaterialTable';
+import type { RowEditControls } from './MaterialTableCells';
 import { draftFromMaterial, editDraft, type RowDraft } from '@/lib/materialRowDraft';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
@@ -203,6 +204,15 @@ describe('MaterialTable — Zeilenmodus ✎ (#115)', () => {
 		expect(html).not.toContain('Mengen und Preise von Bier');
 	});
 
+	it('nimmt ✓ und ✕ aus dem Tab-Pfad — Tab geht von Feld zu Feld und in die nächste Zeile', () => {
+		// Spec #115: „Tab bewegt sich innerhalb und in die nächste Zeile." Mit den
+		// zwei Knöpfen im Pfad stünden beim Nachtragen über 76 Positionen 152
+		// Extra-Stopps zwischen den Feldern. Klicken, Enter und Esc bleiben.
+		const html = renderTable([bier], false, rowEditWith({ mat1: draftFromMaterial(bier) }));
+
+		expect(html.match(/tabindex="-1"/g)).toHaveLength(2);
+	});
+
 	it('hält die offene Zeile auf 56 px — sonst schöbe das Umschalten alles nach unten', () => {
 		// Auflage aus #114, nachgemessen: 44 → 56 px, wenn die Höhe nicht steht.
 		const rows = [bier, material({ id: 'mat2', name: 'Wein' })];
@@ -218,8 +228,9 @@ describe('MaterialTable — Zeilenmodus ✎ (#115)', () => {
 		expect(html).toContain('shadow-zeile-offen');
 	});
 
-	it('lässt die eben gespeicherte Zeile kurz grün aufblitzen', () => {
-		expect(renderTable([bier], false, rowEditWith({}, ['mat1']))).toContain('bg-gruen/15');
+	it('lässt die eben gespeicherte Zeile grün aufblitzen und verklingen', () => {
+		// Als Animation, nicht als Farbe mit Übergang: sofort grün, dann aus.
+		expect(renderTable([bier], false, rowEditWith({}, ['mat1']))).toContain('animate-blitz-gruen');
 	});
 
 	it('behält einen ungewöhnlichen Steuersatz in der Auswahl, statt ihn still zu schlucken', () => {

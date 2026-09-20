@@ -312,10 +312,15 @@ export const EditingCell: React.FC<{
 		case 'gross':
 			return field('gross', 'Brutto', draft.gross);
 		case 'actions':
+			// `tabIndex={-1}`: Tab soll von Feld zu Feld und in die nächste Zeile
+			// gehen (#115). Zwei Knöpfe je Zeile im Pfad wären beim Nachtragen über
+			// 76 Positionen 152 Stopps zwischen den Zahlen — dieselben Handgriffe
+			// liegen ohnehin auf Enter und Esc.
 			return (
 				<div className="flex items-center justify-end gap-0.5">
 					<button
 						type="button"
+						tabIndex={-1}
 						aria-label={`Zeile ${m.name} speichern`}
 						onClick={() => rowEdit.onSaveRow(m.id)}
 						className={cn(ROW_BUTTON, 'border-tinte bg-gelb')}
@@ -324,6 +329,7 @@ export const EditingCell: React.FC<{
 					</button>
 					<button
 						type="button"
+						tabIndex={-1}
 						aria-label={`Zeile ${m.name} abbrechen`}
 						onClick={() => rowEdit.onCancelRow(m.id)}
 						className={cn(ROW_BUTTON, 'border-tinte')}

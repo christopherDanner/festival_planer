@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
 import { cn } from '@/lib/utils';
 
 export interface RowEditBulkBarProps {
@@ -11,8 +12,10 @@ export interface RowEditBulkBarProps {
 	onCancelAll: () => void;
 }
 
-const BULK_BUTTON =
-	'border-2 border-tinte px-3 py-1.5 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte max-[899px]:min-h-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte';
+const BULK_BUTTON = cn(
+	'border-2 border-tinte px-3 py-1.5 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte max-[899px]:min-h-10',
+	FOCUS_INK
+);
 
 /**
  * Sammel-Fußleiste des Zeilenmodus (#115): `3 Zeilen offen, davon 2 geändert

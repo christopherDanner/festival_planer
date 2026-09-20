@@ -27,8 +27,6 @@ import {
 	type RowEditControls
 } from './MaterialTableCells';
 
-export type { RowEditControls } from './MaterialTableCells';
-
 /* ------------------------------------------------------------------ */
 /*  Generic inline-editable cell (text / number)                      */
 /* ------------------------------------------------------------------ */
@@ -470,8 +468,8 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 									// oben und unten — als Innenschatten, damit sie dabei keinen
 									// Pixel höher wird (#114).
 									draft && 'bg-gelb/25 shadow-zeile-offen',
-									// Nach dem Speichern blitzt sie kurz grün und verlischt.
-									!draft && flash && 'bg-gruen/15 transition-colors duration-[900ms]',
+									// Nach dem Speichern blitzt sie grün auf und verklingt.
+									!draft && flash && 'animate-blitz-gruen',
 									!draft && !flash && 'hover:bg-papier'
 								)}
 							>

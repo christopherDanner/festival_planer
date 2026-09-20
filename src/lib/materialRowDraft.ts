@@ -2,7 +2,7 @@
 gerechnet wird in `materialCosts` (ADR 0006), umgerechnet in `materialQuantity`
 — hier steht nur, was der Entwurf aus den getippten Zeichen macht. */
 
-import { grossPrice, netPrice, roundEuro } from './materialCosts';
+import { grossPrice, netPrice } from './materialCosts';
 import { fromBaseQuantity, toBaseQuantity } from './materialQuantity';
 
 /** Die fünf tippbaren Felder einer Zeile (#115). Material, Lieferant, Gebinde,
@@ -101,6 +101,23 @@ export type RowUpdate = Pick<
 >;
 
 /**
+ * Der Preis, den die Zeile speichert.
+ *
+ * Ein **unberührtes** Preisfeld schreibt den gespeicherten Preis zurück, nicht
+ * die Zahl, die dort steht: das Feld zeigt Cent, der gespeicherte Preis kann
+ * feiner sein. 41,67 € pro 50-Liter-Fass sind 0,8334 € je Liter — wer an so
+ * einer Zeile nur die Verbraucht-Menge nachträgt, hätte sonst nebenbei auf
+ * 0,83 € gekürzt und damit das Fass um 17 Cent verbilligt. Gemessen wird an
+ * der **Quellseite**: ändert sich nur die MwSt, rechnet die Gegenseite neu,
+ * die getippte Zahl bleibt.
+ */
+function draftPrice(draft: RowDraft, m: RowDraftMaterial): number | null {
+	const saved = draftFromMaterial(m);
+	const untouched = draft.source === saved.source && draft[draft.source] === saved[draft.source];
+	return untouched ? m.unit_price : numberOrNull(draft[draft.source]);
+}
+
+/**
  * Der Entwurf als Änderung an der Position.
  *
  * Der **Preis der Quelle** wird gespeichert, nicht die errechnete Gegenseite:
@@ -111,7 +128,7 @@ export type RowUpdate = Pick<
 export function draftUpdate(draft: RowDraft, m: RowDraftMaterial): RowUpdate {
 	const orderedBase = numberOrNull(draft.ordered);
 	const actualBase = numberOrNull(draft.actual);
-	const price = numberOrNull(draft.source === 'net' ? draft.net : draft.gross);
+	const price = draftPrice(draft, m);
 	return {
 		// Eine Position ohne Bestellmenge ist keine gelöschte Position, sondern
 		// eine mit 0 — `actual_quantity` dagegen heißt leer „nichts nachgetragen".
@@ -144,10 +161,9 @@ export function draftPreview<T extends RowDraftMaterial>(draft: RowDraft, m: T):
  * Änderung, auch wenn beide Zahlen stehen bleiben. Ohne erfassten Preis sagt
  * die Basis nichts aus und zählt darum nicht.
  *
- * Verglichen wird der Preis **auf Cent**: das Feld kann nur Cent zeigen, und
- * ein gespeicherter Bruchteil davon (0,8334 € je Liter aus 41,67 € pro Fass)
- * machte sonst jede unberührte Zeile beim Öffnen zur geänderten — samt stillem
- * Zurückrunden durch „ALLE SPEICHERN".
+ * Dass ein unberührtes Preisfeld seinen gespeicherten Preis behält, erledigt
+ * `draftPrice` — ein auf Cent gezeigter Bruchteil (0,8334 € je Liter aus
+ * 41,67 € pro Fass) machte sonst jede solche Zeile beim Öffnen zur geänderten.
  */
 export function isDirty(draft: RowDraft, m: RowDraftMaterial): boolean {
 	const saved = draftFromMaterial(m);
@@ -155,11 +171,9 @@ export function isDirty(draft: RowDraft, m: RowDraftMaterial): boolean {
 	if (draft.actual !== saved.actual) return true;
 	if (draft.tax !== saved.tax) return true;
 
-	const price = draftUpdate(draft, m).unit_price;
-	if ((price == null) !== (m.unit_price == null)) return true;
-	if (price == null || m.unit_price == null) return false;
-	if (roundEuro(price) !== roundEuro(m.unit_price)) return true;
-	return (draft.source === 'net') !== m.price_is_net;
+	const price = draftPrice(draft, m);
+	if (price !== m.unit_price) return true;
+	return price != null && (draft.source === 'net') !== m.price_is_net;
 }
 
 /**

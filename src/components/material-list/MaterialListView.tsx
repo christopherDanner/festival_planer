@@ -16,6 +16,7 @@ import OrderListExportDialog from './dialogs/OrderListExportDialog';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
 import { useRowEditor } from '@/hooks/useRowEditor';
+import type { ViewChange } from '@/lib/materialRowEditor';
 import {
 	groupMaterials,
 	searchMaterials,
@@ -94,7 +95,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	// Achse, Reiter, Chip und Suche nehmen die offenen Zeilen aus dem Bild —
 	// mit ungespeicherten Änderungen fragt der Zeilenmodus erst nach.
 	const guarded =
-		<T,>(change: Parameters<typeof editor.requestViewChange>[0], set: (value: T) => void) =>
+		<T,>(change: ViewChange, set: (value: T) => void) =>
 		(value: T) =>
 			editor.requestViewChange(change, () => set(value));
 

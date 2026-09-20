@@ -8,6 +8,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
 import { cn } from '@/lib/utils';
 import type { GuardAnswer, ViewChange } from '@/lib/materialRowEditor';
 
@@ -30,8 +31,10 @@ const CHANGE_WORDS: Record<ViewChange, string> = {
 	rows: 'Die Zeilen zuzuklappen'
 };
 
-const GUARD_BUTTON =
-	'border-2 border-tinte px-3.5 py-2 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte';
+const GUARD_BUTTON = cn(
+	'border-2 border-tinte px-3.5 py-2 text-[12.5px] font-bold uppercase tracking-[.02em] text-tinte',
+	FOCUS_INK
+);
 
 /**
  * Rückfrage vor einem Sichtwechsel mit ungespeicherten Zeilen (#115). Achse,
