@@ -607,6 +607,182 @@ export type Database = {
 					}
 				];
 			};
+			schedule_days: {
+				Row: {
+					created_at: string;
+					date: string;
+					festival_id: string;
+					id: string;
+					is_auto_generated: boolean;
+					label: string | null;
+					sort_order: number;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					date: string;
+					festival_id: string;
+					id?: string;
+					is_auto_generated?: boolean;
+					label?: string | null;
+					sort_order?: number;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					date?: string;
+					festival_id?: string;
+					id?: string;
+					is_auto_generated?: boolean;
+					label?: string | null;
+					sort_order?: number;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'schedule_days_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			schedule_phases: {
+				Row: {
+					created_at: string;
+					festival_id: string;
+					id: string;
+					name: string;
+					schedule_day_id: string;
+					sort_order: number;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					festival_id: string;
+					id?: string;
+					name: string;
+					schedule_day_id: string;
+					sort_order?: number;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					festival_id?: string;
+					id?: string;
+					name?: string;
+					schedule_day_id?: string;
+					sort_order?: number;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'schedule_phases_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'schedule_phases_schedule_day_id_fkey';
+						columns: ['schedule_day_id'];
+						isOneToOne: false;
+						referencedRelation: 'schedule_days';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			schedule_entries: {
+				Row: {
+					created_at: string;
+					description: string | null;
+					end_time: string | null;
+					festival_id: string;
+					id: string;
+					responsible_helper_id: string | null;
+					responsible_member_id: string | null;
+					schedule_day_id: string;
+					schedule_phase_id: string | null;
+					sort_order: number;
+					start_time: string | null;
+					status: string | null;
+					title: string;
+					type: string;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					description?: string | null;
+					end_time?: string | null;
+					festival_id: string;
+					id?: string;
+					responsible_helper_id?: string | null;
+					responsible_member_id?: string | null;
+					schedule_day_id: string;
+					schedule_phase_id?: string | null;
+					sort_order?: number;
+					start_time?: string | null;
+					status?: string | null;
+					title: string;
+					type: string;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					description?: string | null;
+					end_time?: string | null;
+					festival_id?: string;
+					id?: string;
+					responsible_helper_id?: string | null;
+					responsible_member_id?: string | null;
+					schedule_day_id?: string;
+					schedule_phase_id?: string | null;
+					sort_order?: number;
+					start_time?: string | null;
+					status?: string | null;
+					title?: string;
+					type?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'schedule_entries_festival_id_fkey';
+						columns: ['festival_id'];
+						isOneToOne: false;
+						referencedRelation: 'festivals';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'schedule_entries_responsible_helper_id_fkey';
+						columns: ['responsible_helper_id'];
+						isOneToOne: false;
+						referencedRelation: 'festival_helpers';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'schedule_entries_responsible_member_id_fkey';
+						columns: ['responsible_member_id'];
+						isOneToOne: false;
+						referencedRelation: 'members';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'schedule_entries_schedule_day_id_fkey';
+						columns: ['schedule_day_id'];
+						isOneToOne: false;
+						referencedRelation: 'schedule_days';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'schedule_entries_schedule_phase_id_fkey';
+						columns: ['schedule_phase_id'];
+						isOneToOne: false;
+						referencedRelation: 'schedule_phases';
+						referencedColumns: ['id'];
+					}
+				];
+			};
 		};
 		Views: {
 			[_ in never]: never;

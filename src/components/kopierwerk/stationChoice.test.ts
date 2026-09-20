@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Station, StationShift } from '@/lib/shiftService';
-import { allStationsState, stationPreviewRows, toggleAllStations, toggleStation } from './stationChoice';
+import { stationPreviewRows } from './stationChoice';
 
 /** Fest 2026: Fr 24.07. – So 26.07.; Fest 2027 startet Fr 23.07. */
 const SOURCE_START = '2026-07-24';
@@ -100,29 +100,5 @@ describe('stationPreviewRows', () => {
 	});
 });
 
-describe('Auswahl auf Stations-Ebene', () => {
-	const alle = ['st-1', 'st-2', 'st-3'];
-
-	it('nimmt eine Station dazu und wieder heraus', () => {
-		expect(toggleStation(['st-1'], 'st-2')).toEqual(['st-1', 'st-2']);
-		expect(toggleStation(['st-1', 'st-2'], 'st-1')).toEqual(['st-2']);
-	});
-
-	it('meldet den Umschalter als gewählt, leer oder dazwischen', () => {
-		expect(allStationsState(alle, alle)).toBe(true);
-		expect(allStationsState(alle, [])).toBe(false);
-		expect(allStationsState(alle, ['st-2'])).toBe('indeterminate');
-	});
-
-	// Ohne Stationen gäbe es nichts zu wählen — der Umschalter darf dann nicht
-	// als gewählt dastehen.
-	it('bleibt ohne Stationen leer', () => {
-		expect(allStationsState([], [])).toBe(false);
-	});
-
-	it('wählt mit dem Umschalter alle oder keine', () => {
-		expect(toggleAllStations(alle, ['st-2'])).toEqual(alle);
-		expect(toggleAllStations(alle, alle)).toEqual([]);
-		expect(toggleAllStations(alle, [])).toEqual(alle);
-	});
-});
+// Das Ankreuzen auf Stations-Ebene steht in `selection.ts` und wird dort
+// geprüft — es ist dasselbe wie in Schritt 3 (#95).

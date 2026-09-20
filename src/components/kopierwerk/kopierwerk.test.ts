@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+	copyFestivalOptions,
 	draftToFestivalData,
 	emptyFestivalDraft,
 	isDraftReady,
@@ -154,5 +155,33 @@ describe('Fußzeile von Schritt 1', () => {
 	it('legt ohne Vorlage direkt an, mit Vorlage führt sie weiter zu den Stationen', () => {
 		expect(stepSubmitLabel(false)).toBe('FEST ANLEGEN');
 		expect(stepSubmitLabel(true)).toBe('WEITER: STATIONEN →');
+	});
+});
+
+describe('Kopier-Auftrag aus den Schritten 2 und 3', () => {
+	const selection = {
+		stationIds: new Set(['s-ausschank', 's-grill']),
+		copyAssignments: true,
+		materialIds: new Set(['m-bier', 'm-kohle']),
+		quantitySource: 'actual' as const
+	};
+
+	it('trägt Stationen, Material und Mengenquelle zusammen', () => {
+		expect(
+			copyFestivalOptions(
+				{ start_date: '2026-07-24' },
+				draft({ startDate: '2027-07-23' }),
+				selection
+			)
+		).toEqual({
+			stationIds: ['s-ausschank', 's-grill'],
+			copyAssignments: true,
+			materialIds: ['m-bier', 'm-kohle'],
+			materialQuantitySource: 'actual',
+			// Der Versatz rechnet vom Start der Vorlage auf den Start des neuen
+			// Fests — vertauscht schöbe er die Schichten um ein Jahr zurück.
+			sourceFestivalStartDate: '2026-07-24',
+			targetFestivalStartDate: '2027-07-23'
+		});
 	});
 });
