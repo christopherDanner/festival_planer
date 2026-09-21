@@ -5,20 +5,25 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  *
  * Ein Helfer gehört dem Fest, in dem er steht — eine Zuteilung aus dem
  * Quellfest kann im Zielfest also nicht auf dieselbe Helfer-Zeile zeigen.
- * „Zuteilungen übernehmen" legt darum die betroffenen Helfer im Zielfest neu
- * an und schlüsselt die Zuteilungen darauf um. Ohne das zeigten die kopierten
- * Zuteilungen auf Helfer eines fremden Fests.
- *
- * Der eigene Schalter „Helfer übernehmen" samt umgeschlüsselter Wünsche bleibt
- * dem Kopierwerk-Slice; hier geht es nur darum, dass die heutige Übernahme
- * nicht in fremde Feste zeigt.
+ * Weil es keinen Bestand mehr gibt, ist die Fest-Kopie der einzige Weg,
+ * letztjährige Helfer zu holen: „Helfer übernehmen" kopiert die **ganze**
+ * Helferliste samt auf die neuen Stationen/Schichten umgeschlüsselter Wünsche,
+ * „Zuteilungen übernehmen" setzt sie voraus (#100).
  */
 
 const mocks = vi.hoisted(() => ({
 	createdHelpers: [] as Array<{ festivalId: string; first_name: string; last_name: string }>,
+	preferenceUpdates: [] as Array<{
+		festivalId: string;
+		helperId: string;
+		stationPreferences: string[];
+		shiftPreferences: string[];
+	}>,
 	stationAssignments: [] as Array<{ festivalId: string; stationId: string; helperId: string }>,
 	shiftAssignments: [] as Array<{ festivalId: string; stationShiftId: string; helperId: string }>,
 	createdStations: [] as any[],
+	createdShifts: [] as any[],
+	bulkCalls: 0,
 	nextHelperId: 0
 }));
 
@@ -68,7 +73,10 @@ vi.mock('../shiftService', () => ({
 		mocks.createdStations = stations;
 		return stations.map((_s, i) => ({ id: `st-neu-${i}` }));
 	},
-	createStationShiftsBulk: async (shifts: any[]) => shifts.map((_s, i) => ({ id: `sh-neu-${i}` })),
+	createStationShiftsBulk: async (shifts: any[]) => {
+		mocks.createdShifts = shifts;
+		return shifts.map((_s, i) => ({ id: `sh-neu-${i}` }));
+	},
 	assignHelperToStation: async (festivalId: string, stationId: string, helperId: string) => {
 		mocks.stationAssignments.push({ festivalId, stationId, helperId });
 	},
@@ -85,17 +93,54 @@ vi.mock('../helperService', () => ({
 	getHelpers: async (festivalId: string) =>
 		festivalId === 'quelle'
 			? [
-					{ id: 'h-alt-1', festival_id: 'quelle', first_name: 'Hans', last_name: 'Huber' },
-					{ id: 'h-alt-2', festival_id: 'quelle', first_name: 'Eva', last_name: 'Ebner' },
+					{
+						id: 'h-alt-1',
+						festival_id: 'quelle',
+						first_name: 'Hans',
+						last_name: 'Huber',
+						// Wunsch auf die gewählte Station, dazu einer auf die abgewählte.
+						station_preferences: ['st-alt', 'st-bleibt'],
+						shift_preferences: ['sh-alt']
+					},
+					{
+						id: 'h-alt-2',
+						festival_id: 'quelle',
+						first_name: 'Eva',
+						last_name: 'Ebner',
+						station_preferences: [],
+						shift_preferences: []
+					},
 					{ id: 'h-alt-3', festival_id: 'quelle', first_name: 'Nur', last_name: 'Kassa' },
 					{ id: 'h-alt-4', festival_id: 'quelle', first_name: 'Nur', last_name: 'Kassaschicht' },
-					{ id: 'h-alt-5', festival_id: 'quelle', first_name: 'Ohne', last_name: 'Zuteilung' }
+					{
+						id: 'h-alt-5',
+						festival_id: 'quelle',
+						first_name: 'Ohne',
+						last_name: 'Zuteilung',
+						// Nur Wünsche auf Abgewähltes — im Zielfest bleibt davon nichts.
+						station_preferences: ['st-bleibt'],
+						shift_preferences: ['sh-bleibt']
+					}
 				]
 			: [],
-	createHelper: async (festivalId: string, helper: { first_name: string; last_name: string }) => {
-		mocks.createdHelpers.push({ festivalId, ...helper });
-		mocks.nextHelperId += 1;
-		return `h-neu-${mocks.nextHelperId}`;
+	createHelpersBulk: async (
+		festivalId: string,
+		helpers: Array<{ first_name: string; last_name: string }>
+	) => {
+		mocks.bulkCalls += 1;
+		return helpers.map((helper) => {
+			mocks.createdHelpers.push({ festivalId, ...helper });
+			mocks.nextHelperId += 1;
+			return `h-neu-${mocks.nextHelperId}`;
+		});
+	},
+	updateHelperPreferences: async (
+		festivalId: string,
+		helperId: string,
+		stationPreferences: string[],
+		shiftPreferences: string[]
+	) => {
+		mocks.preferenceUpdates.push({ festivalId, helperId, stationPreferences, shiftPreferences });
 	}
 }));
 
@@ -104,71 +149,152 @@ vi.mock('../materialService', () => ({
 	createMaterialsBulk: async () => []
 }));
 
-import { copyFestivalData } from '../festivalCopyService';
+import { copyFestivalData, type CopyFestivalOptions } from '../festivalCopyService';
 
-const options = (copyAssignments: boolean) => ({
+const options = (over: Partial<CopyFestivalOptions> = {}): CopyFestivalOptions => ({
 	stationIds: ['st-alt'],
-	copyAssignments,
+	copyHelpers: false,
+	copyAssignments: false,
 	materialIds: [],
-	materialQuantitySource: 'ordered' as const,
+	materialQuantitySource: 'ordered',
 	sourceFestivalStartDate: '2026-07-01',
-	targetFestivalStartDate: '2027-07-01'
+	targetFestivalStartDate: '2027-07-01',
+	...over
 });
+
+/** Erster Helfer der Quell-Liste (Hans Huber) in seiner neuen Zeile. */
+const HANS_IM_ZIELFEST = 'h-neu-1';
+/** Zweiter (Eva Ebner) — sie hängt an der Schicht der gewählten Station. */
+const EVA_IM_ZIELFEST = 'h-neu-2';
 
 beforeEach(() => {
 	mocks.createdHelpers = [];
+	mocks.preferenceUpdates = [];
 	mocks.stationAssignments = [];
 	mocks.shiftAssignments = [];
 	mocks.createdStations = [];
+	mocks.createdShifts = [];
+	mocks.bulkCalls = 0;
 	mocks.nextHelperId = 0;
 });
 
-describe('copyFestivalData mit Zuteilungen', () => {
-	it('legt jeden gebrauchten Helfer im Zielfest an', async () => {
-		await copyFestivalData('quelle', 'ziel', options(true));
+describe('„Helfer übernehmen"', () => {
+	// Nicht nur die zugeteilten: wer denselben Stamm, aber einen frischen Plan
+	// will, soll nicht jeden Namen neu tippen müssen (#100).
+	it('kopiert die ganze Helferliste des Quellfests', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ copyHelpers: true }));
 
-		expect(mocks.createdHelpers).toEqual([
-			{ festivalId: 'ziel', first_name: 'Hans', last_name: 'Huber' },
-			{ festivalId: 'ziel', first_name: 'Eva', last_name: 'Ebner' }
+		expect(mocks.createdHelpers.map((h) => h.last_name)).toEqual([
+			'Huber',
+			'Ebner',
+			'Kassa',
+			'Kassaschicht',
+			'Zuteilung'
 		]);
+		expect(mocks.createdHelpers.every((h) => h.festivalId === 'ziel')).toBe(true);
 	});
 
-	// Ohne Mitglieder-Seite gibt es keinen Ort, an dem jemand Helfer aufräumt,
-	// die nie eine Zuteilung bekommen — sie dürfen also gar nicht entstehen.
-	it('lässt Helfer aus, deren Zuteilungen nicht mitkopiert werden', async () => {
-		await copyFestivalData('quelle', 'ziel', options(true));
+	// Geschlossen statt Zeile für Zeile: sonst wären es so viele Abfragen wie
+	// Helfer, während Stationen, Schichten und Material längst gebündelt gehen.
+	it('legt die Liste in einem Zug an', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ copyHelpers: true }));
 
-		const copied = mocks.createdHelpers.map((h) => h.last_name);
-		expect(copied).not.toContain('Kassa');
-		expect(copied).not.toContain('Kassaschicht');
-		expect(copied).not.toContain('Zuteilung');
+		expect(mocks.bulkCalls).toBe(1);
 	});
+
+	// „Präferenzen kommen mit" — über dieselben Maps, die Stationen und
+	// Schichten ohnehin aufbauen.
+	it('schlüsselt die Wünsche auf die neuen Stationen und Schichten um', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ copyHelpers: true }));
+
+		expect(mocks.preferenceUpdates).toContainEqual({
+			festivalId: 'ziel',
+			helperId: HANS_IM_ZIELFEST,
+			stationPreferences: ['st-neu-0'],
+			shiftPreferences: ['sh-neu-0']
+		});
+	});
+
+	// Was in Schritt 2 abgewählt wurde, gibt es im Zielfest nicht — sein Wunsch
+	// wäre eine Karteileiche.
+	it('lässt Wünsche auf abgewählte Stationen und Schichten still fallen', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ copyHelpers: true }));
+
+		// „Ohne Zuteilung" wünscht sich nur Abgewähltes — von seinen Wünschen
+		// bleibt nichts, also wird an seiner Zeile auch nichts geschrieben.
+		expect(mocks.preferenceUpdates.map((u) => u.helperId)).toEqual([HANS_IM_ZIELFEST]);
+	});
+});
+
+describe('„Helfer übernehmen" + „Zuteilungen übernehmen"', () => {
+	const beides = options({ copyHelpers: true, copyAssignments: true });
 
 	it('schlüsselt Stations- und Schicht-Zuteilungen auf die neuen Helfer um', async () => {
-		await copyFestivalData('quelle', 'ziel', options(true));
+		await copyFestivalData('quelle', 'ziel', beides);
 
 		expect(mocks.stationAssignments).toEqual([
-			{ festivalId: 'ziel', stationId: 'st-neu-0', helperId: 'h-neu-1' }
+			{ festivalId: 'ziel', stationId: 'st-neu-0', helperId: HANS_IM_ZIELFEST }
 		]);
 		expect(mocks.shiftAssignments).toEqual([
-			{ festivalId: 'ziel', stationShiftId: 'sh-neu-0', helperId: 'h-neu-2' }
+			{ festivalId: 'ziel', stationShiftId: 'sh-neu-0', helperId: EVA_IM_ZIELFEST }
 		]);
 	});
 
 	it('setzt den Verantwortlichen der neuen Station auf den neuen Helfer', async () => {
-		await copyFestivalData('quelle', 'ziel', options(true));
+		await copyFestivalData('quelle', 'ziel', beides);
 
-		expect(mocks.createdStations[0]).toMatchObject({ responsible_helper_id: 'h-neu-1' });
+		expect(mocks.createdStations[0]).toMatchObject({
+			responsible_helper_id: HANS_IM_ZIELFEST
+		});
+	});
+
+	// Eine Kopie, keine Verschiebung: am Quellfest wird nichts angefasst.
+	it('lässt die Helfer des Quellfests unverändert', async () => {
+		await copyFestivalData('quelle', 'ziel', beides);
+
+		expect(mocks.createdHelpers.some((h) => h.festivalId === 'quelle')).toBe(false);
+		expect(mocks.preferenceUpdates.some((u) => u.festivalId === 'quelle')).toBe(false);
+		expect(mocks.stationAssignments.some((a) => a.festivalId === 'quelle')).toBe(false);
+		expect(mocks.shiftAssignments.some((a) => a.festivalId === 'quelle')).toBe(false);
 	});
 });
 
-describe('copyFestivalData ohne Zuteilungen', () => {
-	it('kopiert dann auch keine Helfer und keinen Verantwortlichen', async () => {
-		await copyFestivalData('quelle', 'ziel', options(false));
+describe('nur „Helfer übernehmen"', () => {
+	it('legt die Helferliste an, aber keine Zuteilung', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ copyHelpers: true }));
+
+		expect(mocks.createdHelpers).toHaveLength(5);
+		expect(mocks.stationAssignments).toEqual([]);
+		expect(mocks.shiftAssignments).toEqual([]);
+		expect(mocks.createdStations[0].responsible_helper_id).toBeUndefined();
+	});
+});
+
+describe('ohne beide Schalter', () => {
+	it('lässt die Helferliste des Zielfests leer', async () => {
+		await copyFestivalData('quelle', 'ziel', options());
+
+		expect(mocks.createdHelpers).toEqual([]);
+		expect(mocks.preferenceUpdates).toEqual([]);
+		expect(mocks.stationAssignments).toEqual([]);
+		expect(mocks.shiftAssignments).toEqual([]);
+		expect(mocks.createdStations[0].responsible_helper_id).toBeUndefined();
+	});
+
+	it('kopiert Stationen und Schichten trotzdem vollständig', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ stationIds: ['st-alt', 'st-bleibt'] }));
+
+		expect(mocks.createdStations.map((s) => s.name)).toEqual(['Bar', 'Kassa']);
+		expect(mocks.createdShifts.map((s) => s.name)).toEqual(['Abend', 'Kassa-Abend']);
+	});
+
+	// „Zuteilungen übernehmen" ist ohne Helfer ungültig — die Oberfläche graut
+	// den Schalter aus, der Service verlässt sich nicht darauf.
+	it('kopiert auch dann nichts, wenn nur „Zuteilungen übernehmen" gesetzt ist', async () => {
+		await copyFestivalData('quelle', 'ziel', options({ copyAssignments: true }));
 
 		expect(mocks.createdHelpers).toEqual([]);
 		expect(mocks.stationAssignments).toEqual([]);
 		expect(mocks.shiftAssignments).toEqual([]);
-		expect(mocks.createdStations[0].responsible_helper_id).toBeUndefined();
 	});
 });

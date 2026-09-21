@@ -1,0 +1,400 @@
+// @vitest-environment node
+//
+// Seams under test (aus den Abnahmekriterien von #99 abgeleitet, vor dem
+// ersten Test festgelegt):
+//
+// 1. Die Migrationsdatei
+//    supabase/migrations/20260817000001_drop_legacy_member_columns.sql als
+//    Ganzes — abgespielt auf einer Datenbank im Schemastand davor, also
+//    Basisschema + Ablaufplan-Tabellen (20260315000001) + festival_helpers
+//    samt Fan-out (20260804000001) + Nachzug der Zeiger (20260805000002).
+// 2. Beobachtet wird ausschließlich über SQL gegen das Ergebnis: das Schema
+//    (information_schema, pg_indexes, pg_constraint) und die Daten. Keine
+//    Zerlegung des SQL-Textes, kein Nachbau der Regel in TypeScript.
+//
+// Der Slice hat keine öffentliche Schnittstelle in src/ — die Datenbank *ist*
+// die Schnittstelle. Was in src/integrations/supabase/types.ts steht, prüft
+// der Typecheck.
+
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import type { PGlite } from '@electric-sql/pglite';
+import { applyMigration, columnsOf, createTestDatabase, insertFestival } from './testDatabase';
+
+// Jeder Test hier startet ein echtes Postgres (WASM) und spielt vier
+// Migrationen ab. Das dauert Sekunden statt Millisekunden.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
+const SCHEDULE_TABLES = '20260315000001_create_schedule_tables.sql';
+const FESTIVAL_HELPERS = '20260804000001_create_festival_helpers.sql';
+const HELPER_POINTERS = '20260805000002_helper_pointers_followup.sql';
+const MIGRATION = '20260817000001_drop_legacy_member_columns.sql';
+
+function isoDate(offsetDays: number): string {
+	const day = new Date();
+	day.setUTCDate(day.getUTCDate() + offsetDays);
+	return day.toISOString().slice(0, 10);
+}
+
+type LegacyData = {
+	festivals: Record<'past' | 'planned' | 'deleted', string>;
+	stations: Record<'bar', string>;
+};
+
+/**
+ * Der Bestand, wie er nach dem additiven Umbau dasteht: alte member-Zeiger und
+ * neue helper_id nebeneinander. Das gelöschte Fest ist der Härtefall — der
+ * Fan-out hat dort keine Helfer angelegt, seine Zeilen tragen also kein
+ * helper_id.
+ */
+async function seedMigratedData(db: PGlite): Promise<LegacyData> {
+	const memberId = async (firstName: string, lastName: string) =>
+		(
+			await db.query<{ id: string }>(
+				`INSERT INTO members (first_name, last_name, is_active, user_id)
+				 VALUES ($1, $2, true, gen_random_uuid()) RETURNING id`,
+				[firstName, lastName]
+			)
+		).rows[0].id;
+
+	const stationId = async (festivalId: string, name: string, responsibleMemberId: string | null) =>
+		(
+			await db.query<{ id: string }>(
+				`INSERT INTO stations (festival_id, name, responsible_member_id) VALUES ($1, $2, $3) RETURNING id`,
+				[festivalId, name, responsibleMemberId]
+			)
+		).rows[0].id;
+
+	const shiftId = async (festivalId: string, stationId: string, name: string) =>
+		(
+			await db.query<{ id: string }>(
+				`INSERT INTO station_shifts (festival_id, station_id, name, start_date, start_time, end_time)
+				 VALUES ($1, $2, $3, CURRENT_DATE, '18:00', '22:00') RETURNING id`,
+				[festivalId, stationId, name]
+			)
+		).rows[0].id;
+
+	const anna = await memberId('Anna', 'Achter');
+	// Cilli ist nur Verantwortliche einer Station — die zweite der vier Spuren,
+	// die der Fan-out kennt.
+	const cilli = await memberId('Cilli', 'Cerny');
+
+	const past = await insertFestival(db, 'Zeltfest 2025', isoDate(-30));
+	const planned = await insertFestival(db, 'Zeltfest 2026', isoDate(30));
+	const deleted = await insertFestival(db, 'Abgesagtes Fest', isoDate(30));
+	await db.query(`UPDATE festivals SET deleted_at = now() WHERE id = $1`, [deleted]);
+
+	const bar = await stationId(past, 'Bar', null);
+	await stationId(past, 'Kassa', cilli);
+	const barEvening = await shiftId(past, bar, 'Abendschicht');
+	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3)`, [
+		past,
+		bar,
+		anna
+	]);
+	await db.query(
+		`INSERT INTO shift_assignments (festival_id, station_shift_id, station_id, member_id, position)
+		 VALUES ($1, $2, $3, $4, 1)`,
+		[past, barEvening, bar, anna]
+	);
+	await db.query(
+		`INSERT INTO festival_member_preferences (festival_id, member_id, station_preferences, shift_preferences)
+		 VALUES ($1, $2, ARRAY[$3::text], ARRAY[$4::text])`,
+		[past, anna, bar, barEvening]
+	);
+
+	await stationId(planned, 'Grill', null);
+
+	// Das gelöschte Fest: Zuteilungen ohne Gegenstück im neuen Modell.
+	const zelt = await stationId(deleted, 'Zelt', null);
+	const zeltNight = await shiftId(deleted, zelt, 'Nachtschicht');
+	await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3)`, [
+		deleted,
+		zelt,
+		anna
+	]);
+	await db.query(
+		`INSERT INTO shift_assignments (festival_id, station_shift_id, station_id, member_id)
+		 VALUES ($1, $2, $3, $4)`,
+		[deleted, zeltNight, zelt, anna]
+	);
+
+	return { festivals: { past, planned, deleted }, stations: { bar } };
+}
+
+/** Der additive Zwischenstand, danach die echte Aufräum-Migration darüber. */
+async function cleanedUpDatabase(): Promise<{ db: PGlite; legacy: LegacyData }> {
+	const db = await createTestDatabase();
+	await applyMigration(db, SCHEDULE_TABLES);
+	const legacy = await seedMigratedData(db);
+	await applyMigration(db, FESTIVAL_HELPERS);
+	await applyMigration(db, HELPER_POINTERS);
+	await applyMigration(db, MIGRATION);
+	return { db, legacy };
+}
+
+/** Die Zuteilungen eines Fests, beide Tabellen in einem Griff. */
+async function assignmentCountsOf(
+	db: PGlite,
+	festivalId: string
+): Promise<{ station_members: number; shift_assignments: number }> {
+	const result = await db.query<{ station_members: number; shift_assignments: number }>(
+		`SELECT (SELECT count(*)::int FROM station_members WHERE festival_id = $1) AS station_members,
+		        (SELECT count(*)::int FROM shift_assignments WHERE festival_id = $1) AS shift_assignments`,
+		[festivalId]
+	);
+	return result.rows[0];
+}
+
+describe('Alte member-Zeiger', () => {
+	let db: PGlite;
+
+	beforeAll(async () => {
+		({ db } = await cleanedUpDatabase());
+	});
+
+	it('sind aus station_members, shift_assignments und stations verschwunden', async () => {
+		const stationMembers = await columnsOf(db, 'station_members');
+		const shiftAssignments = await columnsOf(db, 'shift_assignments');
+		const stations = await columnsOf(db, 'stations');
+
+		expect(stationMembers.has('member_id')).toBe(false);
+		expect(shiftAssignments.has('member_id')).toBe(false);
+		expect(stations.has('responsible_member_id')).toBe(false);
+	});
+
+	it('lassen die Helfer-Zeiger an ihrer Stelle stehen', async () => {
+		const stationMembers = await columnsOf(db, 'station_members');
+		const shiftAssignments = await columnsOf(db, 'shift_assignments');
+		const stations = await columnsOf(db, 'stations');
+
+		expect(stationMembers.get('helper_id')).toMatchObject({ data_type: 'uuid' });
+		expect(shiftAssignments.get('helper_id')).toMatchObject({ data_type: 'uuid' });
+		expect(stations.get('responsible_helper_id')).toMatchObject({ data_type: 'uuid' });
+	});
+
+	it('nehmen die Leiche shift_assignments.festival_member_id gleich mit', async () => {
+		const shiftAssignments = await columnsOf(db, 'shift_assignments');
+
+		expect(shiftAssignments.has('festival_member_id')).toBe(false);
+	});
+});
+
+describe('Zuteilung ohne Helfer', () => {
+	let db: PGlite;
+	let legacy: LegacyData;
+
+	beforeAll(async () => {
+		({ db, legacy } = await cleanedUpDatabase());
+	});
+
+	it('ist fortan verboten — helper_id trägt die Zuteilung allein', async () => {
+		const stationMembers = await columnsOf(db, 'station_members');
+		const shiftAssignments = await columnsOf(db, 'shift_assignments');
+
+		expect(stationMembers.get('helper_id')).toMatchObject({ is_nullable: 'NO' });
+		expect(shiftAssignments.get('helper_id')).toMatchObject({ is_nullable: 'NO' });
+	});
+
+	it('räumt die zurückgebliebenen Zeilen der gelöschten Feste weg', async () => {
+		expect(await assignmentCountsOf(db, legacy.festivals.deleted)).toEqual({
+			station_members: 0,
+			shift_assignments: 0
+		});
+	});
+
+	it('lässt die Zuteilungen eines lebenden Fests unangetastet', async () => {
+		expect(await assignmentCountsOf(db, legacy.festivals.past)).toEqual({
+			station_members: 1,
+			shift_assignments: 1
+		});
+	});
+
+	it('lässt eine Station ohne Verantwortlichen weiter zu', async () => {
+		const stations = await columnsOf(db, 'stations');
+
+		expect(stations.get('responsible_helper_id')).toMatchObject({ is_nullable: 'YES' });
+	});
+});
+
+describe('Das Fenster zwischen Schema-Slice und Code-Umschalter', () => {
+	// Der Fan-out (#97) lief additiv und *vor* dem Umschalten des Codes (#98).
+	// Was der alte Codestand dazwischen in ein lebendes Fest geschrieben hat,
+	// trägt member_id und kein helper_id — und ist trotzdem echte Planung.
+	let db: PGlite;
+	let nachzuegler: { festival: string; station: string; shift: string };
+
+	beforeAll(async () => {
+		db = await createTestDatabase();
+		await applyMigration(db, SCHEDULE_TABLES);
+		const legacy = await seedMigratedData(db);
+		await applyMigration(db, FESTIVAL_HELPERS);
+		await applyMigration(db, HELPER_POINTERS);
+
+		// Ab hier läuft noch der alte Code: er kennt nur member_id.
+		const member = (
+			await db.query<{ id: string }>(
+				`INSERT INTO members (first_name, last_name, email, phone, notes, is_active, user_id)
+				 VALUES ('Nora', 'Neuner', 'nora@example.org', '0664 9999', 'Erst nachher dazugekommen', true, gen_random_uuid())
+				 RETURNING id`
+			)
+		).rows[0].id;
+		const station = (
+			await db.query<{ id: string }>(
+				`INSERT INTO stations (festival_id, name, responsible_member_id) VALUES ($1, 'Schank', $2) RETURNING id`,
+				[legacy.festivals.planned, member]
+			)
+		).rows[0].id;
+		const shift = (
+			await db.query<{ id: string }>(
+				`INSERT INTO station_shifts (festival_id, station_id, name, start_date, start_time, end_time)
+				 VALUES ($1, $2, 'Frühschicht', CURRENT_DATE, '10:00', '14:00') RETURNING id`,
+				[legacy.festivals.planned, station]
+			)
+		).rows[0].id;
+		await db.query(`INSERT INTO station_members (festival_id, station_id, member_id) VALUES ($1, $2, $3)`, [
+			legacy.festivals.planned,
+			station,
+			member
+		]);
+		await db.query(
+			`INSERT INTO shift_assignments (festival_id, station_shift_id, station_id, member_id, position)
+			 VALUES ($1, $2, $3, $4, 0)`,
+			[legacy.festivals.planned, shift, station, member]
+		);
+
+		await applyMigration(db, MIGRATION);
+		nachzuegler = { festival: legacy.festivals.planned, station, shift };
+	});
+
+	it('legt den Nachzügler als Helfer seines Fests an, statt ihn wegzuräumen', async () => {
+		const helper = await db.query<{ first_name: string; last_name: string; email: string; notes: string }>(
+			`SELECT first_name, last_name, email, notes FROM festival_helpers
+			  WHERE festival_id = $1 AND last_name = 'Neuner'`,
+			[nachzuegler.festival]
+		);
+
+		expect(helper.rows).toEqual([
+			{
+				first_name: 'Nora',
+				last_name: 'Neuner',
+				email: 'nora@example.org',
+				notes: 'Erst nachher dazugekommen'
+			}
+		]);
+	});
+
+	it('rettet seine Stations- und Schichtzuteilung auf den Helfer hinüber', async () => {
+		const zuteilungen = await db.query<{ station_members: number; shift_assignments: number }>(
+			`SELECT (SELECT count(*)::int FROM station_members sm
+			          JOIN festival_helpers fh ON fh.id = sm.helper_id
+			         WHERE sm.station_id = $1 AND fh.last_name = 'Neuner') AS station_members,
+			        (SELECT count(*)::int FROM shift_assignments sa
+			          JOIN festival_helpers fh ON fh.id = sa.helper_id
+			         WHERE sa.station_shift_id = $2 AND fh.last_name = 'Neuner') AS shift_assignments`,
+			[nachzuegler.station, nachzuegler.shift]
+		);
+
+		expect(zuteilungen.rows[0]).toEqual({ station_members: 1, shift_assignments: 1 });
+	});
+
+	it('rettet auch den Verantwortlichen der Station, den sonst niemand vermisst hätte', async () => {
+		const station = await db.query<{ last_name: string | null }>(
+			`SELECT fh.last_name FROM stations s
+			   LEFT JOIN festival_helpers fh ON fh.id = s.responsible_helper_id
+			  WHERE s.id = $1`,
+			[nachzuegler.station]
+		);
+
+		expect(station.rows[0].last_name).toBe('Neuner');
+	});
+});
+
+describe('Was von der globalen Person übrig bleibt', () => {
+	let db: PGlite;
+
+	beforeAll(async () => {
+		({ db } = await cleanedUpDatabase());
+	});
+
+	it('nicht die Wunsch-Tabelle — die Wünsche stehen auf der Helfer-Zeile', async () => {
+		const tables = await db.query<{ table_name: string }>(
+			`SELECT table_name FROM information_schema.tables
+			  WHERE table_schema = 'public' AND table_name = 'festival_member_preferences'`
+		);
+		const helpers = await columnsOf(db, 'festival_helpers');
+
+		expect(tables.rows).toEqual([]);
+		expect(helpers.get('station_preferences')).toMatchObject({ udt_name: '_uuid', is_nullable: 'NO' });
+		expect(helpers.get('shift_preferences')).toMatchObject({ udt_name: '_uuid', is_nullable: 'NO' });
+	});
+
+	it('nicht die Migrations-Brücke — sie hat ihren Zweck erfüllt', async () => {
+		const helpers = await columnsOf(db, 'festival_helpers');
+
+		expect(helpers.has('source_member_id')).toBe(false);
+	});
+
+	it('bleibt als toter Rückweg stehen, samt seiner toten Wunsch-Spalte', async () => {
+		const members = await columnsOf(db, 'members');
+
+		expect(members.has('id')).toBe(true);
+		expect(members.has('station_preferences')).toBe(true);
+	});
+
+	it('sagt selbst, dass es Absicht ist — sonst taucht die Tabelle als vergessen wieder auf', async () => {
+		const comment = await db.query<{ description: string | null }>(
+			`SELECT obj_description('public.members'::regclass, 'pg_class') AS description`
+		);
+
+		expect(comment.rows[0].description).toMatch(/ADR 0005/);
+	});
+
+	it('wird von keiner Tabelle mehr per Fremdschlüssel gehalten', async () => {
+		const references = await db.query<{ table_name: string; column_name: string }>(
+			`SELECT c.conrelid::regclass::text AS table_name, a.attname AS column_name
+			   FROM pg_constraint c
+			   JOIN unnest(c.conkey) AS k(attnum) ON true
+			   JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+			  WHERE c.contype = 'f' AND c.confrelid = 'public.members'::regclass`
+		);
+
+		// schedule_entries.responsible_member_id fällt in seinem eigenen
+		// Aufräum-Slice; hier geht es nur um die Helfer-Zeiger.
+		expect(references.rows).toEqual([{ table_name: 'schedule_entries', column_name: 'responsible_member_id' }]);
+	});
+});
+
+describe('Der Schutz gegen die doppelte Stations-Zuteilung', () => {
+	it('überlebt den Drop von member_id — er hängt am Helfer', async () => {
+		const { db, legacy } = await cleanedUpDatabase();
+		const helper = await db.query<{ id: string }>(
+			`SELECT id FROM festival_helpers WHERE festival_id = $1 AND first_name = 'Anna'`,
+			[legacy.festivals.past]
+		);
+
+		const zweitesMal = db.query(
+			`INSERT INTO station_members (festival_id, station_id, helper_id) VALUES ($1, $2, $3)`,
+			[legacy.festivals.past, legacy.stations.bar, helper.rows[0].id]
+		);
+
+		await expect(zweitesMal).rejects.toThrow(/station_members_station_id_helper_id_key/);
+	});
+});
+
+describe('Zweiter Durchlauf', () => {
+	it('läuft durch und rührt nichts mehr an', async () => {
+		const { db } = await cleanedUpDatabase();
+		const counts = () =>
+			db.query<{ helpers: number; station_members: number; shift_assignments: number }>(
+				`SELECT (SELECT count(*)::int FROM festival_helpers) AS helpers,
+				        (SELECT count(*)::int FROM station_members) AS station_members,
+				        (SELECT count(*)::int FROM shift_assignments) AS shift_assignments`
+			);
+		const afterFirstRun = (await counts()).rows[0];
+
+		await expect(applyMigration(db, MIGRATION)).resolves.toBeUndefined();
+
+		expect(afterFirstRun.helpers).toBeGreaterThan(0);
+		expect((await counts()).rows[0]).toEqual(afterFirstRun);
+	});
+});

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 import { formatFestDateRange, festCountdown } from '@/lib/festDates';
 import { Poster } from '@/components/toolkit/Poster';
 import { Stamp } from '@/components/toolkit/Stamp';
@@ -13,7 +13,7 @@ interface FestplakatProps {
 		end_date?: string;
 		location?: string;
 	};
-	scheduleDays: ScheduleDayWithPhases[];
+	scheduleDays: ScheduleDayWithEntries[];
 	/** Absprung in den Ablaufplan-Tab (Programm-Aushang lebt dort). */
 	onOpenSchedule: () => void;
 }

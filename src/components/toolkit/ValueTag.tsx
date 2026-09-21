@@ -14,9 +14,16 @@ const valueTagVariants = cva(
 				ink: 'border-tinte bg-papier text-tinte',
 				/** Nichts erfasst / Sachleistung: gestrichelt grau. */
 				muted: 'border-dashed border-tinte-soft bg-white text-tinte-soft'
-			}
+			},
+			/** Durchgedrückt: Fläche in der Rahmenfarbe, Schrift hell — für die
+			Marke, die *gewählt* ist und nicht nur einen Wert nennt (#95). */
+			filled: { true: '', false: '' }
 		},
-		defaultVariants: { tone: 'green' }
+		compoundVariants: [
+			{ filled: true, tone: 'green', className: 'bg-gruen text-white' },
+			{ filled: true, tone: 'ink', className: 'bg-tinte text-white' }
+		],
+		defaultVariants: { tone: 'green', filled: false }
 	}
 );
 
@@ -30,9 +37,17 @@ export interface ValueTagProps
 }
 
 /** Wertmarke: Kategoriename + Akzentschrift-Wert (DESIGN-VISION.md §4 „Wertmarke"). */
-export function ValueTag({ className, children, value, overridden, tone, ...props }: ValueTagProps) {
+export function ValueTag({
+	className,
+	children,
+	value,
+	overridden,
+	tone,
+	filled,
+	...props
+}: ValueTagProps) {
 	return (
-		<span className={cn(valueTagVariants({ tone }), className)} {...props}>
+		<span className={cn(valueTagVariants({ tone, filled }), className)} {...props}>
 			{children}
 			{value != null && (
 				<span

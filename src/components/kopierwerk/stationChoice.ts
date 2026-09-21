@@ -1,21 +1,54 @@
-import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
 import { copiedShiftDateLabel, formatShiftRange } from '@/lib/shiftDates';
 import type { Station, StationShift } from '@/lib/shiftService';
 
 /**
  * Schritt 2 des Kopierwerks (#94) als reine Logik: welche Zeilen die Werkbank
- * zeigt und was das Ankreuzen bewirkt.
+ * zeigt.
  *
  * Gewählt wird auf **Stations-Ebene** (Entscheid #64) — die Schichten hängen
  * nur als Vorschau darunter, damit man vor dem Anlegen sieht, auf welche Tage
- * sie rücken.
+ * sie rücken. Das Ankreuzen selbst steht in `selection.ts`, es ist dasselbe wie
+ * in Schritt 3; was die Auswahl beider Schritte zusammen ergibt, ist
+ * `CopySelection` (#95).
  */
 
 /**
- * Was Schritt 2 zur Kopie beisteuert — der Ausschnitt aus `CopyFestivalOptions`,
- * den diese Werkbank füllt. Das Material kommt aus Schritt 3.
+ * Die beiden Übernahme-Schalter von Schritt 2. Sie stehen zusammen, weil sie
+ * aneinander hängen — was `CopySelection` daraus macht, steht in `kopierwerk`.
  */
-export type StationSelection = Pick<CopyFestivalOptions, 'stationIds' | 'copyAssignments'>;
+export interface CopySwitches {
+	copyHelpers: boolean;
+	copyAssignments: boolean;
+}
+
+/**
+ * Die eine Regel der beiden Übernahme-Schalter (ADR 0005): ohne kopierte Helfer
+ * gibt es nichts, woran eine Zuteilung hängen könnte. Sie steht hier und nicht
+ * an den Schaltern, damit sie nicht an der Oberfläche allein hängt — das
+ * Ausgrauen ist nur ihre Darstellung.
+ */
+const withCopySwitches = (
+	switches: CopySwitches,
+	copyHelpers: boolean,
+	copyAssignments: boolean
+): CopySwitches => ({ ...switches, copyHelpers, copyAssignments: copyHelpers && copyAssignments });
+
+/**
+ * „Helfer übernehmen" umschalten. Fällt der Schalter, fallen die Zuteilungen
+ * mit — ein unsichtbar gesetztes Häkchen würde beim Wiedereinschalten mehr
+ * kopieren, als die Oberfläche zeigt.
+ */
+export function withHelperCopy(switches: CopySwitches, copyHelpers: boolean): CopySwitches {
+	return withCopySwitches(switches, copyHelpers, switches.copyAssignments);
+}
+
+/** „Zuteilungen übernehmen" umschalten — greift nur mit übernommenen Helfern. */
+export function withAssignmentCopy(
+	switches: CopySwitches,
+	copyAssignments: boolean
+): CopySwitches {
+	return withCopySwitches(switches, switches.copyHelpers, copyAssignments);
+}
 
 /** Eine Schicht in der Vorschau — read-only, ohne eigene Auswahl. */
 export interface ShiftPreview {
@@ -49,31 +82,6 @@ export interface StationPreviewInput {
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
-/** Station dazu oder heraus; die Reihenfolge der Auswahl bleibt stabil. */
-export function toggleStation(selected: string[], stationId: string): string[] {
-	return selected.includes(stationId)
-		? selected.filter((id) => id !== stationId)
-		: [...selected, stationId];
-}
-
-/**
- * Zustand des „Alle Stationen"-Umschalters. Der Zwischenzustand hält fest, dass
- * ein Teil gewählt ist — ohne ihn läse sich eine Teilauswahl als „keine".
- */
-export function allStationsState(
-	stationIds: string[],
-	selected: string[]
-): boolean | 'indeterminate' {
-	const chosen = stationIds.filter((id) => selected.includes(id)).length;
-	if (chosen === 0) return false;
-	return chosen === stationIds.length ? true : 'indeterminate';
-}
-
-/** Der Umschalter wählt alle — außer es sind schon alle, dann keine. */
-export function toggleAllStations(stationIds: string[], selected: string[]): string[] {
-	return allStationsState(stationIds, selected) === true ? [] : [...stationIds];
-}
 
 /**
  * Die Zeilen der Werkbank. Die Reihenfolge von Stationen und Schichten kommt
