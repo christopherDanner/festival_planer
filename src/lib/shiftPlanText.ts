@@ -9,14 +9,13 @@ Wortlaut. */
 
 import {
 	buildStationBoards,
-	helperName,
 	slotLabel,
 	stationMetaText,
 	type BoardRow,
 	type ShiftPlanSource,
 	type StationBoard
 } from '@/lib/shiftBoard';
-import type { Helper } from '@/lib/helperService';
+import { helperName, type Helper } from '@/lib/helperService';
 
 export interface ShiftPlanTextData extends ShiftPlanSource {
 	festivalName: string;

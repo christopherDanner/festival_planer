@@ -52,7 +52,8 @@ import * as poster from '@/lib/pdfPoster';
 import { buildShiftPlanPdf, type ExportData } from '@/lib/exportService';
 import { buildSchedulePdf, type ScheduleExportOptions } from '@/lib/scheduleExportService';
 import { buildSponsoringOverviewPdf } from '@/lib/sponsoringExportService';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
+import { scheduleDay, scheduleEntry, schedulePhase } from './scheduleFactories';
 import type { SponsoringOverviewRow } from '@/lib/sponsoringTotals';
 import { OPEN_SLOT } from '@/lib/shiftBoard';
 import { assignment, shift, station, stationHelper } from './shiftFixtures';
@@ -125,68 +126,41 @@ function shiftPlanData(): ExportData {
 }
 
 function scheduleOptions(overrides: Partial<ScheduleExportOptions> = {}): ScheduleExportOptions {
-	const days: ScheduleDayWithPhases[] = [
-		{
+	const days: ScheduleDayWithEntries[] = [
+		scheduleDay({
 			id: 'd-1',
-			festival_id: 'f1',
 			date: '2026-08-08',
 			label: 'Festtag',
 			is_auto_generated: true,
-			sort_order: 0,
-			...stamps,
 			phases: [
-				{
-					id: 'p-1',
+				schedulePhase({ id: 'p-1', schedule_day_id: 'd-1', name: 'Aufbau' }),
+				schedulePhase({ id: 'p-2', schedule_day_id: 'd-1', name: 'Frühschoppen', sort_order: 1 })
+			],
+			entries: [
+				scheduleEntry({
+					id: 'e-1',
 					schedule_day_id: 'd-1',
-					festival_id: 'f1',
-					name: 'Aufbau',
-					sort_order: 0,
-					...stamps,
-					entries: [
-						{
-							id: 'e-1',
-							schedule_phase_id: 'p-1',
-							festival_id: 'f1',
-							title: 'Zelt aufstellen',
-							type: 'task',
-							start_time: '08:00:00',
-							end_time: '10:00:00',
-							responsible_helper_id: 'm-1',
-							responsible_helper: { id: 'm-1', first_name: 'Anna', last_name: 'Gruber' },
-							status: 'done',
-							description: null,
-							sort_order: 0,
-							...stamps
-						}
-					]
-				},
-				{
-					id: 'p-2',
+					schedule_phase_id: 'p-1',
+					title: 'Zelt aufstellen',
+					type: 'task',
+					start_time: '08:00:00',
+					end_time: '10:00:00',
+					responsible_helper_id: 'm-1',
+					responsible_helper: { id: 'm-1', first_name: 'Anna', last_name: 'Gruber' },
+					status: 'done'
+				}),
+				scheduleEntry({
+					id: 'e-2',
 					schedule_day_id: 'd-1',
-					festival_id: 'f1',
-					name: 'Frühschoppen',
-					sort_order: 1,
-					...stamps,
-					entries: [
-						{
-							id: 'e-2',
-							schedule_phase_id: 'p-2',
-							festival_id: 'f1',
-							title: 'Blasmusik — Einmarsch',
-							type: 'program',
-							start_time: '10:30:00',
-							end_time: null,
-							responsible_helper_id: null,
-							responsible_helper: null,
-							status: 'open',
-							description: null,
-							sort_order: 0,
-							...stamps
-						}
-					]
-				}
+					schedule_phase_id: 'p-2',
+					title: 'Blasmusik — Einmarsch',
+					type: 'program',
+					start_time: '10:30:00',
+					responsible_helper: null,
+					status: 'open'
+				})
 			]
-		}
+		})
 	];
 
 	return {
@@ -426,6 +400,28 @@ describe('buildSchedulePdf — Ablaufplan in Plakat-Optik', () => {
 			expect.anything(),
 			expect.objectContaining({ label: 'Erledigt', tone: 'gruen' })
 		);
+	});
+
+	it('druckt Einträge ohne Phase unter dem Tag, ohne Zwischentitel', () => {
+		const options = scheduleOptions();
+		options.days[0].entries.push(
+			scheduleEntry({
+				id: 'e-3',
+				schedule_day_id: 'd-1',
+				schedule_phase_id: null,
+				title: 'Kassa zählen',
+				type: 'task',
+				start_time: '23:00:00',
+				status: 'open'
+			})
+		);
+
+		buildSchedulePdf(options);
+
+		const texts = printed().map((p) => p.text);
+		// Der Eintrag steht auf dem Papier — und bringt keine eigene Aufschrift mit.
+		expect(texts).toContain('Kassa zählen');
+		expect(texts.filter((t) => t === t.toUpperCase() && t.length > 0)).not.toContain('OHNE PHASE');
 	});
 
 	it('trägt die Fußzeile mit Seitenzähler', () => {

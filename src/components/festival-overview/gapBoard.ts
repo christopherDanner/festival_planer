@@ -10,7 +10,7 @@ import type {
 	ShiftAssignmentWithHelper,
 	StationHelperWithDetails
 } from '@/lib/shiftService';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { withoutPrice } from '@/lib/materialCosts';
 import { formatShiftRange } from '@/lib/shiftDates';
@@ -59,7 +59,7 @@ export interface GapBoardInput {
 	shifts: StationShift[];
 	assignments: ShiftAssignmentWithHelper[];
 	stationHelpers: StationHelperWithDetails[];
-	scheduleDays: ScheduleDayWithPhases[];
+	scheduleDays: ScheduleDayWithEntries[];
 	materials: FestivalMaterialWithStation[];
 }
 
@@ -68,11 +68,6 @@ export function formatDeadline(date: string, time: string | null): string {
 	const d = new Date(`${date}T00:00:00`);
 	const day = `${WEEKDAYS[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
 	return time ? `${day}, ${time.slice(0, 5)}` : day;
-}
-
-/** Alle Programm-/Aufgaben-Einträge eines Tages über seine Phasen. */
-function entriesOf(day: ScheduleDayWithPhases) {
-	return (day.phases ?? []).flatMap((phase) => phase.entries ?? []);
 }
 
 function deriveStationGaps(input: GapBoardInput): StationGap[] {
@@ -109,10 +104,11 @@ function deriveStationGaps(input: GapBoardInput): StationGap[] {
 	return gaps.sort((a, b) => b.missing - a.missing || a.stationName.localeCompare(b.stationName, 'de'));
 }
 
-function deriveOpenTaskGap(days: ScheduleDayWithPhases[]): OpenTaskGap | null {
+function deriveOpenTaskGap(days: ScheduleDayWithEntries[]): OpenTaskGap | null {
 	const open: { date: string; time: string | null }[] = [];
 	for (const day of days) {
-		for (const entry of entriesOf(day)) {
+		// Die Einträge hängen am Tag, mit oder ohne Phase (ADR 0007).
+		for (const entry of day.entries ?? []) {
 			if (entry.type === 'task' && entry.status === 'open') {
 				open.push({ date: day.date, time: entry.start_time });
 			}

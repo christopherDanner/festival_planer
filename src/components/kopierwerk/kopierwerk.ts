@@ -1,5 +1,8 @@
 import { festYear, formatFestDateRange } from '@/lib/festDates';
+import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
 import type { FestivalData } from '@/lib/festivalService';
+
+import type { QuantitySource } from './materialChoice';
 
 /**
  * Was Schritt 1 des Kopierwerks sammelt, bevor das Fest existiert (#93).
@@ -154,6 +157,36 @@ export function stampCardHeading(
 	if (templateName) parts.push(`aus Vorlage ${templateName}`);
 
 	return { title: draft.name.trim() || 'Neues Fest', sub: parts.join(' · ') };
+}
+
+/** Was die Schritte 2 und 3 zusammengetragen haben. Beide Auswahlen sind
+Mengen — auf dem Bildschirm ist es dieselbe Art von Häkchen. */
+export interface CopySelection {
+	stationIds: ReadonlySet<string>;
+	copyAssignments: boolean;
+	materialIds: ReadonlySet<string>;
+	quantitySource: QuantitySource;
+}
+
+/**
+ * Der Auftrag an `copyFestivalData`: die Auswahl beider Schritte plus die
+ * beiden Fest-Startdaten, aus denen der Termin-Versatz der Schichten kommt.
+ * Sie stehen hier zusammen, damit Vorlage und neues Fest nicht an einer
+ * Aufrufstelle vertauscht werden können.
+ */
+export function copyFestivalOptions(
+	template: { start_date: string },
+	draft: FestivalDraft,
+	selection: CopySelection
+): CopyFestivalOptions {
+	return {
+		stationIds: [...selection.stationIds],
+		copyAssignments: selection.copyAssignments,
+		materialIds: [...selection.materialIds],
+		materialQuantitySource: selection.quantitySource,
+		sourceFestivalStartDate: template.start_date,
+		targetFestivalStartDate: draft.startDate
+	};
 }
 
 /** Knopf der Schritt-1-Fußzeile: ohne Vorlage wird angelegt, mit Vorlage geht es weiter. */

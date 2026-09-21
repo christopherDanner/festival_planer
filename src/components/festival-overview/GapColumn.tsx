@@ -6,7 +6,7 @@ import type {
 	ShiftAssignmentWithHelper,
 	StationHelperWithDetails
 } from '@/lib/shiftService';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import type { FestivalTab } from '@/components/festival/FestivalTabBar';
 import { Stamp } from '@/components/toolkit/Stamp';
@@ -17,7 +17,7 @@ interface GapColumnProps {
 	shifts: StationShift[];
 	assignments: ShiftAssignmentWithHelper[];
 	stationHelpers: StationHelperWithDetails[];
-	scheduleDays: ScheduleDayWithPhases[];
+	scheduleDays: ScheduleDayWithEntries[];
 	materials: FestivalMaterialWithStation[];
 	/** Absprung in einen anderen Fest-Tab. */
 	onTabChange: (tab: FestivalTab) => void;

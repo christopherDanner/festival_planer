@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { helperName } from '@/lib/shiftBoard';
 import { fullPlanText, helperPlanText, type ShiftPlanTextData } from '@/lib/shiftPlanText';
 import type {
 	ShiftAssignmentWithHelper,
@@ -10,7 +9,7 @@ import type {
 	StationHelperWithDetails,
 	StationShift
 } from '@/lib/shiftService';
-import type { Helper } from '@/lib/helperService';
+import { helperName, type Helper } from '@/lib/helperService';
 
 import ShareZettel, { type ShareMode } from './ShareZettel';
 
