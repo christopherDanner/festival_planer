@@ -136,7 +136,8 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 			}>
 			<PaperSheetFields>
 				{mode === 'edit' && (
-					<PaperSheetNote>
+					// Der Hinweis steht neben der Lücke, nicht im Changelog.
+					<PaperSheetNote wide>
 						Hier liegen die <b>Stammdaten</b> der Position. {ZEILEN_HINWEIS}
 					</PaperSheetNote>
 				)}

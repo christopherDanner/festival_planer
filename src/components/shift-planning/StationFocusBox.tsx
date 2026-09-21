@@ -11,7 +11,7 @@ import type { StationShift } from '@/lib/shiftService';
 
 export interface StationFocusBoxProps {
 	board: StationBoard;
-	/** Nur diese Station auto-füllen; verdrahtet wird der Knopf in #108. */
+	/** Öffnet die Auto-Zuteilung eingeschränkt auf diese Station (#108). */
 	onAutoFill: () => void;
 	onEditStation: () => void;
 	/** Wird erst nach der Rückfrage des ⋮-Menüs gerufen — sie steht dort, weil

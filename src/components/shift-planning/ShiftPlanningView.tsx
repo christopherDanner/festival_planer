@@ -14,6 +14,7 @@ import AutoAssignDialog from './dialogs/AutoAssignDialog';
 import ShareDialog from './dialogs/ShareDialog';
 import { exportToExcel, exportToPdf } from '@/lib/exportService';
 import { buildStationBoard, buildStationTabs, resolveFocusStationId } from '@/lib/shiftBoard';
+import { autoAssignScope } from '@/lib/autoAssignScope';
 import { buildHelperRoster, type HelperFilter } from '@/lib/helperRoster';
 import { deriveShiftsMetric } from '@/lib/staffing';
 import type { Station, StationShift, ShiftAssignmentWithHelper } from '@/lib/shiftService';
@@ -79,6 +80,14 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		() =>
 			deriveShiftsMetric(data.stations, data.stationShifts, data.assignments, data.stationHelpers),
 		[data.stations, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	// Der Umfang des nächsten Laufs: ohne Station das ganze Fest, mit Station nur
+	// deren Schichten („NUR DIESE STATION AUTO-FÜLLEN").
+	const autoFillStation =
+		dialogState.type === 'autoAssign' ? dialogState.station ?? null : null;
+	const assignmentScope = useMemo(
+		() => autoAssignScope(autoFillStation, data.stationShifts, data.assignments),
+		[autoFillStation, data.stationShifts, data.assignments]
 	);
 	// Die Gruppierung hängt an der Fokus-Station: wechselt der Reiter, ordnet
 	// sich die Liste nach der neuen Wunsch-Passung.
@@ -405,17 +414,15 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			<AutoAssignDialog
 				open={dialogState.type === 'autoAssign'}
 				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
+				scope={assignmentScope}
 				onAssign={(config) => {
-					// „Nur diese Station auto-füllen" heißt: dasselbe Verfahren über ein
-					// gefiltertes Schicht-Array (Entscheid 6 aus #68). Die Regler zählen
-					// weiter übers ganze Fest — sonst sammelt jemand in fünf Stationen je
-					// drei Schichten. Der eigene Dialog dafür kommt in #108.
-					const station = dialogState.type === 'autoAssign' ? dialogState.station : undefined;
-					const stationShifts = station
-						? data.stationShifts.filter((s) => s.station_id === station.id)
-						: data.stationShifts;
-
-					if (stationShifts.length === 0 || data.stations.length === 0 || data.helpers.length === 0) {
+					// Einschränken heißt: dasselbe Verfahren über ein gefiltertes
+					// Schicht-Array (Entscheid 6 aus #68) — der Service bleibt unberührt.
+					if (
+						assignmentScope.shifts.length === 0 ||
+						data.stations.length === 0 ||
+						data.helpers.length === 0
+					) {
 						toast({
 							title: 'Fehler',
 							description: 'Es müssen Schichten, Stationen und Helfer vorhanden sein.',
@@ -423,15 +430,20 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 						});
 						return;
 					}
-					actions.autoAssign.mutate({
-						stationShifts,
-						stations: data.stations,
-						helpers: data.helpers,
-						config,
-						stationPreferences: data.stationPreferences
-					});
+					actions.autoAssign.mutate(
+						{
+							stationShifts: assignmentScope.shifts,
+							stations: data.stations,
+							helpers: data.helpers,
+							config,
+							stationPreferences: data.stationPreferences
+						},
+						// Erst wenn der Lauf durch ist — bis dahin steht „Zuteilen…"
+						// auf dem Knopf, statt dass der Zettel im Nichts verschwindet.
+						{ onSettled: () => setDialogState({ type: 'none' }) }
+					);
 				}}
-				onClear={() => actions.clearAssignments.mutate()}
+				onClear={(stationId) => actions.clearAssignments.mutate({ stationId })}
 				isLoading={actions.autoAssign.isPending}
 			/>
 

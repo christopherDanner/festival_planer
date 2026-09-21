@@ -111,23 +111,35 @@ export function PaperSheetFields({
 }
 
 /**
- * Ein Merkzettel zwischen den Feldern: 2px-Tinte-Rahmen mit dicker linker
- * Kante, über beide Spalten. Er steht dort, wo er gilt — der Hinweis zu einem
- * Feld gehört neben das Feld, nicht ins Changelog. `ton="warnung"` färbt die
- * Kante rot, wo der Zettel einen Fehler benennt statt etwas zu erklären.
+ * Ein Merkzettel zwischen den Feldern: weiße Werkzeugfläche, 2px Tinte, links
+ * die breite Kante. Er steht dort, wo er gilt — der Absatz neben der Lücke statt
+ * im Changelog. In #117 am Stammdaten-Hinweis des Positions-Zettels festgelegt;
+ * seit #108 liegt das Rezept hier, weil es die zweite Stelle erreicht hat
+ * (ADR 0003 §1). `ton="warnung"` färbt die Kante rot, wo der Zettel einen Fehler
+ * benennt statt etwas zu erklären.
+ *
+ * `wide` gehört hierher und nicht zum Aufrufer: es hängt am Raster von
+ * `PaperSheetFields`, genau wie bei `PaperSheetField`.
  */
 export function PaperSheetNote({
+	wide,
 	children,
+	className,
 	ton = 'hinweis'
 }: {
+	/** Über beide Spalten von `PaperSheetFields`. */
+	wide?: boolean;
 	children: ReactNode;
+	className?: string;
 	ton?: 'hinweis' | 'warnung';
 }) {
 	return (
 		<p
 			className={cn(
-				'border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed min-[900px]:col-span-2',
-				ton === 'warnung' && 'border-l-rot'
+				'border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed',
+				wide && 'min-[900px]:col-span-2',
+				ton === 'warnung' && 'border-l-rot',
+				className
 			)}>
 			{children}
 		</p>

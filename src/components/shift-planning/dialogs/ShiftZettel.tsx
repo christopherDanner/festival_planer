@@ -143,10 +143,10 @@ const ShiftZettel: React.FC<ShiftZettelProps> = ({
 				das Datum nicht, gilt der Fehler: eine Vorschau auf eine Zeile, die so
 				nie entsteht, wäre schlimmer als gar keine. */}
 				{problem ? (
-					<PaperSheetNote ton="warnung">{problem}</PaperSheetNote>
+					<PaperSheetNote wide ton="warnung">{problem}</PaperSheetNote>
 				) : (
 					ueberMitternacht && (
-						<PaperSheetNote>
+						<PaperSheetNote wide>
 							Läuft über Mitternacht: Die Schicht steht beim <b>Starttag</b> und trägt dort{' '}
 							<b className="font-display tracking-[.02em]">{shiftTimeLabel(form)}</b>.
 						</PaperSheetNote>
