@@ -12,13 +12,13 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FileDown } from 'lucide-react';
 import { exportScheduleToPdf } from '@/lib/scheduleExportService';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 
 interface ScheduleExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   festivalName: string;
-  days: ScheduleDayWithPhases[];
+  days: ScheduleDayWithEntries[];
 }
 
 export default function ScheduleExportDialog({
@@ -107,7 +107,9 @@ export default function ScheduleExportDialog({
     });
   };
 
-  const hasSelection = selectedDayIds.size > 0 && selectedPhaseIds.size > 0;
+  // Ein Tag genügt: seit ADR 0007 kann er Einträge tragen, ohne eine einzige
+  // Phase zu haben — auf Phasen zu bestehen sperrte den Export für diese Feste.
+  const hasSelection = selectedDayIds.size > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
