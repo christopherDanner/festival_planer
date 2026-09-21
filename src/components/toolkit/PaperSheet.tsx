@@ -110,6 +110,30 @@ export function PaperSheetFields({
 	);
 }
 
+/**
+ * Ein Merkzettel zwischen den Feldern: 2px-Tinte-Rahmen mit dicker linker
+ * Kante, über beide Spalten. Er steht dort, wo er gilt — der Hinweis zu einem
+ * Feld gehört neben das Feld, nicht ins Changelog. `ton="warnung"` färbt die
+ * Kante rot, wo der Zettel einen Fehler benennt statt etwas zu erklären.
+ */
+export function PaperSheetNote({
+	children,
+	ton = 'hinweis'
+}: {
+	children: ReactNode;
+	ton?: 'hinweis' | 'warnung';
+}) {
+	return (
+		<p
+			className={cn(
+				'border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed min-[900px]:col-span-2',
+				ton === 'warnung' && 'border-l-rot'
+			)}>
+			{children}
+		</p>
+	);
+}
+
 export interface PaperSheetFieldProps {
 	label: ReactNode;
 	htmlFor?: string;

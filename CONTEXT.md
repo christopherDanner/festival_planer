@@ -89,6 +89,8 @@ Bestellwert und Verbrauchswert sind bereichsübergreifend dieselben Zahlen — d
 
 Funktionale Einheit innerhalb eines Festes (`stations`), z.B. "Bar", "Küche", "Kassa". Stationen sind pro Fest definiert, werden aber bei der Material-Übernahme per Name zwischen Festen gemappt.
 
+Ihr **Ort** ist der Platz am Festgelände ("Zelt Nord"). Er steht im grünen Stationskopf des Schichtplans und wird im Station-Dialog so beschriftet; in der Datenbank heißt die Spalte aus der Frühzeit noch `description`.
+
 ## Lieferant
 
 Bezugsquelle einer Material-Position (`supplier`, Freitext pro Position, kann leer sein). Dient als Gruppierungsachse beim Erstellen von Bestelllisten — alle Positionen mit demselben Lieferanten ergeben eine Bestellung. Positionen ohne Lieferanten bilden die Gruppe "Kein Lieferant".
@@ -199,7 +201,7 @@ _Avoid_: Follow-up.
 
 ## Werkzeug-Bausteine (Toolkit)
 
-Die wiederkehrenden UI-Bausteine der Werkzeug-Plakat-Handschrift (`design-vision/DESIGN-VISION.md` §4): Maßband-Ruler, Namens-Marke, Wertmarke, Stempel, Segment-Schalter, Ampel-Logik, Freier Platz. Im Code englisch benannt unter `src/components/toolkit/` (`<Ruler>`, `<NameChip>`, `<ValueTag>`, `<Stamp>`, `<SegmentedControl>`, `<ModeToggle>`, `<StatusBar>`, `<OpenSlot>`) — Mapping und Komponentenstrategie in ADR 0003. Abgrenzung: `src/components/ui/` = Radix-Verhalten (shadcn, nur restylt), `toolkit/` = Handschrift.
+Die wiederkehrenden UI-Bausteine der Werkzeug-Plakat-Handschrift (`design-vision/DESIGN-VISION.md` §4): Maßband-Ruler, Namens-Marke, Wertmarke, Stempel, Segment-Schalter, Ampel-Logik, Freier Platz. Im Code englisch benannt unter `src/components/toolkit/` (`<Ruler>`, `<NameChip>`, `<ValueTag>`, `<Stamp>`, `<SegmentedControl>`, `<ModeToggle>`, `<StatusBar>`, `<OpenSlot>`, `<ActionMenu>`) — Mapping und Komponentenstrategie in ADR 0003. Abgrenzung: `src/components/ui/` = Radix-Verhalten (shadcn, nur restylt), `toolkit/` = Handschrift.
 
 ## Sponsoring-Übersicht
 
