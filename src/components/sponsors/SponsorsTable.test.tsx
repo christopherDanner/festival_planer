@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { buildSponsorHistory, type SponsorHistoryMap } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
 import SponsorsTable from './SponsorsTable';
 
@@ -20,8 +21,18 @@ function sponsor(over: Partial<Sponsor> = {}): Sponsor {
 	};
 }
 
-const render = (sponsors: Sponsor[]) =>
-	renderToStaticMarkup(<SponsorsTable sponsors={sponsors} onSelect={() => {}} />);
+const render = (sponsors: Sponsor[], history: SponsorHistoryMap = {}) =>
+	renderToStaticMarkup(
+		<SponsorsTable sponsors={sponsors} history={history} onSelect={() => {}} />
+	);
+
+/** Historie aus echten Verknüpfungen, nicht von Hand gestellt. */
+const historieVon = (...jahre: [id: string, start_date: string][]) =>
+	buildSponsorHistory(
+		jahre.map(([id]) => ({ sponsor_id: 's1', festival_id: id })),
+		jahre.map(([id, start_date]) => ({ id, start_date })),
+		null
+	);
 
 describe('SponsorsTable', () => {
 	it('trägt die sieben Frachtbrief-Spalten', () => {
@@ -50,9 +61,34 @@ describe('SponsorsTable', () => {
 		expect(html).toContain('Bäckerei Grünsteidl');
 	});
 
-	it('lässt „Zuletzt" leer, bis der Historie-Slice greift', () => {
+	it('zeigt in „Zuletzt" das Jahr des letzten Sponsorings und die Anzahl der Feste', () => {
+		const html = render(
+			[sponsor()],
+			historieVon(['f2021', '2021-07-24'], ['f2023', '2023-07-22'], ['f2025', '2025-07-25'])
+		);
+		expect(html).toContain('2025');
+		expect(html).toContain('3 Feste');
+		expect(html).not.toContain('NOCH NIE');
+	});
+
+	it('zählt ein einzelnes Fest im Singular', () => {
+		const html = render([sponsor()], historieVon(['f2025', '2025-07-25']));
+		expect(html).toContain('1 Fest<');
+	});
+
+	it('setzt der Firma ohne Historie die Marke „NOCH NIE"', () => {
 		const html = render([sponsor()]);
-		expect(html).not.toContain('Noch nie');
+		expect(html).toContain('NOCH NIE');
+		expect(html).toContain('border-dashed');
+		expect(html).toContain('text-rot');
+	});
+
+	it('nennt bei einem Fest ohne Datum die Anzahl statt eines erfundenen Jahres', () => {
+		const html = render([sponsor()], {
+			s1: { sponsorId: 's1', lastYear: null, festivalCount: 2, sponsorsReferenceFestival: false }
+		});
+		expect(html).toContain('2 Feste');
+		expect(html).not.toContain('NOCH NIE');
 	});
 
 	it('sortiert nicht um — die Reihenfolge des Bestands bleibt', () => {

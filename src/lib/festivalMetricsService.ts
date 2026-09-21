@@ -5,6 +5,7 @@ import {
 	type FestivalScopedRow,
 	type FestivalSponsoringRow
 } from '@/lib/festivalMetrics';
+import { fetchAllRows, type RowPage } from '@/lib/restPaging';
 import { SPONSORING_VALUES_SELECT } from '@/lib/sponsorService';
 
 /**
@@ -24,16 +25,6 @@ export async function getFestivalMetrics(festivalIds: string[]): Promise<Festiva
 	]);
 
 	return buildFestivalMetrics({ shifts, materials, sponsorings });
-}
-
-/** Zeilen je Antwort. Die REST-Schicht deckelt selbst — siehe `queryByFestival`. */
-const PAGE_SIZE = 1000;
-
-interface RowPage {
-	data: unknown[] | null;
-	error: { message: string } | null;
-	/** Wahre Gesamtzahl der Treffer, unabhängig vom Deckel der Antwort. */
-	count: number | null;
 }
 
 /**
@@ -60,36 +51,18 @@ interface RowQueryClient {
  * wird immer über `festival_id` — das ist der Sinn der Sache und nicht Teil der
  * Spaltenliste.
  *
- * Geblättert wird, weil die REST-Schicht eine Antwort deckelt (PostgREST:
- * standardmäßig 1000 Zeilen). Über alle Feste der Wand summiert ist dieser
- * Deckel erreichbar — ein Fest bringt laut Vision ~86 Material-Positionen mit —,
- * und eine gedeckelte Antwort würde still zu wenig zählen. `count` nennt die
- * wahre Gesamtzahl; solange Zeilen fehlen, wird nachgeblättert. Im Normalfall
- * bleibt es bei der einen Abfrage je Kennzahl.
+ * Geblättert wird über `fetchAllRows`: über alle Feste der Wand summiert ist
+ * der Zeilendeckel der REST-Schicht erreichbar — ein Fest bringt laut Vision
+ * ~86 Material-Positionen mit —, und eine gedeckelte Antwort würde still zu
+ * wenig zählen. Im Normalfall bleibt es bei der einen Abfrage je Kennzahl.
  */
-async function queryByFestival<T>(
-	table: string,
-	select: string,
-	festivalIds: string[]
-): Promise<T[]> {
+function queryByFestival<T>(table: string, select: string, festivalIds: string[]): Promise<T[]> {
 	const client = supabase as unknown as RowQueryClient;
-	const rows: T[] = [];
-	let total: number | null = null;
-
-	for (;;) {
-		const { data, error, count } = await client
+	return fetchAllRows<T>((from, to) =>
+		client
 			.from(table)
 			.select(select, { count: 'exact' })
 			.in('festival_id', festivalIds)
-			.range(rows.length, rows.length + PAGE_SIZE - 1);
-
-		if (error) throw new Error(error.message);
-		const page = (data ?? []) as T[];
-		rows.push(...page);
-		total ??= count;
-
-		// Fertig, sobald alle Treffer da sind. `page.length === 0` fängt den Fall,
-		// dass die Zeilen unter uns weggelöscht wurden — sonst liefe das ewig.
-		if (total === null || rows.length >= total || page.length === 0) return rows;
-	}
+			.range(from, to)
+	);
 }

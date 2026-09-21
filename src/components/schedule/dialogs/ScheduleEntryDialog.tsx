@@ -18,14 +18,17 @@ interface ScheduleEntryDialogProps {
 		responsible_helper_id: string | null;
 		status: 'open' | 'done' | null;
 		description: string | null;
-		sort_order?: number;
 	} | null;
-	schedulePhaseId: string;
+	/** Der Eintrag gehört dem Tag — die einzige Pflichtebene (ADR 0007). */
+	scheduleDayId: string;
+	/** Optionaler Feinschnitt; `null` heißt „direkt unter dem Tag". */
+	schedulePhaseId: string | null;
 	festivalId: string;
+	/** Die Verantwortlichen sind die Helfer dieses Fests (ADR 0005). */
 	helpers: Array<{ id: string; first_name: string; last_name: string }>;
-	sortOrder: number;
 	onSave: (data: {
-		schedule_phase_id: string;
+		schedule_day_id: string;
+		schedule_phase_id: string | null;
 		festival_id: string;
 		title: string;
 		type: 'task' | 'program';
@@ -34,7 +37,6 @@ interface ScheduleEntryDialogProps {
 		responsible_helper_id: string | null;
 		status: 'open' | 'done' | null;
 		description: string | null;
-		sort_order: number;
 	}) => void;
 }
 
@@ -42,10 +44,10 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 	open,
 	onOpenChange,
 	entry,
+	scheduleDayId,
 	schedulePhaseId,
 	festivalId,
 	helpers,
-	sortOrder,
 	onSave
 }) => {
 	const [form, setForm] = useState({
@@ -85,6 +87,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 
 		const type = form.type as 'task' | 'program';
 		onSave({
+			schedule_day_id: scheduleDayId,
 			schedule_phase_id: schedulePhaseId,
 			festival_id: festivalId,
 			title: form.title,
@@ -93,8 +96,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 			end_time: form.end_time || null,
 			responsible_helper_id: form.responsible_helper_id && form.responsible_helper_id !== '__none__' ? form.responsible_helper_id : null,
 			status: type === 'task' ? (entry?.status || 'open') : null,
-			description: form.description || null,
-			sort_order: entry ? entry.sort_order ?? sortOrder : sortOrder
+			description: form.description || null
 		});
 		onOpenChange(false);
 	};
