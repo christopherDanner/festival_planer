@@ -7,6 +7,7 @@ import {
 	type SponsorSegment
 } from '@/lib/sponsorHistory';
 import { filterSponsors, type Sponsor } from '@/lib/sponsorService';
+import SponsorsCardList from './SponsorsCardList';
 import SponsorsEmptyState from './SponsorsEmptyState';
 import SponsorsMast from './SponsorsMast';
 import SponsorsTable from './SponsorsTable';
@@ -30,7 +31,7 @@ export interface SponsorsViewProps {
 	onSearchChange: (value: string) => void;
 	segment: SponsorSegment;
 	onSegmentChange: (segment: SponsorSegment) => void;
-	/** Kompakt-Mast unter 900px. */
+	/** Unter 900px: Kompakt-Mast und Karten statt Frachtbrief-Tabelle (#160). */
 	compact?: boolean;
 	onOpenFestivalList: () => void;
 	onAddSponsor: () => void;
@@ -94,6 +95,9 @@ export default function SponsorsView({
 			/>
 			{sponsors.length === 0 ? (
 				<SponsorsEmptyState onAddSponsor={onAddSponsor} />
+			) : compact ? (
+				// Unter 900px Karten statt der querscrollenden Tabelle (#160).
+				<SponsorsCardList sponsors={shown} history={history} onSelect={onSelectSponsor} />
 			) : (
 				<SponsorsTable sponsors={shown} history={history} onSelect={onSelectSponsor} />
 			)}
