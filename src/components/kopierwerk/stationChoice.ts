@@ -12,6 +12,44 @@ import type { Station, StationShift } from '@/lib/shiftService';
  * `CopySelection` (#95).
  */
 
+/**
+ * Die beiden Übernahme-Schalter von Schritt 2. Sie stehen zusammen, weil sie
+ * aneinander hängen — was `CopySelection` daraus macht, steht in `kopierwerk`.
+ */
+export interface CopySwitches {
+	copyHelpers: boolean;
+	copyAssignments: boolean;
+}
+
+/**
+ * Die eine Regel der beiden Übernahme-Schalter (ADR 0005): ohne kopierte Helfer
+ * gibt es nichts, woran eine Zuteilung hängen könnte. Sie steht hier und nicht
+ * an den Schaltern, damit sie nicht an der Oberfläche allein hängt — das
+ * Ausgrauen ist nur ihre Darstellung.
+ */
+const withCopySwitches = (
+	switches: CopySwitches,
+	copyHelpers: boolean,
+	copyAssignments: boolean
+): CopySwitches => ({ ...switches, copyHelpers, copyAssignments: copyHelpers && copyAssignments });
+
+/**
+ * „Helfer übernehmen" umschalten. Fällt der Schalter, fallen die Zuteilungen
+ * mit — ein unsichtbar gesetztes Häkchen würde beim Wiedereinschalten mehr
+ * kopieren, als die Oberfläche zeigt.
+ */
+export function withHelperCopy(switches: CopySwitches, copyHelpers: boolean): CopySwitches {
+	return withCopySwitches(switches, copyHelpers, switches.copyAssignments);
+}
+
+/** „Zuteilungen übernehmen" umschalten — greift nur mit übernommenen Helfern. */
+export function withAssignmentCopy(
+	switches: CopySwitches,
+	copyAssignments: boolean
+): CopySwitches {
+	return withCopySwitches(switches, switches.copyHelpers, copyAssignments);
+}
+
 /** Eine Schicht in der Vorschau — read-only, ohne eigene Auswahl. */
 export interface ShiftPreview {
 	id: string;

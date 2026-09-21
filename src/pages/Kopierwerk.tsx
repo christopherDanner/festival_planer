@@ -6,7 +6,12 @@ import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
 import MaterialStep from '@/components/kopierwerk/MaterialStep';
 import StampCard from '@/components/kopierwerk/StampCard';
 import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
-import { stationPreviewRows } from '@/components/kopierwerk/stationChoice';
+import {
+	stationPreviewRows,
+	withAssignmentCopy,
+	withHelperCopy,
+	type CopySwitches
+} from '@/components/kopierwerk/stationChoice';
 import { loadTemplate, type LoadedTemplate } from '@/components/kopierwerk/loadTemplate';
 import {
 	copyFestivalOptions,
@@ -58,7 +63,12 @@ export default function Kopierwerk() {
 	// Die Auswahl der Schritte 2 und 3. Voreingestellt ist „alles mitnehmen" —
 	// eine Vorlage wird gewählt, um sie zu übernehmen.
 	const [stationIds, setStationIds] = useState<ReadonlySet<string>>(new Set());
-	const [copyAssignments, setCopyAssignments] = useState(false);
+	// Die beiden Übernahme-Schalter stehen zusammen, weil sie aneinander hängen:
+	// die Regel dazu ist `withHelperCopy`/`withAssignmentCopy` (#100).
+	const [copySwitches, setCopySwitches] = useState<CopySwitches>({
+		copyHelpers: false,
+		copyAssignments: false
+	});
 	const [materialIds, setMaterialIds] = useState<ReadonlySet<string>>(new Set());
 	const [quantitySource, setQuantitySource] = useState<QuantitySource>('ordered');
 	// Gewählt wird in Schritt 2 auf Stations-Ebene, das Aufklappen ist reine
@@ -155,7 +165,7 @@ export default function Kopierwerk() {
 						festivalId,
 						copyFestivalOptions(source.festival, draft, {
 							stationIds,
-							copyAssignments,
+							...copySwitches,
 							materialIds,
 							quantitySource
 						})
@@ -180,7 +190,7 @@ export default function Kopierwerk() {
 				setSaving(false);
 			}
 		},
-		[copyAssignments, draft, materialIds, navigate, quantitySource, stationIds, template, toast]
+		[copySwitches, draft, materialIds, navigate, quantitySource, stationIds, template, toast]
 	);
 
 	const submitBasics = () => {
@@ -211,7 +221,8 @@ export default function Kopierwerk() {
 				rows={stationRows}
 				selectedStationIds={stationIds}
 				expandedStationIds={expandedStationIds}
-				copyAssignments={copyAssignments}
+				copyHelpers={copySwitches.copyHelpers}
+				copyAssignments={copySwitches.copyAssignments}
 				onToggleStation={(stationId) =>
 					setStationIds((previous) => toggleId(previous, stationId))
 				}
@@ -228,7 +239,12 @@ export default function Kopierwerk() {
 				onToggleExpanded={(stationId) =>
 					setExpandedStationIds((previous) => toggleId(previous, stationId))
 				}
-				onCopyAssignmentsChange={setCopyAssignments}
+				onCopyHelpersChange={(value) =>
+					setCopySwitches((previous) => withHelperCopy(previous, value))
+				}
+				onCopyAssignmentsChange={(value) =>
+					setCopySwitches((previous) => withAssignmentCopy(previous, value))
+				}
 				onBack={() => setStep('basics')}
 				onNext={() => setStep('materials')}
 			/>

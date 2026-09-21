@@ -65,6 +65,30 @@ export const createHelper = async (festivalId: string, helper: HelperInput): Pro
 	return data.id;
 };
 
+/**
+ * Eine ganze Helferliste auf einmal — die Fest-Kopie legt sie geschlossen an
+ * (#100), und einzeln wären das so viele Abfragen wie Helfer. Die IDs kommen in
+ * der Reihenfolge der übergebenen Zeilen zurück, damit der Aufrufer sie seinen
+ * Quell-Helfern zuordnen kann.
+ */
+export const createHelpersBulk = async (
+	festivalId: string,
+	helpers: HelperInput[]
+): Promise<string[]> => {
+	if (helpers.length === 0) return [];
+
+	const { data, error } = await supabase
+		.from('festival_helpers')
+		.insert(helpers.map(helper => ({ ...helper, festival_id: festivalId })))
+		.select('id');
+
+	if (error) {
+		throw new Error(error.message);
+	}
+
+	return (data || []).map(row => row.id);
+};
+
 export const updateHelper = async (
 	festivalId: string,
 	helperId: string,

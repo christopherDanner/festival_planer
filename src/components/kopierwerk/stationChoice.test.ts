@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Station, StationShift } from '@/lib/shiftService';
-import { stationPreviewRows } from './stationChoice';
+import { stationPreviewRows, withAssignmentCopy, withHelperCopy } from './stationChoice';
 
 /** Fest 2026: Fr 24.07. – So 26.07.; Fest 2027 startet Fr 23.07. */
 const SOURCE_START = '2026-07-24';
@@ -102,3 +102,35 @@ describe('stationPreviewRows', () => {
 
 // Das Ankreuzen auf Stations-Ebene steht in `selection.ts` und wird dort
 // geprüft — es ist dasselbe wie in Schritt 3 (#95).
+
+describe('withHelperCopy', () => {
+	const gewaehlt = { copyHelpers: true, copyAssignments: true };
+
+	it('schaltet „Helfer übernehmen" um', () => {
+		expect(withHelperCopy({ ...gewaehlt, copyHelpers: false }, true)).toEqual(gewaehlt);
+		expect(withHelperCopy(gewaehlt, true)).toEqual(gewaehlt);
+	});
+
+	// Ohne kopierte Helfer gibt es nichts, woran eine Zuteilung hängen könnte
+	// (ADR 0005) — das Häkchen bliebe sonst unsichtbar gesetzt stehen.
+	it('nimmt die Zuteilungen mit, wenn die Helfer abgewählt werden', () => {
+		expect(withHelperCopy(gewaehlt, false)).toEqual({
+			copyHelpers: false,
+			copyAssignments: false
+		});
+	});
+});
+
+describe('withAssignmentCopy', () => {
+	it('schaltet „Zuteilungen übernehmen" um', () => {
+		const mitHelfern = { copyHelpers: true, copyAssignments: false };
+		expect(withAssignmentCopy(mitHelfern, true)).toEqual({ ...mitHelfern, copyAssignments: true });
+	});
+
+	// Dieselbe Regel wie oben, von der anderen Seite: die Oberfläche graut den
+	// Schalter aus, die Auswahl selbst lässt ihn gar nicht erst zu.
+	it('bleibt ohne übernommene Helfer leer', () => {
+		const ohneHelfer = { copyHelpers: false, copyAssignments: false };
+		expect(withAssignmentCopy(ohneHelfer, true)).toEqual(ohneHelfer);
+	});
+});
