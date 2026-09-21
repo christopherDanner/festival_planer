@@ -16,10 +16,8 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Building2, FileDown, Import } from 'lucide-react';
 import SponsorUebernahmeDialog from '@/components/sponsoring/SponsorUebernahmeDialog';
-import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
-import SponsoringMatrix from '@/components/sponsoring/SponsoringMatrix';
+import SponsoringOverview from '@/components/sponsoring/SponsoringOverview';
 import { useToast } from '@/hooks/use-toast';
 import {
 	getSponsors,
@@ -35,14 +33,8 @@ import {
 	type SponsoringWithDetails,
 	type SponsoringAssignmentInput
 } from '@/lib/sponsorService';
-import {
-	buildSponsoringOverviewFooter,
-	buildSponsoringOverviewRows,
-	festivalInKindTotal,
-	festivalSponsoringTotal
-} from '@/lib/sponsoringTotals';
+import { buildSponsoringOverviewRows } from '@/lib/sponsoringTotals';
 import { exportSponsoringOverviewPdf } from '@/lib/sponsoringExportService';
-import { formatEuro } from '@/lib/money';
 
 interface SponsoringsSectionProps {
 	festivalId: string;
@@ -68,6 +60,9 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 
 	const [showDialog, setShowDialog] = useState(false);
 	const [showTransferDialog, setShowTransferDialog] = useState(false);
+	/* Suchzustand der Werkzeugleiste; er filtert nur die Zeilen der Übersicht
+	(ADR 0006, #151) — die Fest-Kennzahl im Bereichskopf sieht ihn nie. */
+	const [searchTerm, setSearchTerm] = useState('');
 	const [editing, setEditing] = useState<SponsoringWithDetails | null>(null);
 	const [sponsorChoice, setSponsorChoice] = useState('');
 	const [newCompanyName, setNewCompanyName] = useState('');
@@ -214,18 +209,21 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		? sponsors
 		: sponsors.filter((s) => !sponsorings.some((sp) => sp.sponsor_id === s.id));
 
-	/* Vorjahresbeitrag je Sponsoring und Geldsumme des vorigen Fests kommen aus
-	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Solange es
-	den Leseweg nicht gibt, zeigt die Matrix den Leerfall: keine Vorjahr-Unterzeile
-	und — laut #69, Entscheid 5 — gar kein Maßband. */
-	const rows = buildSponsoringOverviewRows(sponsorings);
-	const footer = buildSponsoringOverviewFooter(rows, categories);
-	const total = festivalSponsoringTotal(sponsorings);
-
 	const handleDeleteById = (sponsoringId: string) => {
 		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
 		if (sponsoring) handleDelete(sponsoring);
 	};
+
+	const handleEditById = (sponsoringId: string) => {
+		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
+		if (sponsoring) openEdit(sponsoring);
+	};
+
+	/* Der Export nimmt bewusst **alle** Zeilen: ein PDF verlässt den Bildschirm
+	und trägt seine Beschriftung nicht mit — ein gefilterter Ausdruck wäre die
+	stille Lüge, die ADR 0006 am Fuß gerade verhindert. */
+	const handleExportPdf = () =>
+		exportSponsoringOverviewPdf(buildSponsoringOverviewRows(sponsorings), { festivalName });
 
 	if (loading) {
 		return (
@@ -238,114 +236,17 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
-						<Building2 className="h-5 w-5" />
-						Sponsoring-Übersicht
-					</h2>
-					<p className="text-sm text-muted-foreground">
-						Erfasste Sponsoren mit Leistungen und Gesamtsumme
-					</p>
-				</div>
-				<div className="flex flex-wrap gap-2">
-					<Button onClick={() => setShowTransferDialog(true)} size="sm" variant="outline">
-						<Import className="h-4 w-4 mr-2" />
-						<span>Übernahme</span>
-					</Button>
-					<Button
-						onClick={() => exportSponsoringOverviewPdf(rows, { festivalName })}
-						size="sm"
-						variant="outline"
-						disabled={rows.length === 0}>
-						<FileDown className="h-4 w-4 mr-2" />
-						<span>PDF</span>
-					</Button>
-					<Button onClick={openCreate} size="sm">
-						<Plus className="h-4 w-4 mr-2" />
-						<span>Sponsoring</span>
-					</Button>
-				</div>
-			</div>
-
-			<SponsoringHeadline
-				total={total}
-				sponsorCount={sponsorings.length}
-				inKindTotal={festivalInKindTotal(sponsorings)}
-				previousFestivalTotal={null}
+			<SponsoringOverview
+				sponsorings={sponsorings}
+				categories={categories}
+				searchTerm={searchTerm}
+				onSearchChange={setSearchTerm}
+				onCreate={openCreate}
+				onTransfer={() => setShowTransferDialog(true)}
+				onExportPdf={handleExportPdf}
+				onEdit={handleEditById}
+				onDelete={handleDeleteById}
 			/>
-
-			{/* Mobile: Karten-Liste */}
-			<div className="md:hidden space-y-2">
-				{rows.length === 0 ? (
-					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
-						Noch keine Sponsorings erfasst
-					</div>
-				) : (
-					<>
-						{rows.map((row) => {
-							const sponsoring = sponsorings.find((s) => s.id === row.sponsoringId)!;
-							return (
-								<div key={row.sponsoringId} className="border bg-card p-3">
-									<div className="flex items-start justify-between gap-2">
-										<div className="flex-1 min-w-0">
-											<div className="font-medium truncate">{row.companyName}</div>
-											<div className="text-sm font-semibold mt-0.5">{formatEuro(row.total)}</div>
-										</div>
-										<div className="flex items-center gap-1 shrink-0">
-											<Button
-												size="icon"
-												variant="ghost"
-												className="h-8 w-8"
-												onClick={() => openEdit(sponsoring)}>
-												<Edit className="h-4 w-4" />
-											</Button>
-											<Button
-												size="icon"
-												variant="ghost"
-												className="h-8 w-8 text-destructive/70 hover:text-destructive"
-												onClick={() => handleDelete(sponsoring)}>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										</div>
-									</div>
-									{(row.positions.length > 0 || row.freeAmount != null) && (
-										<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1.5">
-											{row.positions.map((p, i) => (
-												<span key={i}>
-													{p.label} ({formatEuro(p.value)})
-												</span>
-											))}
-											{row.freeAmount != null && (
-												<span>Freibetrag ({formatEuro(row.freeAmount)})</span>
-											)}
-										</div>
-									)}
-								</div>
-							);
-						})}
-						<div className="border bg-card p-3 flex items-center justify-between">
-							<span className="font-semibold text-sm">Gesamtsumme</span>
-							<span className="font-semibold">{formatEuro(total)}</span>
-						</div>
-					</>
-				)}
-			</div>
-
-			{/* Desktop: Paket-Matrix */}
-			<div className="hidden md:block">
-				<SponsoringMatrix
-					categories={categories}
-					rows={rows}
-					footer={footer}
-					onDelete={handleDeleteById}
-				/>
-				{rows.length === 0 && (
-					<p className="border bg-card py-8 text-center text-sm text-muted-foreground">
-						Noch keine Sponsorings erfasst
-					</p>
-				)}
-			</div>
 
 			<SponsorUebernahmeDialog
 				open={showTransferDialog}

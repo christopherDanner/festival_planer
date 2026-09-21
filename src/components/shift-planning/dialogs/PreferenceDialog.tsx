@@ -5,23 +5,23 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, MapPin, Clock, Users, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Station, StationShift } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import type { Helper } from '@/lib/helperService';
 
 interface PreferenceDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	member: Member | null;
+	helper: Helper | null;
 	stations: Station[];
 	stationShifts: StationShift[];
 	stationPreferences: Record<string, string[]>;
 	shiftPreferences: Record<string, string[]>;
-	onSave: (memberId: string, stationPrefs: string[], shiftPrefs: string[]) => void;
+	onSave: (helperId: string, stationPrefs: string[], shiftPrefs: string[]) => void;
 }
 
 const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 	open,
 	onOpenChange,
-	member,
+	helper,
 	stations,
 	stationShifts,
 	stationPreferences,
@@ -32,11 +32,11 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 	const [tempShiftPrefs, setTempShiftPrefs] = useState<string[]>([]);
 
 	useEffect(() => {
-		if (member && open) {
-			setTempStationPrefs(stationPreferences[member.id] || []);
-			setTempShiftPrefs(shiftPreferences[member.id] || []);
+		if (helper && open) {
+			setTempStationPrefs(stationPreferences[helper.id] || []);
+			setTempShiftPrefs(shiftPreferences[helper.id] || []);
 		}
-	}, [member, open, stationPreferences, shiftPreferences]);
+	}, [helper, open, stationPreferences, shiftPreferences]);
 
 	const handleToggleStation = (stationId: string) => {
 		const isSelected = tempStationPrefs.includes(stationId);
@@ -67,8 +67,8 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 	};
 
 	const handleSave = () => {
-		if (!member) return;
-		onSave(member.id, tempStationPrefs, tempShiftPrefs);
+		if (!helper) return;
+		onSave(helper.id, tempStationPrefs, tempShiftPrefs);
 		onOpenChange(false);
 	};
 
@@ -78,7 +78,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 				<DialogHeader className="flex-shrink-0">
 					<DialogTitle className="flex items-center gap-2">
 						<Heart className="h-5 w-5 text-red-500" />
-						Präferenzen für {member?.last_name} {member?.first_name}
+						Präferenzen für {helper?.last_name} {helper?.first_name}
 					</DialogTitle>
 				</DialogHeader>
 				<div className="flex-1 overflow-y-auto space-y-6 pr-2">
@@ -89,7 +89,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 							Stationswünsche
 						</h3>
 						<p className="text-sm text-muted-foreground mb-4">
-							Wählen Sie die Stationen aus, bei denen {member?.first_name} gerne arbeiten möchte.
+							Wählen Sie die Stationen aus, bei denen {helper?.first_name} gerne arbeiten möchte.
 						</p>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 							{stations.map((station) => {
@@ -133,7 +133,7 @@ const PreferenceDialog: React.FC<PreferenceDialogProps> = ({
 							Schichtwünsche (optional)
 						</h3>
 						<p className="text-sm text-muted-foreground mb-4">
-							Wählen Sie spezifische Schichten aus, in denen {member?.first_name} arbeiten möchte.
+							Wählen Sie spezifische Schichten aus, in denen {helper?.first_name} arbeiten möchte.
 							Die Schichten sind nach Stationen gruppiert.
 						</p>
 						<div className="space-y-6">

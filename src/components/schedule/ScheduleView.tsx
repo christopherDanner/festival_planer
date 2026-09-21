@@ -11,14 +11,14 @@ import ScheduleExportDialog from './dialogs/ScheduleExportDialog';
 import type {
   ScheduleDayWithPhases,
   SchedulePhaseWithEntries,
-  ScheduleEntryWithMember,
+  ScheduleEntryWithHelper,
 } from '@/lib/scheduleService';
 
 type DialogState =
   | { type: null }
   | { type: 'day'; day?: ScheduleDayWithPhases }
   | { type: 'phase'; phase?: SchedulePhaseWithEntries; scheduleDayId: string }
-  | { type: 'entry'; entry?: ScheduleEntryWithMember; schedulePhaseId: string }
+  | { type: 'entry'; entry?: ScheduleEntryWithHelper; schedulePhaseId: string }
   | { type: 'export' };
 
 interface ScheduleViewProps {
@@ -29,7 +29,7 @@ interface ScheduleViewProps {
 }
 
 export default function ScheduleView({ festivalId, festivalName, festivalStartDate, festivalEndDate }: ScheduleViewProps) {
-  const { days, members, isLoading } = useScheduleData(festivalId);
+  const { days, helpers, isLoading } = useScheduleData(festivalId);
   const actions = useScheduleActions(festivalId);
   const isMobile = useIsMobile();
   const [dialogState, setDialogState] = useState<DialogState>({ type: null });
@@ -48,7 +48,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
   }, [isLoading, days.length, festivalStartDate]);
 
   // Calculate sort_order for new entries based on time
-  const calculateEntrySortOrder = (entries: ScheduleEntryWithMember[], startTime: string | null): number => {
+  const calculateEntrySortOrder = (entries: ScheduleEntryWithHelper[], startTime: string | null): number => {
     if (!startTime || entries.length === 0) {
       return entries.length > 0 ? Math.max(...entries.map(e => e.sort_order)) + 1 : 0;
     }
@@ -88,7 +88,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
           type: data.type,
           start_time: data.start_time,
           end_time: data.end_time,
-          responsible_member_id: data.responsible_member_id,
+          responsible_helper_id: data.responsible_helper_id,
           status: data.status,
           description: data.description,
         }
@@ -101,7 +101,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
     }
   };
 
-  const handleToggleEntryStatus = (entry: ScheduleEntryWithMember) => {
+  const handleToggleEntryStatus = (entry: ScheduleEntryWithHelper) => {
     if (entry.type !== 'task') return;
     actions.editEntry.mutate({
       id: entry.id,
@@ -155,7 +155,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
   }
 
   // Find entries for the current entry dialog's phase (for sort order calculation)
-  const getCurrentPhaseEntries = (): ScheduleEntryWithMember[] => {
+  const getCurrentPhaseEntries = (): ScheduleEntryWithHelper[] => {
     if (dialogState.type !== 'entry') return [];
     for (const day of days) {
       for (const phase of day.phases) {
@@ -233,7 +233,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
         entry={dialogState.type === 'entry' ? dialogState.entry : null}
         schedulePhaseId={dialogState.type === 'entry' ? dialogState.schedulePhaseId : ''}
         festivalId={festivalId}
-        members={members}
+        helpers={helpers}
         sortOrder={
           dialogState.type === 'entry'
             ? calculateEntrySortOrder(getCurrentPhaseEntries(), null)

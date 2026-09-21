@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { festCountdown, festCountdownCoarse, festYear, formatFestDateRange } from './festDates';
+import {
+	festCountdown,
+	festCountdownCoarse,
+	festYear,
+	formatFestDateRange,
+	formatFestDayLong
+} from './festDates';
 
 describe('festYear', () => {
 	it('liest das Jahr tagesgenau und lokal, nicht als UTC', () => {
@@ -21,6 +27,17 @@ describe('formatFestDateRange', () => {
 	it('zeigt Eintages-Feste als einzelnen Tag', () => {
 		expect(formatFestDateRange('2026-07-24', '2026-07-24')).toBe('Fr 24. Juli');
 		expect(formatFestDateRange('2026-07-24', null)).toBe('Fr 24. Juli');
+	});
+});
+
+describe('formatFestDayLong', () => {
+	it('schreibt den Tages-Zwischentitel aus (Wochentag, Tag, Monat)', () => {
+		expect(formatFestDayLong('2026-07-25')).toBe('Samstag 25. Juli');
+		expect(formatFestDayLong('2026-07-26')).toBe('Sonntag 26. Juli');
+	});
+
+	it('liest den Tag lokal, nicht als UTC — sonst rutscht der Kopf um einen Tag', () => {
+		expect(formatFestDayLong('2026-01-01')).toBe('Donnerstag 1. Jänner');
 	});
 });
 

@@ -31,6 +31,7 @@ export default {
           tief: "oklch(var(--gruen-tief) / <alpha-value>)",
         },
         gelb: "oklch(var(--gelb) / <alpha-value>)",
+        kreide: "oklch(var(--kreide) / <alpha-value>)",
         rot: "oklch(var(--rot) / <alpha-value>)",
         linie: "oklch(var(--linie) / <alpha-value>)",
         fusszeile: "oklch(var(--fusszeile) / <alpha-value>)",
@@ -94,6 +95,10 @@ export default {
       borderWidth: {
         "1.5": "1.5px",
         "2.5": "2.5px",
+        // Dialoge stehen einen Strich kräftiger als Container: 3px aus dem
+        // abgenommenen Prototyp `entscheid-material-bearbeiten.html` (`.dlg`),
+        // ausdrücklich so in #117 verlangt.
+        "3": "3px",
       },
       borderRadius: {
         lg: "var(--radius)",

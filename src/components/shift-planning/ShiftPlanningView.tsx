@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 import { useShiftPlanningData } from './hooks/useShiftPlanningData';
 import { useShiftPlanningActions } from './hooks/useShiftPlanningActions';
-import ShiftPlanningHeader from './ShiftPlanningHeader';
-import StationCard from './StationCard';
-import MemberSidebar from './MemberSidebar';
+import ShiftPlanningToolbar from './ShiftPlanningToolbar';
+import StationTabStrip from './StationTabStrip';
+import StationFocusBox from './StationFocusBox';
+import NoStationsNotice from './NoStationsNotice';
+import HelperSidebar from './HelperSidebar';
 import StationDialog from './dialogs/StationDialog';
 import StationShiftDialog from './dialogs/StationShiftDialog';
-import MemberDialog from './dialogs/MemberDialog';
+import HelperDialog from './dialogs/HelperDialog';
 import PreferenceDialog from './dialogs/PreferenceDialog';
 import AutoAssignDialog from './dialogs/AutoAssignDialog';
 import ShareDialog from './dialogs/ShareDialog';
@@ -17,16 +18,23 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 import { exportToExcel, exportToPdf } from '@/lib/exportService';
-import type { Station, StationShift, ShiftAssignmentWithMember } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import { buildStationBoard, buildStationTabs, resolveFocusStationId } from '@/lib/shiftBoard';
+import { deriveShiftsMetric } from '@/lib/staffing';
+import type { Station, StationShift, ShiftAssignmentWithHelper } from '@/lib/shiftService';
+import { removeHelperMessage, type Helper } from '@/lib/helperService';
 
+/** Welcher Dialog offen ist. Der geschlossene Zustand heißt `'none'` und nicht
+`null`: das Projekt läuft ohne `strictNullChecks`, und dort unterscheidet `null`
+die Fälle nicht — TypeScript verlöre an jedem Zugriff die Verengung. */
 type DialogState =
-	| { type: null }
+	| { type: 'none' }
 	| { type: 'station'; station?: Station }
 	| { type: 'stationShift'; station: Station; stationShift?: StationShift }
-	| { type: 'member'; member?: Member }
-	| { type: 'preferences'; member: Member }
-	| { type: 'autoAssign' };
+	| { type: 'helper'; helper?: Helper }
+	| { type: 'preferences'; helper: Helper }
+	// Ohne Station läuft die Zuteilung übers ganze Fest, mit Station nur über
+	// deren Schichten („NUR DIESE STATION AUTO-FÜLLEN").
+	| { type: 'autoAssign'; station?: Station };
 
 interface ShiftPlanningViewProps {
 	festivalId: string;
@@ -34,88 +42,123 @@ interface ShiftPlanningViewProps {
 	festivalDate?: string;
 }
 
+/**
+ * Der Schichtplan als **Fokus-Werkbank** (#102, Variante E der DESIGN-VISION):
+ * Werkzeugleiste mit KPI-Maßband, darunter der Ampel-Reiter-Streifen aller
+ * Stationen und **eine** Station im Fokus. Die Stationen stehen nicht mehr als
+ * schmale Spalten nebeneinander — damit ist auch der Vollbild-Modus weg, der
+ * nur dem Platzdruck dieser Spalten geschuldet war (Entscheid 9 aus #68).
+ *
+ * Gerechnet und gegliedert wird in `shiftBoard` bzw. `staffing`; diese Ansicht
+ * hält den Zustand (Fokus-Station, Filter, Dialoge) und verdrahtet die Griffe.
+ */
 const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festivalName, festivalDate }) => {
 	const { toast } = useToast();
 	const isMobile = useIsMobile();
 	const data = useShiftPlanningData(festivalId);
 	const actions = useShiftPlanningActions(festivalId);
 
-	const [isFullscreen, setIsFullscreen] = useState(false);
+	const [focusStationId, setFocusStationId] = useState<string | null>(null);
 	const [nameFilter, setNameFilter] = useState('');
 	const [stationFilter, setStationFilter] = useState('all');
 	const [assignmentFilter, setAssignmentFilter] = useState('all');
-	const [draggedMember, setDraggedMember] = useState<Member | null>(null);
-	const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-	const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+	const [draggedHelper, setDraggedHelper] = useState<Helper | null>(null);
+	const [selectedHelper, setSelectedHelper] = useState<Helper | null>(null);
+	const [dialogState, setDialogState] = useState<DialogState>({ type: 'none' });
 	const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-	const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
+	const [isHelperDrawerOpen, setIsHelperDrawerOpen] = useState(false);
 
-	const handleTapSelect = (member: Member) => {
-		setSelectedMember(member);
-		setIsMemberDrawerOpen(false);
+	const tabs = useMemo(
+		() => buildStationTabs(data.stations, data.stationShifts, data.assignments, data.stationHelpers),
+		[data.stations, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	// Beim ersten Rendern und nach dem Löschen der gewählten Station übernimmt
+	// der erste Reiter.
+	const activeStationId = resolveFocusStationId(tabs, focusStationId);
+	const focusStation = tabs.find((t) => t.station.id === activeStationId)?.station ?? null;
+	const board = useMemo(
+		() =>
+			focusStation
+				? buildStationBoard(focusStation, data.stationShifts, data.assignments, data.stationHelpers)
+				: null,
+		[focusStation, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	const metric = useMemo(
+		() =>
+			deriveShiftsMetric(data.stations, data.stationShifts, data.assignments, data.stationHelpers),
+		[data.stations, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+
+	const handleTapSelect = (helper: Helper) => {
+		setSelectedHelper(helper);
+		setIsHelperDrawerOpen(false);
 		toast({
-			title: `${member.last_name} ${member.first_name} ausgewählt`,
+			title: `${helper.last_name} ${helper.first_name} ausgewählt`,
 			description: 'Tippe auf eine Station oder Schicht zum Zuweisen. Tippe erneut auf den Button um abzubrechen.',
 		});
 	};
 
 	const handleTapAssignToShift = (stationShiftId: string) => {
-		if (!selectedMember) return;
+		if (!selectedHelper) return;
 		const stationShift = data.stationShifts.find((s) => s.id === stationShiftId);
 		if (!stationShift) return;
 
 		const currentAssignments = getAssignmentsForStationShift(stationShiftId);
 		if (currentAssignments.length >= stationShift.required_people) {
 			toast({ title: 'Hinweis', description: 'Diese Schicht ist bereits vollständig besetzt.', variant: 'destructive' });
-			setSelectedMember(null);
+			setSelectedHelper(null);
 			return;
 		}
-		if (currentAssignments.some((a) => a.member_id === selectedMember.id)) {
-			toast({ title: 'Hinweis', description: `${selectedMember.last_name} ${selectedMember.first_name} ist bereits dieser Schicht zugewiesen.`, variant: 'destructive' });
-			setSelectedMember(null);
+		if (currentAssignments.some((a) => a.helper_id === selectedHelper.id)) {
+			toast({ title: 'Hinweis', description: `${selectedHelper.last_name} ${selectedHelper.first_name} ist bereits dieser Schicht zugewiesen.`, variant: 'destructive' });
+			setSelectedHelper(null);
 			return;
 		}
 
+		const helper = selectedHelper;
+		actions.assignHelper.mutate(
+			{ stationShiftId, helperId: helper.id, position: nextFreePosition(currentAssignments) },
+			{ onSuccess: () => toast({ title: 'Erfolg', description: `${helper.last_name} ${helper.first_name} wurde zugewiesen.` }) }
+		);
+		setSelectedHelper(null);
+	};
+
+	const handleTapAssignToStation = (stationId: string) => {
+		if (!selectedHelper) return;
+
+		const currentStationHelpers = data.stationHelpers.filter((sm) => sm.station_id === stationId);
+		if (currentStationHelpers.some((sm) => sm.helper_id === selectedHelper.id)) {
+			toast({ title: 'Hinweis', description: `${selectedHelper.last_name} ${selectedHelper.first_name} ist bereits dieser Station zugewiesen.`, variant: 'destructive' });
+			setSelectedHelper(null);
+			return;
+		}
+
+		const helper = selectedHelper;
+		actions.assignHelperToStation.mutate(
+			{ stationId, helperId: helper.id },
+			{ onSuccess: () => toast({ title: 'Erfolg', description: `${helper.last_name} ${helper.first_name} wurde der Station zugewiesen.` }) }
+		);
+		setSelectedHelper(null);
+	};
+
+	const getAssignmentsForStationShift = (stationShiftId: string): ShiftAssignmentWithHelper[] => {
+		return data.assignments.filter((a) => a.station_shift_id === stationShiftId);
+	};
+
+	/** Kleinste freie Platznummer einer Schicht. */
+	const nextFreePosition = (currentAssignments: ShiftAssignmentWithHelper[]): number => {
 		const usedPositions = currentAssignments.map((a) => a.position).sort((a, b) => a - b);
 		let nextPosition = 1;
 		for (const pos of usedPositions) {
 			if (nextPosition === pos) nextPosition++;
 			else break;
 		}
-
-		const member = selectedMember;
-		actions.assignMember.mutate(
-			{ stationShiftId, memberId: member.id, position: nextPosition },
-			{ onSuccess: () => toast({ title: 'Erfolg', description: `${member.last_name} ${member.first_name} wurde zugewiesen.` }) }
-		);
-		setSelectedMember(null);
-	};
-
-	const handleTapAssignToStation = (stationId: string) => {
-		if (!selectedMember) return;
-
-		const currentStationMembers = data.stationMembers.filter((sm) => sm.station_id === stationId);
-		if (currentStationMembers.some((sm) => sm.member_id === selectedMember.id)) {
-			toast({ title: 'Hinweis', description: `${selectedMember.last_name} ${selectedMember.first_name} ist bereits dieser Station zugewiesen.`, variant: 'destructive' });
-			setSelectedMember(null);
-			return;
-		}
-
-		const member = selectedMember;
-		actions.assignMemberToStation.mutate(
-			{ stationId, memberId: member.id },
-			{ onSuccess: () => toast({ title: 'Erfolg', description: `${member.last_name} ${member.first_name} wurde der Station zugewiesen.` }) }
-		);
-		setSelectedMember(null);
-	};
-
-	const getAssignmentsForStationShift = (stationShiftId: string): ShiftAssignmentWithMember[] => {
-		return data.assignments.filter((a) => a.station_shift_id === stationShiftId);
+		return nextPosition;
 	};
 
 	const handleDrop = async (stationShiftId: string, e: React.DragEvent) => {
 		e.preventDefault();
-		if (!draggedMember) return;
+		if (!draggedHelper) return;
 
 		const stationShift = data.stationShifts.find((s) => s.id === stationShiftId);
 		if (!stationShift) return;
@@ -127,74 +170,67 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				description: 'Diese Schicht ist bereits vollständig besetzt.',
 				variant: 'destructive'
 			});
-			setDraggedMember(null);
+			setDraggedHelper(null);
 			return;
 		}
 
-		if (currentAssignments.some((a) => a.member_id === draggedMember.id)) {
+		if (currentAssignments.some((a) => a.helper_id === draggedHelper.id)) {
 			toast({
 				title: 'Hinweis',
-				description: `${draggedMember.last_name} ${draggedMember.first_name} ist bereits dieser Schicht zugewiesen.`,
+				description: `${draggedHelper.last_name} ${draggedHelper.first_name} ist bereits dieser Schicht zugewiesen.`,
 				variant: 'destructive'
 			});
-			setDraggedMember(null);
+			setDraggedHelper(null);
 			return;
 		}
 
-		const usedPositions = currentAssignments.map((a) => a.position).sort((a, b) => a - b);
-		let nextPosition = 1;
-		for (const pos of usedPositions) {
-			if (nextPosition === pos) nextPosition++;
-			else break;
-		}
-
-		actions.assignMember.mutate(
-			{ stationShiftId, memberId: draggedMember.id, position: nextPosition },
+		actions.assignHelper.mutate(
+			{ stationShiftId, helperId: draggedHelper.id, position: nextFreePosition(currentAssignments) },
 			{
 				onSuccess: () => {
 					toast({
 						title: 'Erfolg',
-						description: `${draggedMember.last_name} ${draggedMember.first_name} wurde zugewiesen.`
+						description: `${draggedHelper.last_name} ${draggedHelper.first_name} wurde zugewiesen.`
 					});
 				}
 			}
 		);
-		setDraggedMember(null);
+		setDraggedHelper(null);
 	};
 
 	const handleDropOnStation = async (stationId: string, e: React.DragEvent) => {
 		e.preventDefault();
-		if (!draggedMember) return;
+		if (!draggedHelper) return;
 
 		const station = data.stations.find((s) => s.id === stationId);
 		if (!station) return;
 
-		const currentStationMembers = data.stationMembers.filter(
+		const currentStationHelpers = data.stationHelpers.filter(
 			(sm) => sm.station_id === stationId
 		);
 
-		if (currentStationMembers.some((sm) => sm.member_id === draggedMember.id)) {
+		if (currentStationHelpers.some((sm) => sm.helper_id === draggedHelper.id)) {
 			toast({
 				title: 'Hinweis',
-				description: `${draggedMember.last_name} ${draggedMember.first_name} ist bereits dieser Station zugewiesen.`,
+				description: `${draggedHelper.last_name} ${draggedHelper.first_name} ist bereits dieser Station zugewiesen.`,
 				variant: 'destructive'
 			});
-			setDraggedMember(null);
+			setDraggedHelper(null);
 			return;
 		}
 
-		actions.assignMemberToStation.mutate(
-			{ stationId, memberId: draggedMember.id },
+		actions.assignHelperToStation.mutate(
+			{ stationId, helperId: draggedHelper.id },
 			{
 				onSuccess: () => {
 					toast({
 						title: 'Erfolg',
-						description: `${draggedMember.last_name} ${draggedMember.first_name} wurde der Station zugewiesen.`
+						description: `${draggedHelper.last_name} ${draggedHelper.first_name} wurde der Station zugewiesen.`
 					});
 				}
 			}
 		);
-		setDraggedMember(null);
+		setDraggedHelper(null);
 	};
 
 	const handleExport = (exportFn: typeof exportToExcel | typeof exportToPdf) => {
@@ -204,7 +240,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			stations: data.stations,
 			stationShifts: data.stationShifts,
 			assignments: data.assignments,
-			stationMembers: data.stationMembers,
+			stationHelpers: data.stationHelpers,
 		});
 	};
 
@@ -217,127 +253,118 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	}
 
 	return (
-		<div
-			className={cn(
-				'flex flex-col',
-				isFullscreen
-					? isMobile
-						? 'fixed inset-x-0 top-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 bg-background'
-						: 'fixed inset-0 z-50 bg-background'
-					: 'h-[calc(100vh-8rem)]'
-			)}>
-			<ShiftPlanningHeader
-				isFullscreen={isFullscreen}
-				onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+		<div className="space-y-3 sm:space-y-4">
+			<ShiftPlanningToolbar
+				metric={metric}
 				onAddStation={() => setDialogState({ type: 'station' })}
 				onAutoAssign={() => setDialogState({ type: 'autoAssign' })}
-				onAddMember={() => setDialogState({ type: 'member' })}
 				onShare={() => setIsShareDialogOpen(true)}
 			/>
 
-			{/* Mobile: selected member banner */}
-			{isMobile && selectedMember && (
-				<div className="flex items-center justify-between px-3 py-2 bg-primary/5 border-b border-primary/20">
-					<span className="text-sm font-medium">
-						{selectedMember.last_name} {selectedMember.first_name} — tippe auf eine Station/Schicht
+			{/* Mobile: Banner des ausgewählten Helfers */}
+			{isMobile && selectedHelper && (
+				<div className="flex items-center justify-between border-2 border-tinte bg-gelb px-3 py-2">
+					<span className="text-sm font-semibold">
+						{selectedHelper.last_name} {selectedHelper.first_name} — tippe auf einen freien Platz
 					</span>
-					<Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedMember(null)}>
+					<Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedHelper(null)}>
 						Abbrechen
 					</Button>
 				</div>
 			)}
 
-			<div className="flex-1 flex overflow-hidden">
-				<div className="flex-1 overflow-x-auto overflow-y-auto p-2 md:p-4">
+			<div className="flex items-start gap-4">
+				<div className="min-w-0 flex-1 space-y-3 sm:space-y-4">
 					{data.stations.length === 0 ? (
-						<div className="flex items-center justify-center h-full">
-							<div className="text-center text-muted-foreground">
-								<p>Erstellen Sie zuerst Stationen, um die Matrix zu sehen.</p>
-							</div>
-						</div>
+						<NoStationsNotice onAddStation={() => setDialogState({ type: 'station' })} />
 					) : (
-						<div className="flex gap-3 md:gap-4 items-start min-h-full pb-4">
-							{data.stations.map((station) => (
-								<div key={station.id} className="w-[280px] md:w-[320px] shrink-0">
-									<StationCard
-										station={station}
-										stationShifts={data.stationShifts.filter(
-											(s) => s.station_id === station.id
-										)}
-										stationMembers={data.stationMembers.filter(
-											(sm) => sm.station_id === station.id
-										)}
-										members={data.members}
-										getAssignments={getAssignmentsForStationShift}
-										selectedMember={selectedMember}
-										onTapAssignToShift={handleTapAssignToShift}
-										onTapAssignToStation={handleTapAssignToStation}
-										onEditStation={() => setDialogState({ type: 'station', station })}
-										onDeleteStation={() => {
-											if (
-												confirm(
-													'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
-												)
-											) {
-												actions.deleteStation.mutate(station.id);
-											}
-										}}
-										onAddShift={() => setDialogState({ type: 'stationShift', station })}
-										onEditShift={(shift) =>
-											setDialogState({ type: 'stationShift', station, stationShift: shift })
+						<>
+							<StationTabStrip
+								tabs={tabs}
+								activeStationId={activeStationId}
+								onSelect={setFocusStationId}
+							/>
+							{board && (
+								<StationFocusBox
+									board={board}
+									onAutoFill={() =>
+										setDialogState({ type: 'autoAssign', station: board.station })
+									}
+									onEditStation={() =>
+										setDialogState({ type: 'station', station: board.station })
+									}
+									onDeleteStation={() => {
+										if (
+											confirm(
+												'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
+											)
+										) {
+											actions.deleteStation.mutate(board.station.id);
 										}
-										onDeleteShift={(shiftId) => {
-											if (
-												confirm('Sind Sie sicher, dass Sie diese Schicht löschen möchten?')
-											) {
-												actions.deleteStationShift.mutate(shiftId);
-											}
-										}}
-										onRemoveMember={(stationShiftId, memberId) => {
-											actions.removeMember.mutate({ stationShiftId, memberId });
-										}}
-										onDrop={handleDrop}
-										onDropOnStation={handleDropOnStation}
-										onRemoveStationMember={(stationId, memberId) => {
-											actions.removeMemberFromStation.mutate({ stationId, memberId });
-										}}
-									/>
-								</div>
-							))}
-						</div>
+									}}
+									onAddShift={() =>
+										setDialogState({ type: 'stationShift', station: board.station })
+									}
+									onEditShift={(shift) =>
+										setDialogState({
+											type: 'stationShift',
+											station: board.station,
+											stationShift: shift
+										})
+									}
+									onDeleteShift={(shiftId) => {
+										if (confirm('Sind Sie sicher, dass Sie diese Schicht löschen möchten?')) {
+											actions.deleteStationShift.mutate(shiftId);
+										}
+									}}
+									onAssignToShift={handleTapAssignToShift}
+									onAssignToStation={() => handleTapAssignToStation(board.station.id)}
+									onDropOnShift={handleDrop}
+									onDropOnStation={(e) => handleDropOnStation(board.station.id, e)}
+									onRemoveFromShift={(stationShiftId, helperId) =>
+										actions.removeHelper.mutate({ stationShiftId, helperId })
+									}
+									onRemoveFromStation={(helperId) =>
+										actions.removeHelperFromStation.mutate({
+											stationId: board.station.id,
+											helperId
+										})
+									}
+								/>
+							)}
+						</>
 					)}
 				</div>
 
 				{/* Desktop sidebar */}
 				{!isMobile && (
-					<MemberSidebar
-						members={data.members}
-						stations={data.stations}
-						stationShifts={data.stationShifts}
-						assignments={data.assignments}
-						stationMembers={data.stationMembers}
-						stationPreferences={data.stationPreferences}
-						shiftPreferences={data.shiftPreferences}
-						nameFilter={nameFilter}
-						stationFilter={stationFilter}
-						assignmentFilter={assignmentFilter}
-						onNameFilterChange={setNameFilter}
-						onStationFilterChange={setStationFilter}
-						onAssignmentFilterChange={setAssignmentFilter}
-						onDragStart={setDraggedMember}
-						onDragEnd={() => setDraggedMember(null)}
-						onEditPreferences={(member) => setDialogState({ type: 'preferences', member })}
-						onEditMember={(member) => setDialogState({ type: 'member', member })}
-						onDeleteMember={(member) => {
-							if (
-								confirm(
-									`Möchten Sie ${member.last_name} ${member.first_name} wirklich löschen?`
-								)
-							) {
-								actions.deleteMember.mutate(member.id);
-							}
-						}}
-					/>
+					<div className="sticky top-4 flex max-h-[calc(100vh-7rem)] shrink-0">
+						<HelperSidebar
+							helpers={data.helpers}
+							stations={data.stations}
+							stationShifts={data.stationShifts}
+							assignments={data.assignments}
+							stationHelpers={data.stationHelpers}
+							stationPreferences={data.stationPreferences}
+							shiftPreferences={data.shiftPreferences}
+							nameFilter={nameFilter}
+							stationFilter={stationFilter}
+							assignmentFilter={assignmentFilter}
+							onNameFilterChange={setNameFilter}
+							onStationFilterChange={setStationFilter}
+							onAssignmentFilterChange={setAssignmentFilter}
+							onDragStart={setDraggedHelper}
+							onDragEnd={() => setDraggedHelper(null)}
+							onAddHelper={() => setDialogState({ type: 'helper' })}
+							onEditPreferences={(helper) => setDialogState({ type: 'preferences', helper })}
+							onEditHelper={(helper) => setDialogState({ type: 'helper', helper })}
+							onDeleteHelper={(helper) => {
+								if (confirm(removeHelperMessage(helper))) {
+									actions.deleteHelper.mutate(helper.id);
+								}
+							}}
+						/>
+					</div>
 				)}
 			</div>
 
@@ -346,22 +373,22 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				<>
 					<Button
 						className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 bg-primary hover:bg-primary/90"
-						onClick={() => setIsMemberDrawerOpen(true)}
+						onClick={() => setIsHelperDrawerOpen(true)}
 					>
 						<Users className="h-6 w-6 text-primary-foreground" />
 					</Button>
-					<Drawer open={isMemberDrawerOpen} onOpenChange={setIsMemberDrawerOpen}>
+					<Drawer open={isHelperDrawerOpen} onOpenChange={setIsHelperDrawerOpen}>
 						<DrawerContent className="max-h-[85vh]">
 							<DrawerHeader className="pb-0">
-								<DrawerTitle>Mitglieder</DrawerTitle>
+								<DrawerTitle>Helfer</DrawerTitle>
 							</DrawerHeader>
-							<MemberSidebar
+							<HelperSidebar
 								variant="drawer"
-								members={data.members}
+								helpers={data.helpers}
 								stations={data.stations}
 								stationShifts={data.stationShifts}
 								assignments={data.assignments}
-								stationMembers={data.stationMembers}
+								stationHelpers={data.stationHelpers}
 								stationPreferences={data.stationPreferences}
 								shiftPreferences={data.shiftPreferences}
 								nameFilter={nameFilter}
@@ -370,18 +397,15 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 								onNameFilterChange={setNameFilter}
 								onStationFilterChange={setStationFilter}
 								onAssignmentFilterChange={setAssignmentFilter}
-								onDragStart={setDraggedMember}
-								onDragEnd={() => setDraggedMember(null)}
+								onDragStart={setDraggedHelper}
+								onDragEnd={() => setDraggedHelper(null)}
 								onTapSelect={handleTapSelect}
-								onEditPreferences={(member) => setDialogState({ type: 'preferences', member })}
-								onEditMember={(member) => setDialogState({ type: 'member', member })}
-								onDeleteMember={(member) => {
-									if (
-										confirm(
-											`Möchten Sie ${member.last_name} ${member.first_name} wirklich löschen?`
-										)
-									) {
-										actions.deleteMember.mutate(member.id);
+								onAddHelper={() => setDialogState({ type: 'helper' })}
+								onEditPreferences={(helper) => setDialogState({ type: 'preferences', helper })}
+								onEditHelper={(helper) => setDialogState({ type: 'helper', helper })}
+								onDeleteHelper={(helper) => {
+									if (confirm(removeHelperMessage(helper))) {
+										actions.deleteHelper.mutate(helper.id);
 									}
 								}}
 							/>
@@ -393,9 +417,9 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			{/* Dialogs */}
 			<StationDialog
 				open={dialogState.type === 'station'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
 				station={dialogState.type === 'station' ? dialogState.station : null}
-				members={data.members}
+				helpers={data.helpers}
 				onSave={(formData) => {
 					if (dialogState.type === 'station' && dialogState.station) {
 						actions.updateStation.mutate({
@@ -413,7 +437,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 
 			<StationShiftDialog
 				open={dialogState.type === 'stationShift'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
 				stationShift={
 					dialogState.type === 'stationShift' ? dialogState.stationShift : null
 				}
@@ -441,53 +465,57 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				}}
 			/>
 
-			<MemberDialog
-				open={dialogState.type === 'member'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
-				member={dialogState.type === 'member' ? dialogState.member : null}
+			<HelperDialog
+				open={dialogState.type === 'helper'}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
+				helper={dialogState.type === 'helper' ? dialogState.helper : null}
 				onSave={(formData) => {
-					if (dialogState.type === 'member' && dialogState.member) {
-						actions.updateMember.mutate({ id: dialogState.member.id, updates: formData });
+					if (dialogState.type === 'helper' && dialogState.helper) {
+						actions.updateHelper.mutate({ id: dialogState.helper.id, updates: formData });
 					} else {
-						actions.createMember.mutate(formData);
+						actions.createHelper.mutate(formData);
 					}
 				}}
 			/>
 
 			<PreferenceDialog
 				open={dialogState.type === 'preferences'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
-				member={dialogState.type === 'preferences' ? dialogState.member : null}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
+				helper={dialogState.type === 'preferences' ? dialogState.helper : null}
 				stations={data.stations}
 				stationShifts={data.stationShifts}
 				stationPreferences={data.stationPreferences}
 				shiftPreferences={data.shiftPreferences}
-				onSave={(memberId, stationPrefs, shiftPrefs) => {
-					actions.savePreferences.mutate({ memberId, stationPrefs, shiftPrefs });
+				onSave={(helperId, stationPrefs, shiftPrefs) => {
+					actions.savePreferences.mutate({ helperId, stationPrefs, shiftPrefs });
 				}}
 			/>
 
 			<AutoAssignDialog
 				open={dialogState.type === 'autoAssign'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
 				onAssign={(config) => {
-					if (
-						data.stationShifts.length === 0 ||
-						data.stations.length === 0 ||
-						data.members.length === 0
-					) {
+					// „Nur diese Station auto-füllen" heißt: dasselbe Verfahren über ein
+					// gefiltertes Schicht-Array (Entscheid 6 aus #68). Die Regler zählen
+					// weiter übers ganze Fest — sonst sammelt jemand in fünf Stationen je
+					// drei Schichten. Der eigene Dialog dafür kommt in #108.
+					const station = dialogState.type === 'autoAssign' ? dialogState.station : undefined;
+					const stationShifts = station
+						? data.stationShifts.filter((s) => s.station_id === station.id)
+						: data.stationShifts;
+
+					if (stationShifts.length === 0 || data.stations.length === 0 || data.helpers.length === 0) {
 						toast({
 							title: 'Fehler',
-							description:
-								'Es müssen Schichten, Stationen und Mitglieder vorhanden sein.',
+							description: 'Es müssen Schichten, Stationen und Helfer vorhanden sein.',
 							variant: 'destructive'
 						});
 						return;
 					}
 					actions.autoAssign.mutate({
-						stationShifts: data.stationShifts,
+						stationShifts,
 						stations: data.stations,
-						members: data.members.filter((m) => m.is_active),
+						helpers: data.helpers,
 						config,
 						stationPreferences: data.stationPreferences
 					});
@@ -504,8 +532,8 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				stations={data.stations}
 				stationShifts={data.stationShifts}
 				assignments={data.assignments}
-				stationMembers={data.stationMembers}
-				members={data.members}
+				stationHelpers={data.stationHelpers}
+				helpers={data.helpers}
 				onExportPdf={() => handleExport(exportToPdf)}
 				onExportExcel={() => handleExport(exportToExcel)}
 			/>
