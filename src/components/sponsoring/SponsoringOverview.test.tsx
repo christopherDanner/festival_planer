@@ -43,8 +43,9 @@ const render = (props: Partial<SponsoringOverviewProps> = {}) =>
 			onCreate={noop}
 			onTransfer={noop}
 			onExportPdf={noop}
-			onEdit={noop}
 			onDelete={noop}
+			onApply={noop}
+			onRemove={noop}
 			{...props}
 		/>
 	);
