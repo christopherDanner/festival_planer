@@ -11,7 +11,6 @@ import {
 	updateScheduleEntry,
 	deleteScheduleEntry,
 	initializeScheduleDays,
-	reorderScheduleEntries,
 	reorderSchedulePhases,
 	type ScheduleDay,
 	type SchedulePhase,
@@ -200,14 +199,6 @@ export const useScheduleActions = (festivalId: string) => {
 		}
 	});
 
-	const reorderEntriesMutation = useMutation({
-		mutationFn: (items: { id: string; sort_order: number }[]) => reorderScheduleEntries(items),
-		onSuccess: () => { invalidateAll(); },
-		onError: () => {
-			toast({ title: 'Fehler', description: 'Reihenfolge konnte nicht gespeichert werden.', variant: 'destructive' });
-		}
-	});
-
 	return {
 		createDay: createDayMutation,
 		editDay: editDayMutation,
@@ -219,7 +210,7 @@ export const useScheduleActions = (festivalId: string) => {
 		editEntry: editEntryMutation,
 		removeEntry: removeEntryMutation,
 		initDays: initDaysMutation,
+		// Einträge werden nicht mehr von Hand gereiht — die Uhrzeit sortiert (ADR 0007).
 		reorderPhases: reorderPhasesMutation,
-		reorderEntries: reorderEntriesMutation,
 	};
 };

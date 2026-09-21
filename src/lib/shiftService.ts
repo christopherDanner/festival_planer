@@ -1,27 +1,37 @@
 import { supabase } from '@/integrations/supabase/client';
 
+/** Kurzform eines Helfers, wie ihn die Verknüpfungs-Abfragen mitbringen. */
+export interface HelperRef {
+	id: string;
+	first_name: string;
+	last_name: string;
+}
+
+const HELPER_REF = 'id, first_name, last_name';
+
 export interface Station {
 	id: string;
 	festival_id: string;
 	name: string;
 	required_people: number;
 	description?: string;
-	responsible_member_id?: string | null;
-	responsible_member?: { id: string; first_name: string; last_name: string } | null;
+	responsible_helper_id?: string | null;
+	responsible_helper?: HelperRef | null;
 	created_at: string;
 	updated_at: string;
 }
 
-export interface StationMember {
+/** Ein Helfer, der einer Station ohne bestimmte Schicht zugeteilt ist. */
+export interface StationHelper {
 	id: string;
 	festival_id: string;
 	station_id: string;
-	member_id: string;
+	helper_id: string;
 	created_at: string;
 }
 
-export interface StationMemberWithDetails extends StationMember {
-	member?: { id: string; first_name: string; last_name: string };
+export interface StationHelperWithDetails extends StationHelper {
+	helper?: HelperRef;
 }
 
 export interface ShiftAssignment {
@@ -29,18 +39,14 @@ export interface ShiftAssignment {
 	festival_id: string;
 	station_shift_id: string;
 	station_id: string;
-	member_id?: string;
+	helper_id?: string;
 	position: number;
 	created_at: string;
 	updated_at: string;
 }
 
-export interface ShiftAssignmentWithMember extends ShiftAssignment {
-	member?: {
-		id: string;
-		first_name: string;
-		last_name: string;
-	};
+export interface ShiftAssignmentWithHelper extends ShiftAssignment {
+	helper?: HelperRef;
 }
 
 export interface StationShift {
@@ -61,7 +67,7 @@ export interface StationShift {
 export const getStations = async (festivalId: string): Promise<Station[]> => {
 	const { data, error } = await supabase
 		.from('stations')
-		.select('*, responsible_member:members!responsible_member_id(id, first_name, last_name)')
+		.select(`*, responsible_helper:festival_helpers!responsible_helper_id(${HELPER_REF})`)
 		.eq('festival_id', festivalId)
 		.order('name');
 
@@ -99,15 +105,10 @@ export const deleteStation = async (id: string): Promise<void> => {
 // Assignment functions
 export const getShiftAssignments = async (
 	festivalId: string
-): Promise<ShiftAssignmentWithMember[]> => {
+): Promise<ShiftAssignmentWithHelper[]> => {
 	const { data, error } = await supabase
 		.from('shift_assignments')
-		.select(
-			`
-      *,
-      member:members(id, first_name, last_name)
-    `
-		)
+		.select(`*, helper:festival_helpers!helper_id(${HELPER_REF})`)
 		.eq('festival_id', festivalId);
 
 	if (error) throw error;
@@ -208,10 +209,10 @@ export const deleteStationShift = async (id: string): Promise<void> => {
 };
 
 // Station Shift Assignment functions
-export const assignMemberToStationShift = async (
+export const assignHelperToStationShift = async (
 	festivalId: string,
 	stationShiftId: string,
-	memberId: string,
+	helperId: string,
 	position: number = 1
 ): Promise<ShiftAssignment> => {
 	// Get the station shift to get the station_id
@@ -225,26 +226,26 @@ export const assignMemberToStationShift = async (
 		throw new Error('Station shift not found');
 	}
 
-	// Check if member is already assigned to this station shift
-	const { data: existingMemberAssignment, error: memberCheckError } = await supabase
+	// Check if the helper is already assigned to this station shift
+	const { data: existingHelperAssignment, error: helperCheckError } = await supabase
 		.from('shift_assignments')
 		.select('*')
 		.eq('festival_id', festivalId)
 		.eq('station_shift_id', stationShiftId)
 		.eq('station_id', stationShift.station_id)
-		.eq('member_id', memberId)
+		.eq('helper_id', helperId)
 		.maybeSingle();
 
-	if (memberCheckError) {
-		throw memberCheckError;
+	if (helperCheckError) {
+		throw helperCheckError;
 	}
 
-	if (existingMemberAssignment) {
-		// Member is already assigned, update the position
-		return updateAssignment(existingMemberAssignment.id, { position });
+	if (existingHelperAssignment) {
+		// Helper is already assigned, update the position
+		return updateAssignment(existingHelperAssignment.id, { position });
 	}
 
-	// Check if position is already taken by another member
+	// Check if position is already taken by another helper
 	const { data: existingPositionAssignment, error: positionCheckError } = await supabase
 		.from('shift_assignments')
 		.select('*')
@@ -286,7 +287,7 @@ export const assignMemberToStationShift = async (
 			festival_id: festivalId,
 			station_shift_id: stationShiftId,
 			station_id: stationShift.station_id,
-			member_id: memberId,
+			helper_id: helperId,
 			position: nextPosition
 		});
 	} else {
@@ -295,16 +296,16 @@ export const assignMemberToStationShift = async (
 			festival_id: festivalId,
 			station_shift_id: stationShiftId,
 			station_id: stationShift.station_id,
-			member_id: memberId,
+			helper_id: helperId,
 			position
 		});
 	}
 };
 
-export const removeMemberFromStationShift = async (
+export const removeHelperFromStationShift = async (
 	festivalId: string,
 	stationShiftId: string,
-	memberId: string
+	helperId: string
 ): Promise<void> => {
 	// Get the station shift to get the station_id
 	const { data: stationShift, error: shiftError } = await supabase
@@ -323,32 +324,32 @@ export const removeMemberFromStationShift = async (
 		.eq('festival_id', festivalId)
 		.eq('station_shift_id', stationShiftId)
 		.eq('station_id', stationShift.station_id)
-		.eq('member_id', memberId);
+		.eq('helper_id', helperId);
 
 	if (error) throw error;
 };
 
-// Station Member functions (direct assignment without shift)
-export const getStationMembers = async (
+// Station Helper functions (direct assignment without shift)
+export const getStationHelpers = async (
 	festivalId: string
-): Promise<StationMemberWithDetails[]> => {
+): Promise<StationHelperWithDetails[]> => {
 	const { data, error } = await supabase
 		.from('station_members')
-		.select('*, member:members(id, first_name, last_name)')
+		.select(`*, helper:festival_helpers!helper_id(${HELPER_REF})`)
 		.eq('festival_id', festivalId);
 
 	if (error) throw error;
 	return data || [];
 };
 
-export const assignMemberToStation = async (
+export const assignHelperToStation = async (
 	festivalId: string,
 	stationId: string,
-	memberId: string
-): Promise<StationMember> => {
+	helperId: string
+): Promise<StationHelper> => {
 	const { data, error } = await supabase
 		.from('station_members')
-		.insert({ festival_id: festivalId, station_id: stationId, member_id: memberId })
+		.insert({ festival_id: festivalId, station_id: stationId, helper_id: helperId })
 		.select()
 		.single();
 
@@ -356,27 +357,27 @@ export const assignMemberToStation = async (
 	return data;
 };
 
-export const removeMemberFromStation = async (
+export const removeHelperFromStation = async (
 	stationId: string,
-	memberId: string
+	helperId: string
 ): Promise<void> => {
 	const { error } = await supabase
 		.from('station_members')
 		.delete()
 		.eq('station_id', stationId)
-		.eq('member_id', memberId);
+		.eq('helper_id', helperId);
 
 	if (error) throw error;
 };
 
 // Bulk insert helpers
 export const createStationsBulk = async (
-	stations: Omit<Station, 'id' | 'created_at' | 'updated_at' | 'responsible_member'>[]
+	stations: Omit<Station, 'id' | 'created_at' | 'updated_at' | 'responsible_helper'>[]
 ): Promise<Station[]> => {
 	const { data, error } = await supabase
 		.from('stations')
 		.insert(stations)
-		.select('*, responsible_member:members!stations_responsible_member_id_fkey(id, first_name, last_name)');
+		.select(`*, responsible_helper:festival_helpers!responsible_helper_id(${HELPER_REF})`);
 	if (error) throw error;
 	return data || [];
 };

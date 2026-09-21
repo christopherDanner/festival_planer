@@ -21,44 +21,55 @@ export interface SchedulePhase {
 	updated_at: string;
 }
 
+/**
+ * Ein Ablauf-Eintrag gehört dem Tag; die Phase ist ein optionaler Feinschnitt
+ * (ADR 0007). Darum `schedule_day_id` pflicht und `schedule_phase_id` nullable —
+ * und kein `sort_order` mehr: gereiht wird nach Startzeit, nicht von Hand.
+ */
 export interface ScheduleEntry {
 	id: string;
-	schedule_phase_id: string;
+	schedule_day_id: string;
+	schedule_phase_id: string | null;
 	festival_id: string;
 	title: string;
 	type: 'task' | 'program';
 	start_time: string | null;
 	end_time: string | null;
-	responsible_member_id: string | null;
+	responsible_helper_id: string | null;
 	status: 'open' | 'done' | null;
 	description: string | null;
-	sort_order: number;
 	created_at: string;
 	updated_at: string;
 }
 
-export interface ScheduleEntryWithMember extends ScheduleEntry {
-	responsible_member?: { id: string; first_name: string; last_name: string } | null;
+export interface ScheduleEntryWithHelper extends ScheduleEntry {
+	responsible_helper?: { id: string; first_name: string; last_name: string } | null;
 }
 
-export interface SchedulePhaseWithEntries extends SchedulePhase {
-	entries: ScheduleEntryWithMember[];
-}
-
-export interface ScheduleDayWithPhases extends ScheduleDay {
-	phases: SchedulePhaseWithEntries[];
+/**
+ * Die gelesene Form des Ablaufplans: alle Einträge des Tages nebeneinander, die
+ * Phasen nur als Gruppen-Metadaten. Die Gruppierung Tag → Phase macht die
+ * Ansicht ({@link groupEntriesByPhase}), nicht die Abfrage — ein Eintrag ohne
+ * Phase hätte in einer verschachtelten Form keinen Platz.
+ */
+export interface ScheduleDayWithEntries extends ScheduleDay {
+	phases: SchedulePhase[];
+	entries: ScheduleEntryWithHelper[];
 }
 
 // --- Schedule Days ---
 
-export const getScheduleDays = async (festivalId: string): Promise<ScheduleDayWithPhases[]> => {
+export const getScheduleDays = async (festivalId: string): Promise<ScheduleDayWithEntries[]> => {
 	const { data, error } = await (supabase as any)
 		.from('schedule_days')
-		.select('*, phases:schedule_phases(*, entries:schedule_entries(*, responsible_member:members(id, first_name, last_name)))')
+		.select('*, phases:schedule_phases(*), entries:schedule_entries(*, responsible_helper:festival_helpers!responsible_helper_id(id, first_name, last_name))')
 		.eq('festival_id', festivalId)
 		.order('date')
 		.order('sort_order', { referencedTable: 'phases' })
-		.order('sort_order', { referencedTable: 'phases.entries' });
+		// Die Uhrzeit reiht, bei Gleichstand das Anlegedatum; ohne Zeit ans Ende
+		// (ADR 0007). `sort_order` der Einträge wird nicht mehr gelesen.
+		.order('start_time', { referencedTable: 'entries', nullsFirst: false })
+		.order('created_at', { referencedTable: 'entries' });
 
 	if (error) throw error;
 	return data || [];
@@ -217,18 +228,10 @@ export const deleteScheduleEntry = async (id: string): Promise<void> => {
 	if (error) throw error;
 };
 
-export const reorderScheduleEntries = async (
-	entries: { id: string; sort_order: number }[]
-): Promise<void> => {
-	for (const entry of entries) {
-		const { error } = await (supabase as any)
-			.from('schedule_entries')
-			.update({ sort_order: entry.sort_order, updated_at: new Date().toISOString() })
-			.eq('id', entry.id);
-		if (error) throw error;
-	}
-};
-
+/**
+ * Nur die Phasen werden von Hand gereiht — sie tragen keine Uhrzeit. Das
+ * Gegenstück für Einträge entfällt mit ADR 0007.
+ */
 export const reorderSchedulePhases = async (
 	phases: { id: string; sort_order: number }[]
 ): Promise<void> => {

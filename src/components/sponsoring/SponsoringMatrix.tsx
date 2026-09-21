@@ -8,10 +8,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ValueTag } from '@/components/toolkit/ValueTag';
+import {
+	PAPER_TABLE_BODY_CELL,
+	PAPER_TABLE_FOOT_CELL,
+	PAPER_TABLE_HEAD_CELL
+} from '@/components/toolkit/PaperTable';
 import SponsoringZettel from '@/components/sponsoring/SponsoringZettel';
 import { formatEuro } from '@/lib/money';
 import type { SponsoringCategory } from '@/lib/sponsorService';
-import type { SponsoringOverviewFooter, SponsoringOverviewRow } from '@/lib/sponsoringTotals';
+import {
+	sponsoringFooterLabel,
+	sponsoringNoMatchNotice,
+	type SponsoringOverviewFooter,
+	type SponsoringOverviewRow
+} from '@/lib/sponsoringTotals';
 import {
 	buildZettel,
 	type Zettel,
@@ -22,8 +32,13 @@ import {
 export interface SponsoringMatrixProps {
 	/** Die Preisliste des Fests — eine Spalte je Kategorie, in dieser Reihenfolge. */
 	categories: SponsoringCategory[];
+	/** Die **sichtbaren** Zeilen; der Fuß summiert genau diese (ADR 0006). */
 	rows: SponsoringOverviewRow[];
 	footer: SponsoringOverviewFooter;
+	/** Firmen des Fests insgesamt — damit der Fuß den Filter beschriften kann. */
+	totalRowCount: number;
+	/** Laufender Suchbegriff; nur für die Hinweiszeile, wenn nichts passt. */
+	searchTerm: string;
 	onDelete: (sponsoringId: string) => void;
 	/** „Übernehmen" im Zettel. */
 	onApply: (sponsoringId: string, target: ZettelTarget, input: ZettelInput) => void;
@@ -52,11 +67,9 @@ Kategorien hat. Damit passen 4 (952 px) und 6 (1128 px) hinein, 7 reißen mit
 const OTHER_COLUMNS_PX = 600;
 const CATEGORY_COLUMN_MIN_PX = 88;
 
-const HEAD_CELL =
-	'border-b-2 border-tinte bg-fusszeile px-2.5 py-2 text-left align-bottom text-[11px] font-bold uppercase tracking-[.05em]';
-const BODY_CELL = 'overflow-hidden px-2.5 align-middle tabular-nums';
-const FOOT_CELL =
-	'border-t-2 border-tinte bg-fusszeile px-2.5 py-2 align-middle font-extrabold tabular-nums';
+const HEAD_CELL = PAPER_TABLE_HEAD_CELL;
+const BODY_CELL = PAPER_TABLE_BODY_CELL;
+const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
 
 /** Gestrichelte „+"-Marke für alles, was an dieser Zeile noch nicht erfasst ist. */
 const UnrecordedMark: React.FC = () => <ValueTag tone="muted">+</ValueTag>;
@@ -131,6 +144,8 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	categories,
 	rows,
 	footer,
+	totalRowCount,
+	searchTerm,
 	onDelete,
 	onApply,
 	onRemove
@@ -158,176 +173,190 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	};
 
 	return (
-		<div>
-			<div className="overflow-x-auto border-2.5 border-tinte bg-white">
-				<table
-					className="w-full table-fixed border-collapse text-[13px]"
-					style={{
-						minWidth: `${OTHER_COLUMNS_PX + categories.length * CATEGORY_COLUMN_MIN_PX}px`
-					}}
-				>
-					<thead>
-						<tr>
-							<th scope="col" className={`${HEAD_CELL} ${STICKY_LEFT} z-20 w-[17%]`}>
-								Firma
-							</th>
-							{categories.map((category) => (
-								/* hyphens-auto: bei 6 Kategorien ist eine Spalte 91 px breit,
-								„TRANSPARENT" braucht ~95 px und kann als ein Wort nicht umbrechen. */
-								<th
-									key={category.id}
-									scope="col"
-									lang="de"
-									className={`${HEAD_CELL} hyphens-auto text-center`}
-								>
-									{category.name}
-									{category.value != null && (
-										<span className="block font-display text-xs font-semibold normal-case tracking-normal text-gruen">
-											{formatEuro(category.value)}
-										</span>
-									)}
-								</th>
-							))}
-							<th scope="col" className={`${HEAD_CELL} w-[8%] text-right`}>
-								Freibetrag
-							</th>
-							<th scope="col" className={`${HEAD_CELL} w-[15%]`}>
-								Sachleistung
-							</th>
-							<th scope="col" className={`${HEAD_CELL} ${STICKY_TOTAL} z-20 w-[9%] text-right`}>
-								Gesamt
-							</th>
-							<th scope="col" className={`${HEAD_CELL} ${STICKY_MENU} z-20 w-11`}>
-								<span className="sr-only">Aktionen</span>
-							</th>
-						</tr>
-					</thead>
-
-					<tbody>
-						{rows.map((row) => (
-							<tr key={row.sponsoringId} className={`${ROW_HEIGHT} border-b border-linie`}>
-								<td className={`${BODY_CELL} ${STICKY_LEFT} z-10 truncate bg-white font-bold`}>
-									{row.companyName}
-								</td>
-								{categories.map((category) => {
-									const position = row.positionsByCategoryId[category.id];
-									return (
-										<td key={category.id} className={`${BODY_CELL} text-center`}>
-											<ZettelCell
-												label={`${category.name} bei ${row.companyName}`}
-												align="center"
-												{...cell(row, { kind: 'category', category })}
-											>
-												{position ? (
-													<ValueTag
-														value={formatEuro(position.value)}
-														overridden={position.overridden}
-													/>
-												) : (
-													<UnrecordedMark />
-												)}
-											</ZettelCell>
-										</td>
-									);
-								})}
-								<td className={`${BODY_CELL} text-right`}>
-									<ZettelCell
-										label={`Freibetrag bei ${row.companyName}`}
-										align="end"
-										{...cell(row, { kind: 'freeAmount' })}
-									>
-										{row.freeAmount != null ? (
-											<ValueTag tone="ink" value={formatEuro(row.freeAmount)} />
-										) : (
-											<UnrecordedMark />
-										)}
-									</ZettelCell>
-								</td>
-								<td className={BODY_CELL}>
-									<ZettelCell
-										label={`Sachleistung bei ${row.companyName}`}
-										align="start"
-										{...cell(row, { kind: 'inKind' })}
-									>
-										{row.inKind ? (
-											/* Die Spalte wird nicht breiter (bei 6 Kategorien ist die Reserve
-											0 px), also kürzt der Text und der volle steht im title. */
-											<ValueTag
-												tone="muted"
-												className="max-w-full"
-												title={`${row.inKind.description} (${formatEuro(row.inKind.value)})`}
-												value={`(${formatEuro(row.inKind.value)})`}
-											>
-												<span className="min-w-0 overflow-hidden text-ellipsis">
-													{row.inKind.description}
-												</span>
-											</ValueTag>
-										) : (
-											<UnrecordedMark />
-										)}
-									</ZettelCell>
-								</td>
-								<td className={`${BODY_CELL} ${STICKY_TOTAL} z-10 bg-white text-right`}>
-									<span className="font-bold">{formatEuro(row.total)}</span>
-									{/* Vorjahresbeitrag: immer grau, keine Rot/Grün-Färbung — es gibt
-									keinen Anspruch, den ein Sponsor verletzt hätte (#69, Entscheid 4). */}
-									{row.previousTotal != null && (
-										<span className="block text-[10.5px] font-semibold leading-tight text-tinte-soft">
-											Vorjahr {formatEuro(row.previousTotal)}
-										</span>
-									)}
-								</td>
-								<td className={`${BODY_CELL} ${STICKY_MENU} z-10 bg-white`}>
-									{/* Das Menü trägt vorerst nur „Entfernen"; Notiz und Firmendaten
-									kommen mit #150, ein „Bearbeiten" ist dort ausdrücklich verworfen. */}
-									<DropdownMenu>
-										<DropdownMenuTrigger
-											className="text-tinte-soft hover:text-tinte"
-											aria-label={`Menü für ${row.companyName}`}
-										>
-											<MoreVertical className="h-4 w-4" />
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuItem
-												className="text-rot"
-												onSelect={() => onDelete(row.sponsoringId)}
-											>
-												Entfernen
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</td>
-							</tr>
-						))}
-					</tbody>
-
-					{/* Ohne Zeile gibt es nichts zu summieren — und sechs korrekte Nullen
-					sehen wie ein Fehler aus (#69, Leerzustand L2). */}
-					{rows.length > 0 && (
-						<tfoot>
-							<tr>
-								<td className={`${FOOT_CELL} ${STICKY_LEFT} z-10`}>Σ je Kategorie</td>
-								{categories.map((category) => (
-									<td key={category.id} className={`${FOOT_CELL} text-center`}>
-										{formatEuro(footer.perCategoryId[category.id] ?? 0)}
-									</td>
-								))}
-								<td className={`${FOOT_CELL} text-right`}>{formatEuro(footer.freeAmount)}</td>
-								{/* Sachwert steht neben dem Geld, nie darin (ADR 0008). */}
-								<td className={FOOT_CELL}>
-									{footer.inKindValue > 0 && `+ ${formatEuro(footer.inKindValue)} Sachwert`}
-								</td>
-								<td className={`${FOOT_CELL} ${STICKY_TOTAL} z-10 text-right`}>
-									<span className="font-display text-[15px] font-semibold">
-										{formatEuro(footer.total)}
+		<div className="overflow-x-auto border-2.5 border-tinte bg-white">
+			<table
+				className="w-full table-fixed border-collapse text-[13px]"
+				style={{ minWidth: `${OTHER_COLUMNS_PX + categories.length * CATEGORY_COLUMN_MIN_PX}px` }}
+			>
+				<thead>
+					<tr>
+						<th scope="col" className={`${HEAD_CELL} ${STICKY_LEFT} z-20 w-[17%]`}>
+							Firma
+						</th>
+						{categories.map((category) => (
+							/* hyphens-auto: bei 6 Kategorien ist eine Spalte 91 px breit,
+							„TRANSPARENT" braucht ~95 px und kann als ein Wort nicht umbrechen. */
+							<th
+								key={category.id}
+								scope="col"
+								lang="de"
+								className={`${HEAD_CELL} hyphens-auto text-center`}
+							>
+								{category.name}
+								{category.value != null && (
+									<span className="block font-display text-xs font-semibold normal-case tracking-normal text-gruen">
+										{formatEuro(category.value)}
 									</span>
-								</td>
-								<td className={`${FOOT_CELL} ${STICKY_MENU} z-10`} />
-							</tr>
-						</tfoot>
+								)}
+							</th>
+						))}
+						<th scope="col" className={`${HEAD_CELL} w-[8%] text-right`}>
+							Freibetrag
+						</th>
+						<th scope="col" className={`${HEAD_CELL} w-[15%]`}>
+							Sachleistung
+						</th>
+						<th scope="col" className={`${HEAD_CELL} ${STICKY_TOTAL} z-20 w-[9%] text-right`}>
+							Gesamt
+						</th>
+						<th scope="col" className={`${HEAD_CELL} ${STICKY_MENU} z-20 w-11`}>
+							<span className="sr-only">Aktionen</span>
+						</th>
+					</tr>
+				</thead>
+
+				<tbody>
+					{rows.map((row) => (
+						<tr key={row.sponsoringId} className={`${ROW_HEIGHT} border-b border-linie`}>
+							<td className={`${BODY_CELL} ${STICKY_LEFT} z-10 truncate bg-white font-bold`}>
+								{row.companyName}
+							</td>
+							{categories.map((category) => {
+								const position = row.positionsByCategoryId[category.id];
+								return (
+									<td key={category.id} className={`${BODY_CELL} text-center`}>
+										<ZettelCell
+											label={`${category.name} bei ${row.companyName}`}
+											align="center"
+											{...cell(row, { kind: 'category', category })}
+										>
+											{position ? (
+												<ValueTag
+													value={formatEuro(position.value)}
+													overridden={position.overridden}
+												/>
+											) : (
+												<UnrecordedMark />
+											)}
+										</ZettelCell>
+									</td>
+								);
+							})}
+							<td className={`${BODY_CELL} text-right`}>
+								<ZettelCell
+									label={`Freibetrag bei ${row.companyName}`}
+									align="end"
+									{...cell(row, { kind: 'freeAmount' })}
+								>
+									{row.freeAmount != null ? (
+										<ValueTag tone="ink" value={formatEuro(row.freeAmount)} />
+									) : (
+										<UnrecordedMark />
+									)}
+								</ZettelCell>
+							</td>
+							<td className={BODY_CELL}>
+								<ZettelCell
+									label={`Sachleistung bei ${row.companyName}`}
+									align="start"
+									{...cell(row, { kind: 'inKind' })}
+								>
+									{row.inKind ? (
+										/* Die Spalte wird nicht breiter (bei 6 Kategorien ist die Reserve
+										0 px), also kürzt der Text und der volle steht im title. */
+										<ValueTag
+											tone="muted"
+											className="max-w-full"
+											title={`${row.inKind.description} (${formatEuro(row.inKind.value)})`}
+											value={`(${formatEuro(row.inKind.value)})`}
+										>
+											<span className="min-w-0 overflow-hidden text-ellipsis">
+												{row.inKind.description}
+											</span>
+										</ValueTag>
+									) : (
+										<UnrecordedMark />
+									)}
+								</ZettelCell>
+							</td>
+							<td className={`${BODY_CELL} ${STICKY_TOTAL} z-10 bg-white text-right`}>
+								<span className="font-bold">{formatEuro(row.total)}</span>
+								{/* Vorjahresbeitrag: immer grau, keine Rot/Grün-Färbung — es gibt
+								keinen Anspruch, den ein Sponsor verletzt hätte (#69, Entscheid 4). */}
+								{row.previousTotal != null && (
+									<span className="block text-[10.5px] font-semibold leading-tight text-tinte-soft">
+										Vorjahr {formatEuro(row.previousTotal)}
+									</span>
+								)}
+							</td>
+							<td className={`${BODY_CELL} ${STICKY_MENU} z-10 bg-white`}>
+								{/* Das Menü trägt vorerst nur „Entfernen"; Notiz und Firmendaten
+								kommen mit #150, ein „Bearbeiten" ist dort ausdrücklich verworfen. */}
+								<DropdownMenu>
+									<DropdownMenuTrigger
+										className="text-tinte-soft hover:text-tinte"
+										aria-label={`Menü für ${row.companyName}`}
+									>
+										<MoreVertical className="h-4 w-4" />
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										<DropdownMenuItem
+											className="text-rot"
+											onSelect={() => onDelete(row.sponsoringId)}
+										>
+											Entfernen
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							</td>
+						</tr>
+					))}
+
+					{/* Kein Treffer: eine Hinweiszeile statt einer leeren Tabelle — die
+					Kategorie-Spalten bleiben dabei vollständig stehen (#151). Ein Fest
+					ohne Sponsoring (`totalRowCount === 0`) ist kein Suchergebnis und
+					behält seinen eigenen Satz. */}
+					{rows.length === 0 && totalRowCount > 0 && searchTerm.trim() !== '' && (
+						<tr className="border-b border-linie">
+							<td
+								colSpan={categories.length + 5}
+								className="px-2.5 py-8 text-center text-tinte-soft"
+							>
+								{sponsoringNoMatchNotice(searchTerm)}
+							</td>
+						</tr>
 					)}
-				</table>
-			</div>
+				</tbody>
+
+				{/* Ohne Zeile gibt es nichts zu summieren — und sechs korrekte Nullen
+				sehen wie ein Fehler aus (#69, Leerzustand L2). Dieselbe Regel greift,
+				wenn die Suche nichts übrig lässt (#151). */}
+				{rows.length > 0 && (
+					<tfoot>
+						<tr>
+							<td className={`${FOOT_CELL} ${STICKY_LEFT} z-10`}>
+								{sponsoringFooterLabel('Σ je Kategorie', rows.length, totalRowCount)}
+							</td>
+							{categories.map((category) => (
+								<td key={category.id} className={`${FOOT_CELL} text-center`}>
+									{formatEuro(footer.perCategoryId[category.id] ?? 0)}
+								</td>
+							))}
+							<td className={`${FOOT_CELL} text-right`}>{formatEuro(footer.freeAmount)}</td>
+							{/* Sachwert steht neben dem Geld, nie darin (ADR 0008). */}
+							<td className={FOOT_CELL}>
+								{footer.inKindValue > 0 && `+ ${formatEuro(footer.inKindValue)} Sachwert`}
+							</td>
+							<td className={`${FOOT_CELL} ${STICKY_TOTAL} z-10 text-right`}>
+								<span className="font-display text-[15px] font-semibold">
+									{formatEuro(footer.total)}
+								</span>
+							</td>
+							<td className={`${FOOT_CELL} ${STICKY_MENU} z-10`} />
+						</tr>
+					</tfoot>
+				)}
+			</table>
 		</div>
 	);
 };

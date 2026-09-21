@@ -1,45 +1,22 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Pencil, Trash2, Info, ChevronUp, ChevronDown } from 'lucide-react';
-import type { ScheduleEntryWithMember } from '@/lib/scheduleService';
+import { Pencil, Trash2 } from 'lucide-react';
+import EntryDescriptionHint from './EntryDescriptionHint';
+import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
 interface ScheduleEntryRowProps {
-	entry: ScheduleEntryWithMember;
-	onEdit: (entry: ScheduleEntryWithMember) => void;
+	entry: ScheduleEntryWithHelper;
+	onEdit: (entry: ScheduleEntryWithHelper) => void;
 	onDelete: (id: string) => void;
-	onToggleStatus: (entry: ScheduleEntryWithMember) => void;
-	isFirst: boolean;
-	isLast: boolean;
-	onMoveUp: () => void;
-	onMoveDown: () => void;
+	onToggleStatus: (entry: ScheduleEntryWithHelper) => void;
 }
 
-const ScheduleEntryRow = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, isLast, onMoveUp, onMoveDown }: ScheduleEntryRowProps) => {
+const ScheduleEntryRow = ({ entry, onEdit, onDelete, onToggleStatus }: ScheduleEntryRowProps) => {
 	const isDone = entry.status === 'done';
 
 	return (
 		<div className="group relative flex items-start gap-4 py-1">
-			{/* Move buttons - visible on hover */}
-			<div className="absolute -left-7 top-2 flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-				<Button
-					variant="ghost"
-					size="icon"
-					className={`h-5 w-5 ${isFirst ? 'invisible' : ''}`}
-					onClick={onMoveUp}
-				>
-					<ChevronUp className="h-3 w-3" />
-				</Button>
-				<Button
-					variant="ghost"
-					size="icon"
-					className={`h-5 w-5 ${isLast ? 'invisible' : ''}`}
-					onClick={onMoveDown}
-				>
-					<ChevronDown className="h-3 w-3" />
-				</Button>
-			</div>
-
 			{/* Card content */}
 			<div className="flex-1 border bg-card p-3">
 				<div className="flex items-center justify-between">
@@ -81,20 +58,15 @@ const ScheduleEntryRow = ({ entry, onEdit, onDelete, onToggleStatus, isFirst, is
 				</div>
 
 				{/* Bottom row: responsible + status */}
-				{(entry.responsible_member || entry.type === 'task' || entry.description) && (
+				{(entry.responsible_helper || entry.type === 'task' || entry.description) && (
 					<div className="flex items-center justify-between mt-2 text-sm">
 						<span className="text-muted-foreground">
-							{entry.responsible_member
-								? `${entry.responsible_member.last_name} ${entry.responsible_member.first_name}`
+							{entry.responsible_helper
+								? `${entry.responsible_helper.last_name} ${entry.responsible_helper.first_name}`
 								: ''}
 						</span>
 						<div className="flex items-center gap-2">
-							{entry.description && (
-								<Info
-									className="h-3.5 w-3.5 text-muted-foreground/60"
-									title={entry.description}
-								/>
-							)}
+							<EntryDescriptionHint description={entry.description} />
 							{entry.type === 'task' && (
 								<Checkbox
 									checked={isDone}

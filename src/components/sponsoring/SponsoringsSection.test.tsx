@@ -63,8 +63,10 @@ async function mount() {
 
 	return {
 		container,
-		/** Die Kopfzahl des Bereichs (Maßband-Kasten). */
-		kopfzahl: () => container.querySelector('.space-y-4')!.children[1].textContent ?? '',
+		/* Der Maßband-Kasten, an seinem eigenen Rahmen gegriffen statt an seiner
+		Stelle im Baum — die Übersicht schiebt sonst jede neue Zeile den Griff
+		weiter (der Rahmen der Matrix trägt kein `px-4`). */
+		kopfzahl: () => container.querySelector('.border-2\\.5.px-4')?.textContent ?? '',
 		/** Der Tabellenfuß mit den Spaltensummen. */
 		fuss: () => container.querySelector('tfoot')?.textContent ?? '',
 		field: (label: string) =>
