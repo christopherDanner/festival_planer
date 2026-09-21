@@ -13,17 +13,26 @@ import path from 'node:path';
 
 const SRC = path.resolve(__dirname, '../..');
 const COMPONENTS = path.join(SRC, 'components');
+/** Der einzige Einstieg der App — alles andere hängt daran. */
+const ENTRY = path.join(SRC, 'main.tsx');
 
-/** `from '…'`, `import('…')`, `export … from '…'` — mehr Formen nutzt das Repo nicht. */
+/**
+ * Deckt `from '…'`, `import('…')` und `export … from '…'` ab. Bewusst grob:
+ * Der Ausdruck greift auch in Kommentaren und Zeichenketten. Das macht den
+ * Graph großzügiger, als er sein müsste — er hält ein Bauteil eher für
+ * lebendig als für tot und meldet darum nie ein benutztes Bauteil an.
+ */
 const SPECIFIER = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g;
 
-const SOURCE_FILE = /\.tsx?$/;
-const TEST_FILE = /\.test\.tsx?$/;
+/** `allowJs` steht in der tsconfig auf true, also zählen JS-Dateien mit. */
+const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
+const SOURCE_FILE = /\.[jt]sx?$/;
+const TEST_FILE = /\.test\.[jt]sx?$/;
 
 export interface ComponentTree {
 	/** Alle Bauteile unter `src/components/`, ohne Tests — als Pfad relativ zu `src/`. */
 	modules: string[];
-	/** Davon die, zu denen von den Einstiegsdateien der App kein Weg führt. */
+	/** Davon die, zu denen vom Einstieg der App kein Weg führt. */
 	unreachable: string[];
 }
 
@@ -36,8 +45,9 @@ function sourceFiles(dir: string): string[] {
 }
 
 /**
- * Tests zählen bewusst nicht als Nutzer: Ein Bauteil, das nur noch sein eigener
- * Test anfasst, ist genauso tot wie eines, das niemand anfasst.
+ * Tests gehören nicht zum Bestand: Ein Bauteil, das nur noch sein eigener Test
+ * anfasst, ist genauso tot wie eines, das niemand anfasst — und vom Einstieg
+ * der App führt ohnehin kein Weg in einen Test.
  */
 const isTest = (file: string) =>
 	TEST_FILE.test(file) || path.relative(SRC, file).split(path.sep).includes('__tests__');
@@ -53,17 +63,23 @@ function resolveSpecifier(files: Set<string>, from: string, specifier: string): 
 	else if (specifier.startsWith('.')) base = path.resolve(path.dirname(from), specifier);
 	else return null;
 
+	// `base` selbst zuerst: `main.tsx` schreibt die Endung aus (`./App.tsx`).
 	const candidates = [
-		`${base}.ts`,
-		`${base}.tsx`,
-		path.join(base, 'index.ts'),
-		path.join(base, 'index.tsx')
+		base,
+		...EXTENSIONS.map((extension) => `${base}${extension}`),
+		...EXTENSIONS.map((extension) => path.join(base, `index${extension}`))
 	];
 	return candidates.find((candidate) => files.has(candidate)) ?? null;
 }
 
 export function analyzeComponentTree(): ComponentTree {
 	const files = new Set(sourceFiles(SRC));
+	if (!files.has(ENTRY)) {
+		// Ohne Einstieg wäre jedes Bauteil unerreichbar — ein Guard, der alles
+		// anmeckert, wird abgeschaltet. Lieber laut hier abbrechen.
+		throw new Error(`Einstieg ${relative(ENTRY)} nicht gefunden — Pfad im Guard veraltet?`);
+	}
+
 	const importsOf = new Map<string, string[]>(
 		[...files].map((file) => [
 			file,
@@ -73,17 +89,16 @@ export function analyzeComponentTree(): ComponentTree {
 		])
 	);
 
-	// Einstiege sind alles, was kein Bauteil und kein Test ist: `main.tsx`,
-	// `App.tsx`, die Seiten, `lib/`, `hooks/`, `integrations/`.
+	// Gelaufen wird von `main.tsx` aus, nicht von allem, was kein Bauteil ist.
+	// Sonst hielte eine Seite, die selbst niemand mehr aufruft, ihre Bauteile
+	// am Leben — und genau so bleibt ein abgelöstes Muster unbemerkt liegen.
 	const reached = new Set<string>();
-	const queue = [...files].filter((file) => !isComponent(file) && !isTest(file));
+	const queue = [ENTRY];
 	while (queue.length > 0) {
 		const file = queue.pop() as string;
 		if (reached.has(file)) continue;
 		reached.add(file);
-		for (const target of importsOf.get(file) ?? []) {
-			if (!isTest(target)) queue.push(target);
-		}
+		queue.push(...(importsOf.get(file) ?? []));
 	}
 
 	const modules = [...files].filter((file) => isComponent(file) && !isTest(file)).sort();

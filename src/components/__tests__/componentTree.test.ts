@@ -37,14 +37,15 @@ describe('Bestand unter src/components/', () => {
 
 	/**
 	 * `ui/` ist das Regal der Verhaltens-Hüllen (ADR 0003), kein Arbeitsplatz:
-	 * Was dort keinen Nutzer mehr hat, ist Ballast und geht samt npm-Paket —
-	 * die Linie aus #72.
+	 * Was dort keinen Nutzer mehr hat, ist Ballast. Das npm-Paket dahinter
+	 * gehört per Hand mit raus (die Linie aus #72) — das prüft hier nichts.
 	 */
 	it('lässt keine Hülle in ui/ ohne Nutzer liegen', () => {
 		expect(tree.unreachable.filter((module) => module.startsWith(UI))).toEqual([]);
 	});
 
 	it('hängt kein Bauteil ohne Ticket ab', () => {
-		expect(tree.unreachable.filter((module) => !module.startsWith(UI))).toEqual(PARKED);
+		const parked = tree.unreachable.filter((module) => !module.startsWith(UI));
+		expect(parked.sort()).toEqual([...PARKED].sort());
 	});
 });
