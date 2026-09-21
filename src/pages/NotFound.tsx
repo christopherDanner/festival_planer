@@ -30,8 +30,8 @@ const NotFound = () => {
 				<Stamp tone="red" size="lg" tilt="left">
 					DIESE SEITE GIBT ES NICHT
 				</Stamp>
-				{/* Der Satz nimmt die Breite des Kastens — wie in N2, wo er auf dem
-				Desktop in eine Zeile fällt und am Handy in zwei. */}
+				{/* Kein eigenes Breitenmaß: der Satz nimmt die Breite des Kastens,
+				wie in N2 — der Kasten ist das Maß, nicht die Zeilenlänge. */}
 				<p className="mt-4 text-[12.5px] leading-snug text-tinte-soft">
 					Der Link führt ins Leere. Zurück zur Festliste, dort steht alles.
 				</p>
