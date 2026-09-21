@@ -1,11 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Station, StationShift } from './shiftService';
-import { assignMemberToStationShift, getShiftAssignments } from './shiftService';
-import type { Member } from './memberService';
+import { assignHelperToStationShift, getShiftAssignments } from './shiftService';
+import type { Helper } from './helperService';
 
 export interface AutoAssignmentConfig {
-	minShiftsPerMember: number;
-	maxShiftsPerMember: number;
+	minShiftsPerHelper: number;
+	maxShiftsPerHelper: number;
 	respectPreferences: boolean;
 }
 
@@ -17,14 +17,14 @@ export interface AssignmentResult {
 		stationId: string;
 		remainingSlots: number;
 	}>;
-	memberStats: Array<{
-		memberId: string;
+	helperStats: Array<{
+		helperId: string;
 		assignedShifts: number;
 	}>;
 }
 
 interface AssignmentScore {
-	memberId: string;
+	helperId: string;
 	score: number;
 	hasPreference: boolean;
 	currentShifts: number;
@@ -34,7 +34,7 @@ export const performAutomaticAssignment = async (
 	festivalId: string,
 	stationShifts: StationShift[],
 	stations: Station[],
-	members: Member[],
+	helpers: Helper[],
 	config: AutoAssignmentConfig,
 	stationPreferences?: Record<string, string[]>
 ): Promise<AssignmentResult> => {
@@ -42,18 +42,18 @@ export const performAutomaticAssignment = async (
 		success: false,
 		assignmentsCreated: 0,
 		unfilledPositions: [],
-		memberStats: []
+		helperStats: []
 	};
 
 	try {
 		// Get existing assignments
 		const existingAssignments = await getShiftAssignments(festivalId);
 
-		// Track member shift counts
-		const memberShiftCounts = new Map<string, number>();
-		members.forEach((member) => {
-			const currentAssignments = existingAssignments.filter((a) => a.member_id === member.id);
-			memberShiftCounts.set(member.id, currentAssignments.length);
+		// Track helper shift counts
+		const helperShiftCounts = new Map<string, number>();
+		helpers.forEach((helper) => {
+			const currentAssignments = existingAssignments.filter((a) => a.helper_id === helper.id);
+			helperShiftCounts.set(helper.id, currentAssignments.length);
 		});
 
 		// Build assignment matrix directly from station shifts
@@ -67,7 +67,7 @@ export const performAutomaticAssignment = async (
 
 		stationShifts.forEach((stationShift) => {
 			const currentAssignments = existingAssignments.filter(
-				(a) => a.station_shift_id === stationShift.id && a.member_id
+				(a) => a.station_shift_id === stationShift.id && a.helper_id
 			).length;
 
 			const remainingSlots = stationShift.required_people - currentAssignments;
@@ -94,39 +94,39 @@ export const performAutomaticAssignment = async (
 		for (const position of assignmentMatrix) {
 			if (position.remainingSlots <= 0) continue;
 
-			const availableMembers = members.filter((member) => {
-				const currentShifts = memberShiftCounts.get(member.id) || 0;
+			// Kein Aktiv-Filter mehr (ADR 0005): wer nicht mitmacht, steht gar nicht
+			// erst in der Helferliste des Fests.
+			const availableHelpers = helpers.filter((helper) => {
+				const currentShifts = helperShiftCounts.get(helper.id) || 0;
 
-				// Check if member is already assigned to this station shift
+				// Check if the helper is already assigned to this station shift
 				const alreadyAssigned = existingAssignments.some(
-					(a) => a.station_shift_id === position.stationShiftId && a.member_id === member.id
+					(a) => a.station_shift_id === position.stationShiftId && a.helper_id === helper.id
 				);
 
-				return (
-					!alreadyAssigned && currentShifts < config.maxShiftsPerMember && member.is_active
-				);
+				return !alreadyAssigned && currentShifts < config.maxShiftsPerHelper;
 			});
 
-			if (availableMembers.length === 0) continue;
+			if (availableHelpers.length === 0) continue;
 
-			// Score members for this position
-			const memberScores: AssignmentScore[] = availableMembers.map((member) => {
-				const currentShifts = memberShiftCounts.get(member.id) || 0;
+			// Score helpers for this position
+			const helperScores: AssignmentScore[] = availableHelpers.map((helper) => {
+				const currentShifts = helperShiftCounts.get(helper.id) || 0;
 				let score = 0;
 
 				// Preference bonus (highest priority)
-				const memberPreferences = stationPreferences?.[member.id] || [];
+				const helperPreferences = stationPreferences?.[helper.id] || [];
 				const hasPreference =
-					config.respectPreferences && memberPreferences.includes(position.stationId);
+					config.respectPreferences && helperPreferences.includes(position.stationId);
 				if (hasPreference) {
 					score += 1000;
 				}
 
-				// Favor members with fewer shifts (load balancing)
-				score += (config.maxShiftsPerMember - currentShifts) * 10;
+				// Favor helpers with fewer shifts (load balancing)
+				score += (config.maxShiftsPerHelper - currentShifts) * 10;
 
-				// Small bonus for members below minimum shifts
-				if (currentShifts < config.minShiftsPerMember) {
+				// Small bonus for helpers below minimum shifts
+				if (currentShifts < config.minShiftsPerHelper) {
 					score += 50;
 				}
 
@@ -134,7 +134,7 @@ export const performAutomaticAssignment = async (
 				score += Math.random() * 5;
 
 				return {
-					memberId: member.id,
+					helperId: helper.id,
 					score,
 					hasPreference,
 					currentShifts
@@ -142,31 +142,31 @@ export const performAutomaticAssignment = async (
 			});
 
 			// Sort by score (highest first)
-			memberScores.sort((a, b) => b.score - a.score);
+			helperScores.sort((a, b) => b.score - a.score);
 
 			// Assign slots for this position
-			const slotsToFill = Math.min(position.remainingSlots, memberScores.length);
+			const slotsToFill = Math.min(position.remainingSlots, helperScores.length);
 
 			for (let slot = 0; slot < slotsToFill; slot++) {
-				const selectedMember = memberScores[slot];
+				const selectedHelper = helperScores[slot];
 
 				try {
-					await assignMemberToStationShift(
+					await assignHelperToStationShift(
 						festivalId,
 						position.stationShiftId,
-						selectedMember.memberId,
+						selectedHelper.helperId,
 						position.currentAssignments + slot + 1
 					);
 
 					// Update our tracking
-					memberShiftCounts.set(
-						selectedMember.memberId,
-						(memberShiftCounts.get(selectedMember.memberId) || 0) + 1
+					helperShiftCounts.set(
+						selectedHelper.helperId,
+						(helperShiftCounts.get(selectedHelper.helperId) || 0) + 1
 					);
 
 					assignmentsCreated++;
 				} catch (error) {
-					console.error('Failed to assign member:', error);
+					console.error('Failed to assign helper:', error);
 				}
 			}
 
@@ -175,9 +175,9 @@ export const performAutomaticAssignment = async (
 		}
 
 		// Calculate final stats
-		result.memberStats = members.map((member) => ({
-			memberId: member.id,
-			assignedShifts: memberShiftCounts.get(member.id) || 0
+		result.helperStats = helpers.map((helper) => ({
+			helperId: helper.id,
+			assignedShifts: helperShiftCounts.get(helper.id) || 0
 		}));
 
 		result.unfilledPositions = assignmentMatrix

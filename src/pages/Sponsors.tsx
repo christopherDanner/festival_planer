@@ -16,6 +16,8 @@ import { useAuth } from '@/components/AuthProvider';
 import MastPanel from '@/components/sponsors/MastPanel';
 import SponsorsMast from '@/components/sponsors/SponsorsMast';
 import SponsorsView from '@/components/sponsors/SponsorsView';
+import type { SponsorHistoryMap, SponsorSegment } from '@/lib/sponsorHistory';
+import { getSponsorHistory } from '@/lib/sponsorHistoryService';
 import {
 	getSponsors,
 	createSponsor,
@@ -49,16 +51,24 @@ const Sponsors = () => {
 	const isMobile = useIsMobile();
 
 	const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+	const [history, setHistory] = useState<SponsorHistoryMap>({});
+	const [referenceYear, setReferenceYear] = useState<number | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
+	const [segment, setSegment] = useState<SponsorSegment>('alle');
 	const [showDialog, setShowDialog] = useState(false);
 	const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
 	const [formData, setFormData] = useState(emptyForm);
 
+	// Bestand und Historie gehören zusammen: ohne Historie stünde an jeder Zeile
+	// „NOCH NIE" — eine falsche Auskunft, auf der auch die Löschsperre (#159)
+	// steht. Scheitert eine der beiden Abfragen, scheitert das Laden.
 	const loadSponsors = useCallback(async () => {
 		try {
-			const data = await getSponsors();
+			const [data, historyLoad] = await Promise.all([getSponsors(), getSponsorHistory()]);
 			setSponsors(data);
+			setHistory(historyLoad.history);
+			setReferenceYear(historyLoad.referenceYear);
 		} catch (error) {
 			toast({
 				title: 'Fehler',
@@ -178,8 +188,12 @@ const Sponsors = () => {
 				) : (
 					<SponsorsView
 						sponsors={sponsors}
+						history={history}
+						referenceYear={referenceYear}
 						searchTerm={searchTerm}
 						onSearchChange={setSearchTerm}
+						segment={segment}
+						onSegmentChange={setSegment}
 						compact={isMobile}
 						onOpenFestivalList={() => navigate('/dashboard')}
 						onAddSponsor={openAddSponsor}

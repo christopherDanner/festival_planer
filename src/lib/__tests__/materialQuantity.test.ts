@@ -3,6 +3,7 @@ import {
 	toBaseQuantity,
 	fromBaseQuantity,
 	formatPackaging,
+	formatQuantity,
 	ceilToPackaging,
 	formatRequiredPackaging
 } from '../materialQuantity';
@@ -65,13 +66,13 @@ describe('formatRequiredPackaging', () => {
 	it('returns text when packaging count is fractional', () => {
 		expect(
 			formatRequiredPackaging(1.02, { packaging_unit: 'Fass', amount_per_packaging: 50 })
-		).toBe('2 Fass');
+		).toBe('2 × Fass');
 	});
 
 	it('returns text even when packaging count is integer', () => {
 		expect(
 			formatRequiredPackaging(10, { packaging_unit: 'Karton', amount_per_packaging: 20 })
-		).toBe('10 Karton');
+		).toBe('10 × Karton');
 	});
 
 	it('returns null when material has no packaging', () => {
@@ -84,6 +85,21 @@ describe('formatRequiredPackaging', () => {
 		expect(
 			formatRequiredPackaging(null, { packaging_unit: 'Fass', amount_per_packaging: 50 })
 		).toBeNull();
+	});
+});
+
+describe('formatQuantity', () => {
+	it('lässt eine ganze Menge ganz', () => {
+		expect(formatQuantity(200)).toBe('200');
+	});
+
+	it('schreibt Nachkommastellen mit Komma', () => {
+		expect(formatQuantity(12.5)).toBe('12,5');
+	});
+
+	it('schneidet den Fließkomma-Rest ab', () => {
+		// 0,3 − 0,1 ergibt binär 0.19999999999999998
+		expect(formatQuantity(0.3 - 0.1)).toBe('0,2');
 	});
 });
 

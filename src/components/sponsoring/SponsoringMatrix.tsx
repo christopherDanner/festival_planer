@@ -7,15 +7,30 @@ import {
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { ValueTag } from '@/components/toolkit/ValueTag';
+import {
+	PAPER_TABLE_BODY_CELL,
+	PAPER_TABLE_FOOT_CELL,
+	PAPER_TABLE_HEAD_CELL
+} from '@/components/toolkit/PaperTable';
 import { formatEuro } from '@/lib/money';
 import type { SponsoringCategory } from '@/lib/sponsorService';
-import type { SponsoringOverviewFooter, SponsoringOverviewRow } from '@/lib/sponsoringTotals';
+import {
+	sponsoringFooterLabel,
+	sponsoringNoMatchNotice,
+	type SponsoringOverviewFooter,
+	type SponsoringOverviewRow
+} from '@/lib/sponsoringTotals';
 
 export interface SponsoringMatrixProps {
 	/** Die Preisliste des Fests — eine Spalte je Kategorie, in dieser Reihenfolge. */
 	categories: SponsoringCategory[];
+	/** Die **sichtbaren** Zeilen; der Fuß summiert genau diese (ADR 0006). */
 	rows: SponsoringOverviewRow[];
 	footer: SponsoringOverviewFooter;
+	/** Firmen des Fests insgesamt — damit der Fuß den Filter beschriften kann. */
+	totalRowCount: number;
+	/** Laufender Suchbegriff; nur für die Hinweiszeile, wenn nichts passt. */
+	searchTerm: string;
 	onDelete: (sponsoringId: string) => void;
 }
 
@@ -36,11 +51,9 @@ Kategorien hat. Damit passen 4 (952 px) und 6 (1128 px) hinein, 7 reißen mit
 const OTHER_COLUMNS_PX = 600;
 const CATEGORY_COLUMN_MIN_PX = 88;
 
-const HEAD_CELL =
-	'border-b-2 border-tinte bg-fusszeile px-2.5 py-2 text-left align-bottom text-[11px] font-bold uppercase tracking-[.05em]';
-const BODY_CELL = 'overflow-hidden px-2.5 align-middle tabular-nums';
-const FOOT_CELL =
-	'border-t-2 border-tinte bg-fusszeile px-2.5 py-2 align-middle font-extrabold tabular-nums';
+const HEAD_CELL = PAPER_TABLE_HEAD_CELL;
+const BODY_CELL = PAPER_TABLE_BODY_CELL;
+const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
 
 /** Gestrichelte „+"-Marke für alles, was an dieser Zeile noch nicht erfasst ist. */
 const UnrecordedMark: React.FC = () => <ValueTag tone="muted">+</ValueTag>;
@@ -58,6 +71,8 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	categories,
 	rows,
 	footer,
+	totalRowCount,
+	searchTerm,
 	onDelete
 }) => (
 	<div className="overflow-x-auto border-2.5 border-tinte bg-white">
@@ -177,14 +192,32 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 						</td>
 					</tr>
 				))}
+
+				{/* Kein Treffer: eine Hinweiszeile statt einer leeren Tabelle — die
+				Kategorie-Spalten bleiben dabei vollständig stehen (#151). Ein Fest
+				ohne Sponsoring (`totalRowCount === 0`) ist kein Suchergebnis und
+				behält seinen eigenen Satz. */}
+				{rows.length === 0 && totalRowCount > 0 && searchTerm.trim() !== '' && (
+					<tr className="border-b border-linie">
+						<td
+							colSpan={categories.length + 5}
+							className="px-2.5 py-8 text-center text-tinte-soft"
+						>
+							{sponsoringNoMatchNotice(searchTerm)}
+						</td>
+					</tr>
+				)}
 			</tbody>
 
 			{/* Ohne Zeile gibt es nichts zu summieren — und sechs korrekte Nullen
-			sehen wie ein Fehler aus (#69, Leerzustand L2). */}
+			sehen wie ein Fehler aus (#69, Leerzustand L2). Dieselbe Regel greift,
+			wenn die Suche nichts übrig lässt (#151). */}
 			{rows.length > 0 && (
 				<tfoot>
 					<tr>
-						<td className={`${FOOT_CELL} ${STICKY_LEFT} z-10`}>Σ je Kategorie</td>
+						<td className={`${FOOT_CELL} ${STICKY_LEFT} z-10`}>
+							{sponsoringFooterLabel('Σ je Kategorie', rows.length, totalRowCount)}
+						</td>
 						{categories.map((category) => (
 							<td key={category.id} className={`${FOOT_CELL} text-center`}>
 								{formatEuro(footer.perCategoryId[category.id] ?? 0)}

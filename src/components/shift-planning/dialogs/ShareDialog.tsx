@@ -17,8 +17,8 @@ import { Share2, Copy, MessageCircle, FileText, FileSpreadsheet } from 'lucide-r
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
-import type { Member } from '@/lib/memberService';
+import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
+import type { Helper } from '@/lib/helperService';
 
 interface ShareDialogProps {
 	open: boolean;
@@ -27,9 +27,9 @@ interface ShareDialogProps {
 	festivalDate: string;
 	stations: Station[];
 	stationShifts: StationShift[];
-	assignments: ShiftAssignmentWithMember[];
-	stationMembers: StationMemberWithDetails[];
-	members: Member[];
+	assignments: ShiftAssignmentWithHelper[];
+	stationHelpers: StationHelperWithDetails[];
+	helpers: Helper[];
 	onExportPdf: () => void;
 	onExportExcel: () => void;
 }
@@ -42,16 +42,16 @@ function formatShiftTime(shift: StationShift): string {
 	return `${day} ${dateStr} ${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}`;
 }
 
-function resolveMemberName(memberId: string | undefined, members: Member[], assignment?: ShiftAssignmentWithMember): string {
+function resolveHelperName(helperId: string | undefined, helpers: Helper[], assignment?: ShiftAssignmentWithHelper): string {
 	// Try populated relation on assignment
-	if (assignment?.member?.last_name) {
-		return `${assignment.member.last_name} ${assignment.member.first_name}`;
+	if (assignment?.helper?.last_name) {
+		return `${assignment.helper.last_name} ${assignment.helper.first_name}`;
 	}
 	// Fallback: lookup by ID
-	const id = memberId || assignment?.member_id;
+	const id = helperId || assignment?.helper_id;
 	if (id) {
-		const m = members.find(mem => mem.id === id);
-		if (m) return `${m.last_name} ${m.first_name}`;
+		const h = helpers.find(candidate => candidate.id === id);
+		if (h) return `${h.last_name} ${h.first_name}`;
 	}
 	return '';
 }
@@ -64,19 +64,19 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 	stations,
 	stationShifts,
 	assignments,
-	stationMembers,
-	members,
+	stationHelpers,
+	helpers,
 	onExportPdf,
 	onExportExcel
 }) => {
 	const { toast } = useToast();
 	const isMobile = useIsMobile();
-	const [mode, setMode] = useState<'full' | 'member'>('full');
-	const [selectedMemberId, setSelectedMemberId] = useState<string>('__none__');
+	const [mode, setMode] = useState<'full' | 'helper'>('full');
+	const [selectedHelperId, setSelectedHelperId] = useState<string>('__none__');
 
-	const sortedMembers = useMemo(
-		() => [...members].sort((a, b) => a.last_name.localeCompare(b.last_name)),
-		[members]
+	const sortedHelpers = useMemo(
+		() => [...helpers].sort((a, b) => a.last_name.localeCompare(b.last_name)),
+		[helpers]
 	);
 
 	function generateFullPlanText(): string {
@@ -85,17 +85,17 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 		for (const station of stations) {
 			text += `\n--- ${station.name} ---\n`;
 
-			// Station-level members (without specific shifts)
-			const stMembers = stationMembers.filter(sm => sm.station_id === station.id);
-			if (stMembers.length > 0) {
-				const names = stMembers
+			// Stations-Helfer (ohne bestimmte Schicht)
+			const stHelpers = stationHelpers.filter(sm => sm.station_id === station.id);
+			if (stHelpers.length > 0) {
+				const names = stHelpers
 					.map(sm => {
-						if (sm.member) return `${sm.member.last_name} ${sm.member.first_name}`;
-						return resolveMemberName(sm.member_id, members);
+						if (sm.helper) return `${sm.helper.last_name} ${sm.helper.first_name}`;
+						return resolveHelperName(sm.helper_id, helpers);
 					})
 					.filter(Boolean);
 				if (names.length > 0) {
-					text += `Mitglieder:\n`;
+					text += `Helfer:\n`;
 					for (const name of names) {
 						text += `  - ${name}\n`;
 					}
@@ -107,7 +107,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 			for (const shift of stShifts) {
 				const time = formatShiftTime(shift);
 				const shiftAssignments = assignments.filter(a => a.station_shift_id === shift.id);
-				const names = shiftAssignments.map(a => resolveMemberName(undefined, members, a)).filter(Boolean);
+				const names = shiftAssignments.map(a => resolveHelperName(undefined, helpers, a)).filter(Boolean);
 				text += `${shift.name} (${time})\n`;
 				if (names.length > 0) {
 					for (const name of names) {
@@ -118,30 +118,30 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 				}
 			}
 
-			// Station with no shifts and no members
-			if (stShifts.length === 0 && stMembers.length === 0) {
+			// Station ohne Schichten und ohne Helfer
+			if (stShifts.length === 0 && stHelpers.length === 0) {
 				text += `  (keine Zuweisungen)\n`;
 			}
 		}
 		return text.trim();
 	}
 
-	function generateMemberPlanText(memberId: string): string {
-		const member = members.find(m => m.id === memberId);
-		if (!member) return '';
+	function generateHelperPlanText(helperId: string): string {
+		const helper = helpers.find(h => h.id === helperId);
+		if (!helper) return '';
 
-		const name = `${member.last_name} ${member.first_name}`;
+		const name = `${helper.last_name} ${helper.first_name}`;
 		let text = `EINSATZPLAN\n${name}\n${festivalName} | ${festivalDate}\n`;
 
 		// Station-level assignments
-		const memberStations = stationMembers.filter(sm => sm.member_id === memberId);
+		const helperStations = stationHelpers.filter(sm => sm.helper_id === helperId);
 		// Shift assignments
-		const memberAssignments = assignments.filter(a => a.member_id === memberId);
+		const helperAssignments = assignments.filter(a => a.helper_id === helperId);
 
-		// Collect all station IDs this member is assigned to
+		// Alle Stationen, in denen dieser Helfer steht
 		const stationIds = new Set<string>();
-		memberStations.forEach(sm => stationIds.add(sm.station_id));
-		memberAssignments.forEach(a => {
+		helperStations.forEach(sm => stationIds.add(sm.station_id));
+		helperAssignments.forEach(a => {
 			const shift = stationShifts.find(s => s.id === a.station_shift_id);
 			if (shift) stationIds.add(shift.station_id);
 		});
@@ -154,12 +154,12 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 				text += `\n--- ${station?.name || 'Station'} ---\n`;
 
 				// Show if assigned at station level
-				if (memberStations.some(sm => sm.station_id === stationId)) {
-					text += `  Stationsmitglied\n`;
+				if (helperStations.some(sm => sm.station_id === stationId)) {
+					text += `  Stations-Helfer\n`;
 				}
 
 				// Show shift assignments
-				const stationShiftAssignments = memberAssignments.filter(a => {
+				const stationShiftAssignments = helperAssignments.filter(a => {
 					const shift = stationShifts.find(s => s.id === a.station_shift_id);
 					return shift && shift.station_id === stationId;
 				});
@@ -171,7 +171,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 				}
 			}
 
-			const totalAssignments = memberStations.length + memberAssignments.length;
+			const totalAssignments = helperStations.length + helperAssignments.length;
 			text += `\nGesamt: ${totalAssignments} ${totalAssignments === 1 ? 'Zuweisung' : 'Zuweisungen'}`;
 		}
 
@@ -180,9 +180,9 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 
 	const previewText = useMemo(() => {
 		if (mode === 'full') return generateFullPlanText();
-		if (mode === 'member' && selectedMemberId !== '__none__') return generateMemberPlanText(selectedMemberId);
+		if (mode === 'helper' && selectedHelperId !== '__none__') return generateHelperPlanText(selectedHelperId);
 		return '';
-	}, [mode, selectedMemberId, stations, stationShifts, assignments, stationMembers, members, festivalName, festivalDate]);
+	}, [mode, selectedHelperId, stations, stationShifts, assignments, stationHelpers, helpers, festivalName, festivalDate]);
 
 	const handleCopy = async () => {
 		if (!previewText) return;
@@ -230,24 +230,24 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 							Gesamter Plan
 						</Button>
 						<Button
-							variant={mode === 'member' ? 'default' : 'outline'}
+							variant={mode === 'helper' ? 'default' : 'outline'}
 							size="sm"
 							className="flex-1"
-							onClick={() => setMode('member')}
+							onClick={() => setMode('helper')}
 						>
-							Pro Mitglied
+							Pro Helfer
 						</Button>
 					</div>
 
-					{mode === 'member' && (
-						<Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
+					{mode === 'helper' && (
+						<Select value={selectedHelperId} onValueChange={setSelectedHelperId}>
 							<SelectTrigger>
-								<SelectValue placeholder="Mitglied auswählen" />
+								<SelectValue placeholder="Helfer auswählen" />
 							</SelectTrigger>
 							<SelectContent>
-								{sortedMembers.map(member => (
-									<SelectItem key={member.id} value={member.id}>
-										{member.last_name} {member.first_name}
+								{sortedHelpers.map(helper => (
+									<SelectItem key={helper.id} value={helper.id}>
+										{helper.last_name} {helper.first_name}
 									</SelectItem>
 								))}
 							</SelectContent>
