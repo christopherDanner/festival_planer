@@ -7,6 +7,7 @@ Dashboard müssen für dasselbe Fest dieselbe Zahl nennen. Dieses Modul ordnet
 nur und beschriftet. */
 
 import { formatFestDayLong } from '@/lib/festDates';
+import { helperName } from '@/lib/helperService';
 import { stationStaffing } from '@/lib/staffing';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
 import type {
@@ -100,10 +101,10 @@ interface Occupant {
 	name: string;
 }
 
-/** „Hochauer Franz" — Nachname zuerst, wie überall sonst in der App. */
-function helperName(helper?: HelperRef | null): string {
-	if (!helper) return 'Unbekannt';
-	return `${helper.last_name} ${helper.first_name}`.trim();
+/** Der Name auf einem Platz. Die Schreibweise kommt aus `helperService`;
+eigen ist hier nur der Fall ohne Helfer-Verweis. */
+function slotName(helper?: HelperRef | null): string {
+	return helper ? helperName(helper) : 'Unbekannt';
 }
 
 /** `11:00:00` → `11`, `11:30` → `11:30`. Sekunden und glatte Minuten fallen
@@ -113,8 +114,13 @@ function clockLabel(time: string): string {
 	return minutes && minutes !== '00' ? `${hours}:${minutes}` : hours;
 }
 
+/** Die Zeitangaben einer Schicht — mehr braucht die Aufschrift nicht. So kann
+der Schicht-Dialog (#106) das unfertige Formular durchreichen und zeigt damit
+vorab genau die Aufschrift, die die Zeile später trägt. */
+export type ShiftTimes = Pick<StationShift, 'start_date' | 'start_time' | 'end_date' | 'end_time'>;
+
 /** Ob eine Schicht über Mitternacht läuft: eigenes, abweichendes Enddatum. */
-function crossesMidnight(shift: StationShift): boolean {
+function crossesMidnight(shift: ShiftTimes): boolean {
 	return Boolean(shift.end_date) && shift.end_date !== shift.start_date;
 }
 
@@ -123,7 +129,7 @@ function crossesMidnight(shift: StationShift): boolean {
  * Zwischentitel darüber — außer bei einer Schicht über Mitternacht, die beim
  * **Starttag** steht und ihr zweites Datum darum selbst mitträgt: `23–02 +1`.
  */
-export function shiftTimeLabel(shift: StationShift): string {
+export function shiftTimeLabel(shift: ShiftTimes): string {
 	const span = `${clockLabel(shift.start_time)}–${clockLabel(shift.end_time)}`;
 	return crossesMidnight(shift) ? `${span} +1` : span;
 }
@@ -222,7 +228,7 @@ export function buildStationBoard(
 
 	const members = stationHelpers
 		.filter((m) => m.station_id === station.id)
-		.map((m) => ({ id: m.id, helperId: m.helper_id, name: helperName(m.helper) }))
+		.map((m) => ({ id: m.id, helperId: m.helper_id, name: slotName(m.helper) }))
 		.sort(byName);
 
 	const ownShifts = shifts.filter((s) => s.station_id === station.id);
@@ -250,7 +256,7 @@ export function buildStationBoard(
 		const occupants = assignments
 			.filter((a) => a.station_shift_id === shift.id)
 			.sort((a, b) => a.position - b.position)
-			.map((a) => ({ helperId: a.helper_id ?? null, name: helperName(a.helper) }));
+			.map((a) => ({ helperId: a.helper_id ?? null, name: slotName(a.helper) }));
 
 		const rows = days.get(shift.start_date) ?? [];
 		// Die Schicht über Mitternacht steht beim Starttag (Entscheid 4 aus #68).

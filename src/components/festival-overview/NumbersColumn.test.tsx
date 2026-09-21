@@ -10,7 +10,7 @@ const render = (sponsorings: SponsoringWithDetails[]) =>
 			stations={[]}
 			shifts={[]}
 			assignments={[]}
-			stationMembers={[]}
+			stationHelpers={[]}
 			materials={[]}
 			sponsorings={sponsorings}
 			onTabChange={() => {}}

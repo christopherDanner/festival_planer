@@ -23,6 +23,24 @@ export function festDayStart(value: string | Date): Date {
 	return d;
 }
 
+/**
+ * Die bevorstehenden Feste, aufsteigend nach Start — ein heute startendes Fest
+ * zählt dazu (#90). Das erste davon ist das nächste Fest: die Plakatwand setzt
+ * es auf Rang 1, die Sponsoren-Seite nimmt es als Bezugsfest für „heuer".
+ * Beide fragen hier, damit es nur eine Ableitung gibt.
+ *
+ * Ein Fest ohne Startdatum ist nicht bevorstehend — ohne Datum steht nichts bevor.
+ */
+export function upcomingFestivals<T extends { start_date: string | null }>(
+	festivals: T[],
+	today: Date = new Date()
+): T[] {
+	const now = festDayStart(today).getTime();
+	return festivals
+		.filter((f) => f.start_date != null && festDayStart(f.start_date).getTime() >= now)
+		.sort((a, b) => festDayStart(a.start_date!).getTime() - festDayStart(b.start_date!).getTime());
+}
+
 /** Ganze Tage von heute bis zum Start; negativ, wenn der Start vorbei ist. */
 function daysUntil(startDate: string, today: Date): number {
 	return Math.round((festDayStart(startDate).getTime() - festDayStart(today).getTime()) / 86400000);
