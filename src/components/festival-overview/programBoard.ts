@@ -1,8 +1,9 @@
 /** Programm-Aufbereitung für das Festplakat (Dashboard-Mitte, DESIGN-VISION §5).
 Reine Logik, ohne React — die Programmpunkte aus dem Ablauf werden nach Tag
-gruppiert und je Tag nach Startzeit sortiert (Vorschau/Aushang). */
+gruppiert (Vorschau/Aushang). Gereiht sind sie schon: seit ADR 0007 sortiert der
+Service nach Startzeit, hier wird die Reihenfolge nur noch übernommen. */
 
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 
 export interface ProgramRow {
 	id: string;
@@ -33,33 +34,19 @@ export function programDayTitle(date: string, label: string | null): string {
 	return WEEKDAY_FORMAT.format(new Date(`${date}T00:00:00`));
 }
 
-/** Tage mit Programmpunkten, je Tag nach Startzeit sortiert (leere Zeit ans Ende). */
-export function getProgramByDay(days: ScheduleDayWithPhases[]): ProgramDay[] {
+/** Tage mit Programmpunkten, in der Reihenfolge, die der Service geliefert hat. */
+export function getProgramByDay(days: ScheduleDayWithEntries[]): ProgramDay[] {
 	const result: ProgramDay[] = [];
 
 	for (const day of days) {
-		const programEntries = (day.phases ?? []).flatMap((phase) =>
-			(phase.entries ?? []).filter((entry) => entry.type === 'program')
-		);
+		const programEntries = (day.entries ?? []).filter((entry) => entry.type === 'program');
 		if (programEntries.length === 0) continue;
 
-		const rows: ProgramRow[] = programEntries
-			.map((entry, index) => ({
-				id: entry.id,
-				time: formatProgramTime(entry.start_time),
-				title: entry.title,
-				_order: index
-			}))
-			.sort((a, b) => {
-				// Leere Zeit immer ans Ende; sonst lexikografisch (HH:MM ist sortierbar).
-				if (a.time && b.time) {
-					if (a.time !== b.time) return a.time < b.time ? -1 : 1;
-					return a._order - b._order;
-				}
-				if (!a.time && !b.time) return a._order - b._order;
-				return a.time ? -1 : 1;
-			})
-			.map(({ id, time, title }) => ({ id, time, title }));
+		const rows: ProgramRow[] = programEntries.map((entry) => ({
+			id: entry.id,
+			time: formatProgramTime(entry.start_time),
+			title: entry.title
+		}));
 
 		result.push({ dayId: day.id, title: programDayTitle(day.date, day.label), rows });
 	}

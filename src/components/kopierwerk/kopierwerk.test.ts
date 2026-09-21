@@ -161,6 +161,7 @@ describe('Fußzeile von Schritt 1', () => {
 describe('Kopier-Auftrag aus den Schritten 2 und 3', () => {
 	const selection = {
 		stationIds: new Set(['s-ausschank', 's-grill']),
+		copyHelpers: true,
 		copyAssignments: true,
 		materialIds: new Set(['m-bier', 'm-kohle']),
 		quantitySource: 'actual' as const
@@ -175,6 +176,7 @@ describe('Kopier-Auftrag aus den Schritten 2 und 3', () => {
 			)
 		).toEqual({
 			stationIds: ['s-ausschank', 's-grill'],
+			copyHelpers: true,
 			copyAssignments: true,
 			materialIds: ['m-bier', 'm-kohle'],
 			materialQuantitySource: 'actual',

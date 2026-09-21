@@ -39,7 +39,8 @@ export interface ShiftAssignment {
 	festival_id: string;
 	station_shift_id: string;
 	station_id: string;
-	helper_id?: string;
+	/** Seit dem Aufräum-Slice (#99) NOT NULL: eine Zuteilung ohne Helfer sagt nichts aus. */
+	helper_id: string;
 	position: number;
 	created_at: string;
 	updated_at: string;

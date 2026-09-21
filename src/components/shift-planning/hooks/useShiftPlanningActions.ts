@@ -23,7 +23,7 @@ import {
 } from '@/lib/helperService';
 import {
 	performAutomaticAssignment,
-	clearAllAssignments,
+	clearAssignments,
 	type AutoAssignmentConfig
 } from '@/lib/automaticAssignmentService';
 
@@ -263,13 +263,29 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		}
 	});
 
+	// Mit `stationId` nur die Zuweisungen dieser Station (#108) — der Umfang
+	// kommt aus dem Dialog, der ihn auch aufgeschrieben hat (`autoAssignScope`).
 	const clearAssignmentsMutation = useMutation({
-		mutationFn: () => clearAllAssignments(festivalId),
-		onSuccess: (success) => {
-			if (success) {
-				invalidateAll();
-				toast({ title: 'Erfolg', description: 'Alle Zuweisungen wurden gelöscht.' });
+		mutationFn: ({ stationId }: { stationId?: string }) =>
+			clearAssignments(festivalId, stationId),
+		onSuccess: (success, { stationId }) => {
+			// Auch der Fehlschlag lädt neu: was der Server jetzt hält, weiß hier
+			// niemand mehr. Vorher blieb der Fall stumm — kein Zähler, kein Hinweis.
+			invalidateAll();
+			if (!success) {
+				toast({
+					title: 'Fehler',
+					description: 'Zuweisungen konnten nicht gelöscht werden.',
+					variant: 'destructive'
+				});
+				return;
 			}
+			toast({
+				title: 'Erfolg',
+				description: stationId
+					? 'Die Zuweisungen dieser Station wurden gelöscht.'
+					: 'Alle Zuweisungen wurden gelöscht.'
+			});
 		},
 		onError: () => {
 			toast({

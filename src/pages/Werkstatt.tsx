@@ -225,6 +225,14 @@ const Werkstatt = () => (
 						</NameChip>
 					</div>
 				</Probe>
+				<Probe label="Wählbar (Teilen-Dialog)">
+					<div className="flex flex-wrap gap-2">
+						<NameChip onSelect={() => {}} selected>
+							Maria Huber
+						</NameChip>
+						<NameChip onSelect={() => {}}>Sepp Gruber</NameChip>
+					</div>
+				</Probe>
 			</div>
 		</Abschnitt>
 

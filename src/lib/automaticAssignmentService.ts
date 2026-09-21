@@ -67,7 +67,7 @@ export const performAutomaticAssignment = async (
 
 		stationShifts.forEach((stationShift) => {
 			const currentAssignments = existingAssignments.filter(
-				(a) => a.station_shift_id === stationShift.id && a.helper_id
+				(a) => a.station_shift_id === stationShift.id
 			).length;
 
 			const remainingSlots = stationShift.required_people - currentAssignments;
@@ -198,12 +198,23 @@ export const performAutomaticAssignment = async (
 	}
 };
 
-export const clearAllAssignments = async (festivalId: string): Promise<boolean> => {
+/**
+ * Zuweisungen löschen — ohne `stationId` die des ganzen Fests, mit `stationId`
+ * nur die dieser Station (#108). Gefiltert wird über `station_id` der Zuweisung,
+ * dieselbe Spalte, über die auch einzelne Zuweisungen entstehen und vergehen
+ * (`assignHelperToStationShift` / `removeHelperFromStationShift`).
+ *
+ * Stationsmitglieder **ohne** Schicht (`station_members`) bleiben stehen: die
+ * Auto-Zuteilung legt sie nicht an, also nimmt sie das Zurücknehmen auch nicht
+ * mit.
+ */
+export const clearAssignments = async (
+	festivalId: string,
+	stationId?: string
+): Promise<boolean> => {
 	try {
-		const { error } = await supabase
-			.from('shift_assignments')
-			.delete()
-			.eq('festival_id', festivalId);
+		const query = supabase.from('shift_assignments').delete().eq('festival_id', festivalId);
+		const { error } = await (stationId ? query.eq('station_id', stationId) : query);
 
 		if (error) throw error;
 		return true;

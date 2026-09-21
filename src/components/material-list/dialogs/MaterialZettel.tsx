@@ -19,7 +19,8 @@ import {
 	FOCUS_INK,
 	PaperSheet,
 	PaperSheetField,
-	PaperSheetFields
+	PaperSheetFields,
+	PaperSheetNote
 } from '@/components/toolkit/PaperSheet';
 import type { Station } from '@/lib/shiftService';
 import {
@@ -32,6 +33,7 @@ import {
 	type PriceBase,
 	type PriceIsNet
 } from '@/lib/materialDialogForm';
+import { TAX_RATES } from '@/lib/materialRow';
 
 const DEFAULT_UNITS = ['Stück', 'Liter', 'kg', 'Meter', 'Packung', 'Dose', 'Flasche'];
 const DEFAULT_PACKAGING_UNITS = ['Fass', 'Karton', 'Kiste', 'Palette', 'Sack', 'Beutel', 'Kanister'];
@@ -136,9 +138,9 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 			<PaperSheetFields>
 				{mode === 'edit' && (
 					// Der Hinweis steht neben der Lücke, nicht im Changelog.
-					<p className="border-2 border-l-[7px] border-tinte bg-white px-3 py-2 text-xs leading-relaxed min-[900px]:col-span-2">
+					<PaperSheetNote wide>
 						Hier liegen die <b>Stammdaten</b> der Position. {ZEILEN_HINWEIS}
-					</p>
+					</PaperSheetNote>
 				)}
 
 				<PaperSheetField wide label="Bezeichnung" htmlFor="mat-name">
@@ -361,9 +363,11 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value={KEINE}>Keine</SelectItem>
-									<SelectItem value="10">10% (Lebensmittel)</SelectItem>
-									<SelectItem value="13">13% (Beherbergung)</SelectItem>
-									<SelectItem value="20">20% (Standard)</SelectItem>
+									{TAX_RATES.map(({ rate, hint }) => (
+										<SelectItem key={rate} value={String(rate)}>
+											{rate}% ({hint})
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 						</PaperSheetField>

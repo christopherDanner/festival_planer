@@ -62,6 +62,8 @@ export function makeSponsoring(opts: {
 	assignments?: SponsoringAssignmentWithCategory[];
 	inKindDescription?: string | null;
 	inKindValue?: number | null;
+	/** Quellfest einer Sponsor-Übernahme; ohne eines ist das Sponsoring handeingetragen. */
+	copiedFromFestivalId?: string | null;
 }): SponsoringWithDetails {
 	idCounter += 1;
 	return {
@@ -71,6 +73,7 @@ export function makeSponsoring(opts: {
 		free_amount: opts.freeAmount ?? null,
 		in_kind_description: opts.inKindDescription ?? null,
 		in_kind_value: opts.inKindValue ?? null,
+		copied_from_festival_id: opts.copiedFromFestivalId ?? null,
 		notes: null,
 		created_at: '',
 		updated_at: '',

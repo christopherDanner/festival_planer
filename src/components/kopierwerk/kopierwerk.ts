@@ -163,6 +163,8 @@ export function stampCardHeading(
 Mengen — auf dem Bildschirm ist es dieselbe Art von Häkchen. */
 export interface CopySelection {
 	stationIds: ReadonlySet<string>;
+	/** Die ganze Helferliste der Vorlage ins neue Fest (ADR 0005, #100). */
+	copyHelpers: boolean;
 	copyAssignments: boolean;
 	materialIds: ReadonlySet<string>;
 	quantitySource: QuantitySource;
@@ -181,6 +183,7 @@ export function copyFestivalOptions(
 ): CopyFestivalOptions {
 	return {
 		stationIds: [...selection.stationIds],
+		copyHelpers: selection.copyHelpers,
 		copyAssignments: selection.copyAssignments,
 		materialIds: [...selection.materialIds],
 		materialQuantitySource: selection.quantitySource,

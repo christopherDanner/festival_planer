@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import { PaperSheet, PaperSheetField, PaperSheetFields } from './PaperSheet';
+import { PaperSheet, PaperSheetField, PaperSheetFields, PaperSheetNote } from './PaperSheet';
 
 /* Seam dieses Tests (aus #119 abgeleitet, vor dem ersten Test festgehalten):
    `PaperSheet` ist der *Rahmen* eines Dialog-Papiers — Papier-Grund, 3px-Tinte-
@@ -107,5 +107,23 @@ describe('PaperSheetFields / PaperSheetField', () => {
 				</PaperSheetField>
 			)
 		).toContain('Erst mit Gebinde');
+	});
+});
+
+describe('PaperSheetNote', () => {
+	it('ist eine weiße Werkzeugfläche mit breiter Tinte-Kante links', () => {
+		const html = render(<PaperSheetNote>Hier steht der Hinweis.</PaperSheetNote>);
+
+		expect(html).toContain('bg-white');
+		expect(html).toContain('border-2');
+		expect(html).toContain('border-l-[7px]');
+		expect(html).toContain('border-tinte');
+		expect(html).toContain('Hier steht der Hinweis.');
+	});
+
+	it('legt einen breiten Hinweis über beide Spalten des Rasters', () => {
+		// Das Rasterwissen liegt bei den Bausteinen, nicht bei den Aufrufern.
+		expect(render(<PaperSheetNote>x</PaperSheetNote>)).not.toContain('col-span-2');
+		expect(render(<PaperSheetNote wide>x</PaperSheetNote>)).toContain('min-[900px]:col-span-2');
 	});
 });
