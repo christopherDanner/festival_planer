@@ -7,6 +7,7 @@ Dashboard müssen für dasselbe Fest dieselbe Zahl nennen. Dieses Modul ordnet
 nur und beschriftet. */
 
 import { formatFestDayLong } from '@/lib/festDates';
+import { helperName } from '@/lib/helperService';
 import { stationStaffing } from '@/lib/staffing';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
 import type {
@@ -100,10 +101,10 @@ interface Occupant {
 	name: string;
 }
 
-/** „Hochauer Franz" — Nachname zuerst, wie überall sonst in der App. */
-function helperName(helper?: HelperRef | null): string {
-	if (!helper) return 'Unbekannt';
-	return `${helper.last_name} ${helper.first_name}`.trim();
+/** Der Name auf einem Platz. Die Schreibweise kommt aus `helperService`;
+eigen ist hier nur der Fall ohne Helfer-Verweis. */
+function slotName(helper?: HelperRef | null): string {
+	return helper ? helperName(helper) : 'Unbekannt';
 }
 
 /** `11:00:00` → `11`, `11:30` → `11:30`. Sekunden und glatte Minuten fallen
@@ -222,7 +223,7 @@ export function buildStationBoard(
 
 	const members = stationHelpers
 		.filter((m) => m.station_id === station.id)
-		.map((m) => ({ id: m.id, helperId: m.helper_id, name: helperName(m.helper) }))
+		.map((m) => ({ id: m.id, helperId: m.helper_id, name: slotName(m.helper) }))
 		.sort(byName);
 
 	const ownShifts = shifts.filter((s) => s.station_id === station.id);
@@ -250,7 +251,7 @@ export function buildStationBoard(
 		const occupants = assignments
 			.filter((a) => a.station_shift_id === shift.id)
 			.sort((a, b) => a.position - b.position)
-			.map((a) => ({ helperId: a.helper_id ?? null, name: helperName(a.helper) }));
+			.map((a) => ({ helperId: a.helper_id ?? null, name: slotName(a.helper) }));
 
 		const rows = days.get(shift.start_date) ?? [];
 		// Die Schicht über Mitternacht steht beim Starttag (Entscheid 4 aus #68).

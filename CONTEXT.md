@@ -38,6 +38,16 @@ _Avoid_: Mitglied (heißt in einem Verein etwas anderes), Member.
 
 Die Helfer eines Fests, geführt im Schichtplan. Zugleich der einzige Ort, an dem Helfer entstehen und verschwinden — und, weil es keinen Bestand gibt, ist die *Fest-Kopie* der einzige Weg, die Helfer eines vergangenen Fests in ein neues zu holen.
 
+Jeder Helfer steht als **Marke** darin (Namens-Marke, siehe *Werkzeug-Bausteine*), die bei Zugeteilten eine **Zähler-Plakette** trägt. Gruppiert wird nach **Wunsch-Passung**: wer die gerade fokussierte Station in seinen Wünschen führt, steht oben.
+
+**„Zugeteilt" heißt hier bewusst etwas anderes als bei der Ampel** (Entscheid aus #68) — es gibt zwei richtige Zählungen nebeneinander:
+
+- **Filter „Frei / Zugeteilt"** zählt *irgendeine* Zuteilung: Schicht **oder** Stationsmitgliedschaft. Wer nur in der Fußzeile einer Station steht, ist hier zugeteilt.
+- **Ampel, Reiter, KPI-Maßband** rechnen enger (siehe `staffing`): Station mit Schichten → nur Schicht-Zuteilungen; ohne Schichten → Stationsmitgliedschaft.
+- Die **Zähler-Plakette** zählt noch enger: nur *Schicht*-Zuteilungen. Sie beantwortet „wen hab ich noch nicht ausgenutzt?", und dazu sagt eine Stationsmitgliedschaft nichts.
+
+Die drei sind kein Widerspruch, der zu bereinigen wäre.
+
 ## Material-Übernahme
 
 Vorgang, Material-Positionen und Bestellmengen aus einem vergangenen Fest als Referenz für ein neues Fest zu nutzen. Ziel: Aufwand bei der Bestellplanung sparen, weil Mengen aus dem Vorjahr bekannt sind.
