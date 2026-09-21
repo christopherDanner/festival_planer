@@ -1,10 +1,11 @@
 import React from 'react';
-import { Building2, Edit, FileDown, Import, Plus, Trash2 } from 'lucide-react';
+import { Building2, FileDown, Import, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
 import SponsoringMatrix from '@/components/sponsoring/SponsoringMatrix';
 import SponsoringSearch from '@/components/sponsoring/SponsoringSearch';
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
+import type { ZettelInput, ZettelTarget } from '@/lib/sponsoringZettel';
 import {
 	buildSponsoringOverviewFooter,
 	buildSponsoringOverviewRows,
@@ -26,8 +27,11 @@ export interface SponsoringOverviewProps {
 	onCreate: () => void;
 	onTransfer: () => void;
 	onExportPdf: () => void;
-	onEdit: (sponsoringId: string) => void;
 	onDelete: (sponsoringId: string) => void;
+	/** „Übernehmen" im Zettel der Matrix. */
+	onApply: (sponsoringId: string, target: ZettelTarget, input: ZettelInput) => void;
+	/** „Entfernen" im Zettel der Matrix. */
+	onRemove: (sponsoringId: string, target: ZettelTarget) => void;
 }
 
 /**
@@ -50,8 +54,9 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	onCreate,
 	onTransfer,
 	onExportPdf,
-	onEdit,
-	onDelete
+	onDelete,
+	onApply,
+	onRemove
 }) => {
 	/* Vorjahresbeitrag je Sponsoring und Geldsumme des vorigen Fests kommen aus
 	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Solange es
@@ -108,7 +113,8 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 				previousFestivalTotal={null}
 			/>
 
-			{/* Mobile: Karten-Liste */}
+			{/* Mobile: Karten-Liste. Bedient wird sie noch nicht — die Karten-Form
+			des Zettels ist ein eigener Slice (ADR 0009). */}
 			<div className="md:hidden space-y-2">
 				{allRows.length === 0 ? (
 					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
@@ -127,22 +133,14 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 										<div className="font-medium truncate">{row.companyName}</div>
 										<div className="text-sm font-semibold mt-0.5">{formatEuro(row.total)}</div>
 									</div>
-									<div className="flex items-center gap-1 shrink-0">
-										<Button
-											size="icon"
-											variant="ghost"
-											className="h-8 w-8"
-											onClick={() => onEdit(row.sponsoringId)}>
-											<Edit className="h-4 w-4" />
-										</Button>
-										<Button
-											size="icon"
-											variant="ghost"
-											className="h-8 w-8 text-destructive/70 hover:text-destructive"
-											onClick={() => onDelete(row.sponsoringId)}>
-											<Trash2 className="h-4 w-4" />
-										</Button>
-									</div>
+									<Button
+										size="icon"
+										variant="ghost"
+										className="h-8 w-8 shrink-0 text-destructive/70 hover:text-destructive"
+										aria-label={`Sponsoring von ${row.companyName} entfernen`}
+										onClick={() => onDelete(row.sponsoringId)}>
+										<Trash2 className="h-4 w-4" />
+									</Button>
 								</div>
 								{(row.positions.length > 0 || row.freeAmount != null) && (
 									<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1.5">
@@ -178,6 +176,8 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 					totalRowCount={allRows.length}
 					searchTerm={searchTerm}
 					onDelete={onDelete}
+					onApply={onApply}
+					onRemove={onRemove}
 				/>
 				{/* Ein Fest ohne Sponsoring ist kein Suchergebnis — es behält diesen
 				Satz auch bei getipptem Begriff. Die Hinweiszeile bei keinem Treffer

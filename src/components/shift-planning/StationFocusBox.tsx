@@ -1,17 +1,12 @@
 import React from 'react';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Poster } from '@/components/toolkit/Poster';
 import { NameChip } from '@/components/toolkit/NameChip';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
+import FocusBoxMenu from './FocusBoxMenu';
 import type { BoardRow, StationBoard } from '@/lib/shiftBoard';
+import { shiftDeletionMessage, stationDeletionMessage } from '@/lib/shiftDeletion';
 import type { StationShift } from '@/lib/shiftService';
 
 export interface StationFocusBoxProps {
@@ -19,6 +14,8 @@ export interface StationFocusBoxProps {
 	/** Öffnet die Auto-Zuteilung eingeschränkt auf diese Station (#108). */
 	onAutoFill: () => void;
 	onEditStation: () => void;
+	/** Wird erst nach der Rückfrage des ⋮-Menüs gerufen — sie steht dort, weil
+	 * nur das Menü weiß, ob sie schon bejaht wurde. */
 	onDeleteStation: () => void;
 	onAddShift: () => void;
 	onEditShift: (shift: StationShift) => void;
@@ -93,12 +90,12 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 						{row.open > 0 ? `${row.open} OFFEN` : 'VOLL'}
 					</span>
 					{shift && (
-						<RowMenu
+						<FocusBoxMenu
+							subject="Schicht"
 							label={`Menü der Schicht ${row.time}`}
+							deleteMessage={shiftDeletionMessage(shift, row.assigned)}
 							onEdit={() => onEditShift(shift)}
 							onDelete={() => onDeleteShift(shift.id)}
-							editLabel="Schicht bearbeiten"
-							deleteLabel="Schicht löschen"
 						/>
 					)}
 				</div>
@@ -178,12 +175,12 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 					>
 						Nur diese Station auto-füllen
 					</button>
-					<RowMenu
+					<FocusBoxMenu
+						subject="Station"
 						label="Menü der Station"
+						deleteMessage={stationDeletionMessage(board)}
 						onEdit={onEditStation}
 						onDelete={onDeleteStation}
-						editLabel="Station bearbeiten"
-						deleteLabel="Station löschen"
 						onPoster
 					/>
 				</div>
@@ -254,56 +251,5 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 		</div>
 	);
 };
-
-/** Das ⋮-Menü von Station und Schicht (Entscheid 5 aus #68): Zerstörerisches
-liegt eine Ebene tiefer, die Zeilen bleiben ruhig. Die Einträge sind die
-bestehenden Griffe; ihre Dialoge bekommen in #106 die Plakat-Optik. */
-function RowMenu({
-	label,
-	onEdit,
-	onDelete,
-	editLabel,
-	deleteLabel,
-	onPoster = false
-}: {
-	label: string;
-	onEdit: () => void;
-	onDelete: () => void;
-	editLabel: string;
-	deleteLabel: string;
-	onPoster?: boolean;
-}) {
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<button
-					type="button"
-					aria-label={label}
-					className={cn(
-						'flex h-9 w-9 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
-						// Das ⋮ ist der einzige Weg zu Bearbeiten und Löschen — am Handy
-						// darf es kein 32px-Ziel sein (DESIGN-VISION §6).
-						TOUCH_TARGET,
-						onPoster
-							? 'text-white hover:bg-white/15 focus-visible:outline-papier'
-							: 'text-tinte-soft hover:text-tinte focus-visible:outline-tinte'
-					)}
-				>
-					<MoreVertical className="h-4 w-4" />
-				</button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				<DropdownMenuItem className="gap-2" onClick={onEdit}>
-					<Pencil className="h-4 w-4" />
-					{editLabel}
-				</DropdownMenuItem>
-				<DropdownMenuItem className="gap-2 text-rot" onClick={onDelete}>
-					<Trash2 className="h-4 w-4" />
-					{deleteLabel}
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
 
 export default StationFocusBox;

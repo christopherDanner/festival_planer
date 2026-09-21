@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import StationFocusBox from './StationFocusBox';
@@ -132,6 +134,119 @@ describe('StationFocusBox — grüner Kopf', () => {
 
 	it('legt Bearbeiten und Löschen in ein ⋮-Menü', () => {
 		expect(render(station(), [shift()])).toContain('Menü der Station');
+	});
+});
+
+// --- Löschen nur über das ⋮ (#106) -------------------------------------------
+
+describe('StationFocusBox — Löschen liegt hinter den beiden ⋮-Menüs', () => {
+	it('trägt kein Löschen im Kasten selbst — weder am Kopf noch an der Zeile', () => {
+		const markup = render(station(), [shift({ required_people: 1 })], [assignment()]);
+
+		expect(markup).toContain('Menü der Station');
+		expect(markup).toContain('Menü der Schicht 11–15');
+		expect(markup.toLowerCase()).not.toContain('löschen');
+	});
+
+	it('gibt der Pseudo-Zeile „GANZES FEST" kein Schicht-Menü — es gibt keine Schicht', () => {
+		const markup = render(station({ required_people: 2 }), []);
+
+		expect(markup).toContain('GANZES FEST');
+		expect(markup).not.toContain('Menü der Schicht');
+	});
+});
+
+describe('StationFocusBox — die Rückfragen kennen den Kasten', () => {
+	(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+	beforeAll(() => {
+		globalThis.ResizeObserver ??= class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		};
+		Element.prototype.scrollIntoView ??= () => {};
+	});
+
+	afterEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	const mount = async (props: Partial<React.ComponentProps<typeof StationFocusBox>>) => {
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		await act(async () => {
+			createRoot(host).render(
+				<StationFocusBox
+					board={buildStationBoard(
+						station(),
+						[shift({ required_people: 2, name: 'Frühschoppen' })],
+						[assignment()],
+						[member()]
+					)}
+					onAutoFill={noop}
+					onEditStation={noop}
+					onDeleteStation={noop}
+					onAddShift={noop}
+					onEditShift={noop}
+					onDeleteShift={noop}
+					onAssignToShift={noop}
+					onAssignToStation={noop}
+					onDropOnShift={noop}
+					onDropOnStation={noop}
+					onRemoveFromShift={noop}
+					onRemoveFromStation={noop}
+					{...props}
+				/>
+			);
+		});
+	};
+
+	const oeffneMenue = async (label: string) => {
+		await act(async () => {
+			document
+				.querySelector(`[aria-label="${label}"]`)
+				?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		});
+		await act(async () => {
+			[...document.querySelectorAll('[role="menuitem"]')]
+				.find((el) => (el.textContent ?? '').includes('löschen'))
+				?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+		return document.querySelector('[role="alertdialog"]')?.textContent ?? '';
+	};
+
+	it('nennt beim Löschen der Station ihre Schichten und Zuteilungen', async () => {
+		await mount({});
+
+		const frage = await oeffneMenue('Menü der Station');
+		expect(frage).toContain('Ausschank');
+		// Eine Schicht mit einer Zuteilung plus ein Stationsmitglied.
+		expect(frage).toContain('1 Schicht');
+		expect(frage).toContain('2 Zuteilungen');
+	});
+
+	it('nennt beim Löschen der Schicht deren Tag, Zeit und Besetzung', async () => {
+		await mount({});
+
+		const frage = await oeffneMenue('Menü der Schicht 11–15');
+		expect(frage).toContain('Frühschoppen');
+		expect(frage).toContain('Samstag 25. Juli');
+		expect(frage).toContain('1 Zuteilung');
+	});
+
+	it('meldet die Schicht-Id, sobald die Rückfrage bejaht ist', async () => {
+		const onDeleteShift = vi.fn();
+		await mount({ onDeleteShift });
+		await oeffneMenue('Menü der Schicht 11–15');
+
+		await act(async () => {
+			[...document.querySelectorAll('[role="alertdialog"] button')]
+				.find((b) => b.textContent?.trim() === 'Löschen')
+				?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+
+		expect(onDeleteShift).toHaveBeenCalledWith('sh1');
 	});
 });
 

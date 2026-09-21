@@ -2,13 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { MoreVertical, Pencil, Trash2, Package, Copy } from 'lucide-react';
+import { Pencil, Trash2, Package, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
@@ -16,18 +10,22 @@ import {
 	toBaseQuantity,
 	fromBaseQuantity,
 	formatPackaging,
-	formatQuantity,
 	formatRequiredPackaging
 } from '@/lib/materialQuantity';
 import { grossPrice, netPrice, rowTotal, sumTotals } from '@/lib/materialCosts';
-import { deltaCell, taxCell, type DeltaTone } from '@/lib/materialRow';
 import { formatAmount } from '@/lib/money';
 import {
-	MissingValue,
 	PAPER_TABLE_BODY_CELL,
 	PAPER_TABLE_FOOT_CELL,
 	PAPER_TABLE_HEAD_CELL
 } from '@/components/toolkit/PaperTable';
+import {
+	DeltaText,
+	EditingCell,
+	ReadingCell,
+	type ColumnKey,
+	type RowEditControls
+} from './MaterialTableCells';
 
 /* ------------------------------------------------------------------ */
 /*  Generic inline-editable cell (text / number)                      */
@@ -132,25 +130,12 @@ interface MaterialTableProps {
 	onUpdateField: (id: string, field: string, value: any) => void;
 	/** Ebenfalls nur für die Handy-Karte (#116). */
 	onUpdateFields: (id: string, partial: Partial<FestivalMaterialWithStation>) => void;
+	rowEdit: RowEditControls;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Spalten                                                            */
 /* ------------------------------------------------------------------ */
-
-type ColumnKey =
-	| 'material'
-	| 'station'
-	| 'supplier'
-	| 'packaging'
-	| 'ordered'
-	| 'consumed'
-	| 'delta'
-	| 'tax'
-	| 'net'
-	| 'gross'
-	| 'total'
-	| 'actions';
 
 interface Column {
 	key: ColumnKey;
@@ -204,50 +189,12 @@ function columns(showStation: boolean): Column[] {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Zellen                                                             */
+/*  Zellen — der Inhalt steht in `MaterialTableCells`                  */
 /* ------------------------------------------------------------------ */
 
 const HEAD_CELL = PAPER_TABLE_HEAD_CELL;
 const BODY_CELL = PAPER_TABLE_BODY_CELL;
 const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
-
-/** Preislücke: rot gestrichelt statt still leer — die Position zählt in keine
-Summe und das muss man in der Zeile sehen (#114).
-
-Bewusst kein `<OpenSlot>`: der trägt dieselbe Grafik, ist aber ein Knopf zum
-Besetzen. In der lesenden Tabelle führt die Zelle nirgendwohin — erst der
-Zeilenmodus (#115) macht sie zum Eingabefeld. */
-const PriceGap = () => (
-	<span className="inline-block border-1.5 border-dashed border-rot px-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-rot">
-		Fehlt
-	</span>
-);
-
-const DELTA_TONE: Record<DeltaTone, string> = {
-	// Mehr verbraucht als bestellt hat mehr gekostet als geplant.
-	over: 'font-bold text-rot',
-	under: 'font-bold text-gruen',
-	zero: 'text-tinte-soft',
-	none: 'text-tinte-soft/60'
-};
-
-/** Menge in Basiseinheiten samt Einheit, darunter die Gebinde-Umrechnung. */
-const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterialWithStation }> = ({
-	stored,
-	material
-}) => {
-	if (stored == null) return <MissingValue />;
-	const hint = formatRequiredPackaging(stored, material);
-	return (
-		<>
-			<span className="font-medium">{formatQuantity(toBaseQuantity(stored, material) ?? 0)}</span>{' '}
-			<span className="text-[10.5px] text-tinte-soft">{material.unit}</span>
-			{hint && (
-				<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
-			)}
-		</>
-	);
-};
 
 /* ------------------------------------------------------------------ */
 /*  Mobile card                                                        */
@@ -265,7 +212,6 @@ export const MaterialMobileCard: React.FC<{
 	onUpdateField: (field: string, value: any) => void;
 	onUpdateFields: (partial: Partial<FestivalMaterialWithStation>) => void;
 }> = ({ material, showStation, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
-	const diff = deltaCell(material);
 	return (
 		<div className="border bg-card overflow-hidden">
 			<div className="flex items-start justify-between gap-2 p-3 pb-2">
@@ -346,7 +292,7 @@ export const MaterialMobileCard: React.FC<{
 				</div>
 				<div className="bg-card px-3 py-2">
 					<span className="text-[10px] text-muted-foreground uppercase tracking-wide">Differenz</span>
-					<p className={`text-sm mt-0.5 ${DELTA_TONE[diff.tone]}`}>{diff.text}</p>
+					<DeltaText material={material} className="mt-0.5 block text-sm" />
 				</div>
 			</div>
 			<div className="grid grid-cols-3 gap-px bg-border/50 border-t">
@@ -434,10 +380,15 @@ export const MaterialMobileCard: React.FC<{
  * Spaltenbreiten und eine feste Zeilenhöhe von 56 px. Ohne beides verschöbe das
  * Umschalten auf Eingabefelder jede Spalte und schöbe alles darunter nach unten.
  *
+ * Hier steht nur das Gerüst — Kopf, Raster, Zeilenzustand und Fuß. Was *in*
+ * einer Zelle steht, lesend wie in Bearbeitung, steht in `MaterialTableCells`:
+ * beide Zustände bedienen dieselbe Spaltenordnung und liefen getrennt
+ * unweigerlich auseinander.
+ *
  * Gerechnet wird in `materialCosts` (ADR 0006), umgerechnet in
  * `materialQuantity`, gelesen in `materialRow` — die Tabelle malt nur.
  */
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, onUpdateField, onUpdateFields, rowEdit }) => {
 	const isMobile = useIsMobile();
 
 	const totalCost = sumTotals(materials);
@@ -505,18 +456,49 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 				</thead>
 
 				<tbody>
-					{materials.map((m) => (
-						<tr key={m.id} className="h-[56px] border-b border-linie hover:bg-papier">
-							{cols.map((col) => (
-								<td
-									key={col.key}
-									className={cn(BODY_CELL, col.align === 'right' && 'text-right')}
-								>
-									<Cell column={col.key} material={m} onEdit={onEdit} onCopy={onCopy} onDelete={onDelete} />
-								</td>
-							))}
-						</tr>
-					))}
+					{materials.map((m) => {
+						const draft = rowEdit.draftsById[m.id];
+						const flash = rowEdit.savedIds.includes(m.id);
+						return (
+							<tr
+								key={m.id}
+								className={cn(
+									'h-[56px] border-b border-linie',
+									// Die offene Zeile trägt gelben Grund und einen Tinte-Strich
+									// oben und unten — als Innenschatten, damit sie dabei keinen
+									// Pixel höher wird (#114).
+									draft && 'bg-gelb/25 shadow-zeile-offen',
+									// Nach dem Speichern blitzt sie grün auf und verklingt.
+									!draft && flash && 'animate-blitz-gruen',
+									!draft && !flash && 'hover:bg-papier'
+								)}
+							>
+								{cols.map((col) => (
+									<td
+										key={col.key}
+										className={cn(BODY_CELL, col.align === 'right' && 'text-right')}
+									>
+										{draft ? (
+											<EditingCell
+												column={col.key}
+												material={m}
+												draft={draft}
+												autoFocus={rowEdit.focusId === m.id}
+												rowEdit={rowEdit}
+											/>
+										) : (
+											<ReadingCell
+												column={col.key}
+												material={m}
+												actions={{ onEdit, onCopy, onDelete }}
+												onStartEdit={rowEdit.onStartEdit}
+											/>
+										)}
+									</td>
+								))}
+							</tr>
+						);
+					})}
 				</tbody>
 
 				{/* Der Fuß steht immer — auch wenn keine Position einen Preis trägt.
@@ -543,89 +525,6 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 			</table>
 		</div>
 	);
-};
-
-/** Der Inhalt einer Zelle — je Spalte an einer Stelle, damit Kopf, Raster und
-Zeile nicht auseinanderlaufen können. */
-const Cell: React.FC<{
-	column: ColumnKey;
-	material: FestivalMaterialWithStation;
-	onEdit: (material: FestivalMaterialWithStation) => void;
-	onCopy: (material: FestivalMaterialWithStation) => void;
-	onDelete: (id: string) => void;
-}> = ({ column, material: m, onEdit, onCopy, onDelete }) => {
-	switch (column) {
-		case 'material':
-			return (
-				<>
-					<div className="truncate font-bold leading-tight">{m.name}</div>
-					{m.category && (
-						<span className="mt-0.5 inline-block max-w-full truncate bg-papier-getoent px-1.5 text-[10px] font-bold leading-relaxed text-tinte-soft">
-							{m.category}
-						</span>
-					)}
-				</>
-			);
-		// `block`, weil die Ellipse an einem Inline-Element nicht greift: der
-		// lange Lieferantenname wäre sonst hart abgeschnitten.
-		case 'station':
-			return m.station?.name ? (
-				<span className="block truncate">{m.station.name}</span>
-			) : (
-				<MissingValue />
-			);
-		case 'supplier':
-			return m.supplier ? <span className="block truncate">{m.supplier}</span> : <MissingValue />;
-		case 'packaging':
-			return <span className="block truncate">{formatPackaging(m)}</span>;
-		case 'ordered':
-			return <QuantityCell stored={m.ordered_quantity} material={m} />;
-		case 'consumed':
-			return <QuantityCell stored={m.actual_quantity} material={m} />;
-		case 'delta': {
-			const delta = deltaCell(m);
-			return <span className={DELTA_TONE[delta.tone]}>{delta.text}</span>;
-		}
-		case 'tax': {
-			const tax = taxCell(m);
-			return <span className={tax.muted ? 'text-tinte-soft' : undefined}>{tax.text}</span>;
-		}
-		case 'net': {
-			const net = netPrice(m);
-			return net == null ? <PriceGap /> : <>{formatAmount(net)}</>;
-		}
-		case 'gross': {
-			const gross = grossPrice(m);
-			return gross == null ? <PriceGap /> : <>{formatAmount(gross)}</>;
-		}
-		case 'total': {
-			const total = rowTotal(m);
-			// Ohne Preis keine Zeilensumme — die Position verfälscht keine Summe.
-			return total == null ? <MissingValue /> : <b>{formatAmount(total)}</b>;
-		}
-		case 'actions':
-			return (
-				<div className="flex justify-end">
-					<DropdownMenu>
-						<DropdownMenuTrigger
-							aria-label={`Menü für ${m.name}`}
-							className="px-1 py-1 text-tinte-soft hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
-						>
-							<MoreVertical className="h-4 w-4" />
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							{/* Der Dialog trägt seit #117 nur die Stammdaten; Mengen und Preise
-							bekommen mit #115 ihren ✎-Knopf in dieser Spalte. */}
-							<DropdownMenuItem onSelect={() => onEdit(m)}>Bearbeiten</DropdownMenuItem>
-							<DropdownMenuItem onSelect={() => onCopy(m)}>Kopieren</DropdownMenuItem>
-							<DropdownMenuItem className="text-rot" onSelect={() => onDelete(m.id)}>
-								Entfernen
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-			);
-	}
 };
 
 export default MaterialTable;

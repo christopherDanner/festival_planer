@@ -1,5 +1,11 @@
 import { type CSSProperties } from 'react';
 
+import {
+	countSponsorSegments,
+	filterSponsorsBySegment,
+	type SponsorHistoryMap,
+	type SponsorSegment
+} from '@/lib/sponsorHistory';
 import { filterSponsors, type Sponsor } from '@/lib/sponsorService';
 import SponsorsEmptyState from './SponsorsEmptyState';
 import SponsorsMast from './SponsorsMast';
@@ -16,8 +22,14 @@ const TOOLBAR_HEIGHT_PX = 59;
 export interface SponsorsViewProps {
 	/** Der ganze Sponsorenbestand, alphabetisch (so liefert ihn `getSponsors`). */
 	sponsors: Sponsor[];
+	/** Sponsoren-Historie je Firma, in einem Zug geladen (`getSponsorHistory`). */
+	history: SponsorHistoryMap;
+	/** Jahr des Bezugsfests; null zwischen zwei Festen — dann entfällt „heuer". */
+	referenceYear: number | null;
 	searchTerm: string;
 	onSearchChange: (value: string) => void;
+	segment: SponsorSegment;
+	onSegmentChange: (segment: SponsorSegment) => void;
 	/** Kompakt-Mast unter 900px. */
 	compact?: boolean;
 	onOpenFestivalList: () => void;
@@ -30,24 +42,41 @@ export interface SponsorsViewProps {
  * Die Sponsoren-Stammdaten als Ganzes: Mast, klebende Werkzeugleiste und
  * darunter entweder der Frachtbrief oder — bei leerem Bestand — der
  * Leerzustand. Ohne Datenzugriff, damit die Zusammensetzung prüfbar bleibt.
+ *
+ * Suche und Segment filtern hintereinander: die Zähler am Schalter zählen
+ * über die Treffer der Suche und sagen damit voraus, was ein Klick zeigt.
+ * Die Zählzeile im Mast bleibt dagegen der ganze Bestand.
  */
 export default function SponsorsView({
 	sponsors,
+	history,
+	referenceYear,
 	searchTerm,
 	onSearchChange,
+	segment,
+	onSegmentChange,
 	compact,
 	onOpenFestivalList,
 	onAddSponsor,
 	onSignOut,
 	onSelectSponsor
 }: SponsorsViewProps) {
+	// Ohne Bezugsfest gibt es kein „heuer" — ein stehengebliebenes Segment würde
+	// den Frachtbrief zuschneiden, ohne dass noch ein Schalter das erklärt.
+	const active = referenceYear === null ? 'alle' : segment;
 	const matches = filterSponsors(sponsors, searchTerm);
+	const shown = filterSponsorsBySegment(matches, history, active);
 
 	return (
 		<div
 			style={{ '--sponsors-toolbar-h': `${TOOLBAR_HEIGHT_PX}px` } as CSSProperties}>
 			<SponsorsMast
 				sponsorCount={sponsors.length}
+				referenceSponsoring={
+					referenceYear === null
+						? undefined
+						: { count: countSponsorSegments(sponsors, history).sponsert, year: referenceYear }
+				}
 				compact={compact}
 				onOpenFestivalList={onOpenFestivalList}
 				onAddSponsor={onAddSponsor}
@@ -56,13 +85,17 @@ export default function SponsorsView({
 			<SponsorsToolbar
 				searchTerm={searchTerm}
 				onSearchChange={onSearchChange}
-				shown={matches.length}
+				shown={shown.length}
 				total={sponsors.length}
+				segment={active}
+				onSegmentChange={onSegmentChange}
+				segmentCounts={countSponsorSegments(matches, history)}
+				referenceYear={referenceYear}
 			/>
 			{sponsors.length === 0 ? (
 				<SponsorsEmptyState onAddSponsor={onAddSponsor} />
 			) : (
-				<SponsorsTable sponsors={matches} onSelect={onSelectSponsor} />
+				<SponsorsTable sponsors={shown} history={history} onSelect={onSelectSponsor} />
 			)}
 		</div>
 	);

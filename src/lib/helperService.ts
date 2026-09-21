@@ -25,6 +25,13 @@ export interface Helper {
 	updated_at: string;
 }
 
+/** „Hochauer Franz" — **Nachname zuerst**, wie überall sonst in der App. Steht
+hier, weil die Schreibweise zum Helfer gehört und nicht zu einer Ansicht: die
+Helferliste, das Platz-Raster und die Fußzeile der Station müssen denselben
+Namen schreiben. */
+export const helperName = (helper: Pick<Helper, 'first_name' | 'last_name'>): string =>
+	`${helper.last_name} ${helper.first_name}`.trim();
+
 /** Die Felder, die die Helferliste beim Anlegen und Bearbeiten schreibt. */
 export type HelperInput = Pick<Helper, 'first_name' | 'last_name'> &
 	Partial<Pick<Helper, 'phone' | 'email' | 'notes'>>;

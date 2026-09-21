@@ -1,12 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { buttonByLabel } from '@/lib/__tests__/domTesting';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
 	buildSponsoringOverviewFooter,
 	buildSponsoringOverviewRows,
 	type SponsoringOverviewRow
 } from '@/lib/sponsoringTotals';
-import SponsoringMatrix from './SponsoringMatrix';
+import SponsoringMatrix, { type SponsoringMatrixProps } from './SponsoringMatrix';
 import {
 	makeAssignment,
 	makeCategory,
@@ -16,21 +19,81 @@ import {
 const preisliste = (namesAndValues: [string, number][]): SponsoringCategory[] =>
 	namesAndValues.map(([name, value]) => makeCategory(name, value));
 
+/** Was die Suche der Matrix mitgibt (#151) — im Test fast immer ungefiltert. */
+type MatrixFilter = { totalRowCount?: number; searchTerm?: string };
+
+const matrix = (
+	rows: SponsoringOverviewRow[],
+	categories: SponsoringCategory[],
+	handlers: Partial<Pick<SponsoringMatrixProps, 'onApply' | 'onRemove' | 'onDelete'>> = {},
+	filter: MatrixFilter = {}
+) => (
+	<SponsoringMatrix
+		categories={categories}
+		rows={rows}
+		footer={buildSponsoringOverviewFooter(rows, categories)}
+		totalRowCount={filter.totalRowCount ?? rows.length}
+		searchTerm={filter.searchTerm ?? ''}
+		onDelete={handlers.onDelete ?? (() => {})}
+		onApply={handlers.onApply ?? (() => {})}
+		onRemove={handlers.onRemove ?? (() => {})}
+	/>
+);
+
 function render(
 	rows: SponsoringOverviewRow[],
 	categories: SponsoringCategory[],
-	filter: { totalRowCount?: number; searchTerm?: string } = {}
+	filter: MatrixFilter = {}
 ) {
-	return renderToStaticMarkup(
-		<SponsoringMatrix
-			categories={categories}
-			rows={rows}
-			footer={buildSponsoringOverviewFooter(rows, categories)}
-			totalRowCount={filter.totalRowCount ?? rows.length}
-			searchTerm={filter.searchTerm ?? ''}
-			onDelete={() => {}}
-		/>
-	);
+	return renderToStaticMarkup(matrix(rows, categories, {}, filter));
+}
+
+/* Der Zettel hängt als Popover im Portal an `document.body`, nicht im
+Container — die Griffe suchen deshalb im ganzen Dokument. Jede Montage wird
+danach wieder abgeräumt, sonst fände der nächste Test einen alten Zettel. */
+const roots: Root[] = [];
+
+afterEach(async () => {
+	await act(async () => {
+		roots.forEach((root) => root.unmount());
+	});
+	roots.length = 0;
+});
+
+/** Die Matrix im jsdom, um Zellklicks zu fahren. */
+async function mount(
+	rows: SponsoringOverviewRow[],
+	categories: SponsoringCategory[],
+	handlers: Partial<Pick<SponsoringMatrixProps, 'onApply' | 'onRemove'>> = {}
+) {
+	const container = document.createElement('div');
+	document.body.appendChild(container);
+	const root = createRoot(container);
+	roots.push(root);
+	await act(async () => {
+		root.render(matrix(rows, categories, handlers));
+	});
+
+	return {
+		container,
+		/** Zelle anklicken — `pointerdown` zuerst, darauf hört Radix beim Schließen. */
+		click: async (label: string) => {
+			const target = container.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
+			await act(async () => {
+				target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+				target.click();
+			});
+		},
+		zettel: () => document.body.querySelector('form[aria-label^="Zettel"]'),
+		field: (label: string) =>
+			document.body.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!,
+		press: async (label: string) => {
+			const button = buttonByLabel(document.body, label);
+			await act(async () => {
+				button.click();
+			});
+		}
+	};
 }
 
 describe('SponsoringMatrix — Gerüst', () => {
@@ -73,7 +136,7 @@ describe('SponsoringMatrix — Gerüst', () => {
 			makeSponsoring({ companyName: 'Bäckerei Leitner' })
 		]);
 		const html = render(rows, preisliste([['Plakat', 200]]));
-		expect(html.match(/h-\[43px\]/g)).toHaveLength(2);
+		expect(html.match(/<tr class="h-\[43px\]/g)).toHaveLength(2);
 	});
 });
 
@@ -154,6 +217,132 @@ describe('SponsoringMatrix — Zellen', () => {
 		expect(html).toContain('title="Geschenkkorb Tombola (€ 80)"');
 		expect(html).toContain('text-ellipsis');
 		expect(html).toContain('(€ 80)');
+	});
+});
+
+describe('SponsoringMatrix — Zellklick öffnet den Zettel', () => {
+	const plakat = makeCategory('Plakat', 200);
+
+	const leereZeile = () =>
+		buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+
+	const belegteZeile = () =>
+		buildSponsoringOverviewRows([
+			makeSponsoring({
+				companyName: 'Taxi Brandl',
+				assignments: [makeAssignment({ category: plakat, value: 350 })],
+				freeAmount: 150,
+				inKindDescription: 'Brotkorb',
+				inKindValue: 40
+			})
+		]);
+
+	it('macht jede wertetragende Zelle zu einem Knopf', () => {
+		const html = render(leereZeile(), [plakat]);
+
+		expect(html).toContain('aria-label="Plakat bei Taxi Brandl"');
+		expect(html).toContain('aria-label="Freibetrag bei Taxi Brandl"');
+		expect(html).toContain('aria-label="Sachleistung bei Taxi Brandl"');
+	});
+
+	it('zeigt in einer leeren Zelle nie den Standardwert — auch nicht blass', () => {
+		// Sonst sähe eine nicht zugewiesene Kategorie aus wie eine zugewiesene
+		// (Platzhalter-Auflage, ADR 0009).
+		const html = render(leereZeile(), [plakat]);
+		const zeilen = html.split('<tbody>')[1].split('</tbody>')[0];
+
+		expect(zeilen).not.toContain('€ 200');
+		expect(zeilen).toContain('border-dashed');
+	});
+
+	it('öffnet über einer leeren Kategorie-Zelle den Zettel mit dem Standardwert', async () => {
+		const view = await mount(leereZeile(), [plakat]);
+
+		expect(view.zettel()).toBeNull();
+		await view.click('Plakat bei Taxi Brandl');
+
+		expect(view.zettel()?.getAttribute('aria-label')).toBe('Zettel Plakat');
+		expect(view.field('Betrag').value).toBe('200');
+		expect(view.zettel()?.textContent).toContain('Standardwert € 200');
+	});
+
+	it('weist mit zwei Klicks den Standardwert zu und schließt den Zettel', async () => {
+		const onApply = vi.fn();
+		const rows = leereZeile();
+		const view = await mount(rows, [plakat], { onApply });
+
+		await view.click('Plakat bei Taxi Brandl');
+		await view.press('Übernehmen');
+
+		expect(onApply).toHaveBeenCalledWith(
+			rows[0].sponsoringId,
+			{ kind: 'category', category: plakat },
+			{ value: '200', description: '' }
+		);
+		expect(view.zettel()).toBeNull();
+	});
+
+	it('bietet über einer belegten Zelle Entfernen an', async () => {
+		const onRemove = vi.fn();
+		const rows = belegteZeile();
+		const view = await mount(rows, [plakat], { onRemove });
+
+		await view.click('Plakat bei Taxi Brandl');
+		await view.press('Entfernen');
+
+		expect(onRemove).toHaveBeenCalledWith(rows[0].sponsoringId, {
+			kind: 'category',
+			category: plakat
+		});
+	});
+
+	it('öffnet denselben Zettel über Freibetrag und Sachleistung', async () => {
+		const view = await mount(belegteZeile(), [plakat]);
+
+		await view.click('Freibetrag bei Taxi Brandl');
+		expect(view.zettel()?.getAttribute('aria-label')).toBe('Zettel Freibetrag');
+		expect(view.zettel()?.textContent).toContain('Kein Standardwert');
+
+		await view.click('Sachleistung bei Taxi Brandl');
+		expect(view.zettel()?.getAttribute('aria-label')).toBe('Zettel Sachleistung');
+		expect(view.field('Bezeichnung').value).toBe('Brotkorb');
+	});
+
+	it('schließt bei einem Klick außerhalb, ohne zu schreiben', async () => {
+		const onApply = vi.fn();
+		const onRemove = vi.fn();
+		const view = await mount(belegteZeile(), [plakat], { onApply, onRemove });
+
+		await view.click('Plakat bei Taxi Brandl');
+		await act(async () => {
+			document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+		});
+
+		expect(view.zettel()).toBeNull();
+		expect(onApply).not.toHaveBeenCalled();
+		expect(onRemove).not.toHaveBeenCalled();
+	});
+
+	it('lässt die Zeilenhöhe beim Öffnen unangetastet', async () => {
+		// Der Zettel schwebt im Portal neben der Tabelle, nicht in ihr — sonst
+		// spränge die Zeile beim Öffnen (Auflage aus #66/#69, gemessen 0 px).
+		const view = await mount(leereZeile(), [plakat]);
+		await view.click('Plakat bei Taxi Brandl');
+
+		expect(view.container.querySelector('tr.h-\\[43px\\]')).not.toBeNull();
+		expect(view.container.querySelector('table')!.contains(view.zettel())).toBe(false);
+	});
+
+	it('sagt am Zell-Knopf an, dass er einen Zettel öffnet', async () => {
+		// Kommt vom Popover-Baustein, nicht von uns (ADR 0003).
+		const view = await mount(leereZeile(), [plakat]);
+		const knopf = view.container.querySelector('[aria-label="Plakat bei Taxi Brandl"]')!;
+
+		expect(knopf.getAttribute('aria-haspopup')).toBe('dialog');
+		expect(knopf.getAttribute('aria-expanded')).toBe('false');
+
+		await view.click('Plakat bei Taxi Brandl');
+		expect(knopf.getAttribute('aria-expanded')).toBe('true');
 	});
 });
 

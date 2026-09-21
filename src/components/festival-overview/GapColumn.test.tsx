@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
+import { scheduleDay, scheduleTask } from '@/lib/__tests__/scheduleFactories';
 import GapColumn from './GapColumn';
 
 function station(over: Partial<Station> = {}): Station {
@@ -46,45 +47,10 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 		...over
 	};
 }
-function dayWithOpenTask(): ScheduleDayWithPhases {
-	return {
-		id: 'd1',
-		festival_id: 'f1',
-		date: '2026-07-25',
-		label: null,
-		is_auto_generated: false,
-		sort_order: 0,
-		created_at: '',
-		updated_at: '',
-		phases: [
-			{
-				id: 'p1',
-				schedule_day_id: 'd1',
-				festival_id: 'f1',
-				name: 'Phase',
-				sort_order: 0,
-				created_at: '',
-				updated_at: '',
-				entries: [
-					{
-						id: 't1',
-						schedule_phase_id: 'p1',
-						festival_id: 'f1',
-						title: 'AKM melden',
-						type: 'task',
-						start_time: '09:00:00',
-						end_time: null,
-						responsible_helper_id: null,
-						status: 'open',
-						description: null,
-						sort_order: 0,
-						created_at: '',
-						updated_at: ''
-					}
-				]
-			}
-		]
-	};
+function dayWithOpenTask(): ScheduleDayWithEntries {
+	return scheduleDay({
+		entries: [scheduleTask({ title: 'AKM melden', start_time: '09:00:00' })]
+	});
 }
 
 const NONE = {
@@ -92,7 +58,7 @@ const NONE = {
 	shifts: [] as StationShift[],
 	assignments: [] as ShiftAssignmentWithHelper[],
 	stationHelpers: [] as StationHelperWithDetails[],
-	scheduleDays: [] as ScheduleDayWithPhases[],
+	scheduleDays: [] as ScheduleDayWithEntries[],
 	materials: [] as FestivalMaterialWithStation[]
 };
 
