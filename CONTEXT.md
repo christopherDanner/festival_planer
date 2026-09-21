@@ -73,6 +73,15 @@ Ein einzelnes Material, das pro Fest geführt wird (`festival_materials`). Wesen
 
 Eine Position ist einer Station zugeordnet (oder keiner). Stations-Mapping zwischen zwei Festen läuft per Stationsname.
 
+## Zeilenmodus
+
+Die Art, wie Mengen und Preise einer Material-Position in der Arbeitsliste erfasst werden: **✎ macht genau eine Zeile zu Eingabefeldern**, alles andere bleibt lesend. Tippbar sind fünf Felder — Bestellt, Verbraucht, MwSt, Netto, Brutto; Material, Lieferant, Gebinde, Δ und Gesamt bleiben Text. Die Stammdaten einer Position gehören dagegen dem Dialog hinter **⋮**.
+
+- **Entwurf** — was in den Feldern einer offenen Zeile steht, als Text, so wie getippt. Er merkt sich seinen Ausgangsstand; *geändert* misst sich daran, nicht an der nachgeladenen Liste.
+- **Quelle des Preises** — die zuletzt getippte Preisseite, netto oder brutto. Sie entscheidet beim Speichern über `price_is_net` und bleibt Quelle, wenn sich der Steuersatz ändert; die andere Seite rechnet dann neu. Damit steht das `price_is_net` aus ADR 0006 nicht mehr als Rätsel in der Oberfläche: man sieht beide Zahlen und wie sie zusammenhängen. Ein **unberührtes** Preisfeld schreibt den gespeicherten Preis zurück, nicht seine auf Cent gezeigte Anzeige.
+- **Sammel-Fußleiste** — zählt die offenen und die geänderten Zeilen des Kastens und speichert oder verwirft sie auf einen Griff. Deckt den Rechnungs-Fall: eine Lieferantenrechnung, viele Zeilen, ein Durchgang.
+- **Sichtwechsel** — jeder Griff, der offene Zeilen aus dem Bild nähme: Achse, Reiter, Kategorie, Suche, der Sprung in die Übernahme, das Zuklappen aller Zeilen. Mit geänderten Zeilen kommt die **Rückfrage** — Speichern / Verwerfen / Zurück —, nie ein stilles Verwerfen.
+
 ## Bestellwert & Verbrauchswert
 
 Die zwei Geldsummen einer Materialliste. **Beide rechnen brutto** — der Verein zahlt brutto, eine Kostenzahl ohne Mehrwertsteuer ist für die Kassa wertlos.
