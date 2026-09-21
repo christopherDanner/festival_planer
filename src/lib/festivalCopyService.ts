@@ -55,12 +55,12 @@ export async function copyFestivalData(
 				if (s.responsible_helper_id) neededHelperIds.add(s.responsible_helper_id);
 			}
 			for (const sm of sourceStationHelpers) {
-				if (sm.helper_id && selectedStationIds.has(sm.station_id)) {
+				if (selectedStationIds.has(sm.station_id)) {
 					neededHelperIds.add(sm.helper_id);
 				}
 			}
 			for (const a of sourceAssignments) {
-				if (a.helper_id && selectedShiftIds.has(a.station_shift_id)) {
+				if (selectedShiftIds.has(a.station_shift_id)) {
 					neededHelperIds.add(a.helper_id);
 				}
 			}
@@ -137,13 +137,13 @@ export async function copyFestivalData(
 			// Shift assignments
 			const allAssignments = await getShiftAssignments(sourceFestivalId);
 			const selectedAssignments = allAssignments.filter(
-				a => a.helper_id && shiftIdMap[a.station_shift_id] && helperIdMap[a.helper_id]
+				a => shiftIdMap[a.station_shift_id] && helperIdMap[a.helper_id]
 			);
 			for (const a of selectedAssignments) {
 				await assignHelperToStationShift(
 					targetFestivalId,
 					shiftIdMap[a.station_shift_id],
-					helperIdMap[a.helper_id!],
+					helperIdMap[a.helper_id],
 					a.position
 				);
 			}

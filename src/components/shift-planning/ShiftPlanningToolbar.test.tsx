@@ -47,6 +47,7 @@ function assignment(over: Partial<ShiftAssignment> = {}): ShiftAssignment {
 		festival_id: 'f1',
 		station_shift_id: 'sh1',
 		station_id: 's1',
+		helper_id: 'p1',
 		position: 1,
 		created_at: '',
 		updated_at: '',
