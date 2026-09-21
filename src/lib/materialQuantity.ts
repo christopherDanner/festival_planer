@@ -30,14 +30,29 @@ export function ceilToPackaging(
 	return Math.ceil(stored);
 }
 
+/**
+ * Die Gebinde-Umrechnung einer Menge: „4 × Fass". Sie steht in der
+ * Positionstabelle unter der Menge (#114) und in der Übernahme-Maske — ein
+ * Wortlaut für beide, sonst liest dieselbe Zahl an zwei Stellen verschieden.
+ * Aufgerundet wird über `ceilToPackaging`: ein angebrochenes Fass wird trotzdem
+ * geliefert.
+ */
 export function formatRequiredPackaging(
 	stored: number | null,
 	material: QuantityContext & { packaging_unit?: string | null | undefined }
 ): string | null {
-	if (stored == null) return null;
 	if (!material.packaging_unit || !material.amount_per_packaging) return null;
-	const ceiled = Math.ceil(stored);
-	return `${ceiled} ${material.packaging_unit}`;
+	const packages = ceilToPackaging(stored, material);
+	return packages == null ? null : `${packages} × ${material.packaging_unit}`;
+}
+
+/**
+ * Eine Menge fürs Auge: auf zwei Stellen und mit Dezimalkomma. Ohne das steht
+ * in der Zelle, was der Fließkomma-Rest hergibt („0.9899999999999999") und
+ * daneben in der Geldspalte ein Komma.
+ */
+export function formatQuantity(value: number): string {
+	return String(Math.round(value * 100) / 100).replace('.', ',');
 }
 
 interface FormatPackagingContext {

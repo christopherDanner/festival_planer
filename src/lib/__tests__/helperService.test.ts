@@ -73,6 +73,7 @@ vi.mock('@/integrations/supabase/client', () => {
 import {
 	getHelpers,
 	createHelper,
+	createHelpersBulk,
 	updateHelper,
 	deleteHelper,
 	updateHelperPreferences,
@@ -160,6 +161,43 @@ describe('createHelper', () => {
 
 		expect(lastCall().payload).not.toHaveProperty('user_id');
 		expect(lastCall().payload).not.toHaveProperty('is_active');
+	});
+});
+
+describe('createHelpersBulk', () => {
+	// Die Fest-Kopie legt eine ganze Helferliste auf einmal an (#100) — einzeln
+	// wären das bei 60 Helfern 60 Abfragen nacheinander.
+	it('legt alle Helfer des Fests mit einer Abfrage an', async () => {
+		mocks.rows = [{ id: 'neu-1' }, { id: 'neu-2' }];
+
+		const ids = await createHelpersBulk('fest-7', [
+			{ first_name: 'Hans', last_name: 'Huber' },
+			{ first_name: 'Eva', last_name: 'Ebner' }
+		]);
+
+		expect(ids).toEqual(['neu-1', 'neu-2']);
+		expect(mocks.calls).toHaveLength(1);
+		expect(lastCall().table).toBe('festival_helpers');
+		expect(lastCall().op).toBe('insert');
+		expect(lastCall().payload).toEqual([
+			{ first_name: 'Hans', last_name: 'Huber', festival_id: 'fest-7' },
+			{ first_name: 'Eva', last_name: 'Ebner', festival_id: 'fest-7' }
+		]);
+	});
+
+	// Ohne Helfer gibt es nichts anzulegen — ein leerer Insert wäre eine
+	// Abfrage ohne Wirkung.
+	it('fragt ohne Helfer gar nicht erst an', async () => {
+		expect(await createHelpersBulk('fest-7', [])).toEqual([]);
+		expect(mocks.calls).toHaveLength(0);
+	});
+
+	it('meldet einen Fehler, statt eine halbe Helferliste vorzutäuschen', async () => {
+		mocks.error = { message: 'festival_helpers kaputt' };
+
+		await expect(
+			createHelpersBulk('fest-7', [{ first_name: 'Hans', last_name: 'Huber' }])
+		).rejects.toThrow('festival_helpers kaputt');
 	});
 });
 

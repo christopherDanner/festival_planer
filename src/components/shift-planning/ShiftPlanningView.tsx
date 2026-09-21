@@ -1,32 +1,36 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 import { useShiftPlanningData } from './hooks/useShiftPlanningData';
 import { useShiftPlanningActions } from './hooks/useShiftPlanningActions';
-import ShiftPlanningHeader from './ShiftPlanningHeader';
-import StationCard from './StationCard';
-import HelperSidebar from './HelperSidebar';
+import ShiftPlanningToolbar from './ShiftPlanningToolbar';
+import StationTabStrip from './StationTabStrip';
+import StationFocusBox from './StationFocusBox';
+import NoStationsNotice from './NoStationsNotice';
+import HelperRoster from './HelperRoster';
 import StationDialog from './dialogs/StationDialog';
 import StationShiftDialog from './dialogs/StationShiftDialog';
 import HelperDialog from './dialogs/HelperDialog';
-import PreferenceDialog from './dialogs/PreferenceDialog';
 import AutoAssignDialog from './dialogs/AutoAssignDialog';
 import ShareDialog from './dialogs/ShareDialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { Button } from '@/components/ui/button';
-import { Users } from 'lucide-react';
 import { exportToExcel, exportToPdf } from '@/lib/exportService';
+import { buildStationBoard, buildStationTabs, resolveFocusStationId } from '@/lib/shiftBoard';
+import { autoAssignScope } from '@/lib/autoAssignScope';
+import { buildHelperRoster, type HelperFilter } from '@/lib/helperRoster';
+import { deriveShiftsMetric } from '@/lib/staffing';
 import type { Station, StationShift, ShiftAssignmentWithHelper } from '@/lib/shiftService';
 import { removeHelperMessage, type Helper } from '@/lib/helperService';
 
+/** Welcher Dialog offen ist. Der geschlossene Zustand heißt `'none'` und nicht
+`null`: das Projekt läuft ohne `strictNullChecks`, und dort unterscheidet `null`
+die Fälle nicht — TypeScript verlöre an jedem Zugriff die Verengung. */
 type DialogState =
-	| { type: null }
+	| { type: 'none' }
 	| { type: 'station'; station?: Station }
 	| { type: 'stationShift'; station: Station; stationShift?: StationShift }
 	| { type: 'helper'; helper?: Helper }
-	| { type: 'preferences'; helper: Helper }
-	| { type: 'autoAssign' };
+	// Ohne Station läuft die Zuteilung übers ganze Fest, mit Station nur über
+	// deren Schichten („NUR DIESE STATION AUTO-FÜLLEN").
+	| { type: 'autoAssign'; station?: Station };
 
 interface ShiftPlanningViewProps {
 	festivalId: string;
@@ -34,30 +38,76 @@ interface ShiftPlanningViewProps {
 	festivalDate?: string;
 }
 
+/**
+ * Der Schichtplan als **Fokus-Werkbank** (#102, Variante E der DESIGN-VISION):
+ * Werkzeugleiste mit KPI-Maßband, darunter der Ampel-Reiter-Streifen aller
+ * Stationen und **eine** Station im Fokus. Die Stationen stehen nicht mehr als
+ * schmale Spalten nebeneinander — damit ist auch der Vollbild-Modus weg, der
+ * nur dem Platzdruck dieser Spalten geschuldet war (Entscheid 9 aus #68).
+ *
+ * Gerechnet und gegliedert wird in `shiftBoard` bzw. `staffing`; diese Ansicht
+ * hält den Zustand (Fokus-Station, Filter, Dialoge) und verdrahtet die Griffe.
+ */
 const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festivalName, festivalDate }) => {
 	const { toast } = useToast();
-	const isMobile = useIsMobile();
 	const data = useShiftPlanningData(festivalId);
 	const actions = useShiftPlanningActions(festivalId);
 
-	const [isFullscreen, setIsFullscreen] = useState(false);
-	const [nameFilter, setNameFilter] = useState('');
-	const [stationFilter, setStationFilter] = useState('all');
-	const [assignmentFilter, setAssignmentFilter] = useState('all');
+	const [focusStationId, setFocusStationId] = useState<string | null>(null);
+	const [helperSearch, setHelperSearch] = useState('');
+	const [helperFilter, setHelperFilter] = useState<HelperFilter>('all');
 	const [draggedHelper, setDraggedHelper] = useState<Helper | null>(null);
 	const [selectedHelper, setSelectedHelper] = useState<Helper | null>(null);
-	const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+	const [dialogState, setDialogState] = useState<DialogState>({ type: 'none' });
 	const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-	const [isHelperDrawerOpen, setIsHelperDrawerOpen] = useState(false);
 
-	const handleTapSelect = (helper: Helper) => {
-		setSelectedHelper(helper);
-		setIsHelperDrawerOpen(false);
-		toast({
-			title: `${helper.last_name} ${helper.first_name} ausgewählt`,
-			description: 'Tippe auf eine Station oder Schicht zum Zuweisen. Tippe erneut auf den Button um abzubrechen.',
-		});
-	};
+	const tabs = useMemo(
+		() => buildStationTabs(data.stations, data.stationShifts, data.assignments, data.stationHelpers),
+		[data.stations, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	// Beim ersten Rendern und nach dem Löschen der gewählten Station übernimmt
+	// der erste Reiter.
+	const activeStationId = resolveFocusStationId(tabs, focusStationId);
+	const focusStation = tabs.find((t) => t.station.id === activeStationId)?.station ?? null;
+	const board = useMemo(
+		() =>
+			focusStation
+				? buildStationBoard(focusStation, data.stationShifts, data.assignments, data.stationHelpers)
+				: null,
+		[focusStation, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	const metric = useMemo(
+		() =>
+			deriveShiftsMetric(data.stations, data.stationShifts, data.assignments, data.stationHelpers),
+		[data.stations, data.stationShifts, data.assignments, data.stationHelpers]
+	);
+	// Der Umfang des nächsten Laufs: ohne Station das ganze Fest, mit Station nur
+	// deren Schichten („NUR DIESE STATION AUTO-FÜLLEN").
+	const autoFillStation =
+		dialogState.type === 'autoAssign' ? dialogState.station ?? null : null;
+	const assignmentScope = useMemo(
+		() => autoAssignScope(autoFillStation, data.stationShifts, data.assignments),
+		[autoFillStation, data.stationShifts, data.assignments]
+	);
+	// Die Gruppierung hängt an der Fokus-Station: wechselt der Reiter, ordnet
+	// sich die Liste nach der neuen Wunsch-Passung.
+	const roster = useMemo(
+		() =>
+			buildHelperRoster({
+				helpers: data.helpers,
+				assignments: data.assignments,
+				stationHelpers: data.stationHelpers,
+				focusStationId: activeStationId,
+				search: helperSearch,
+				filter: helperFilter
+			}),
+		[data.helpers, data.assignments, data.stationHelpers, activeStationId, helperSearch, helperFilter]
+	);
+
+	/** Noch einmal auf dieselbe Marke heißt „doch nicht" — die gelbe Marke ist
+	die einzige Anzeige der Auswahl, also muss sie sich auch zurücknehmen lassen. */
+	const handleSelectHelper = (helper: Helper) =>
+		setSelectedHelper((current) => (current?.id === helper.id ? null : helper));
 
 	const handleTapAssignToShift = (stationShiftId: string) => {
 		if (!selectedHelper) return;
@@ -76,16 +126,9 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			return;
 		}
 
-		const usedPositions = currentAssignments.map((a) => a.position).sort((a, b) => a - b);
-		let nextPosition = 1;
-		for (const pos of usedPositions) {
-			if (nextPosition === pos) nextPosition++;
-			else break;
-		}
-
 		const helper = selectedHelper;
 		actions.assignHelper.mutate(
-			{ stationShiftId, helperId: helper.id, position: nextPosition },
+			{ stationShiftId, helperId: helper.id, position: nextFreePosition(currentAssignments) },
 			{ onSuccess: () => toast({ title: 'Erfolg', description: `${helper.last_name} ${helper.first_name} wurde zugewiesen.` }) }
 		);
 		setSelectedHelper(null);
@@ -111,6 +154,17 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 
 	const getAssignmentsForStationShift = (stationShiftId: string): ShiftAssignmentWithHelper[] => {
 		return data.assignments.filter((a) => a.station_shift_id === stationShiftId);
+	};
+
+	/** Kleinste freie Platznummer einer Schicht. */
+	const nextFreePosition = (currentAssignments: ShiftAssignmentWithHelper[]): number => {
+		const usedPositions = currentAssignments.map((a) => a.position).sort((a, b) => a - b);
+		let nextPosition = 1;
+		for (const pos of usedPositions) {
+			if (nextPosition === pos) nextPosition++;
+			else break;
+		}
+		return nextPosition;
 	};
 
 	const handleDrop = async (stationShiftId: string, e: React.DragEvent) => {
@@ -141,15 +195,8 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			return;
 		}
 
-		const usedPositions = currentAssignments.map((a) => a.position).sort((a, b) => a - b);
-		let nextPosition = 1;
-		for (const pos of usedPositions) {
-			if (nextPosition === pos) nextPosition++;
-			else break;
-		}
-
 		actions.assignHelper.mutate(
-			{ stationShiftId, helperId: draggedHelper.id, position: nextPosition },
+			{ stationShiftId, helperId: draggedHelper.id, position: nextFreePosition(currentAssignments) },
 			{
 				onSuccess: () => {
 					toast({
@@ -217,175 +264,100 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	}
 
 	return (
-		<div
-			className={cn(
-				'flex flex-col',
-				isFullscreen
-					? isMobile
-						? 'fixed inset-x-0 top-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 bg-background'
-						: 'fixed inset-0 z-50 bg-background'
-					: 'h-[calc(100vh-8rem)]'
-			)}>
-			<ShiftPlanningHeader
-				isFullscreen={isFullscreen}
-				onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+		<div className="space-y-3 sm:space-y-4">
+			<ShiftPlanningToolbar
+				metric={metric}
 				onAddStation={() => setDialogState({ type: 'station' })}
 				onAutoAssign={() => setDialogState({ type: 'autoAssign' })}
-				onAddHelper={() => setDialogState({ type: 'helper' })}
 				onShare={() => setIsShareDialogOpen(true)}
 			/>
 
-			{/* Mobile: Banner des ausgewählten Helfers */}
-			{isMobile && selectedHelper && (
-				<div className="flex items-center justify-between px-3 py-2 bg-primary/5 border-b border-primary/20">
-					<span className="text-sm font-medium">
-						{selectedHelper.last_name} {selectedHelper.first_name} — tippe auf eine Station/Schicht
-					</span>
-					<Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedHelper(null)}>
-						Abbrechen
-					</Button>
-				</div>
-			)}
-
-			<div className="flex-1 flex overflow-hidden">
-				<div className="flex-1 overflow-x-auto overflow-y-auto p-2 md:p-4">
+			{/* Werkbank: Fokus links, Helferliste rechts in 264px (#103). Unter
+			900px bleibt eine Spalte — die Liste zeigt sich dort gar nicht erst,
+			die Schublade am Handy baut #105. */}
+			<div className="grid items-start gap-4 min-[900px]:grid-cols-[minmax(0,1fr)_264px]">
+				<div className="min-w-0 space-y-3 sm:space-y-4">
 					{data.stations.length === 0 ? (
-						<div className="flex items-center justify-center h-full">
-							<div className="text-center text-muted-foreground">
-								<p>Erstellen Sie zuerst Stationen, um die Matrix zu sehen.</p>
-							</div>
-						</div>
+						<NoStationsNotice onAddStation={() => setDialogState({ type: 'station' })} />
 					) : (
-						<div className="flex gap-3 md:gap-4 items-start min-h-full pb-4">
-							{data.stations.map((station) => (
-								<div key={station.id} className="w-[280px] md:w-[320px] shrink-0">
-									<StationCard
-										station={station}
-										stationShifts={data.stationShifts.filter(
-											(s) => s.station_id === station.id
-										)}
-										stationHelpers={data.stationHelpers.filter(
-											(sm) => sm.station_id === station.id
-										)}
-										helpers={data.helpers}
-										getAssignments={getAssignmentsForStationShift}
-										selectedHelper={selectedHelper}
-										onTapAssignToShift={handleTapAssignToShift}
-										onTapAssignToStation={handleTapAssignToStation}
-										onEditStation={() => setDialogState({ type: 'station', station })}
-										onDeleteStation={() => {
-											if (
-												confirm(
-													'Sind Sie sicher, dass Sie diese Station löschen möchten? Alle zugehörigen Schichten werden ebenfalls gelöscht.'
-												)
-											) {
-												actions.deleteStation.mutate(station.id);
-											}
-										}}
-										onAddShift={() => setDialogState({ type: 'stationShift', station })}
-										onEditShift={(shift) =>
-											setDialogState({ type: 'stationShift', station, stationShift: shift })
-										}
-										onDeleteShift={(shiftId) => {
-											if (
-												confirm('Sind Sie sicher, dass Sie diese Schicht löschen möchten?')
-											) {
-												actions.deleteStationShift.mutate(shiftId);
-											}
-										}}
-										onRemoveHelper={(stationShiftId, helperId) => {
-											actions.removeHelper.mutate({ stationShiftId, helperId });
-										}}
-										onDrop={handleDrop}
-										onDropOnStation={handleDropOnStation}
-										onRemoveStationHelper={(stationId, helperId) => {
-											actions.removeHelperFromStation.mutate({ stationId, helperId });
-										}}
-									/>
-								</div>
-							))}
-						</div>
+						<>
+							<StationTabStrip
+								tabs={tabs}
+								activeStationId={activeStationId}
+								onSelect={setFocusStationId}
+							/>
+							{board && (
+								<StationFocusBox
+									board={board}
+									onAutoFill={() =>
+										setDialogState({ type: 'autoAssign', station: board.station })
+									}
+									onEditStation={() =>
+										setDialogState({ type: 'station', station: board.station })
+									}
+									// Die Rückfrage stellt das ⋮-Menü — sie kennt dort die
+									// Tragweite, die der Fokus-Kasten zeigt (#106).
+									onDeleteStation={() => actions.deleteStation.mutate(board.station.id)}
+									onAddShift={() =>
+										setDialogState({ type: 'stationShift', station: board.station })
+									}
+									onEditShift={(shift) =>
+										setDialogState({
+											type: 'stationShift',
+											station: board.station,
+											stationShift: shift
+										})
+									}
+									onDeleteShift={(shiftId) => actions.deleteStationShift.mutate(shiftId)}
+									onAssignToShift={handleTapAssignToShift}
+									onAssignToStation={() => handleTapAssignToStation(board.station.id)}
+									onDropOnShift={handleDrop}
+									onDropOnStation={(e) => handleDropOnStation(board.station.id, e)}
+									onRemoveFromShift={(stationShiftId, helperId) =>
+										actions.removeHelper.mutate({ stationShiftId, helperId })
+									}
+									onRemoveFromStation={(helperId) =>
+										actions.removeHelperFromStation.mutate({
+											stationId: board.station.id,
+											helperId
+										})
+									}
+								/>
+							)}
+						</>
 					)}
 				</div>
 
-				{/* Desktop sidebar */}
-				{!isMobile && (
-					<HelperSidebar
-						helpers={data.helpers}
-						stations={data.stations}
-						stationShifts={data.stationShifts}
-						assignments={data.assignments}
-						stationHelpers={data.stationHelpers}
-						stationPreferences={data.stationPreferences}
-						shiftPreferences={data.shiftPreferences}
-						nameFilter={nameFilter}
-						stationFilter={stationFilter}
-						assignmentFilter={assignmentFilter}
-						onNameFilterChange={setNameFilter}
-						onStationFilterChange={setStationFilter}
-						onAssignmentFilterChange={setAssignmentFilter}
-						onDragStart={setDraggedHelper}
-						onDragEnd={() => setDraggedHelper(null)}
-						onEditPreferences={(helper) => setDialogState({ type: 'preferences', helper })}
-						onEditHelper={(helper) => setDialogState({ type: 'helper', helper })}
-						onDeleteHelper={(helper) => {
-							if (confirm(removeHelperMessage(helper))) {
-								actions.deleteHelper.mutate(helper.id);
-							}
-						}}
-					/>
-				)}
+				<HelperRoster
+					roster={roster}
+					focusStationName={focusStation?.name ?? null}
+					search={helperSearch}
+					onSearchChange={setHelperSearch}
+					filter={helperFilter}
+					onFilterChange={setHelperFilter}
+					selectedHelperId={selectedHelper?.id ?? null}
+					onSelectHelper={handleSelectHelper}
+					onDragStart={setDraggedHelper}
+					onDragEnd={() => setDraggedHelper(null)}
+					onAddHelper={() => setDialogState({ type: 'helper' })}
+					onEditHelper={(helper) => setDialogState({ type: 'helper', helper })}
+					onRemoveHelper={(helper) => {
+						// Entfernen nimmt die Zuteilungen mit (ADR 0005) — die Rückfrage
+						// benennt das, sonst sähe die Geste aus wie „ausblenden".
+						if (confirm(removeHelperMessage(helper))) {
+							actions.deleteHelper.mutate(helper.id);
+							// Sonst bliebe ein gelöschter Helfer ausgewählt und ließe sich
+							// auf einen freien Platz setzen.
+							setSelectedHelper((current) => (current?.id === helper.id ? null : current));
+						}
+					}}
+				/>
 			</div>
-
-			{/* Mobile FAB + Drawer */}
-			{isMobile && (
-				<>
-					<Button
-						className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 bg-primary hover:bg-primary/90"
-						onClick={() => setIsHelperDrawerOpen(true)}
-					>
-						<Users className="h-6 w-6 text-primary-foreground" />
-					</Button>
-					<Drawer open={isHelperDrawerOpen} onOpenChange={setIsHelperDrawerOpen}>
-						<DrawerContent className="max-h-[85vh]">
-							<DrawerHeader className="pb-0">
-								<DrawerTitle>Helfer</DrawerTitle>
-							</DrawerHeader>
-							<HelperSidebar
-								variant="drawer"
-								helpers={data.helpers}
-								stations={data.stations}
-								stationShifts={data.stationShifts}
-								assignments={data.assignments}
-								stationHelpers={data.stationHelpers}
-								stationPreferences={data.stationPreferences}
-								shiftPreferences={data.shiftPreferences}
-								nameFilter={nameFilter}
-								stationFilter={stationFilter}
-								assignmentFilter={assignmentFilter}
-								onNameFilterChange={setNameFilter}
-								onStationFilterChange={setStationFilter}
-								onAssignmentFilterChange={setAssignmentFilter}
-								onDragStart={setDraggedHelper}
-								onDragEnd={() => setDraggedHelper(null)}
-								onTapSelect={handleTapSelect}
-								onEditPreferences={(helper) => setDialogState({ type: 'preferences', helper })}
-								onEditHelper={(helper) => setDialogState({ type: 'helper', helper })}
-								onDeleteHelper={(helper) => {
-									if (confirm(removeHelperMessage(helper))) {
-										actions.deleteHelper.mutate(helper.id);
-									}
-								}}
-							/>
-						</DrawerContent>
-					</Drawer>
-				</>
-			)}
 
 			{/* Dialogs */}
 			<StationDialog
 				open={dialogState.type === 'station'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
 				station={dialogState.type === 'station' ? dialogState.station : null}
 				helpers={data.helpers}
 				onSave={(formData) => {
@@ -405,7 +377,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 
 			<StationShiftDialog
 				open={dialogState.type === 'stationShift'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
 				stationShift={
 					dialogState.type === 'stationShift' ? dialogState.stationShift : null
 				}
@@ -414,14 +386,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 					if (dialogState.type === 'stationShift' && dialogState.stationShift) {
 						actions.updateStationShift.mutate({
 							id: dialogState.stationShift.id,
-							updates: {
-								name: formData.name,
-								start_date: formData.start_date,
-								start_time: formData.start_time,
-								end_date: formData.end_date || null,
-								end_time: formData.end_time,
-								required_people: formData.required_people
-							}
+							updates: formData
 						});
 					} else if (dialogState.type === 'stationShift') {
 						actions.createStationShift.mutate({
@@ -435,7 +400,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 
 			<HelperDialog
 				open={dialogState.type === 'helper'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
 				helper={dialogState.type === 'helper' ? dialogState.helper : null}
 				onSave={(formData) => {
 					if (dialogState.type === 'helper' && dialogState.helper) {
@@ -446,45 +411,39 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				}}
 			/>
 
-			<PreferenceDialog
-				open={dialogState.type === 'preferences'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
-				helper={dialogState.type === 'preferences' ? dialogState.helper : null}
-				stations={data.stations}
-				stationShifts={data.stationShifts}
-				stationPreferences={data.stationPreferences}
-				shiftPreferences={data.shiftPreferences}
-				onSave={(helperId, stationPrefs, shiftPrefs) => {
-					actions.savePreferences.mutate({ helperId, stationPrefs, shiftPrefs });
-				}}
-			/>
-
 			<AutoAssignDialog
 				open={dialogState.type === 'autoAssign'}
-				onOpenChange={(open) => !open && setDialogState({ type: null })}
+				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
+				scope={assignmentScope}
 				onAssign={(config) => {
+					// Einschränken heißt: dasselbe Verfahren über ein gefiltertes
+					// Schicht-Array (Entscheid 6 aus #68) — der Service bleibt unberührt.
 					if (
-						data.stationShifts.length === 0 ||
+						assignmentScope.shifts.length === 0 ||
 						data.stations.length === 0 ||
 						data.helpers.length === 0
 					) {
 						toast({
 							title: 'Fehler',
-							description:
-								'Es müssen Schichten, Stationen und Helfer vorhanden sein.',
+							description: 'Es müssen Schichten, Stationen und Helfer vorhanden sein.',
 							variant: 'destructive'
 						});
 						return;
 					}
-					actions.autoAssign.mutate({
-						stationShifts: data.stationShifts,
-						stations: data.stations,
-						helpers: data.helpers,
-						config,
-						stationPreferences: data.stationPreferences
-					});
+					actions.autoAssign.mutate(
+						{
+							stationShifts: assignmentScope.shifts,
+							stations: data.stations,
+							helpers: data.helpers,
+							config,
+							stationPreferences: data.stationPreferences
+						},
+						// Erst wenn der Lauf durch ist — bis dahin steht „Zuteilen…"
+						// auf dem Knopf, statt dass der Zettel im Nichts verschwindet.
+						{ onSettled: () => setDialogState({ type: 'none' }) }
+					);
 				}}
-				onClear={() => actions.clearAssignments.mutate()}
+				onClear={(stationId) => actions.clearAssignments.mutate({ stationId })}
 				isLoading={actions.autoAssign.isPending}
 			/>
 

@@ -1,21 +1,58 @@
 import { type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+import { sponsorHistoryOf, type SponsorHistory, type SponsorHistoryMap } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
+import { MissingValue } from '@/components/toolkit/PaperTable';
+import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import MastPanel from './MastPanel';
 
 export interface SponsorsTableProps {
 	/** Bereits gefilterter Ausschnitt des Sponsorenbestands, alphabetisch. */
 	sponsors: Sponsor[];
+	/** Sponsoren-Historie je Firma; fehlt eine, hat sie keine. */
+	history: SponsorHistoryMap;
 	/** Zeilenklick — Übergangsweg ins Firmendaten-Formular, bis #159 das ⋮ bringt. */
 	onSelect: (sponsor: Sponsor) => void;
 }
 
-/** Fehlender Wert: graues „–" statt einer leeren Zelle. */
-const MissingValue = () => <span className="text-tinte-soft/60">–</span>;
-
 const CellValue = ({ children }: { children: string | null }) =>
 	children ? <>{children}</> : <MissingValue />;
+
+/**
+ * Die Sponsoren-Historie einer Zeile: „2025 · 3 Feste", das Jahr in der
+ * Akzentschrift. Ohne Historie steht die rote gestrichelte Marke — dieselbe
+ * Marke ist im ⋮-Slice (#159) die Begründung, warum diese Firma löschbar ist.
+ * Ein Fest ohne Datum steuert kein Jahr bei, zählt aber mit; dann bleibt es
+ * bei der Anzahl statt einem erfundenen Jahr.
+ */
+function HistoryCell({ history }: { history: SponsorHistory }) {
+	if (history.festivalCount === 0) {
+		// Dasselbe Rezept wie die rote Lücke im Schichtplan (`OpenSlot`), nur
+		// enger gesetzt: in einer Frachtbrief-Zeile darf die Marke die Zeilenhöhe
+		// nicht treiben. Nichts zum Anklicken, also `span`.
+		return (
+			<OpenSlot as="span" className="px-1.5 py-px text-[11px] tracking-[.04em]">
+				NOCH NIE
+			</OpenSlot>
+		);
+	}
+
+	const feste = `${history.festivalCount} ${history.festivalCount === 1 ? 'Fest' : 'Feste'}`;
+	return (
+		<>
+			{history.lastYear !== null && (
+				<span className="font-display text-[13.5px] font-semibold tracking-[.02em]">
+					{history.lastYear}
+				</span>
+			)}
+			<span className="text-[11.5px] text-tinte-soft">
+				{history.lastYear !== null ? ' · ' : ''}
+				{feste}
+			</span>
+		</>
+	);
+}
 
 /**
  * Spaltenkopf: Versalien auf getönter Fläche. Klebt am Desktop unter der
@@ -45,7 +82,7 @@ function HeaderCell({ children, className }: { children?: ReactNode; className?:
  * der Kopf dort kleben: ein Scroll-Container würde das Kleben am Fenster
  * aushebeln.
  */
-export default function SponsorsTable({ sponsors, onSelect }: SponsorsTableProps) {
+export default function SponsorsTable({ sponsors, history, onSelect }: SponsorsTableProps) {
 	// Am Handy ist die Zeile das Trefferfeld — DESIGN-VISION §6 will dafür
 	// 40px, deshalb dort mehr Luft als am Desktop.
 	const cell = 'px-3 py-3 align-middle min-[900px]:py-2';
@@ -109,8 +146,10 @@ export default function SponsorsTable({ sponsors, onSelect }: SponsorsTableProps
 									<td className={cell}>
 										<CellValue>{sponsor.address}</CellValue>
 									</td>
-									{/* „Zuletzt" und ⋮ füllt der Historie- bzw. ⋮-Slice (#158/#159). */}
-									<td className={cn(cell, 'whitespace-nowrap')} />
+									<td className={cn(cell, 'whitespace-nowrap tabular-nums')}>
+										<HistoryCell history={sponsorHistoryOf(history, sponsor.id)} />
+									</td>
+									{/* Das ⋮ füllt #159. */}
 									<td className={cn(cell, 'w-10')} />
 								</tr>
 							))

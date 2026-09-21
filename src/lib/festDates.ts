@@ -5,6 +5,8 @@ const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 const MONTH_FORMAT = new Intl.DateTimeFormat('de-AT', { month: 'long' });
 
+const WEEKDAY_LONG_FORMAT = new Intl.DateTimeFormat('de-AT', { weekday: 'long' });
+
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -19,6 +21,24 @@ export function festDayStart(value: string | Date): Date {
 			: new Date(value);
 	d.setHours(0, 0, 0, 0);
 	return d;
+}
+
+/**
+ * Die bevorstehenden Feste, aufsteigend nach Start — ein heute startendes Fest
+ * zählt dazu (#90). Das erste davon ist das nächste Fest: die Plakatwand setzt
+ * es auf Rang 1, die Sponsoren-Seite nimmt es als Bezugsfest für „heuer".
+ * Beide fragen hier, damit es nur eine Ableitung gibt.
+ *
+ * Ein Fest ohne Startdatum ist nicht bevorstehend — ohne Datum steht nichts bevor.
+ */
+export function upcomingFestivals<T extends { start_date: string | null }>(
+	festivals: T[],
+	today: Date = new Date()
+): T[] {
+	const now = festDayStart(today).getTime();
+	return festivals
+		.filter((f) => f.start_date != null && festDayStart(f.start_date).getTime() >= now)
+		.sort((a, b) => festDayStart(a.start_date!).getTime() - festDayStart(b.start_date!).getTime());
 }
 
 /** Ganze Tage von heute bis zum Start; negativ, wenn der Start vorbei ist. */
@@ -46,6 +66,16 @@ export function formatFestDateRange(startDate: string, endDate?: string | null):
 	const sameMonth =
 		start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
 	return `${formatDay(start, !sameMonth)} – ${formatDay(end, true)}`;
+}
+
+/**
+ * „Samstag 25. Juli" — der ausgeschriebene Tages-Zwischentitel. Steht über den
+ * Schichten eines Tages auf der Fokus-Werkbank (#102) und, in derselben
+ * Sprache, über den Ablauf-Einträgen des Programmzettels.
+ */
+export function formatFestDayLong(date: string | Date): string {
+	const d = festDayStart(date);
+	return `${WEEKDAY_LONG_FORMAT.format(d)} ${d.getDate()}. ${MONTH_FORMAT.format(d)}`;
 }
 
 /**

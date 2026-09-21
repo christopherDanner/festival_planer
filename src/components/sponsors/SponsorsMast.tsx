@@ -13,6 +13,12 @@ import {
 export interface SponsorsMastProps {
 	/** Größe des Sponsorenbestands; `null`, solange er lädt (dann keine Zählzeile). */
 	sponsorCount: number | null;
+	/**
+	 * Wie viele Firmen das Bezugsfest sponsern, samt dessen Jahr. Entfällt
+	 * zwischen zwei Festen (kein Bezugsfest) und solange der Bestand lädt —
+	 * dann bleibt es bei der Firmenzahl.
+	 */
+	referenceSponsoring?: { count: number; year: number };
 	/** Kompakt-Mast unter 900px: „Abmelden" wandert ins ⋮. */
 	compact?: boolean;
 	/** Klick auf den Wordmark — der einzige Zurück-Weg dieser Seite. */
@@ -22,10 +28,19 @@ export interface SponsorsMastProps {
 }
 
 /**
- * Zählzeile des Sponsorenbestands. Der Historie-Slice (#158) hängt hier
- * „· {m} sponsern {Jahr}" an; bis dahin steht nur die Bestandsgröße.
+ * Zählzeile des Sponsorenbestands: „40 Firmen · 12 sponsern 2026". Zwischen
+ * zwei Festen gibt es kein Bezugsfest — dann bleibt es bei der Firmenzahl,
+ * statt ein Jahr zu erfinden (#158).
  */
-const sponsorCountLine = (count: number) => `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
+function sponsorCountLine(
+	count: number,
+	referenceSponsoring: { count: number; year: number } | undefined
+): string {
+	const firmen = `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
+	if (!referenceSponsoring) return firmen;
+	const { count: sponsoring, year } = referenceSponsoring;
+	return `${firmen} · ${sponsoring} ${sponsoring === 1 ? 'sponsert' : 'sponsern'} ${year}`;
+}
 
 /**
  * Mast der Sponsoren-Stammdaten (#101 Entscheid 2): eigener Kopf statt der
@@ -34,6 +49,7 @@ const sponsorCountLine = (count: number) => `${count} ${count === 1 ? 'Firma' : 
  */
 export default function SponsorsMast({
 	sponsorCount,
+	referenceSponsoring,
 	compact,
 	onOpenFestivalList,
 	onAddSponsor,
@@ -56,7 +72,9 @@ export default function SponsorsMast({
 	return (
 		<Mast
 			title="Sponsoren"
-			when={sponsorCount === null ? undefined : sponsorCountLine(sponsorCount)}
+			when={
+				sponsorCount === null ? undefined : sponsorCountLine(sponsorCount, referenceSponsoring)
+			}
 			compact={compact}
 			onWordmarkClick={onOpenFestivalList}
 			end={

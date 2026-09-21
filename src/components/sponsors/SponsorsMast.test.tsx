@@ -35,6 +35,23 @@ describe('SponsorsMast', () => {
 		expect(html).not.toContain('Firma');
 	});
 
+	it('vervollständigt die Zählzeile um die Firmen des Bezugsfests', () => {
+		const html = render({ referenceSponsoring: { count: 12, year: 2026 } });
+		expect(html).toContain('40 Firmen · 12 sponsern 2026');
+	});
+
+	it('sagt bei einer einzigen Firma „sponsert"', () => {
+		const html = render({ referenceSponsoring: { count: 1, year: 2026 } });
+		expect(html).toContain('1 sponsert 2026');
+	});
+
+	it('nennt ohne Bezugsfest nur die Firmenzahl — kein „sponsern undefined"', () => {
+		const html = render();
+		expect(html).toContain('40 Firmen');
+		expect(html).not.toContain('sponsern');
+		expect(html).not.toContain('undefined');
+	});
+
 	it('bietet den Wordmark als Zurück-Weg zur Festliste statt eines ←-Knopfs', () => {
 		const html = render();
 		expect(html).toContain('FESTMEISTER');

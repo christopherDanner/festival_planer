@@ -15,6 +15,8 @@ const renderHeader = (props: Partial<MaterialListHeaderProps> = {}) =>
 			onAddMaterial={noop}
 			onExport={noop}
 			onExportOrderList={noop}
+			allRowsOpen={false}
+			onToggleAllRows={noop}
 			{...props}
 		/>
 	);
@@ -60,5 +62,18 @@ describe('MaterialListHeader — Werkzeuge', () => {
 
 	it('bleibt ohne runde Ecken', () => {
 		expect(renderHeader()).not.toContain('rounded');
+	});
+});
+
+describe('MaterialListHeader — Schalter „Alle Zeilen bearbeiten" (#115)', () => {
+	it('bietet den Schalter an, der alle Zeilen der Gruppe auf einmal öffnet', () => {
+		// Fürs Nachtragen der Verbraucht-Mengen nach dem Fest (CONTEXT.md),
+		// real 76 Positionen — 76× ✎ wäre kein Weg.
+		expect(renderHeader()).toContain('ALLE ZEILEN');
+	});
+
+	it('zeigt am Schalter, ob die Zeilen gerade offen sind', () => {
+		expect(renderHeader({ allRowsOpen: false })).toContain('aria-pressed="false"');
+		expect(renderHeader({ allRowsOpen: true })).toContain('aria-pressed="true"');
 	});
 });

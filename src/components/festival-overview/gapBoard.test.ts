@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import type { Station, StationShift, ShiftAssignmentWithHelper, StationHelperWithDetails } from '@/lib/shiftService';
-import type { ScheduleDayWithPhases } from '@/lib/scheduleService';
+import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
-import { deriveGapBoard, formatShiftRange, formatDeadline } from './gapBoard';
+import { scheduleDay as day, scheduleTask as task } from '@/lib/__tests__/scheduleFactories';
+import { deriveGapBoard, formatDeadline } from './gapBoard';
 
 // --- Minimal factories: nur die Felder, die die Lücken-Ableitung liest. ---
 
@@ -83,62 +84,12 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 	};
 }
 
-function day(
-	over: Partial<ScheduleDayWithPhases> & {
-		entries?: ScheduleDayWithPhases['phases'][number]['entries'];
-	}
-): ScheduleDayWithPhases {
-	const { entries = [], ...rest } = over;
-	return {
-		id: 'd1',
-		festival_id: 'f1',
-		date: '2026-07-25',
-		label: null,
-		is_auto_generated: false,
-		sort_order: 0,
-		created_at: '',
-		updated_at: '',
-		phases: [
-			{
-				id: 'p1',
-				schedule_day_id: 'd1',
-				festival_id: 'f1',
-				name: 'Phase',
-				sort_order: 0,
-				created_at: '',
-				updated_at: '',
-				entries
-			}
-		],
-		...rest
-	};
-}
-
-function task(over: Partial<ScheduleDayWithPhases['phases'][number]['entries'][number]> = {}) {
-	return {
-		id: 't1',
-		schedule_phase_id: 'p1',
-		festival_id: 'f1',
-		title: 'Aufgabe',
-		type: 'task' as const,
-		start_time: null,
-		end_time: null,
-		responsible_helper_id: null,
-		status: 'open' as const,
-		description: null,
-		sort_order: 0,
-		created_at: '',
-		updated_at: '',
-		...over
-	};
-}
-
 const EMPTY = {
 	stations: [] as Station[],
 	shifts: [] as StationShift[],
 	assignments: [] as ShiftAssignmentWithHelper[],
 	stationHelpers: [] as StationHelperWithDetails[],
-	scheduleDays: [] as ScheduleDayWithPhases[],
+	scheduleDays: [] as ScheduleDayWithEntries[],
 	materials: [] as FestivalMaterialWithStation[]
 };
 
@@ -284,6 +235,21 @@ describe('deriveGapBoard — offene Aufgaben', () => {
 		expect(board.openTasks?.deadline.time).toBe('14:00:00');
 	});
 
+	it('zählt auch Aufgaben ohne Phase — sie hängen am Tag (ADR 0007)', () => {
+		const board = deriveGapBoard({
+			...EMPTY,
+			scheduleDays: [
+				day({
+					id: 'd1',
+					phases: [],
+					entries: [task({ id: 't1', schedule_phase_id: null, start_time: '07:00:00' })]
+				})
+			]
+		});
+		expect(board.openTasks?.count).toBe(1);
+		expect(board.openTasks?.deadline.time).toBe('07:00:00');
+	});
+
 	it('keine offene Aufgabe → null', () => {
 		const board = deriveGapBoard({ ...EMPTY, scheduleDays: [day({ entries: [] })] });
 		expect(board.openTasks).toBeNull();
@@ -313,26 +279,6 @@ describe('deriveGapBoard — Leerzustand', () => {
 	it('nicht leer, sobald irgendeine Lücke existiert', () => {
 		const board = deriveGapBoard({ ...EMPTY, materials: [material({ unit_price: null })] });
 		expect(board.isEmpty).toBe(false);
-	});
-});
-
-describe('formatShiftRange', () => {
-	it('kürzt volle Stunden: „Sa 15–19"', () => {
-		expect(formatShiftRange(shift({ start_date: '2026-07-25', start_time: '15:00:00', end_time: '19:00:00' }))).toBe(
-			'Sa 15–19'
-		);
-	});
-	it('behält Minuten, wenn nicht voll: „Sa 15:30–19"', () => {
-		expect(formatShiftRange(shift({ start_date: '2026-07-25', start_time: '15:30:00', end_time: '19:00:00' }))).toBe(
-			'Sa 15:30–19'
-		);
-	});
-	it('mehrtägig: zeigt den End-Wochentag', () => {
-		expect(
-			formatShiftRange(
-				shift({ start_date: '2026-07-25', start_time: '22:00:00', end_date: '2026-07-26', end_time: '02:00:00' })
-			)
-		).toBe('Sa 22–So 02');
 	});
 });
 

@@ -4,7 +4,6 @@ import autoTable from 'jspdf-autotable';
 import { POSTER_FONT } from '@/lib/pdfFonts';
 import {
 	POSTER_COLOR,
-	POSTER_LINE,
 	POSTER_MARGIN,
 	createPosterDoc,
 	drawPosterFooter,
@@ -12,18 +11,24 @@ import {
 	drawRuler,
 	drawSectionHeading,
 	drawStamp,
+	posterTableEnd,
 	posterTableTheme,
+	setPosterInk,
 	truncateToWidth
 } from '@/lib/pdfPoster';
-import type { Station, StationShift, ShiftAssignmentWithMember, StationMemberWithDetails } from '@/lib/shiftService';
+import {
+	buildStationBoards,
+	slotLabel,
+	stationMetaText,
+	type BoardRow,
+	type ShiftPlanSource,
+	type StationBoard
+} from '@/lib/shiftBoard';
+import type { StationShift } from '@/lib/shiftService';
 
-export interface ExportData {
+export interface ExportData extends ShiftPlanSource {
 	festivalName: string;
 	festivalDate: string;
-	stations: Station[];
-	stationShifts: StationShift[];
-	assignments: ShiftAssignmentWithHelper[];
-	stationHelpers: StationHelperWithDetails[];
 }
 
 function formatShiftTime(shift: StationShift): string {
@@ -103,10 +108,8 @@ export function exportToExcel(data: ExportData): void {
 		if (col.responsible) {
 			rows.push(`Leitung: ${col.responsible}`);
 		}
-    
-		rows.push(`${assignedPeople(col)}/${col.station.required_people} Personen`);
-    
-		const totalAssigned = col.stationHelperNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
+		const totalAssigned =
+			col.stationHelperNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
 		rows.push(`${totalAssigned}/${col.station.required_people} Personen`);
 		rows.push('');
 
@@ -160,93 +163,163 @@ export function exportToExcel(data: ExportData): void {
 
 // ── PDF Export ────────────────────────────────────────────────
 
-/** Eine Stationsspalte des Papiers, wie {@link buildStationColumns} sie baut. */
-type StationColumn = ReturnType<typeof buildStationColumns>[number];
+/** Rand, den die getönte Fußzeile samt Luft unter einer Tabelle braucht. */
+const FOOTER_SPACE = 14;
 
-/** Personen, die insgesamt auf einer Station stehen (Station + Schichten). */
-function assignedPeople(column: StationColumn): number {
-	return (
-		column.stationMemberNames.length +
-		column.shiftBlocks.reduce((sum, block) => sum + block.names.length, 0)
-	);
+/** Breitenanteil der Meta-Zeile im Stations-Kopf; rechts daneben stehen
+Maßband und Stempel. */
+const META_WIDTH = 0.52;
+
+/** Spaltenbreiten der Schicht-Tabelle in mm; die Plätze nehmen den Rest. */
+const COL_TIME = 28;
+const COL_SHIFT = 34;
+const COL_OPEN = 22;
+
+/** Neue Seite, sobald der angefangene Block nicht mehr sinnvoll drauf passt. */
+function breakIfTight(doc: jsPDF, y: number, needed: number): number {
+	if (y <= doc.internal.pageSize.getHeight() - FOOTER_SPACE - needed) return y;
+	doc.addPage();
+	return POSTER_MARGIN;
 }
 
 /**
- * Besetzungs-Leiste: je Station ein Maßband mit Ist/Soll und ein Stempel, der
- * Klartext spricht („VOLL BESETZT" / „3 FEHLEN", DESIGN-VISION §4).
+ * Kopf eines Stations-Blocks: Name und Soll/Ist als Sektionszeile, darunter Ort
+ * und Leitung, daneben Maßband und Stempel („VOLL BESETZT" / „3 FEHLEN",
+ * DESIGN-VISION §4).
  *
- * @returns y-Kante unter der Leiste.
+ * @returns y-Kante unter dem Kopf.
  */
-function drawStaffingBars(doc: jsPDF, columns: StationColumn[], startY: number): number {
-	const pageWidth = doc.internal.pageSize.getWidth();
-	const pageHeight = doc.internal.pageSize.getHeight();
-	const width = pageWidth - POSTER_MARGIN * 2;
+function drawStationHead(doc: jsPDF, board: StationBoard, startY: number): number {
+	const width = doc.internal.pageSize.getWidth() - POSTER_MARGIN * 2;
 	let y = drawSectionHeading(doc, {
 		x: POSTER_MARGIN,
 		y: startY,
 		width,
-		label: 'Besetzung',
-		note: `${columns.length} Stationen`
+		label: board.station.name,
+		note: `${board.assigned}/${board.required} Personen`
 	});
-	y += 2;
+	y += 1.5;
 
-	for (const column of columns) {
-		if (y > pageHeight - 24) {
-			doc.addPage();
-			y = POSTER_MARGIN;
-		}
-		const assigned = assignedPeople(column);
-		const required = column.station.required_people;
-		const missing = Math.max(0, required - assigned);
-
-		doc.setFont(POSTER_FONT.accent, 'normal');
-		doc.setFontSize(11);
-		doc.setTextColor(...POSTER_COLOR.tinte);
-		// Der Name darf nicht ins Maßband laufen — lieber gekürzt als überdruckt.
-		const nameWidth = width * 0.22;
-		doc.text(
-			truncateToWidth(doc, column.station.name.toUpperCase(), nameWidth),
-			POSTER_MARGIN,
-			y + 4.2
-		);
-
-		drawRuler(doc, {
-			x: POSTER_MARGIN + width * 0.24,
-			y: y + 0.6,
-			width: width * 0.38,
-			value: assigned,
-			max: required,
-			height: 4.5
-		});
-
-		doc.setFont(POSTER_FONT.body, 'bold');
+	const meta = stationMetaText(board);
+	if (meta) {
+		doc.setFont(POSTER_FONT.body, 'normal');
 		doc.setFontSize(8.5);
-		doc.text(`${assigned}/${required} Personen`, POSTER_MARGIN + width * 0.64, y + 4.2);
-
-		// Rechts angeschlagen: die Stempelbreite hängt am Wortlaut, der Rahmen
-		// soll trotzdem am Seitenrand enden.
-		drawStamp(doc, {
-			x: POSTER_MARGIN + width,
-			y,
-			label: missing > 0 ? `${missing} fehlen` : 'Voll besetzt',
-			tone: missing > 0 ? 'rot' : 'gruen',
-			align: 'right'
-		});
-
-		y += 7.5;
+		setPosterInk(doc, POSTER_COLOR.tinteSoft);
+		// Die Zeile darf nicht ins Maßband laufen — lieber gekürzt als überdruckt.
+		doc.text(truncateToWidth(doc, meta, width * META_WIDTH), POSTER_MARGIN, y + 3.6);
 	}
 
-	return y + 4;
+	drawRuler(doc, {
+		x: POSTER_MARGIN + width * 0.56,
+		y: y + 0.4,
+		width: width * 0.2,
+		value: board.assigned,
+		max: board.required,
+		height: 4.5
+	});
+
+	// Rechts angeschlagen: die Stempelbreite hängt am Wortlaut, der Rahmen soll
+	// trotzdem am Seitenrand enden.
+	drawStamp(doc, {
+		x: POSTER_MARGIN + width,
+		y,
+		label: board.open > 0 ? `${board.open} fehlen` : 'Voll besetzt',
+		tone: board.open > 0 ? 'rot' : 'gruen',
+		align: 'right'
+	});
+
+	return y + 8;
+}
+
+/** Tages-Zwischentitel in der Akzentschrift, rechts die Zähler des Tages —
+derselbe Wortlaut wie auf der Werkbank. */
+function drawDayHeading(
+	doc: jsPDF,
+	day: { title: string; shiftCount: number; open: number },
+	y: number
+): number {
+	const width = doc.internal.pageSize.getWidth() - POSTER_MARGIN * 2;
+
+	doc.setFont(POSTER_FONT.accent, 'normal');
+	doc.setFontSize(11);
+	setPosterInk(doc, POSTER_COLOR.gruen);
+	doc.text(day.title.toUpperCase(), POSTER_MARGIN, y + 3.5);
+
+	doc.setFont(POSTER_FONT.body, 'bold');
+	doc.setFontSize(8);
+	setPosterInk(doc, POSTER_COLOR.tinteSoft);
+	const shifts = `${day.shiftCount} ${day.shiftCount === 1 ? 'Schicht' : 'Schichten'}`;
+	doc.text(
+		`${shifts} · ${day.open > 0 ? `${day.open} offen` : 'voll besetzt'}`,
+		POSTER_MARGIN + width,
+		y + 3.5,
+		{ align: 'right' }
+	);
+
+	setPosterInk(doc, POSTER_COLOR.tinte);
+	return y + 5.5;
 }
 
 /**
- * Baut den Schichtplan als Plakat (im Issue „Einsatzplan"; im Glossar heißt das
- * Papier Schichtplan); das Speichern macht {@link exportToPdf}.
+ * Die Schicht-Zeilen eines Tages als Frachtbrief-Tabelle: Zeit, Schicht, das
+ * durchnummerierte Platz-Raster und der Offen-Zähler. Fehlende Besetzungen
+ * beschriftet `slotLabel` als offen — eine Lücke, die niemand sieht, füllt auch
+ * niemand.
+ *
+ * @returns y-Kante unter der Tabelle.
+ */
+function drawShiftRows(doc: jsPDF, rows: BoardRow[], startY: number): number {
+	const theme = posterTableTheme();
+	autoTable(doc, {
+		...theme,
+		startY,
+		margin: { left: POSTER_MARGIN, right: POSTER_MARGIN, top: POSTER_MARGIN, bottom: FOOTER_SPACE },
+		head: [['Zeit', 'Schicht', 'Besetzung', 'Offen']],
+		body: rows.map((row) => [
+			row.time,
+			row.shift ? row.shift.name : 'Keine Schichten',
+			row.slots.map(slotLabel).join('\n'),
+			row.open > 0 ? `${row.open} offen` : 'voll'
+		]),
+		columnStyles: {
+			// Uhrzeiten sind ein Fall für die Akzentschrift (Vision §4).
+			0: { cellWidth: COL_TIME, halign: 'center', font: POSTER_FONT.accent, fontSize: 10 },
+			1: { cellWidth: COL_SHIFT },
+			2: { cellWidth: 'auto' },
+			3: { cellWidth: COL_OPEN, halign: 'center', fontStyle: 'bold' }
+		},
+		didParseCell: (hookData) => {
+			if (hookData.section !== 'body') return;
+			const row = rows[hookData.row.index];
+			// Die Pseudo-Zeile „GANZES FEST" ist keine Uhrzeit und braucht den
+			// Platz von zwei — in der Zeit-Spalte darum eine Stufe kleiner.
+			if (hookData.column.index === 0 && !row.shift) hookData.cell.styles.fontSize = 7.5;
+			// Der Offen-Zähler trägt die Ampel der Zeile (Werkbank: „1 OFFEN"/„VOLL").
+			if (hookData.column.index === 3) {
+				hookData.cell.styles.textColor = [
+					...(row.open > 0 ? POSTER_COLOR.rot : POSTER_COLOR.gruen)
+				];
+			}
+		}
+	});
+	return posterTableEnd(doc) + 4;
+}
+
+/**
+ * Baut den Schichtplan als Plakat; das Speichern macht {@link exportToPdf}.
+ *
+ * Gegliedert wird wie auf der Fokus-Werkbank: **Station → Tag → Schicht →
+ * Plätze**, im Hochformat. Die früheren Stationsspalten nebeneinander sind
+ * dasselbe Layout, das die Werkbank abgeschafft hat (#102) — wer den Ausdruck
+ * daneben legte, fand sich nicht zurecht (#109).
+ *
+ * Die volle Plakat-Optik (Oswald-Titel je Station, grüner Halftone-Kopf,
+ * Maßbänder als Kasten-Rahmen) ist ausdrücklich nicht hier: sie wird einmal für
+ * alle drei Papiere gelöst.
  */
 export function buildShiftPlanPdf(data: ExportData): jsPDF {
-	const doc = createPosterDoc({ orientation: 'landscape' });
-	const pageWidth = doc.internal.pageSize.getWidth();
-	const margin = POSTER_MARGIN;
+	const doc = createPosterDoc({ orientation: 'portrait' });
+	const width = doc.internal.pageSize.getWidth() - POSTER_MARGIN * 2;
 
 	let y = drawPosterHead(doc, {
 		title: data.festivalName,
@@ -255,107 +328,42 @@ export function buildShiftPlanPdf(data: ExportData): jsPDF {
 		height: 20
 	});
 
-	// ── Station columns as table ──
-	const columns = buildStationColumns(data);
-	y = drawStaffingBars(doc, columns, y);
-	y = drawSectionHeading(doc, {
-		x: margin,
-		y,
-		width: pageWidth - margin * 2,
-		label: 'Schichten'
-	});
-	y += 2;
-	const head = columns.map(col => col.station.name);
+	for (const board of buildStationBoards(data)) {
+		// Ein Stations-Kopf allein am Seitenfuß hilft niemandem — er nimmt die
+		// erste Zeile seiner Tabelle mit.
+		y = breakIfTight(doc, y, 38);
+		y = drawStationHead(doc, board, y);
 
-	const colLines: string[][] = columns.map(col => {
-		const lines: string[] = [];
-		if (col.responsible) {
-			lines.push(`Leitung: ${col.responsible}`);
-		}
-		/* Leerzeile nur zwischen zwei Blöcken — sonst beginnt die Spalte mit
-		einer leeren Zeile, die quer durch alle Stationen läuft. */
-		const separate = () => {
-			if (lines.length > 0) lines.push('');
-		};
-
-		if (col.stationMemberNames.length > 0) {
-			separate();
-			for (const name of col.stationMemberNames) lines.push(name);
-    }
-      
-		const totalAssigned = col.stationHelperNames.length + col.shiftBlocks.reduce((s, b) => s + b.names.length, 0);
-		lines.push(`${totalAssigned}/${col.station.required_people} Personen`);
-
-		if (col.stationHelperNames.length > 0) {
-			lines.push('');
-			for (const name of col.stationHelperNames) lines.push(name);
+		for (const day of board.days) {
+			y = breakIfTight(doc, y, 26);
+			y = drawDayHeading(doc, day, y);
+			y = drawShiftRows(doc, day.rows, y);
 		}
 
-		for (const block of col.shiftBlocks) {
-			separate();
-			lines.push(block.label);
-			lines.push(`${block.filled}/${block.required} besetzt`);
-			if (block.names.length > 0) {
-				for (const name of block.names) lines.push(name);
-			} else {
-				lines.push('– keine –');
-			}
+		// Eine Station ohne Schichten plant eine Ebene höher: ein Platz-Raster
+		// über das ganze Fest (Entscheid 1 aus #68).
+		if (board.wholeFestRow) {
+			y = drawShiftRows(doc, [board.wholeFestRow], y);
 		}
 
-		return lines;
-	});
+		if (board.members.length > 0) {
+			// Die Tabelle darf bis dicht an die Fußzeile laufen — die Zeile darunter
+			// läge sonst darin.
+			y = breakIfTight(doc, y, 6);
+			doc.setFont(POSTER_FONT.body, 'normal');
+			doc.setFontSize(8);
+			setPosterInk(doc, POSTER_COLOR.tinteSoft);
+			doc.text(
+				truncateToWidth(doc, `Ohne Schicht: ${board.members.map((m) => m.name).join(', ')}`, width),
+				POSTER_MARGIN,
+				y + 2.8
+			);
+			setPosterInk(doc, POSTER_COLOR.tinte);
+			y += 6;
+		}
 
-	const maxLines = Math.max(...colLines.map(l => l.length));
-	const bodyRows: string[][] = [];
-	for (let r = 0; r < maxLines; r++) {
-		bodyRows.push(colLines.map(lines => lines[r] ?? ''));
+		y += 4;
 	}
-
-	const usableWidth = pageWidth - margin * 2;
-	const colWidth = usableWidth / columns.length;
-
-	const theme = posterTableTheme({ fontSize: 7.5 });
-	autoTable(doc, {
-		...theme,
-		startY: y,
-		head: [head],
-		body: bodyRows,
-		styles: { ...theme.styles, cellWidth: 'wrap' },
-		headStyles: {
-			...theme.headStyles,
-			// Stationsnamen sind ein Fall für die Akzentschrift (Vision §4).
-			font: POSTER_FONT.accent,
-			fontStyle: 'normal',
-			fontSize: 11,
-			halign: 'center'
-		},
-		// Die Zeilen sind hier Textzeilen, keine Datensätze — Wechseltönung
-		// würde quer durch die Stationsspalten laufen.
-		alternateRowStyles: { fillColor: [...POSTER_COLOR.weiss] },
-		columnStyles: Object.fromEntries(
-			columns.map((_, i) => [i, { cellWidth: colWidth, minCellWidth: 30 }])
-		),
-		tableWidth: usableWidth,
-		didParseCell: (hookData) => {
-			if (hookData.section !== 'body') return;
-			const text = hookData.cell.raw as string;
-			// Zähler und Leitung treten hinter die Namen zurück …
-			if (/^\d+\/\d+ besetzt$/.test(text) || text.startsWith('Leitung:')) {
-				hookData.cell.styles.textColor = [...POSTER_COLOR.tinteSoft];
-				hookData.cell.styles.fontSize = 6.8;
-			}
-			// … die Schicht selbst ist die Zwischenzeile der Spalte:
-			// „Name (Do 01.01 08:00–16:00)".
-			if (/\(\w{2}\s\d{2}\.\d{2}/.test(text)) {
-				hookData.cell.styles.fontStyle = 'bold';
-				hookData.cell.styles.fontSize = 7.5;
-				hookData.cell.styles.fillColor = [...POSTER_COLOR.fusszeile];
-			}
-			if (text === '– keine –') {
-				hookData.cell.styles.textColor = [...POSTER_COLOR.rot];
-			}
-		}
-	});
 
 	drawPosterFooter(doc, `${data.festivalName} — Schichtplan`);
 	return doc;

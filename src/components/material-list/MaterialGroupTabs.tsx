@@ -1,9 +1,9 @@
 import React from 'react';
 
-import { cn } from '@/lib/utils';
-import { SegmentedBase } from '@/components/toolkit/SegmentedBase';
 import { formatEuro } from '@/lib/money';
 import type { MaterialAxis, MaterialGroup } from '@/lib/materialGrouping';
+
+import GroupTabStrip, { GroupTabFigures, GroupTabTitle } from './GroupTabStrip';
 
 export interface MaterialGroupTabsProps {
 	groups: MaterialGroup[];
@@ -14,14 +14,10 @@ export interface MaterialGroupTabsProps {
 
 /**
  * Reiter-Streifen der Arbeitsliste (#113): je Gruppe ein Reiter mit Name,
- * Anzahl, Zwischensumme und den Preislücken. Der Streifen **bricht um und
- * scrollt nicht** — dieselbe Regel wie der Ampel-Streifen aus #68; auf der
- * Lieferanten-Achse sind das real ~13 sehr ungleich gefüllte Reiter.
+ * Anzahl, Zwischensumme und den Preislücken. Streifen und Verhalten kommen aus
+ * `GroupTabStrip` — die Übernahme (#118) trägt denselben.
  *
- * Auf der Achse ALLE entfällt der Streifen, weil es dort genau einen Kasten
- * gibt. Das Auswahlverhalten (Pfeiltasten, Roving-Tabindex) kommt aus dem
- * Toolkit-Baustein `SegmentedBase` — nur das Aussehen ist hier eigen, weil ein
- * Reiter mehr trägt als eine Beschriftung.
+ * Auf der Achse ALLE entfällt der Streifen, weil es dort genau einen Kasten gibt.
  */
 const MaterialGroupTabs: React.FC<MaterialGroupTabsProps> = ({
 	groups,
@@ -29,44 +25,31 @@ const MaterialGroupTabs: React.FC<MaterialGroupTabsProps> = ({
 	activeGroupId,
 	onSelect
 }) => {
-	if (axis === 'all' || groups.length === 0) return null;
+	if (axis === 'all') return null;
 
 	const options = groups.map((group) => ({
 		value: group.id,
 		label: (
 			<>
-				<span className="flex items-baseline justify-between gap-2.5 font-display text-sm font-semibold uppercase tracking-[.03em]">
-					{group.name}
-					<span className="text-xs tabular-nums">{group.count}</span>
-				</span>
-				<span className="mt-0.5 flex items-baseline justify-between gap-2 text-[11px] font-medium text-tinte-soft">
+				<GroupTabTitle name={group.name} count={group.count} />
+				<GroupTabFigures>
 					<span className="tabular-nums">{formatEuro(group.total)}</span>
 					{group.withoutPrice > 0 ? (
 						<span className="font-bold text-rot">{group.withoutPrice} ohne Preis</span>
 					) : (
 						<span aria-hidden>✓</span>
 					)}
-				</span>
+				</GroupTabFigures>
 			</>
 		)
 	}));
 
 	return (
-		<SegmentedBase
+		<GroupTabStrip
 			options={options}
-			value={activeGroupId ?? ''}
-			onValueChange={onSelect}
+			activeId={activeGroupId}
+			onSelect={onSelect}
 			aria-label="Gruppe der Arbeitsliste"
-			className="flex flex-wrap gap-2"
-			buttonClassName={(active) =>
-				cn(
-					// Ein Breakpoint für die ganze App (DESIGN-VISION §6): unter 900px
-					// teilen sich die Reiter die Zeile, darüber tragen sie ihre Breite.
-					'flex min-w-[158px] flex-1 flex-col border-2 border-tinte px-3.5 pb-2 pt-2.5 text-left min-[900px]:flex-none',
-					'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte',
-					active ? 'bg-gelb shadow-versatz' : 'bg-white hover:bg-papier-getoent'
-				)
-			}
 		/>
 	);
 };
