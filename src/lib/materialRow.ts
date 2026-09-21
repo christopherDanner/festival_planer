@@ -13,6 +13,21 @@ export interface RowQuantities {
 }
 
 /**
+ * Die Steuersätze, die die Materialliste zur Wahl stellt. Sie stehen hier
+ * neben `taxCell`, weil der Stammdaten-Dialog (#117) und der Zeilenmodus
+ * (#115/#116) dasselbe Feld anbieten — zweimal getippt liefe ein neuer Satz
+ * unweigerlich auseinander.
+ *
+ * Der Hinweis ist der österreichische Anlass des Satzes; wo das Feld dafür zu
+ * schmal ist (die Kachel der Handy-Karte), steht nur der Satz.
+ */
+export const TAX_RATES: readonly { rate: number; hint: string }[] = [
+	{ rate: 10, hint: 'Lebensmittel' },
+	{ rate: 13, hint: 'Beherbergung' },
+	{ rate: 20, hint: 'Standard' }
+];
+
+/**
  * MwSt-Spalte: „10 %" oder „keine". Ohne Steuersatz sind Netto- und
  * Bruttospalte derselbe Betrag (CONTEXT.md, Entscheid in #114) — das Wort sagt
  * warum, eine leere Zelle sähe nach fehlender Angabe aus. Es steht gedämpft,

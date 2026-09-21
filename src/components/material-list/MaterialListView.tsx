@@ -6,13 +6,18 @@ import MaterialListHeader from './MaterialListHeader';
 import MaterialTotals from './MaterialTotals';
 import MaterialAxisBar from './MaterialAxisBar';
 import MaterialGroupTabs from './MaterialGroupTabs';
+import MaterialGroupDrawer from './MaterialGroupDrawer';
 import MaterialGroupBox from './MaterialGroupBox';
 import MaterialTable from './MaterialTable';
+import MaterialCardList from './MaterialCardList';
+import UnsavedCardsDialog from './UnsavedCardsDialog';
 import RowEditBulkBar from './RowEditBulkBar';
 import RowEditGuardDialog from './RowEditGuardDialog';
+import { useMaterialCardDrafts } from './hooks/useMaterialCardDrafts';
 import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
 import OrderListExportDialog from './dialogs/OrderListExportDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
 import { useRowEditor } from '@/hooks/useRowEditor';
@@ -50,8 +55,16 @@ interface MaterialListViewProps {
  */
 const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festivalName }) => {
 	const navigate = useNavigate();
+	const isMobile = useIsMobile();
 	const { materials, stations, isLoading } = useMaterialListData(festivalId);
 	const actions = useMaterialListActions(festivalId);
+
+	// Die offenen Karten des Zeilenmodus am Handy (#116). Sie hängen hier und
+	// nicht an der Kartenliste, weil Achsen-Umschalter und Gruppen-Schublade
+	// darüber stehen und durch dieselbe Rückfrage müssen.
+	const cards = useMaterialCardDrafts((id, updates) =>
+		actions.updateMaterial.mutate({ id, updates })
+	);
 
 	const [dialogState, setDialogState] = useState<DialogState>({ type: null });
 	const [searchTerm, setSearchTerm] = useState('');
@@ -92,12 +105,17 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	});
 	const allRowsOpen = visible.length > 0 && visible.every((m) => snapshot.draftsById[m.id]);
 
-	// Achse, Reiter, Chip und Suche nehmen die offenen Zeilen aus dem Bild —
-	// mit ungespeicherten Änderungen fragt der Zeilenmodus erst nach.
+	// Achse, Reiter, Chip und Suche nehmen offene Eingaben aus dem Bild — mit
+	// ungespeicherten Änderungen wird erst gefragt. *Welche* Rückfrage greift,
+	// hängt am Gerät: am Handy hält der Kartenmodus (#116) das Getippte, am
+	// Desktop der Zeilenmodus (#115). Beide Wege gehen durch diese eine Stelle,
+	// damit kein Sichtwechsel an der Rückfrage vorbeikommt.
 	const guarded =
 		<T,>(change: ViewChange, set: (value: T) => void) =>
 		(value: T) =>
-			editor.requestViewChange(change, () => set(value));
+			isMobile
+				? cards.attempt(() => set(value))
+				: editor.requestViewChange(change, () => set(value));
 
 	// Die Bestellliste kennt nur zwei Achsen (CONTEXT.md): wer nach Station
 	// plant, bestellt für die Station; sonst beim Lieferanten. Der Reiter reist
@@ -123,6 +141,32 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	const openNewPosition = (from?: MaterialPrefill) => {
 		setPrefill(from);
 		setDialogState({ type: 'material' });
+	};
+
+	/** ⋮ → Stammdaten-Dialog (#117) — aus Tabellenzeile wie aus Karte derselbe Weg. */
+	const openPosition = (material: FestivalMaterialWithStation) => {
+		setPrefill(undefined);
+		setDialogState({ type: 'material', material });
+	};
+
+	const copyPosition = (material: FestivalMaterialWithStation) => {
+		actions.createMaterial.mutate({
+			festival_id: material.festival_id,
+			name: `${material.name} (Kopie)`,
+			category: material.category,
+			station_id: material.station_id,
+			supplier: material.supplier,
+			unit: material.unit,
+			packaging_unit: material.packaging_unit,
+			amount_per_packaging: material.amount_per_packaging,
+			ordered_quantity: material.ordered_quantity,
+			actual_quantity: null,
+			unit_price: material.unit_price,
+			tax_rate: material.tax_rate,
+			price_is_net: material.price_is_net,
+			price_per: material.price_per,
+			notes: material.notes
+		});
 	};
 
 	if (isLoading) {
@@ -173,14 +217,25 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 			*einen* Kasten. */}
 			<MaterialTotals materials={found} totalCount={materials.length} />
 
+			{/* Der Achsen-Umschalter bleibt am Handy oben als Knöpfe wie am Desktop
+			(#116) — nur die Gruppen-Auswahl darunter wechselt die Gestalt. */}
 			<MaterialAxisBar axis={axis} onAxisChange={guarded('axis', setAxis)} />
 
-			<MaterialGroupTabs
-				groups={groups}
-				axis={axis}
-				activeGroupId={activeGroupId}
-				onSelect={guarded('group', setRequestedGroupId)}
-			/>
+			{isMobile ? (
+				<MaterialGroupDrawer
+					groups={groups}
+					axis={axis}
+					activeGroupId={activeGroupId}
+					onSelect={guarded('group', setRequestedGroupId)}
+				/>
+			) : (
+				<MaterialGroupTabs
+					groups={groups}
+					axis={axis}
+					activeGroupId={activeGroupId}
+					onSelect={guarded('group', setRequestedGroupId)}
+				/>
+			)}
 
 			{activeGroup && (
 				<MaterialGroupBox
@@ -189,63 +244,57 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 					visibleMaterials={visible}
 					categories={groupChips}
 					activeCategory={activeCategory}
+					// Der Chip nimmt Karten bzw. Zeilen aus der Sicht wie ein
+					// Gruppenwechsel — darum durch dieselbe Rückfrage (#115/#116).
 					onCategoryChange={guarded('category', setRequestedCategory)}
 					onAddPosition={() => openNewPosition(prefillFromGroup(activeGroup, axis))}
 				>
-					<MaterialTable
-						materials={visible}
-						// Im Stations-Kasten wäre die Station in jeder Zeile dieselbe.
-						showStation={axis !== 'station'}
-						onEdit={(material) => {
-							setPrefill(undefined);
-							setDialogState({ type: 'material', material });
-						}}
-						onDelete={(id) => actions.deleteMaterial.mutate(id)}
-						onCopy={(material) => {
-							actions.createMaterial.mutate({
-								festival_id: material.festival_id,
-								name: `${material.name} (Kopie)`,
-								category: material.category,
-								station_id: material.station_id,
-								supplier: material.supplier,
-								unit: material.unit,
-								packaging_unit: material.packaging_unit,
-								amount_per_packaging: material.amount_per_packaging,
-								ordered_quantity: material.ordered_quantity,
-								actual_quantity: null,
-								unit_price: material.unit_price,
-								tax_rate: material.tax_rate,
-								price_is_net: material.price_is_net,
-								price_per: material.price_per,
-								notes: material.notes
-							});
-						}}
-						onUpdateField={(id, field, value) => {
-							actions.updateMaterial.mutate({ id, updates: { [field]: value } });
-						}}
-						onUpdateFields={(id, partial) => {
-							actions.updateMaterial.mutate({ id, updates: partial });
-						}}
-						rowEdit={{
-							draftsById: snapshot.draftsById,
-							savedIds: snapshot.savedIds,
-							focusId: snapshot.focusId,
-							onStartEdit: editor.open,
-							onDraftChange: editor.edit,
-							onSaveRow: editor.save,
-							onCancelRow: editor.cancel
-						}}
-					/>
-					{/* Die Fußleiste zählt den Kasten, nicht das Fest — offen ist, was
-					man vor sich sieht. */}
-					<RowEditBulkBar
-						open={snapshot.open}
-						dirty={snapshot.dirty}
-						onSaveAll={editor.saveAll}
-						onCancelAll={editor.cancelAll}
-					/>
+					{isMobile ? (
+						// Am Handy Karten statt der querscrollenden Tabelle (#116).
+						<MaterialCardList
+							materials={visible}
+							showStation={axis !== 'station'}
+							cards={cards}
+							onEdit={openPosition}
+							onCopy={copyPosition}
+							onDelete={(id) => actions.deleteMaterial.mutate(id)}
+						/>
+					) : (
+						<>
+							<MaterialTable
+								materials={visible}
+								// Im Stations-Kasten wäre die Station in jeder Zeile dieselbe.
+								showStation={axis !== 'station'}
+								onEdit={openPosition}
+								onDelete={(id) => actions.deleteMaterial.mutate(id)}
+								onCopy={copyPosition}
+								rowEdit={{
+									draftsById: snapshot.draftsById,
+									savedIds: snapshot.savedIds,
+									focusId: snapshot.focusId,
+									onStartEdit: editor.open,
+									onDraftChange: editor.edit,
+									onSaveRow: editor.save,
+									onCancelRow: editor.cancel
+								}}
+							/>
+							{/* Die Fußleiste zählt den Kasten, nicht das Fest — offen ist, was
+							man vor sich sieht. */}
+							<RowEditBulkBar
+								open={snapshot.open}
+								dirty={snapshot.dirty}
+								onSaveAll={editor.saveAll}
+								onCancelAll={editor.cancelAll}
+							/>
+						</>
+					)}
 				</MaterialGroupBox>
 			)}
+
+			{/* Je Gerät fragt der Modus, der dort tippen lässt: am Handy die Karten,
+			am Desktop die Zeilen. Beide hängen an derselben Stelle, damit keiner
+			von beiden still offen bleibt. */}
+			<UnsavedCardsDialog cards={cards} />
 
 			<RowEditGuardDialog
 				change={snapshot.guard}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import MaterialTable, { MaterialMobileCard } from './MaterialTable';
+import MaterialTable from './MaterialTable';
 import type { RowEditControls } from './MaterialTableCells';
 import { draftFromMaterial, editDraft, type RowDraft } from '@/lib/materialRowDraft';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
@@ -57,22 +57,7 @@ const renderTable = (
 			onEdit={noop}
 			onDelete={noop}
 			onCopy={noop}
-			onUpdateField={noop}
-			onUpdateFields={noop}
 			rowEdit={rowEdit}
-		/>
-	);
-
-const renderCard = (material: FestivalMaterialWithStation, showStation: boolean) =>
-	renderToStaticMarkup(
-		<MaterialMobileCard
-			material={material}
-			showStation={showStation}
-			onEdit={noop}
-			onDelete={noop}
-			onCopy={noop}
-			onUpdateField={noop}
-			onUpdateFields={noop}
 		/>
 	);
 
@@ -117,11 +102,7 @@ describe('MaterialTable — die elf Spalten (#114)', () => {
 		expect(headers(html)).not.toContain('Station');
 	});
 
-	it('lässt die Station auch auf der Handy-Karte weg', () => {
-		const row = material({ station: { id: 's1', name: 'Ausschank' } });
-		expect(renderCard(row, false)).not.toContain('Ausschank');
-		expect(renderCard(row, true)).toContain('Ausschank');
-	});
+	// Dieselbe Regel für die Handy-Karte steht in `MaterialCard.test.tsx` (#116).
 });
 
 describe('MaterialTable — nur lesend, solange keine Zeile offen ist (#114)', () => {
