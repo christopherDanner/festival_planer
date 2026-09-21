@@ -14,8 +14,7 @@ export interface SponsorsCardListProps {
 
 /**
  * Der Sponsorenbestand unter 900px (#160): **gestapelte Karten statt der
- * querscrollenden Tabelle** — dasselbe Muster wie Material (#116) und
- * Sponsoring (#155).
+ * querscrollenden Tabelle** — dasselbe Muster wie bei Material (#116).
  *
  * Der Scrollweg ist lang (gemessen 6316 px auf 40 Firmen) und das ist die
  * bezahlte Gegenleistung dafür, dass nichts geöffnet werden muss. Erträglich

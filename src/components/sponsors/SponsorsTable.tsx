@@ -5,7 +5,7 @@ import { sponsorHistoryOf, type SponsorHistoryMap } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
 import { MissingValue } from '@/components/toolkit/PaperTable';
 import MastPanel from './MastPanel';
-import SponsorHistoryMark from './SponsorHistoryMark';
+import SponsorHistoryLine from './SponsorHistoryLine';
 
 export interface SponsorsTableProps {
 	/** Bereits gefilterter Ausschnitt des Sponsorenbestands, alphabetisch. */
@@ -116,7 +116,7 @@ export default function SponsorsTable({ sponsors, history, onSelect }: SponsorsT
 										<CellValue>{sponsor.address}</CellValue>
 									</td>
 									<td className={cn(cell, 'whitespace-nowrap tabular-nums')}>
-										<SponsorHistoryMark history={sponsorHistoryOf(history, sponsor.id)} />
+										<SponsorHistoryLine history={sponsorHistoryOf(history, sponsor.id)} />
 									</td>
 									{/* Das ⋮ füllt #159. */}
 									<td className={cn(cell, 'w-10')} />

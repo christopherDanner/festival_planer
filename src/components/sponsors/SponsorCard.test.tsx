@@ -112,10 +112,18 @@ describe('SponsorCard — der volle Stammsatz am Handy (#160)', () => {
 		expect(html).toMatch(/<button[^>]*>Bäckerei Grünsteidl<\/button>/);
 	});
 
-	it('hält oben rechts den 40px-Platz des ⋮ frei', () => {
+	it('macht die ganze Karte zum Trefferfeld, nicht nur den 17px hohen Namen', () => {
+		// DESIGN-VISION §6 will am Handy 40px; der Firmenname allein ist bei
+		// 14.5px/1.15 knapp 17px hoch. Also dieselbe Lösung wie die Tabellenzeile
+		// am Desktop: die ganze Karte öffnet, der Name bleibt der Tastaturweg.
 		const html = render();
-		expect(html).toContain('min-h-10');
-		expect(html).toContain('min-w-10');
+		expect(html).toMatch(/<article[^>]*cursor-pointer/);
+	});
+
+	it('hält oben rechts den Rand für das ⋮ frei', () => {
+		// Das Menü aus #159 hängt sich wie im Prototyp absolut in die Ecke — es
+		// braucht keine eigene Höhe, aber der Name darf nicht darunter laufen.
+		expect(render()).toMatch(/<h3[^>]*pr-\[42px\]/);
 	});
 
 	it('bricht langen Text um, statt ihn abzuschneiden oder quer zu scrollen', () => {

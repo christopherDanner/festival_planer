@@ -9,9 +9,11 @@ import type { SponsorHistory } from '@/lib/sponsorHistory';
  * bleibt es bei der Anzahl statt einem erfundenen Jahr.
  *
  * Steht hier und nicht in der Tabelle, weil die Handy-Karte (#160) dieselbe
- * Auskunft trägt — eine Regel, eine Stelle (ADR 0003 §2).
+ * Auskunft trägt — eine Regel, eine Stelle (ADR 0003 §2). Kein Toolkit-Baustein
+ * und bewusst nicht „…Mark" genannt: „Marke" ist in ADR 0003 §4 für `NameChip`
+ * und `ValueTag` vergeben.
  */
-export default function SponsorHistoryMark({ history }: { history: SponsorHistory }) {
+export default function SponsorHistoryLine({ history }: { history: SponsorHistory }) {
 	if (history.festivalCount === 0) {
 		// Dasselbe Rezept wie die rote Lücke im Schichtplan (`OpenSlot`), nur
 		// enger gesetzt: in einer Frachtbrief-Zeile darf die Marke die Zeilenhöhe

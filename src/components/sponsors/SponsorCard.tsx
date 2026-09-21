@@ -1,7 +1,7 @@
 import { MissingValue } from '@/components/toolkit/PaperTable';
 import type { SponsorHistory } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
-import SponsorHistoryMark from './SponsorHistoryMark';
+import SponsorHistoryLine from './SponsorHistoryLine';
 
 export interface SponsorCardProps {
 	sponsor: Sponsor;
@@ -36,35 +36,43 @@ function Angabe({ label, value }: { label: string; value: string | null }) {
  * anzurufen oder eine Adresse zu lesen.
  *
  * Bewusste Abweichung von DESIGN-VISION §6 („Tabellen scrollen horizontal im
- * eigenen Rahmen"), mit derselben Begründung wie Material (#116) und
- * Sponsoring (#155): die sieben Spalten brauchen gemessene 895 px, bei 375 px
- * Gerätebreite scrollte die Tabelle +553 px quer — und Querscrollen in einer
- * Liste ist seit #66 ein No-Go.
+ * eigenen Rahmen"), mit derselben Begründung wie bei Material (#116, gebaut)
+ * und Sponsoring (#155, Geschwister-Slice): die sieben Spalten brauchen
+ * gemessene 895 px, bei 375 px Gerätebreite scrollte die Tabelle +553 px quer —
+ * und Querscrollen in einer Liste ist seit #66 ein No-Go.
  *
- * Der Preis ist gemessen und gewollt: 148,7 px je Karte, 6316 px Scrollweg auf
- * 40 Firmen gegen 2596 px beim schlanksten Zuschnitt. Nicht nachträglich
- * „optimieren" — der Zuschnitt ist die Entscheidung (Nutzer-Entscheid #101).
+ * Der Preis ist gemessen und gewollt: im Prototyp 148,7 px je Karte, 6316 px
+ * Scrollweg auf 40 Firmen gegen 2596 px beim schlanksten Zuschnitt. Nicht
+ * nachträglich „optimieren" — der Zuschnitt ist die Entscheidung
+ * (Nutzer-Entscheid #101). Gebaut sind es 176,6 px je Karte: die Grundschrift
+ * der App führt 12px-Text mit 18px Zeilenhöhe, der Prototyp mit der
+ * Browser-Vorgabe von 14px. Dieselben Felder, andere Zeilenhöhe.
  */
 export default function SponsorCard({ sponsor, history, onSelect }: SponsorCardProps) {
 	return (
-		<article className="relative border-2 border-tinte bg-white px-2.5 py-2">
-			{/* Der Firmenname trägt den 42px-Rand für das ⋮ — sonst liefe eine lange
-			Firma unter das Menü. */}
+		// Die ganze Karte öffnet die Firmendaten — DESIGN-VISION §6 will am Handy
+		// 40px, und der Firmenname allein ist knapp 17px hoch. Dieselbe Lösung wie
+		// die Tabellenzeile am Desktop, die deshalb auch klickbar ist.
+		<article
+			onClick={() => onSelect(sponsor)}
+			className="relative cursor-pointer border-2 border-tinte bg-white px-2.5 py-2 hover:bg-fusszeile">
+			{/* Der Firmenname hält den 42px-Rand für das ⋮ frei, das #159 wie im
+			Prototyp absolut in die Ecke hängt — sonst liefe eine lange Firma darunter. */}
 			<h3 className="pr-[42px] leading-[1.15] [overflow-wrap:anywhere]">
 				{/* Die Schrift steht am Knopf, nicht nur an der Überschrift: Tailwinds
 				Preflight setzt `button { text-transform: none; font: inherit }` und
-				nähme die Versalien sonst zurück. */}
+				nähme die Versalien sonst zurück. Der Knopf ist der Tastaturweg zum
+				selben Griff, darum hält er den Klick der Karte an. */}
 				<button
 					type="button"
-					onClick={() => onSelect(sponsor)}
+					onClick={(e) => {
+						e.stopPropagation();
+						onSelect(sponsor);
+					}}
 					className="text-left font-display text-[14.5px] font-semibold uppercase leading-[1.15] tracking-[.015em] hover:underline">
 					{sponsor.company_name}
 				</button>
 			</h3>
-			{/* Der Platz des ⋮ oben rechts: 40px Trefferfläche (DESIGN-VISION §6,
-			WCAG 2.5.8). Das Menü selbst hängt #159 hier ein — wie in der
-			Tabellenzeile am Desktop, die dafür ihre siebte Spalte freihält. */}
-			<div className="absolute right-0 top-0 min-h-10 min-w-10" aria-hidden />
 
 			<dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[12px]">
 				<Angabe label="Kontakt" value={sponsor.contact_person} />
@@ -77,7 +85,7 @@ export default function SponsorCard({ sponsor, history, onSelect }: SponsorCardP
 			{/* Die Historie ist keine Kontaktangabe — die gestrichelte Linie setzt
 			sie ab, wie die eigene Spalte „Zuletzt" es am Desktop tut. */}
 			<div className="mt-1.5 border-t-1.5 border-dashed border-linie pt-1.5 text-[12px]">
-				<SponsorHistoryMark history={history} />
+				<SponsorHistoryLine history={history} />
 			</div>
 		</article>
 	);
