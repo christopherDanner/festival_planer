@@ -7,6 +7,7 @@ Dashboard müssen für dasselbe Fest dieselbe Zahl nennen. Dieses Modul ordnet
 nur und beschriftet. */
 
 import { formatFestDayLong } from '@/lib/festDates';
+import { helperName } from '@/lib/helperService';
 import { stationStaffing } from '@/lib/staffing';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
 import type {
@@ -73,9 +74,23 @@ export interface BoardMember {
 	name: string;
 }
 
+/** Die vier Listen, aus denen sich der Schichtplan eines Fests ableitet.
+Bildschirm, Papier und Text ziehen alle daraus — wer eine davon weglässt,
+zählt falsch. */
+export interface ShiftPlanSource {
+	stations: Station[];
+	stationShifts: StationShift[];
+	assignments: ShiftAssignmentWithHelper[];
+	stationHelpers: StationHelperWithDetails[];
+}
+
 /** Alles, was der Fokus-Kasten einer Station zeigt. */
 export interface StationBoard {
 	station: Station;
+	/** Ort der Station — ohne Ort „Ohne Schichten", sonst `null`. */
+	place: string | null;
+	/** „Hochauer Franz" oder `null` — wer die Station verantwortet. */
+	responsible: string | null;
 	hasShifts: boolean;
 	/** Tage mit Schichten, chronologisch; leer bei einer Station ohne Schichten. */
 	days: BoardDay[];
@@ -100,10 +115,37 @@ interface Occupant {
 	name: string;
 }
 
-/** „Hochauer Franz" — Nachname zuerst, wie überall sonst in der App. */
-function helperName(helper?: HelperRef | null): string {
-	if (!helper) return 'Unbekannt';
-	return `${helper.last_name} ${helper.first_name}`.trim();
+/** Der Name auf einem Platz. Die Schreibweise kommt aus `helperService`;
+eigen ist hier nur der Fall ohne Helfer-Verweis. */
+function slotName(helper?: HelperRef | null): string {
+	return helper ? helperName(helper) : 'Unbekannt';
+}
+
+/**
+ * Ein unbesetzter Platz. Er wird auf Papier und im geteilten Text
+ * **ausgewiesen, nicht weggelassen** — eine Lücke, die niemand sieht, füllt
+ * auch niemand (#109). Auf dem Bildschirm ist dieselbe Lücke ein `<OpenSlot>`,
+ * weil man dort etwas hineinziehen kann.
+ */
+export const OPEN_SLOT = '– offen –';
+
+/** „1 Hochauer Franz" / „2 – offen –" — ein Platz als eine Zeile. */
+export function slotLabel(slot: BoardSlot): string {
+	return `${slot.position} ${slot.name ?? OPEN_SLOT}`;
+}
+
+/**
+ * Ort und Leitung einer Station als eine Zeile: „Zelt Nord · Leitung: Hochauer
+ * Franz". Leer, wenn die Station beides nicht hat.
+ *
+ * Der Verantwortliche steht ausgeschrieben statt als ♛: das Zeichen fehlt im
+ * Latin-Subset der eingebetteten PDF-Schriften und „hat auf Papier nichts zu
+ * suchen" (ADR 0012). Papier und Nachricht tragen darum denselben Wortlaut.
+ */
+export function stationMetaText(board: StationBoard): string {
+	return [board.place, board.responsible && `Leitung: ${board.responsible}`]
+		.filter(Boolean)
+		.join(' · ');
 }
 
 /** `11:00:00` → `11`, `11:30` → `11:30`. Sekunden und glatte Minuten fallen
@@ -113,8 +155,13 @@ function clockLabel(time: string): string {
 	return minutes && minutes !== '00' ? `${hours}:${minutes}` : hours;
 }
 
+/** Die Zeitangaben einer Schicht — mehr braucht die Aufschrift nicht. So kann
+der Schicht-Dialog (#106) das unfertige Formular durchreichen und zeigt damit
+vorab genau die Aufschrift, die die Zeile später trägt. */
+export type ShiftTimes = Pick<StationShift, 'start_date' | 'start_time' | 'end_date' | 'end_time'>;
+
 /** Ob eine Schicht über Mitternacht läuft: eigenes, abweichendes Enddatum. */
-function crossesMidnight(shift: StationShift): boolean {
+function crossesMidnight(shift: ShiftTimes): boolean {
 	return Boolean(shift.end_date) && shift.end_date !== shift.start_date;
 }
 
@@ -123,7 +170,7 @@ function crossesMidnight(shift: StationShift): boolean {
  * Zwischentitel darüber — außer bei einer Schicht über Mitternacht, die beim
  * **Starttag** steht und ihr zweites Datum darum selbst mitträgt: `23–02 +1`.
  */
-export function shiftTimeLabel(shift: StationShift): string {
+export function shiftTimeLabel(shift: ShiftTimes): string {
 	const span = `${clockLabel(shift.start_time)}–${clockLabel(shift.end_time)}`;
 	return crossesMidnight(shift) ? `${span} +1` : span;
 }
@@ -212,8 +259,13 @@ export function buildStationBoard(
 	stationHelpers: StationHelperWithDetails[]
 ): StationBoard {
 	const { required, assigned } = stationStaffing(station, shifts, assignments, stationHelpers);
+	const ownShifts = shifts.filter((s) => s.station_id === station.id);
 	const base = {
 		station,
+		// Ohne Ort sagt die Aufschrift wenigstens, auf welcher Ebene diese Station
+		// plant („Ohne Schichten", Wortlaut des Entscheid-Prototyps).
+		place: station.description || (ownShifts.length > 0 ? null : 'Ohne Schichten'),
+		responsible: station.responsible_helper ? helperName(station.responsible_helper) : null,
 		required,
 		assigned,
 		open: Math.max(0, required - assigned),
@@ -222,10 +274,9 @@ export function buildStationBoard(
 
 	const members = stationHelpers
 		.filter((m) => m.station_id === station.id)
-		.map((m) => ({ id: m.id, helperId: m.helper_id, name: helperName(m.helper) }))
+		.map((m) => ({ id: m.id, helperId: m.helper_id, name: slotName(m.helper) }))
 		.sort(byName);
 
-	const ownShifts = shifts.filter((s) => s.station_id === station.id);
 	if (ownShifts.length === 0) {
 		return {
 			...base,
@@ -250,7 +301,7 @@ export function buildStationBoard(
 		const occupants = assignments
 			.filter((a) => a.station_shift_id === shift.id)
 			.sort((a, b) => a.position - b.position)
-			.map((a) => ({ helperId: a.helper_id ?? null, name: helperName(a.helper) }));
+			.map((a) => ({ helperId: a.helper_id, name: slotName(a.helper) }));
 
 		const rows = days.get(shift.start_date) ?? [];
 		// Die Schicht über Mitternacht steht beim Starttag (Entscheid 4 aus #68).
@@ -273,4 +324,18 @@ export function buildStationBoard(
 		wholeFestRow: null,
 		members
 	};
+}
+
+/**
+ * Die Fokus-Kästen **aller** Stationen, in der Reihenfolge des Reiter-Streifens.
+ * Der Bildschirm zeigt einen davon; Papier und Text drucken sie hintereinander
+ * — dass alle drei dieselbe Gliederung und dieselbe Reihenfolge zeigen, ist die
+ * Bedingung dafür, dass der Ausdruck neben der Werkbank wiedererkennbar ist
+ * (#109).
+ */
+export function buildStationBoards(source: ShiftPlanSource): StationBoard[] {
+	const { stations, stationShifts, assignments, stationHelpers } = source;
+	return buildStationTabs(stations, stationShifts, assignments, stationHelpers).map((tab) =>
+		buildStationBoard(tab.station, stationShifts, assignments, stationHelpers)
+	);
 }

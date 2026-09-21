@@ -149,13 +149,13 @@ export async function copyFestivalData(
 			// Shift assignments
 			const allAssignments = await getShiftAssignments(sourceFestivalId);
 			const selectedAssignments = allAssignments.filter(
-				a => a.helper_id && shiftIdMap[a.station_shift_id] && helperIdMap[a.helper_id]
+				a => shiftIdMap[a.station_shift_id] && helperIdMap[a.helper_id]
 			);
 			for (const a of selectedAssignments) {
 				await assignHelperToStationShift(
 					targetFestivalId,
 					shiftIdMap[a.station_shift_id],
-					helperIdMap[a.helper_id!],
+					helperIdMap[a.helper_id],
 					a.position
 				);
 			}

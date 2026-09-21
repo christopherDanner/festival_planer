@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Station, StationShift } from '@/lib/shiftService';
-import {
-	allStationsState,
-	stationPreviewRows,
-	toggleAllStations,
-	toggleStation,
-	withAssignmentCopy,
-	withHelperCopy
-} from './stationChoice';
+import { stationPreviewRows, withAssignmentCopy, withHelperCopy } from './stationChoice';
 
 /** Fest 2026: Fr 24.07. – So 26.07.; Fest 2027 startet Fr 23.07. */
 const SOURCE_START = '2026-07-24';
@@ -107,38 +100,13 @@ describe('stationPreviewRows', () => {
 	});
 });
 
-describe('Auswahl auf Stations-Ebene', () => {
-	const alle = ['st-1', 'st-2', 'st-3'];
-
-	it('nimmt eine Station dazu und wieder heraus', () => {
-		expect(toggleStation(['st-1'], 'st-2')).toEqual(['st-1', 'st-2']);
-		expect(toggleStation(['st-1', 'st-2'], 'st-1')).toEqual(['st-2']);
-	});
-
-	it('meldet den Umschalter als gewählt, leer oder dazwischen', () => {
-		expect(allStationsState(alle, alle)).toBe(true);
-		expect(allStationsState(alle, [])).toBe(false);
-		expect(allStationsState(alle, ['st-2'])).toBe('indeterminate');
-	});
-
-	// Ohne Stationen gäbe es nichts zu wählen — der Umschalter darf dann nicht
-	// als gewählt dastehen.
-	it('bleibt ohne Stationen leer', () => {
-		expect(allStationsState([], [])).toBe(false);
-	});
-
-	it('wählt mit dem Umschalter alle oder keine', () => {
-		expect(toggleAllStations(alle, ['st-2'])).toEqual(alle);
-		expect(toggleAllStations(alle, alle)).toEqual([]);
-		expect(toggleAllStations(alle, [])).toEqual(alle);
-	});
-});
+// Das Ankreuzen auf Stations-Ebene steht in `selection.ts` und wird dort
+// geprüft — es ist dasselbe wie in Schritt 3 (#95).
 
 describe('withHelperCopy', () => {
-	const stationIds = ['st-1', 'st-2'];
-	const gewaehlt = { stationIds, copyHelpers: true, copyAssignments: true };
+	const gewaehlt = { copyHelpers: true, copyAssignments: true };
 
-	it('schaltet „Helfer übernehmen" um, ohne die Stationen anzurühren', () => {
+	it('schaltet „Helfer übernehmen" um', () => {
 		expect(withHelperCopy({ ...gewaehlt, copyHelpers: false }, true)).toEqual(gewaehlt);
 		expect(withHelperCopy(gewaehlt, true)).toEqual(gewaehlt);
 	});
@@ -147,7 +115,6 @@ describe('withHelperCopy', () => {
 	// (ADR 0005) — das Häkchen bliebe sonst unsichtbar gesetzt stehen.
 	it('nimmt die Zuteilungen mit, wenn die Helfer abgewählt werden', () => {
 		expect(withHelperCopy(gewaehlt, false)).toEqual({
-			stationIds,
 			copyHelpers: false,
 			copyAssignments: false
 		});
@@ -155,17 +122,15 @@ describe('withHelperCopy', () => {
 });
 
 describe('withAssignmentCopy', () => {
-	const stationIds = ['st-1'];
-
 	it('schaltet „Zuteilungen übernehmen" um', () => {
-		const mitHelfern = { stationIds, copyHelpers: true, copyAssignments: false };
+		const mitHelfern = { copyHelpers: true, copyAssignments: false };
 		expect(withAssignmentCopy(mitHelfern, true)).toEqual({ ...mitHelfern, copyAssignments: true });
 	});
 
 	// Dieselbe Regel wie oben, von der anderen Seite: die Oberfläche graut den
 	// Schalter aus, die Auswahl selbst lässt ihn gar nicht erst zu.
 	it('bleibt ohne übernommene Helfer leer', () => {
-		const ohneHelfer = { stationIds, copyHelpers: false, copyAssignments: false };
+		const ohneHelfer = { copyHelpers: false, copyAssignments: false };
 		expect(withAssignmentCopy(ohneHelfer, true)).toEqual(ohneHelfer);
 	});
 });
