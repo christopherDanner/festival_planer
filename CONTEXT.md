@@ -160,6 +160,13 @@ Was ein *Sponsor* über alle Feste hinweg beigetragen hat, reduziert auf zwei An
 Sie ist die einzige festübergreifende Antwort auf die *Wiederkontaktierung*: die Sponsoring-Matrix zeigt nur das aktuelle Fest, und der *Vorjahresbeitrag* nur das Quellfest einer *Sponsor-Übernahme* — eine Firma, die vor drei Jahren gesponsert hat und nie mitkopiert wurde, ist sonst nirgends sichtbar. Dieselbe Zahl trägt die Löschregel aus ADR 0010: keine Historie = löschbar.
 _Avoid_: Sponsoring-Verlauf, Firmen-Historie.
 
+## Bezugsfest
+
+Das Fest, auf das sich „heuer" auf der Sponsoren-Stammdaten-Seite bezieht: das **nächste bevorstehende Fest**, abgeleitet wie Rang 1 der Plakatwand (frühestes Startdatum ab heute, heute zählt dazu). Nötig, weil die Seite keinen Fest-Kontext hat — sie steht über allen Festen. Es speist das Jahr im Segment-Schalter (`SPONSERT {Jahr}` · `HEUER NOCH NICHT GEFRAGT`) und in der Zählzeile des Masts.
+
+Zwischen zwei Festen gibt es **kein** Bezugsfest; dann entfällt der Schalter ganz, statt einen leeren Filter anzubieten. Nicht zu verwechseln mit dem *Quellfest* einer *Sponsor-Übernahme* — das liegt in der Vergangenheit, das Bezugsfest in der Zukunft.
+_Avoid_: aktuelles Fest, laufendes Fest.
+
 ## Sponsoring-Kategorie
 
 Eine benannte Sponsoring-Leistung mit einem Wert, z.B. "Werbeplakat", "Social-Media-Beitrag", "Logo in Speisekarte". **Pro Fest definiert** (Name + Wert), weil der Wert je Jahr variieren kann.
