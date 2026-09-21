@@ -2,28 +2,49 @@ import { describe, it, expect } from 'vitest';
 
 import { analyzeComponentTree } from './componentTree';
 
+const UI = 'components/ui/';
+
+/**
+ * Bauteile, die bewusst abgehängt sind — je Eintrag das Ticket, das sie
+ * wieder einhängt. Ein unerreichbares Bauteil ohne Eintrag hier ist kein
+ * Parkplatz, sondern Rest.
+ */
+const PARKED = [
+	// #103 hat den Dialog abgehängt („Bewusste Lücke bis #107"): das ⋮-Menü
+	// der Helferliste öffnet vorerst nur den Helfer-Dialog. #107 verschmilzt
+	// beide und nimmt ihn hier wieder raus.
+	'components/shift-planning/dialogs/PreferenceDialog.tsx'
+];
+
 /**
  * Bestandsprüfung unter `src/components/` (#163).
  *
  * Entschieden in #101: Die App hat genau ein Kopf-Muster, den Mast. Solche
  * Entscheidungen halten nur, wenn das abgelöste Bauteil auch von der Platte
  * verschwindet — eine liegengebliebene Datei sieht aus wie eine Alternative
- * und wird wieder importiert. Dasselbe gilt für `ui/`: ADR 0003 hat die
- * ungenutzten shadcn-Dateien gelöscht (#72), und was danach seinen letzten
- * Nutzer verliert, gehört genauso hinterher.
+ * und wird wieder importiert.
  */
 describe('Bestand unter src/components/', () => {
 	const tree = analyzeComponentTree();
 
 	it('liest den Bestand wirklich ein', () => {
-		// Ohne diese Probe wäre der Guard darunter auch dann grün, wenn der
+		// Ohne diese Probe wären die Guards darunter auch dann grün, wenn der
 		// Scanner an einem falschen Pfad ins Leere liest.
 		expect(tree.modules.length).toBeGreaterThan(100);
 		expect(tree.modules).toContain('components/toolkit/Mast.tsx');
 		expect(tree.modules).toContain('components/ui/button.tsx');
 	});
 
-	it('führt von der App zu jedem Bauteil einen Weg', () => {
-		expect(tree.unreachable).toEqual([]);
+	/**
+	 * `ui/` ist das Regal der Verhaltens-Hüllen (ADR 0003), kein Arbeitsplatz:
+	 * Was dort keinen Nutzer mehr hat, ist Ballast und geht samt npm-Paket —
+	 * die Linie aus #72.
+	 */
+	it('lässt keine Hülle in ui/ ohne Nutzer liegen', () => {
+		expect(tree.unreachable.filter((module) => module.startsWith(UI))).toEqual([]);
+	});
+
+	it('hängt kein Bauteil ohne Ticket ab', () => {
+		expect(tree.unreachable.filter((module) => !module.startsWith(UI))).toEqual(PARKED);
 	});
 });
