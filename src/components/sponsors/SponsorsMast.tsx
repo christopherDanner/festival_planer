@@ -28,8 +28,8 @@ export interface SponsorsMastProps {
 const sponsorCountLine = (count: number) => `${count} ${count === 1 ? 'Firma' : 'Firmen'}`;
 
 /**
- * Mast der Sponsoren-Stammdaten (#101 Entscheid 2): eigener Kopf statt
- * `PageHeader`, Wordmark als Zurück-Weg zur Festliste, gelbes „+ FIRMA"
+ * Mast der Sponsoren-Stammdaten (#101 Entscheid 2): eigener Kopf statt der
+ * alten Zurück-Zeile, Wordmark als Zurück-Weg zur Festliste, gelbes „+ FIRMA"
  * und ruhiges „Abmelden" rechts.
  */
 export default function SponsorsMast({
