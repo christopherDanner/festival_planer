@@ -18,9 +18,12 @@ import {
 describe('Sponsor löschen: nur ohne Sponsoren-Historie (ADR 0010)', () => {
 	let db: PGlite;
 
+	// Eigene Frist: ein WASM-Postgres hochzufahren dauert länger als die
+	// 10-Sekunden-Voreinstellung, seit ein zweiter Prüfstand daneben startet
+	// (#98) und mehr Migrationen einzuspielen sind.
 	beforeAll(async () => {
 		db = await createSponsoringSchemaDb();
-	});
+	}, 60000);
 
 	afterAll(async () => {
 		await db?.close();
@@ -94,6 +97,8 @@ describe('Sponsor löschen: nur ohne Sponsoren-Historie (ADR 0010)', () => {
 	// in der echten Datenbank einen anderen Namen — Supabase-Altbestand, von Hand
 	// angelegt —, dann darf sie nicht scheinbar durchlaufen und den alten CASCADE
 	// stehen lassen: der feuert zuerst und löscht die Historie trotzdem.
+	// Eigene Frist, gleicher Grund wie oben: dieser Fall baut noch eine zweite
+	// Datenbank von Null auf.
 	it('zieht den Fremdschlüssel auch dann auf RESTRICT, wenn er anders heißt', async () => {
 		const driftDb = await createSponsoringSchemaDb();
 		try {
@@ -122,5 +127,5 @@ describe('Sponsor löschen: nur ohne Sponsoren-Historie (ADR 0010)', () => {
 		} finally {
 			await driftDb.close();
 		}
-	});
+	}, 30000);
 });

@@ -31,6 +31,7 @@ export default {
           tief: "oklch(var(--gruen-tief) / <alpha-value>)",
         },
         gelb: "oklch(var(--gelb) / <alpha-value>)",
+        kreide: "oklch(var(--kreide) / <alpha-value>)",
         rot: "oklch(var(--rot) / <alpha-value>)",
         linie: "oklch(var(--linie) / <alpha-value>)",
         fusszeile: "oklch(var(--fusszeile) / <alpha-value>)",
@@ -90,10 +91,19 @@ export default {
         // keine Spaltenbreite kostet.
         "kante-links": "2px 0 0 oklch(var(--tinte))",
         "kante-rechts": "-2px 0 0 oklch(var(--tinte))",
+        // Tinte-Strich über und unter der Zeile in Bearbeitung (#115) — als
+        // Innenschatten, damit das Umschalten die Zeile keinen Pixel höher
+        // macht (Auflage aus #114: gemessen 44 → 56 px).
+        "zeile-offen":
+          "inset 0 2px 0 oklch(var(--tinte)), inset 0 -2px 0 oklch(var(--tinte))",
       },
       borderWidth: {
         "1.5": "1.5px",
         "2.5": "2.5px",
+        // Dialoge stehen einen Strich kräftiger als Container: 3px aus dem
+        // abgenommenen Prototyp `entscheid-material-bearbeiten.html` (`.dlg`),
+        // ausdrücklich so in #117 verlangt.
+        "3": "3px",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -109,6 +119,10 @@ export default {
             height: "var(--radix-accordion-content-height)",
           },
         },
+        "blitz-gruen": {
+          from: { backgroundColor: "oklch(var(--gruen) / 0.15)" },
+          to: { backgroundColor: "transparent" },
+        },
         "accordion-up": {
           from: {
             height: "var(--radix-accordion-content-height)",
@@ -121,6 +135,11 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        // Die eben gespeicherte Zeile (#115): sofort grün, dann verklingen. Als
+        // Keyframe und nicht als `transition`, weil eine Übergangsregel, die im
+        // selben Bild wie die Farbe dazukommt, nicht anspringt — die Zeile
+        // blendete langsam *nach* Grün und spränge dann hart zurück.
+        "blitz-gruen": "blitz-gruen 0.9s ease-out forwards",
       },
     },
   },

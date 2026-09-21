@@ -1,27 +1,31 @@
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, ListPlus } from 'lucide-react';
 import SchedulePhaseSection from './SchedulePhaseSection';
+import ScheduleEntryTable from './ScheduleEntryTable';
+import { groupEntriesByPhase } from '@/lib/scheduleGrouping';
 import type {
-	ScheduleDayWithPhases,
-	SchedulePhaseWithEntries,
-	ScheduleEntryWithMember,
+	ScheduleDayWithEntries,
+	SchedulePhase,
+	ScheduleEntryWithHelper,
 } from '@/lib/scheduleService';
 
+/** Einzug samt Akzentlinie — beide Blöcke unter dem Tag hängen an derselben. */
+const UNDER_DAY = 'mt-1 ml-1 sm:ml-4 pl-2 sm:pl-5 border-l-2 border-primary/15';
+
 interface ScheduleDayAccordionProps {
-	day: ScheduleDayWithPhases;
-	onEditDay: (day: ScheduleDayWithPhases) => void;
+	day: ScheduleDayWithEntries;
+	onEditDay: (day: ScheduleDayWithEntries) => void;
 	onDeleteDay: (id: string) => void;
-	onEditPhase: (phase: SchedulePhaseWithEntries) => void;
+	onEditPhase: (phase: SchedulePhase) => void;
 	onDeletePhase: (id: string) => void;
 	onAddPhase: (dayId: string) => void;
-	onEditEntry: (entry: ScheduleEntryWithMember) => void;
+	onEditEntry: (entry: ScheduleEntryWithHelper) => void;
 	onDeleteEntry: (id: string) => void;
-	onToggleEntryStatus: (entry: ScheduleEntryWithMember) => void;
-	onAddEntry: (phaseId: string) => void;
+	onToggleEntryStatus: (entry: ScheduleEntryWithHelper) => void;
+	/** `phaseId === null` legt den Eintrag direkt am Tag an (ADR 0007). */
+	onAddEntry: (dayId: string, phaseId: string | null) => void;
 	onReorderPhases: (dayId: string, orderedIds: string[]) => void;
-	onReorderEntries: (phaseId: string, orderedIds: string[]) => void;
 	isMobile: boolean;
-	defaultOpen?: boolean;
 }
 
 const ScheduleDayAccordion = ({
@@ -36,11 +40,14 @@ const ScheduleDayAccordion = ({
 	onToggleEntryStatus,
 	onAddEntry,
 	onReorderPhases,
-	onReorderEntries,
 	isMobile,
-	defaultOpen,
 }: ScheduleDayAccordionProps) => {
-	const totalEntries = day.phases.reduce((sum, p) => sum + p.entries.length, 0);
+	const totalEntries = day.entries.length;
+	const groups = groupEntriesByPhase(day);
+	// Einträge ohne Phase stehen direkt unter dem Tag — die Gruppierung macht die
+	// Ansicht, nicht die Abfrage.
+	const ungrouped = groups.find((group) => group.phase === null);
+	const phaseGroups = groups.filter((group) => group.phase !== null);
 
 	const formattedDate = new Date(day.date + 'T00:00:00').toLocaleDateString('de-AT', {
 		weekday: 'long',
@@ -49,10 +56,13 @@ const ScheduleDayAccordion = ({
 		year: 'numeric',
 	});
 
-	const movePhase = (index: number, direction: 'up' | 'down') => {
+	// Über die Phasen-ID statt über einen Index: umgestellt wird `day.phases`,
+	// angeklickt wird eine Gruppe — zwei Listen, deren Gleichlauf nirgends steht.
+	const movePhase = (phaseId: string, direction: 'up' | 'down') => {
 		const newOrder = [...day.phases];
+		const index = newOrder.findIndex(p => p.id === phaseId);
 		const targetIndex = direction === 'up' ? index - 1 : index + 1;
-		if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+		if (index < 0 || targetIndex < 0 || targetIndex >= newOrder.length) return;
 		const [moved] = newOrder.splice(index, 1);
 		newOrder.splice(targetIndex, 0, moved);
 		onReorderPhases(day.id, newOrder.map(p => p.id));
@@ -79,7 +89,11 @@ const ScheduleDayAccordion = ({
 						</div>
 					</div>
 					<div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
-						<Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onAddPhase(day.id); }}>
+						{/* Zwei Plus-Zeichen nebeneinander — hier muss dranstehen, welches was tut. */}
+						<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Eintrag hinzufügen" onClick={() => onAddEntry(day.id, null)}>
+							<ListPlus className="h-4 w-4" />
+						</Button>
+						<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Phase hinzufügen" onClick={() => onAddPhase(day.id)}>
 							<Plus className="h-4 w-4" />
 						</Button>
 						<Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditDay(day)}>
@@ -92,25 +106,38 @@ const ScheduleDayAccordion = ({
 				</div>
 			</div>
 
+			{/* Einträge ohne Phase — direkt unter dem Tag, ohne Zwischentitel */}
+			{ungrouped && (
+				<div className={`${UNDER_DAY} py-2 sm:py-3`}>
+					<ScheduleEntryTable
+						entries={ungrouped.entries}
+						onEdit={onEditEntry}
+						onDelete={onDeleteEntry}
+						onToggleStatus={onToggleEntryStatus}
+						isMobile={isMobile}
+					/>
+				</div>
+			)}
+
 			{/* Phases content — indented with left accent line */}
-			{day.phases.length > 0 && (
-			<div className="mt-1 ml-1 sm:ml-4 pl-2 sm:pl-5 border-l-2 border-primary/15 space-y-3 sm:space-y-6 py-2 sm:py-4">
-				{day.phases.map((phase, index) => (
+			{phaseGroups.length > 0 && (
+			<div className={`${UNDER_DAY} space-y-3 sm:space-y-6 py-2 sm:py-4`}>
+				{phaseGroups.map((group, index) => (
 					<SchedulePhaseSection
-						key={phase.id}
-						phase={phase}
+						key={group.phase.id}
+						phase={group.phase}
+						entries={group.entries}
 						onEditPhase={onEditPhase}
 						onDeletePhase={onDeletePhase}
 						onEditEntry={onEditEntry}
 						onDeleteEntry={onDeleteEntry}
 						onToggleEntryStatus={onToggleEntryStatus}
 						onAddEntry={onAddEntry}
-						onReorderEntries={onReorderEntries}
 						isMobile={isMobile}
 						isFirst={index === 0}
-						isLast={index === day.phases.length - 1}
-						onMoveUp={() => movePhase(index, 'up')}
-						onMoveDown={() => movePhase(index, 'down')}
+						isLast={index === phaseGroups.length - 1}
+						onMoveUp={() => movePhase(group.phase.id, 'up')}
+						onMoveDown={() => movePhase(group.phase.id, 'down')}
 					/>
 				))}
 			</div>

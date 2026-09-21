@@ -1,13 +1,13 @@
 import ScheduleEntryRow from './ScheduleEntryRow';
 import ScheduleEntryCard from './ScheduleEntryCard';
-import type { ScheduleEntryWithMember } from '@/lib/scheduleService';
+import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
 interface ScheduleEntryTableProps {
-	entries: ScheduleEntryWithMember[];
-	onEdit: (entry: ScheduleEntryWithMember) => void;
+	/** Schon gereiht: die Uhrzeit sortiert, der Service liefert sie so (ADR 0007). */
+	entries: ScheduleEntryWithHelper[];
+	onEdit: (entry: ScheduleEntryWithHelper) => void;
 	onDelete: (id: string) => void;
-	onToggleStatus: (entry: ScheduleEntryWithMember) => void;
-	onReorder: (orderedIds: string[]) => void;
+	onToggleStatus: (entry: ScheduleEntryWithHelper) => void;
 	isMobile: boolean;
 }
 
@@ -16,19 +16,9 @@ const ScheduleEntryTable = ({
 	onEdit,
 	onDelete,
 	onToggleStatus,
-	onReorder,
 	isMobile,
 }: ScheduleEntryTableProps) => {
-	const moveEntry = (index: number, direction: 'up' | 'down') => {
-		const newOrder = [...entries];
-		const targetIndex = direction === 'up' ? index - 1 : index + 1;
-		if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-		const [moved] = newOrder.splice(index, 1);
-		newOrder.splice(targetIndex, 0, moved);
-		onReorder(newOrder.map(e => e.id));
-	};
-
-	const formatTime = (entry: ScheduleEntryWithMember) => {
+	const formatTime = (entry: ScheduleEntryWithHelper) => {
 		if (!entry.start_time) return null;
 		const start = entry.start_time.slice(0, 5);
 		if (entry.end_time) {
@@ -45,17 +35,13 @@ const ScheduleEntryTable = ({
 	if (isMobile) {
 		return (
 			<div className="space-y-2">
-				{entries.map((entry, index) => (
+				{entries.map((entry) => (
 					<ScheduleEntryCard
 						key={entry.id}
 						entry={entry}
 						onEdit={onEdit}
 						onDelete={onDelete}
 						onToggleStatus={onToggleStatus}
-						isFirst={index === 0}
-						isLast={index === entries.length - 1}
-						onMoveUp={() => moveEntry(index, 'up')}
-						onMoveDown={() => moveEntry(index, 'down')}
 					/>
 				))}
 			</div>
@@ -104,10 +90,6 @@ const ScheduleEntryTable = ({
 									onEdit={onEdit}
 									onDelete={onDelete}
 									onToggleStatus={onToggleStatus}
-									isFirst={index === 0}
-									isLast={index === entries.length - 1}
-									onMoveUp={() => moveEntry(index, 'up')}
-									onMoveDown={() => moveEntry(index, 'down')}
 								/>
 							</div>
 						</div>

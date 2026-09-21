@@ -1,4 +1,5 @@
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
+import { matchesCompanyName } from '@/lib/companySearch';
 
 /**
  * Was die Geldregel von einer Zuweisung braucht — nur der überschriebene Wert
@@ -22,7 +23,14 @@ export function assignmentValue(assignment: AssignedValue): number {
 	return assignment.value ?? assignment.category.value ?? 0;
 }
 
-/** Gesamtbeitrag eines Sponsorings: Σ zugewiesene Kategorie-Werte + Freibetrag. */
+/**
+ * Gesamtbeitrag eines Sponsorings: Σ zugewiesene Kategorie-Werte + Freibetrag.
+ *
+ * **Geld-only, für immer.** Der Sachwert einer Sachleistung wird hier nie
+ * addiert — Geld und geschätzter Sachwert sind nicht dieselbe Einheit
+ * (ADR 0008, DESIGN-VISION §5). Wer eine zweite Zahl braucht, stellt sie
+ * daneben (`festivalInKindTotal`), nicht hinein.
+ */
 export function sponsoringTotal(sponsoring: SponsoringValue): number {
 	const assigned = sponsoring.assignments.reduce((acc, a) => acc + assignmentValue(a), 0);
 	return assigned + (sponsoring.free_amount ?? 0);
@@ -36,8 +44,16 @@ export function festivalSponsoringTotal(sponsorings: SponsoringValue[]): number 
 /**
  * Sachwert eines Sponsorings: der geschätzte Wert seiner Sachleistung.
  * Zweite Zahl neben dem Geld — wird nie zum Gesamtbeitrag addiert (ADR 0008).
+ *
+ * Ohne Beschreibung gibt es keine Sachleistung (dieselbe Regel wie in
+ * `overviewInKind`) und damit auch keinen Sachwert: ein Schätzwert, zu dem
+ * niemand sagen kann, wofür er steht, ist keine Zahl, die man ausweist. Die
+ * Spalten sind einzeln nullable, der Zustand also darstellbar — zählte ihn der
+ * Dashboard-Kasten und der Tabellenfuß nicht, liefen die beiden Zahlen genau
+ * dort auseinander, wo die Unterzeile sie zusammenhalten soll.
  */
 export function sponsoringInKindValue(sponsoring: SponsoringWithDetails): number {
+	if (!sponsoring.in_kind_description) return 0;
 	return sponsoring.in_kind_value ?? 0;
 }
 
@@ -116,6 +132,44 @@ export function buildSponsoringOverviewRows(
 	});
 	rows.sort((a, b) => a.companyName.localeCompare(b.companyName, 'de'));
 	return rows;
+}
+
+/**
+ * Firmennamen-Suche über die Zeilen der Übersicht — die Matching-Regel steht in
+ * `matchesCompanyName`, damit hier und in den Sponsoren-Stammdaten dieselbe
+ * Firma gefunden wird (#151). Filtert ausschließlich **Zeilen**; die Preisliste
+ * und damit die Spalten bleiben unberührt, sonst springt das Layout beim Tippen.
+ */
+export function filterSponsoringOverviewRows(
+	rows: SponsoringOverviewRow[],
+	searchTerm: string
+): SponsoringOverviewRow[] {
+	return rows.filter((row) => matchesCompanyName(row.companyName, searchTerm));
+}
+
+/**
+ * Beschriftung eines Tabellenfußes, der über die **sichtbaren** Zeilen rechnet.
+ * Fehlt eine Zeile, nennt sie die Zahl („Σ je Kategorie · 3 von 14 Firmen") —
+ * ohne sie wäre eine Kategorie-Summe über drei Firmen eine stille Lüge (ADR
+ * 0006: alle Summen rechnen gefiltert und sagen es in der Beschriftung).
+ *
+ * Auslöser ist die **fehlende Zeile**, nicht der getippte Begriff: passt der
+ * Begriff auf alle Firmen, summiert der Fuß auch alle und hat nichts
+ * offenzulegen — dass die Suche läuft, sagt der Zähler an der Suche.
+ * Bereichskopf und Dashboard bleiben ohnehin unberührt: die rechnen als
+ * Fest-Kennzahl über alle Sponsorings.
+ */
+export function sponsoringFooterLabel(base: string, shown: number, total: number): string {
+	if (shown === total) return base;
+	return `${base} · ${shown} von ${total} Firmen`;
+}
+
+/**
+ * Hinweiszeile, wenn kein Firmenname zur Suche passt. Steht einmal hier, weil
+ * Matrix (Desktop) und Karten-Liste (Handy) denselben Satz zeigen müssen.
+ */
+export function sponsoringNoMatchNotice(searchTerm: string): string {
+	return `Keine Firma passt zu „${searchTerm.trim()}"`;
 }
 
 /** Der Tabellenfuß der Sponsoring-Matrix: eine Summe je Spalte. */

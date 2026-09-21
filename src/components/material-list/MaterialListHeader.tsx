@@ -1,38 +1,78 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Package, FileDown, ArrowDownToLine, ClipboardList } from 'lucide-react';
 
-interface MaterialListHeaderProps {
+import { Button } from '@/components/ui/button';
+import MaterialModeBar, { type MaterialMode } from './MaterialModeBar';
+
+export type { MaterialMode };
+
+export interface MaterialListHeaderProps {
+	mode: MaterialMode;
+	onModeChange: (mode: MaterialMode) => void;
+	searchTerm: string;
+	onSearchChange: (value: string) => void;
+	/** Positionen des Fests — steht im Platzhalter der Suche. */
+	positionCount: number;
 	onAddMaterial: () => void;
 	onExport: () => void;
 	onExportOrderList: () => void;
-	onTransfer: () => void;
+	/** Ob der Zeilenmodus gerade alle Zeilen der Gruppe offen hat (#115). */
+	allRowsOpen: boolean;
+	onToggleAllRows: () => void;
 }
 
-const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({ onAddMaterial, onExport, onExportOrderList, onTransfer }) => {
-	return (
-		<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-			<h2 className="text-lg sm:text-xl font-semibold">Materialliste</h2>
-			<div className="grid grid-cols-2 sm:flex gap-1.5 sm:gap-2">
-				<Button variant="outline" onClick={onTransfer} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" size="sm">
-					<ArrowDownToLine className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-					<span className="truncate">Übernehmen</span>
-				</Button>
-				<Button variant="outline" onClick={onExport} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" size="sm">
-					<FileDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-					<span className="truncate">Materialliste</span>
-				</Button>
-				<Button variant="outline" onClick={onExportOrderList} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" size="sm">
-					<ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-					<span className="truncate">Bestellliste</span>
-				</Button>
-				<Button onClick={onAddMaterial} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" size="sm">
-					<Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-					<span className="truncate">Neu</span>
-				</Button>
-			</div>
-		</div>
-	);
-};
+/**
+ * Werkzeugleiste der Arbeitsliste (#113):
+ * `[ARBEITSLISTE | ÜBERNAHME] [Suche …] [MATERIALLISTE] [BESTELLLISTE] [+ POSITION]`.
+ *
+ * Leiste, Umschalter und Suche kommen aus `MaterialModeBar` — die Übernahme
+ * trägt dieselbe (#118); hier stehen nur die Werkzeuge dieses Modus.
+ *
+ * Die drei Filter-Dropdowns von früher sind weg — die Achse (`MaterialAxisBar`)
+ * ersetzt sie, die Suche bleibt.
+ */
+const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({
+	mode,
+	onModeChange,
+	searchTerm,
+	onSearchChange,
+	positionCount,
+	onAddMaterial,
+	onExport,
+	onExportOrderList,
+	allRowsOpen,
+	onToggleAllRows
+}) => (
+	<MaterialModeBar
+		mode={mode}
+		onModeChange={onModeChange}
+		searchTerm={searchTerm}
+		onSearchChange={onSearchChange}
+		searchPlaceholder={`Suche in ${positionCount} Positionen …`}
+		searchLabel="Material suchen"
+	>
+		{/* Öffnet alle Zeilen der Gruppe auf einmal — fürs Nachtragen der
+		Verbraucht-Mengen nach dem Fest (#115). Ein Schalter, kein Knopf: er sagt
+		auch, dass gerade alles offen ist. */}
+		<Button
+			variant={allRowsOpen ? 'default' : 'outline'}
+			size="sm"
+			aria-pressed={allRowsOpen}
+			className="text-[12.5px] max-[899px]:min-h-10"
+			onClick={onToggleAllRows}
+		>
+			ALLE ZEILEN
+		</Button>
+		<Button variant="outline" size="sm" className="text-[12.5px] max-[899px]:min-h-10" onClick={onExport}>
+			MATERIALLISTE
+		</Button>
+		<Button variant="outline" size="sm" className="text-[12.5px] max-[899px]:min-h-10" onClick={onExportOrderList}>
+			BESTELLLISTE
+		</Button>
+		{/* Tippziele ≥ 40px am Handy (DESIGN-VISION §6); `size="sm"` ist 36px hoch. */}
+		<Button size="sm" className="text-[12.5px] max-[899px]:min-h-10" onClick={onAddMaterial}>
+			+ POSITION
+		</Button>
+	</MaterialModeBar>
+);
 
 export default MaterialListHeader;

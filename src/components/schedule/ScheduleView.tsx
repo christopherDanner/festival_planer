@@ -9,17 +9,22 @@ import SchedulePhaseDialog from './dialogs/SchedulePhaseDialog';
 import ScheduleEntryDialog from './dialogs/ScheduleEntryDialog';
 import ScheduleExportDialog from './dialogs/ScheduleExportDialog';
 import type {
-  ScheduleDayWithPhases,
-  SchedulePhaseWithEntries,
-  ScheduleEntryWithMember,
+  ScheduleDayWithEntries,
+  SchedulePhase,
+  ScheduleEntryWithHelper,
 } from '@/lib/scheduleService';
 
+// `type: 'none'` statt `null`: das Projekt kompiliert ohne strictNullChecks,
+// dort trägt `null` keine Unterscheidungskraft und die Fallunterscheidung unten
+// würde still nichts verengen.
 type DialogState =
-  | { type: null }
-  | { type: 'day'; day?: ScheduleDayWithPhases }
-  | { type: 'phase'; phase?: SchedulePhaseWithEntries; scheduleDayId: string }
-  | { type: 'entry'; entry?: ScheduleEntryWithMember; schedulePhaseId: string }
+  | { type: 'none' }
+  | { type: 'day'; day?: ScheduleDayWithEntries }
+  | { type: 'phase'; phase?: SchedulePhase; scheduleDayId: string }
+  | { type: 'entry'; entry?: ScheduleEntryWithHelper; scheduleDayId: string; schedulePhaseId: string | null }
   | { type: 'export' };
+
+const CLOSED: DialogState = { type: 'none' };
 
 interface ScheduleViewProps {
   festivalId: string;
@@ -29,10 +34,10 @@ interface ScheduleViewProps {
 }
 
 export default function ScheduleView({ festivalId, festivalName, festivalStartDate, festivalEndDate }: ScheduleViewProps) {
-  const { days, members, isLoading } = useScheduleData(festivalId);
+  const { days, helpers, isLoading } = useScheduleData(festivalId);
   const actions = useScheduleActions(festivalId);
   const isMobile = useIsMobile();
-  const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+  const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
   const [initialized, setInitialized] = useState(false);
 
   // Auto-initialize days from festival dates on first load
@@ -46,21 +51,6 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
       setInitialized(true);
     }
   }, [isLoading, days.length, festivalStartDate]);
-
-  // Calculate sort_order for new entries based on time
-  const calculateEntrySortOrder = (entries: ScheduleEntryWithMember[], startTime: string | null): number => {
-    if (!startTime || entries.length === 0) {
-      return entries.length > 0 ? Math.max(...entries.map(e => e.sort_order)) + 1 : 0;
-    }
-    const timeMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
-    for (let i = 0; i < entries.length; i++) {
-      if (!entries[i].start_time) continue;
-      const entryTime = entries[i].start_time!;
-      const entryMinutes = parseInt(entryTime.split(':')[0]) * 60 + parseInt(entryTime.split(':')[1]);
-      if (timeMinutes < entryMinutes) return entries[i].sort_order;
-    }
-    return Math.max(...entries.map(e => e.sort_order)) + 1;
-  };
 
   // Handlers
   const handleSaveDay = (data: any) => {
@@ -88,20 +78,18 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
           type: data.type,
           start_time: data.start_time,
           end_time: data.end_time,
-          responsible_member_id: data.responsible_member_id,
+          responsible_helper_id: data.responsible_helper_id,
           status: data.status,
           description: data.description,
         }
       });
     } else {
-      // Calculate sort_order based on start_time for new entries
-      const phaseEntries = getCurrentPhaseEntries();
-      const sortOrder = calculateEntrySortOrder(phaseEntries, data.start_time);
-      actions.createEntry.mutate({ ...data, sort_order: sortOrder });
+      // Die Uhrzeit reiht (ADR 0007) — beim Anlegen ist nichts einzusortieren.
+      actions.createEntry.mutate(data);
     }
   };
 
-  const handleToggleEntryStatus = (entry: ScheduleEntryWithMember) => {
+  const handleToggleEntryStatus = (entry: ScheduleEntryWithHelper) => {
     if (entry.type !== 'task') return;
     actions.editEntry.mutate({
       id: entry.id,
@@ -112,11 +100,6 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
   const handleReorderPhases = (dayId: string, orderedIds: string[]) => {
     const items = orderedIds.map((id, index) => ({ id, sort_order: index }));
     actions.reorderPhases.mutate(items);
-  };
-
-  const handleReorderEntries = (phaseId: string, orderedIds: string[]) => {
-    const items = orderedIds.map((id, index) => ({ id, sort_order: index }));
-    actions.reorderEntries.mutate(items);
   };
 
   const handleDeleteDay = (id: string) => {
@@ -154,17 +137,6 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
     );
   }
 
-  // Find entries for the current entry dialog's phase (for sort order calculation)
-  const getCurrentPhaseEntries = (): ScheduleEntryWithMember[] => {
-    if (dialogState.type !== 'entry') return [];
-    for (const day of days) {
-      for (const phase of day.phases) {
-        if (phase.id === dialogState.schedulePhaseId) return phase.entries;
-      }
-    }
-    return [];
-  };
-
   return (
     <div>
       <ScheduleHeader
@@ -179,7 +151,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
         </div>
       ) : (
         <div className="space-y-3">
-          {days.map((day, index) => (
+          {days.map((day) => (
             <ScheduleDayAccordion
               key={day.id}
               day={day}
@@ -188,14 +160,17 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
               onEditPhase={(p) => setDialogState({ type: 'phase', phase: p, scheduleDayId: p.schedule_day_id })}
               onDeletePhase={handleDeletePhase}
               onAddPhase={(dayId) => setDialogState({ type: 'phase', scheduleDayId: dayId })}
-              onEditEntry={(e) => setDialogState({ type: 'entry', entry: e, schedulePhaseId: e.schedule_phase_id })}
+              onEditEntry={(e) => setDialogState({
+                type: 'entry',
+                entry: e,
+                scheduleDayId: e.schedule_day_id,
+                schedulePhaseId: e.schedule_phase_id,
+              })}
               onDeleteEntry={handleDeleteEntry}
               onToggleEntryStatus={handleToggleEntryStatus}
-              onAddEntry={(phaseId) => setDialogState({ type: 'entry', schedulePhaseId: phaseId })}
+              onAddEntry={(dayId, phaseId) => setDialogState({ type: 'entry', scheduleDayId: dayId, schedulePhaseId: phaseId })}
               onReorderPhases={handleReorderPhases}
-              onReorderEntries={handleReorderEntries}
               isMobile={isMobile}
-              defaultOpen={index === 0}
             />
           ))}
         </div>
@@ -204,7 +179,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
       {/* Day Dialog */}
       <ScheduleDayDialog
         open={dialogState.type === 'day'}
-        onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
+        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
         day={dialogState.type === 'day' ? dialogState.day : null}
         festivalId={festivalId}
         existingDaysCount={days.length}
@@ -214,7 +189,7 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
       {/* Phase Dialog */}
       <SchedulePhaseDialog
         open={dialogState.type === 'phase'}
-        onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
+        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
         phase={dialogState.type === 'phase' ? dialogState.phase : null}
         scheduleDayId={dialogState.type === 'phase' ? dialogState.scheduleDayId : ''}
         festivalId={festivalId}
@@ -229,23 +204,19 @@ export default function ScheduleView({ festivalId, festivalName, festivalStartDa
       {/* Entry Dialog */}
       <ScheduleEntryDialog
         open={dialogState.type === 'entry'}
-        onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
+        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
         entry={dialogState.type === 'entry' ? dialogState.entry : null}
-        schedulePhaseId={dialogState.type === 'entry' ? dialogState.schedulePhaseId : ''}
+        scheduleDayId={dialogState.type === 'entry' ? dialogState.scheduleDayId : ''}
+        schedulePhaseId={dialogState.type === 'entry' ? dialogState.schedulePhaseId : null}
         festivalId={festivalId}
-        members={members}
-        sortOrder={
-          dialogState.type === 'entry'
-            ? calculateEntrySortOrder(getCurrentPhaseEntries(), null)
-            : 0
-        }
+        helpers={helpers}
         onSave={handleSaveEntry}
       />
 
       {/* Export Dialog */}
       <ScheduleExportDialog
         open={dialogState.type === 'export'}
-        onOpenChange={(open) => { if (!open) setDialogState({ type: null }); }}
+        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
         festivalName={festivalName || ''}
         days={days}
       />

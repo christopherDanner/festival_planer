@@ -38,6 +38,16 @@ _Avoid_: Mitglied (heißt in einem Verein etwas anderes), Member.
 
 Die Helfer eines Fests, geführt im Schichtplan. Zugleich der einzige Ort, an dem Helfer entstehen und verschwinden — und, weil es keinen Bestand gibt, ist die *Fest-Kopie* der einzige Weg, die Helfer eines vergangenen Fests in ein neues zu holen.
 
+Jeder Helfer steht als **Marke** darin (Namens-Marke, siehe *Werkzeug-Bausteine*), die bei Zugeteilten eine **Zähler-Plakette** trägt. Gruppiert wird nach **Wunsch-Passung**: wer die gerade fokussierte Station in seinen Wünschen führt, steht oben.
+
+**„Zugeteilt" heißt hier bewusst etwas anderes als bei der Ampel** (Entscheid aus #68) — es gibt zwei richtige Zählungen nebeneinander:
+
+- **Filter „Frei / Zugeteilt"** zählt *irgendeine* Zuteilung: Schicht **oder** Stationsmitgliedschaft. Wer nur in der Fußzeile einer Station steht, ist hier zugeteilt.
+- **Ampel, Reiter, KPI-Maßband** rechnen enger (siehe `staffing`): Station mit Schichten → nur Schicht-Zuteilungen; ohne Schichten → Stationsmitgliedschaft.
+- Die **Zähler-Plakette** zählt noch enger: nur *Schicht*-Zuteilungen. Sie beantwortet „wen hab ich noch nicht ausgenutzt?", und dazu sagt eine Stationsmitgliedschaft nichts.
+
+Die drei sind kein Widerspruch, der zu bereinigen wäre.
+
 ## Material-Übernahme
 
 Vorgang, Material-Positionen und Bestellmengen aus einem vergangenen Fest als Referenz für ein neues Fest zu nutzen. Ziel: Aufwand bei der Bestellplanung sparen, weil Mengen aus dem Vorjahr bekannt sind.
@@ -63,6 +73,15 @@ Ein einzelnes Material, das pro Fest geführt wird (`festival_materials`). Wesen
 
 Eine Position ist einer Station zugeordnet (oder keiner). Stations-Mapping zwischen zwei Festen läuft per Stationsname.
 
+## Zeilenmodus
+
+Die Art, wie Mengen und Preise einer Material-Position in der Arbeitsliste erfasst werden: **✎ macht genau eine Zeile zu Eingabefeldern**, alles andere bleibt lesend. Tippbar sind fünf Felder — Bestellt, Verbraucht, MwSt, Netto, Brutto; Material, Lieferant, Gebinde, Δ und Gesamt bleiben Text. Die Stammdaten einer Position gehören dagegen dem Dialog hinter **⋮**.
+
+- **Entwurf** — was in den Feldern einer offenen Zeile steht, als Text, so wie getippt. Er merkt sich seinen Ausgangsstand; *geändert* misst sich daran, nicht an der nachgeladenen Liste.
+- **Quelle des Preises** — die zuletzt getippte Preisseite, netto oder brutto. Sie entscheidet beim Speichern über `price_is_net` und bleibt Quelle, wenn sich der Steuersatz ändert; die andere Seite rechnet dann neu. Damit steht das `price_is_net` aus ADR 0006 nicht mehr als Rätsel in der Oberfläche: man sieht beide Zahlen und wie sie zusammenhängen. Ein **unberührtes** Preisfeld schreibt den gespeicherten Preis zurück, nicht seine auf Cent gezeigte Anzeige.
+- **Sammel-Fußleiste** — zählt die offenen und die geänderten Zeilen des Kastens und speichert oder verwirft sie auf einen Griff. Deckt den Rechnungs-Fall: eine Lieferantenrechnung, viele Zeilen, ein Durchgang.
+- **Sichtwechsel** — jeder Griff, der offene Zeilen aus dem Bild nähme: Achse, Reiter, Kategorie, Suche, der Sprung in die Übernahme, das Zuklappen aller Zeilen. Mit geänderten Zeilen kommt die **Rückfrage** — Speichern / Verwerfen / Zurück —, nie ein stilles Verwerfen.
+
 ## Bestellwert & Verbrauchswert
 
 Die zwei Geldsummen einer Materialliste. **Beide rechnen brutto** — der Verein zahlt brutto, eine Kostenzahl ohne Mehrwertsteuer ist für die Kassa wertlos.
@@ -78,6 +97,8 @@ Bestellwert und Verbrauchswert sind bereichsübergreifend dieselben Zahlen — d
 ## Station
 
 Funktionale Einheit innerhalb eines Festes (`stations`), z.B. "Bar", "Küche", "Kassa". Stationen sind pro Fest definiert, werden aber bei der Material-Übernahme per Name zwischen Festen gemappt.
+
+Ihr **Ort** ist der Platz am Festgelände ("Zelt Nord"). Er steht im grünen Stationskopf des Schichtplans und wird im Station-Dialog so beschriftet; in der Datenbank heißt die Spalte aus der Frühzeit noch `description`.
 
 ## Lieferant
 
@@ -139,6 +160,13 @@ Was ein *Sponsor* über alle Feste hinweg beigetragen hat, reduziert auf zwei An
 Sie ist die einzige festübergreifende Antwort auf die *Wiederkontaktierung*: die Sponsoring-Matrix zeigt nur das aktuelle Fest, und der *Vorjahresbeitrag* nur das Quellfest einer *Sponsor-Übernahme* — eine Firma, die vor drei Jahren gesponsert hat und nie mitkopiert wurde, ist sonst nirgends sichtbar. Dieselbe Zahl trägt die Löschregel aus ADR 0010: keine Historie = löschbar.
 _Avoid_: Sponsoring-Verlauf, Firmen-Historie.
 
+## Bezugsfest
+
+Das Fest, auf das sich „heuer" auf der Sponsoren-Stammdaten-Seite bezieht: das **nächste bevorstehende Fest**, abgeleitet wie Rang 1 der Plakatwand (frühestes Startdatum ab heute, heute zählt dazu). Nötig, weil die Seite keinen Fest-Kontext hat — sie steht über allen Festen. Es speist das Jahr im Segment-Schalter (`SPONSERT {Jahr}` · `HEUER NOCH NICHT GEFRAGT`) und in der Zählzeile des Masts.
+
+Zwischen zwei Festen gibt es **kein** Bezugsfest; dann entfällt der Schalter ganz, statt einen leeren Filter anzubieten. Nicht zu verwechseln mit dem *Quellfest* einer *Sponsor-Übernahme* — das liegt in der Vergangenheit, das Bezugsfest in der Zukunft.
+_Avoid_: aktuelles Fest, laufendes Fest.
+
 ## Sponsoring-Kategorie
 
 Eine benannte Sponsoring-Leistung mit einem Wert, z.B. "Werbeplakat", "Social-Media-Beitrag", "Logo in Speisekarte". **Pro Fest definiert** (Name + Wert), weil der Wert je Jahr variieren kann.
@@ -189,7 +217,7 @@ _Avoid_: Follow-up.
 
 ## Werkzeug-Bausteine (Toolkit)
 
-Die wiederkehrenden UI-Bausteine der Werkzeug-Plakat-Handschrift (`design-vision/DESIGN-VISION.md` §4): Maßband-Ruler, Namens-Marke, Wertmarke, Stempel, Segment-Schalter, Ampel-Logik, Freier Platz. Im Code englisch benannt unter `src/components/toolkit/` (`<Ruler>`, `<NameChip>`, `<ValueTag>`, `<Stamp>`, `<SegmentedControl>`, `<ModeToggle>`, `<StatusBar>`, `<OpenSlot>`) — Mapping und Komponentenstrategie in ADR 0003. Abgrenzung: `src/components/ui/` = Radix-Verhalten (shadcn, nur restylt), `toolkit/` = Handschrift.
+Die wiederkehrenden UI-Bausteine der Werkzeug-Plakat-Handschrift (`design-vision/DESIGN-VISION.md` §4): Maßband-Ruler, Namens-Marke, Wertmarke, Stempel, Segment-Schalter, Ampel-Logik, Freier Platz. Im Code englisch benannt unter `src/components/toolkit/` (`<Ruler>`, `<NameChip>`, `<ValueTag>`, `<Stamp>`, `<SegmentedControl>`, `<ModeToggle>`, `<StatusBar>`, `<OpenSlot>`, `<ActionMenu>`) — Mapping und Komponentenstrategie in ADR 0003. Abgrenzung: `src/components/ui/` = Radix-Verhalten (shadcn, nur restylt), `toolkit/` = Handschrift.
 
 ## Sponsoring-Übersicht
 
