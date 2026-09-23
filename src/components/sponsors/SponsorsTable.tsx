@@ -1,11 +1,11 @@
 import { type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
-import { sponsorHistoryOf, type SponsorHistory, type SponsorHistoryMap } from '@/lib/sponsorHistory';
+import { sponsorHistoryOf, type SponsorHistoryMap } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
 import { MissingValue } from '@/components/toolkit/PaperTable';
-import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import MastPanel from './MastPanel';
+import SponsorHistoryLine from './SponsorHistoryLine';
 
 export interface SponsorsTableProps {
 	/** Bereits gefilterter Ausschnitt des Sponsorenbestands, alphabetisch. */
@@ -18,41 +18,6 @@ export interface SponsorsTableProps {
 
 const CellValue = ({ children }: { children: string | null }) =>
 	children ? <>{children}</> : <MissingValue />;
-
-/**
- * Die Sponsoren-Historie einer Zeile: „2025 · 3 Feste", das Jahr in der
- * Akzentschrift. Ohne Historie steht die rote gestrichelte Marke — dieselbe
- * Marke ist im ⋮-Slice (#159) die Begründung, warum diese Firma löschbar ist.
- * Ein Fest ohne Datum steuert kein Jahr bei, zählt aber mit; dann bleibt es
- * bei der Anzahl statt einem erfundenen Jahr.
- */
-function HistoryCell({ history }: { history: SponsorHistory }) {
-	if (history.festivalCount === 0) {
-		// Dasselbe Rezept wie die rote Lücke im Schichtplan (`OpenSlot`), nur
-		// enger gesetzt: in einer Frachtbrief-Zeile darf die Marke die Zeilenhöhe
-		// nicht treiben. Nichts zum Anklicken, also `span`.
-		return (
-			<OpenSlot as="span" className="px-1.5 py-px text-[11px] tracking-[.04em]">
-				NOCH NIE
-			</OpenSlot>
-		);
-	}
-
-	const feste = `${history.festivalCount} ${history.festivalCount === 1 ? 'Fest' : 'Feste'}`;
-	return (
-		<>
-			{history.lastYear !== null && (
-				<span className="font-display text-[13.5px] font-semibold tracking-[.02em]">
-					{history.lastYear}
-				</span>
-			)}
-			<span className="text-[11.5px] text-tinte-soft">
-				{history.lastYear !== null ? ' · ' : ''}
-				{feste}
-			</span>
-		</>
-	);
-}
 
 /**
  * Spaltenkopf: Versalien auf getönter Fläche. Klebt am Desktop unter der
@@ -77,10 +42,14 @@ function HeaderCell({ children, className }: { children?: ReactNode; className?:
 /**
  * Frachtbrief-Tabelle der Sponsoren-Stammdaten (#101, Variante V1): sieben
  * Spalten, nur lesend. Gemessen brauchen sie mindestens 895 px und passen
- * damit in die 1132 px Inhaltsbreite. Unter 900px scrollt die Tabelle im
- * eigenen Rahmen (DESIGN-VISION §6), am Desktop gar nicht — nur deshalb kann
- * der Kopf dort kleben: ein Scroll-Container würde das Kleben am Fenster
+ * damit in die 1132 px Inhaltsbreite. Der Kopf klebt am Desktop, weil dort
+ * nichts quer scrollt — ein Scroll-Container würde das Kleben am Fenster
  * aushebeln.
+ *
+ * Seit #160 ist sie die Sicht **ab 900px**: darunter zeigt `SponsorsView`
+ * Karten. Die `min-[900px]`-Weichen bleiben trotzdem stehen — `compact` ist
+ * eine Angabe des Aufrufers, und der erste Anstrich, bevor `useIsMobile`
+ * geantwortet hat, ist keine. Sie kosten am Desktop nichts.
  */
 export default function SponsorsTable({ sponsors, history, onSelect }: SponsorsTableProps) {
 	// Am Handy ist die Zeile das Trefferfeld — DESIGN-VISION §6 will dafür
@@ -147,7 +116,7 @@ export default function SponsorsTable({ sponsors, history, onSelect }: SponsorsT
 										<CellValue>{sponsor.address}</CellValue>
 									</td>
 									<td className={cn(cell, 'whitespace-nowrap tabular-nums')}>
-										<HistoryCell history={sponsorHistoryOf(history, sponsor.id)} />
+										<SponsorHistoryLine history={sponsorHistoryOf(history, sponsor.id)} />
 									</td>
 									{/* Das ⋮ füllt #159. */}
 									<td className={cn(cell, 'w-10')} />
