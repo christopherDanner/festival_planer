@@ -2,13 +2,14 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { buttonByLabel } from '@/lib/__tests__/domTesting';
+import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
 	buildSponsoringOverviewFooter,
 	buildSponsoringOverviewRows,
 	type SponsoringOverviewRow
 } from '@/lib/sponsoringTotals';
+import type { CategoryImpact } from '@/lib/sponsoringPreisliste';
 import SponsoringMatrix, { type SponsoringMatrixProps } from './SponsoringMatrix';
 import {
 	makeAssignment,
@@ -19,13 +20,28 @@ import {
 const preisliste = (namesAndValues: [string, number][]): SponsoringCategory[] =>
 	namesAndValues.map(([name, value]) => makeCategory(name, value));
 
+/** Reichweite je Kategorie — im Test meist null, der Zettel am Kopf braucht sie. */
+const ohneZusagen = (categories: SponsoringCategory[]): Record<string, CategoryImpact> =>
+	Object.fromEntries(categories.map((c) => [c.id, { assigned: 0, inheriting: 0 }]));
+
 /** Was die Suche der Matrix mitgibt (#151) — im Test fast immer ungefiltert. */
-type MatrixFilter = { totalRowCount?: number; searchTerm?: string };
+type MatrixFilter = {
+	totalRowCount?: number;
+	searchTerm?: string;
+	categoryImpacts?: Record<string, CategoryImpact>;
+};
+
+type MatrixHandlers = Partial<
+	Pick<
+		SponsoringMatrixProps,
+		'onApply' | 'onRemove' | 'onDelete' | 'onCategoryApply' | 'onCategoryDelete'
+	>
+>;
 
 const matrix = (
 	rows: SponsoringOverviewRow[],
 	categories: SponsoringCategory[],
-	handlers: Partial<Pick<SponsoringMatrixProps, 'onApply' | 'onRemove' | 'onDelete'>> = {},
+	handlers: MatrixHandlers = {},
 	filter: MatrixFilter = {}
 ) => (
 	<SponsoringMatrix
@@ -34,9 +50,12 @@ const matrix = (
 		footer={buildSponsoringOverviewFooter(rows, categories)}
 		totalRowCount={filter.totalRowCount ?? rows.length}
 		searchTerm={filter.searchTerm ?? ''}
+		categoryImpacts={filter.categoryImpacts ?? ohneZusagen(categories)}
 		onDelete={handlers.onDelete ?? (() => {})}
 		onApply={handlers.onApply ?? (() => {})}
 		onRemove={handlers.onRemove ?? (() => {})}
+		onCategoryApply={handlers.onCategoryApply ?? (() => {})}
+		onCategoryDelete={handlers.onCategoryDelete ?? (() => {})}
 	/>
 );
 
@@ -64,14 +83,15 @@ afterEach(async () => {
 async function mount(
 	rows: SponsoringOverviewRow[],
 	categories: SponsoringCategory[],
-	handlers: Partial<Pick<SponsoringMatrixProps, 'onApply' | 'onRemove'>> = {}
+	handlers: MatrixHandlers = {},
+	filter: MatrixFilter = {}
 ) {
 	const container = document.createElement('div');
 	document.body.appendChild(container);
 	const root = createRoot(container);
 	roots.push(root);
 	await act(async () => {
-		root.render(matrix(rows, categories, handlers));
+		root.render(matrix(rows, categories, handlers, filter));
 	});
 
 	return {
@@ -159,6 +179,108 @@ describe('SponsoringMatrix — Spaltenköpfe', () => {
 		expect(html).toContain('Freibetrag');
 		expect(html).toContain('Sachleistung');
 		expect(html).toContain('Gesamt');
+	});
+});
+
+describe('SponsoringMatrix — Spaltenkopf verwaltet die Preisliste', () => {
+	const transparent = makeCategory('Transparent', 300);
+	const mitZusagen = { [transparent.id]: { assigned: 6, inheriting: 4 } };
+
+	/** Der Zettel der Preisliste — nur er führt ein Namensfeld. */
+	const preislisteZettel = () =>
+		document.body.querySelector('form[aria-label^="Zettel"] [aria-label="Name"]');
+
+	it('macht jeden Kategorie-Spaltenkopf zu einem Knopf', () => {
+		const html = render([], [transparent]);
+		expect(html).toContain('aria-label="Kategorie Transparent, Standardwert € 300"');
+	});
+
+	it('öffnet am Kopf den Zettel mit Name und Standardwert', async () => {
+		const view = await mount([], [transparent]);
+
+		await view.click('Kategorie Transparent, Standardwert € 300');
+
+		expect(view.field('Name').value).toBe('Transparent');
+		expect(view.field('Standardwert').value).toBe('300');
+	});
+
+	it('beziffert die Rückwirkung, sobald der Standardwert getippt wird', async () => {
+		const view = await mount([], [transparent], {}, { categoryImpacts: mitZusagen });
+
+		await view.click('Kategorie Transparent, Standardwert € 300');
+		// Unangetastet sagt der Zettel nur, was gilt — die Warnung wäre sonst Tapete.
+		expect(view.zettel()?.textContent).toContain('Standardwert € 300');
+		expect(view.zettel()?.textContent).not.toContain('ohne eigenen Wert');
+
+		await act(async () => {
+			typeInto(view.field('Standardwert'), '350');
+		});
+
+		expect(view.zettel()?.textContent).toContain('Gilt für 4 Firmen ohne eigenen Wert.');
+	});
+
+	it('sperrt Übernehmen bei einem Tippfehler im Standardwert', async () => {
+		// Sonst hieße „35O" stumm *kein* Standardwert, und genau die vier Firmen
+		// aus der Warnzeile fielen rückwirkend auf € 0.
+		const onCategoryApply = vi.fn();
+		const view = await mount([], [transparent], { onCategoryApply }, { categoryImpacts: mitZusagen });
+
+		await view.click('Kategorie Transparent, Standardwert € 300');
+		await act(async () => {
+			typeInto(view.field('Standardwert'), '35O');
+		});
+
+		expect(buttonByLabel(document.body, 'Übernehmen').disabled).toBe(true);
+	});
+
+	it('schreibt Name und Standardwert über Übernehmen', async () => {
+		const onCategoryApply = vi.fn();
+		const view = await mount([], [transparent], { onCategoryApply });
+
+		await view.click('Kategorie Transparent, Standardwert € 300');
+		await view.press('Übernehmen');
+
+		expect(onCategoryApply).toHaveBeenCalledWith(transparent, {
+			name: 'Transparent',
+			value: '300'
+		});
+	});
+
+	it('löscht erst nach der bezifferten Rückfrage', async () => {
+		const onCategoryDelete = vi.fn();
+		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+		const view = await mount([], [transparent], { onCategoryDelete }, { categoryImpacts: mitZusagen });
+
+		await view.click('Kategorie Transparent, Standardwert € 300');
+		await view.press('Kategorie löschen');
+
+		expect(confirmSpy.mock.calls[0][0]).toContain('6 Zuweisungen');
+		expect(onCategoryDelete).toHaveBeenCalledWith(transparent);
+		confirmSpy.mockRestore();
+	});
+
+	it('hält höchstens einen Zettel offen — der Kopf schließt den einer Zelle', async () => {
+		const rows = buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+		const view = await mount(rows, [transparent]);
+
+		await view.click('Transparent bei Taxi Brandl');
+		expect(preislisteZettel()).toBeNull();
+
+		await view.click('Kategorie Transparent, Standardwert € 300');
+		expect(preislisteZettel()).not.toBeNull();
+		expect(document.body.querySelectorAll('form[aria-label^="Zettel"]')).toHaveLength(1);
+	});
+
+	it('lässt den Kopf-Knopf die Versalien und die Worttrennung tragen', async () => {
+		// Tailwinds Preflight nimmt einem <button> die Versalien der <th> zurück,
+		// und ohne hyphens-auto sprengt „TRANSPARENT" die 91-px-Spalte (#147).
+		const html = render([], [transparent]);
+		const kopf = html
+			.split('<button')
+			.find((teil) => teil.includes('aria-label="Kategorie Transparent, Standardwert € 300"'))!;
+
+		expect(kopf).toContain('uppercase');
+		expect(kopf).toContain('hyphens-auto');
 	});
 });
 

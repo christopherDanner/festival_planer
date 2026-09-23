@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
 import SponsoringOverview, { type SponsoringOverviewProps } from './SponsoringOverview';
 import {
 	makeAssignment,
@@ -33,22 +36,63 @@ const sponsorings = [
 
 const noop = () => {};
 
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const overview = (props: Partial<SponsoringOverviewProps> = {}) => (
+	<SponsoringOverview
+		sponsorings={sponsorings}
+		categories={[plakat, transparent]}
+		searchTerm=""
+		categoryImpacts={{}}
+		onSearchChange={noop}
+		onCreate={noop}
+		onTransfer={noop}
+		onExportPdf={noop}
+		onDelete={noop}
+		onApply={noop}
+		onRemove={noop}
+		onCategoryApply={noop}
+		onCategoryDelete={noop}
+		{...props}
+	/>
+);
+
 const render = (props: Partial<SponsoringOverviewProps> = {}) =>
-	renderToStaticMarkup(
-		<SponsoringOverview
-			sponsorings={sponsorings}
-			categories={[plakat, transparent]}
-			searchTerm=""
-			onSearchChange={noop}
-			onCreate={noop}
-			onTransfer={noop}
-			onExportPdf={noop}
-			onDelete={noop}
-			onApply={noop}
-			onRemove={noop}
-			{...props}
-		/>
-	);
+	renderToStaticMarkup(overview(props));
+
+/* Der Zettel hängt als Popover im Portal an `document.body`; jede Montage wird
+danach abgeräumt, sonst findet der nächste Test einen alten. */
+const roots: Root[] = [];
+
+afterEach(async () => {
+	await act(async () => {
+		roots.forEach((root) => root.unmount());
+	});
+	roots.length = 0;
+});
+
+async function mount(props: Partial<SponsoringOverviewProps> = {}) {
+	const container = document.createElement('div');
+	document.body.appendChild(container);
+	const root = createRoot(container);
+	roots.push(root);
+	await act(async () => {
+		root.render(overview(props));
+	});
+	return {
+		container,
+		field: (label: string) =>
+			document.body.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!,
+		zettel: () => document.body.querySelector('form[aria-label^="Zettel"]'),
+		press: async (label: string) => {
+			const button = buttonByLabel(document.body, label);
+			await act(async () => {
+				button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+				button.click();
+			});
+		}
+	};
+}
 
 describe('SponsoringOverview — Suche', () => {
 	it('trägt das Suchfeld der Werkzeugleiste', () => {
@@ -122,5 +166,35 @@ describe('SponsoringOverview — ADR 0006: Kennzahl über alle, Fuß über die s
 			expect(html).toContain('Plakat');
 			expect(html).toContain('Transparent');
 		}
+	});
+});
+
+describe('SponsoringOverview — „+ KATEGORIE" legt die Preisliste an', () => {
+	it('trägt den Knopf in der Werkzeugleiste', () => {
+		expect(render()).toContain('aria-label="Kategorie anlegen"');
+	});
+
+	it('öffnet denselben Zettel im Anlege-Modus: leer, ohne Löschen', async () => {
+		const view = await mount();
+
+		await view.press('Kategorie');
+
+		expect(view.field('Name').value).toBe('');
+		expect(view.field('Standardwert').value).toBe('');
+		expect(view.zettel()?.textContent).not.toContain('Kategorie löschen');
+	});
+
+	it('legt über Übernehmen eine Kategorie ohne Standardwert an', async () => {
+		const onCategoryApply = vi.fn();
+		const view = await mount({ onCategoryApply });
+
+		await view.press('Kategorie');
+		await act(async () => {
+			typeInto(view.field('Name'), 'Logo Speisekarte');
+		});
+		await view.press('Übernehmen');
+
+		expect(onCategoryApply).toHaveBeenCalledWith(null, { name: 'Logo Speisekarte', value: '' });
+		expect(view.zettel()).toBeNull();
 	});
 });

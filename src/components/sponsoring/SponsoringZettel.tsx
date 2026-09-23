@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { canApplyZettel, type Zettel, type ZettelInput } from '@/lib/sponsoringZettel';
+import {
+	ZETTEL_AMOUNT_FIELD,
+	ZETTEL_BUTTON,
+	ZETTEL_FIELD,
+	ZETTEL_HINT,
+	ZETTEL_SHEET,
+	ZETTEL_TITLE
+} from '@/components/sponsoring/zettelLook';
 
 export interface SponsoringZettelProps {
 	zettel: Zettel;
@@ -8,16 +16,6 @@ export interface SponsoringZettelProps {
 	/** „Entfernen" — der einzige Weg, der einen Wert löscht (ADR 0009). */
 	onRemove: () => void;
 }
-
-/* Ein Platzhalter darf nicht wie ein Wert aussehen: blass und in normaler
-Stärke. Im Entscheid-Prototyp stand der Standardwert als Platzhalter in
-Wertschrift — eine nicht zugewiesene Kategorie sah aus wie eine zugewiesene
-(ADR 0009, ausdrücklich kein Kosmetikpunkt). */
-const FIELD =
-	'w-full border-1.5 border-tinte bg-white px-2 py-1 text-[13px] outline-none placeholder:font-normal placeholder:text-tinte-soft focus:border-gruen';
-const AMOUNT_FIELD = `${FIELD} text-right font-display font-semibold tabular-nums`;
-const BUTTON =
-	'border-1.5 border-tinte px-2.5 py-1 text-[11px] font-bold uppercase tracking-[.05em]';
 
 /**
  * Der Zettel: ein Klick auf eine Zelle der Sponsoring-Matrix öffnet ihn mit
@@ -49,13 +47,13 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({ zettel, onApply, on
 	return (
 		<form
 			aria-label={`Zettel ${zettel.title}`}
-			className="w-[205px] border-2.5 border-tinte bg-papier p-2.5 shadow-versatz"
+			className={ZETTEL_SHEET}
 			onSubmit={(e) => {
 				e.preventDefault();
 				onApply({ value, description });
 			}}
 		>
-			<div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[.06em] text-tinte-soft">
+			<div className={ZETTEL_TITLE}>
 				{zettel.title}
 				{/* Leere und belegte Zelle zeigen dasselbe Feld — den Unterschied
 				macht diese Zeile, nicht nur der fehlende Entfernen-Knopf (ADR 0009). */}
@@ -69,7 +67,7 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({ zettel, onApply, on
 			{hasDescription && (
 				<input
 					ref={descriptionRef}
-					className={`${FIELD} mb-1.5`}
+					className={`${ZETTEL_FIELD} mb-1.5`}
 					aria-label="Bezeichnung"
 					placeholder="Bezeichnung"
 					value={description}
@@ -79,7 +77,7 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({ zettel, onApply, on
 
 			<input
 				ref={amountRef}
-				className={AMOUNT_FIELD}
+				className={ZETTEL_AMOUNT_FIELD}
 				aria-label={hasDescription ? 'Schätzwert' : 'Betrag'}
 				inputMode="decimal"
 				placeholder={hasDescription ? 'Schätzwert €' : 'Betrag'}
@@ -87,12 +85,12 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({ zettel, onApply, on
 				onChange={(e) => setValue(e.target.value)}
 			/>
 
-			<div className="mt-1.5 text-[11px] text-tinte-soft">{zettel.hint}</div>
+			<div className={ZETTEL_HINT}>{zettel.hint}</div>
 
 			<div className="mt-2 flex gap-1.5">
 				<button
 					type="submit"
-					className={`${BUTTON} bg-tinte text-papier disabled:opacity-40`}
+					className={`${ZETTEL_BUTTON} bg-tinte text-papier disabled:opacity-40`}
 					disabled={!canApplyZettel(zettel, { value, description })}
 				>
 					Übernehmen
@@ -100,7 +98,7 @@ const SponsoringZettel: React.FC<SponsoringZettelProps> = ({ zettel, onApply, on
 				{/* Entfernen ist nie ein Nebeneffekt des Klicks — es hat einen eigenen,
 				benannten Knopf und gibt es nur, wo etwas zu entfernen ist (ADR 0009). */}
 				{zettel.recorded && (
-					<button type="button" className={`${BUTTON} bg-white text-rot`} onClick={onRemove}>
+					<button type="button" className={`${ZETTEL_BUTTON} bg-white text-rot`} onClick={onRemove}>
 						Entfernen
 					</button>
 				)}

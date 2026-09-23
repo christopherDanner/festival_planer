@@ -5,15 +5,19 @@ Speichern daraus macht. Store-Muster wie der `materialSaveOrchestrator` der
 Gerechnet wird in `materialCellEdit`. */
 
 import {
+	BASE_UNITS,
 	cellText,
 	cellUpdate,
 	isCellDirty,
+	isQuantityColumn,
 	nextCell,
 	type CellMove,
 	type CellRef,
 	type CellUpdate,
 	type CellValues,
-	type EditableColumn
+	type EditableColumn,
+	type InputUnit,
+	type InputUnits
 } from './materialCellEdit';
 
 /** Eine Zeile, wie die Zellbearbeitung sie kennt: Mengen, Preis, Gebinde,
@@ -23,12 +27,19 @@ export type CellRow = CellValues & { id: string };
 export interface CellEditorSnapshot {
 	/** Die offene Zelle — höchstens eine, wie beim Zettel des Sponsorings. */
 	editing: CellRef | null;
-	/** Was darin steht: Mengen als Text in der Basiseinheit, Preise auf Cent,
-	MwSt als Prozentzahl (leer = keine). */
+	/** Was darin steht: Mengen als Text in der Eingabe-Einheit der Spalte, Preise
+	auf Cent, MwSt als Prozentzahl (leer = keine). */
 	value: string;
 	/** Ob darin getippt wurde, seit sie aufging — beim Preis entscheidet das
 	über die Quelle und über die Rundung (siehe `materialCellEdit`). */
 	touched: boolean;
+	/**
+	 * Worin die offene Zelle getippt wird (#218) — festgehalten beim Öffnen.
+	 * Wer den Text deutet, muss diese Einheit nehmen und nicht die, auf der der
+	 * Spaltenkopf inzwischen steht; sonst rechnete die Vorschau anders als das
+	 * Speichern. Ohne offene Zelle und in den Preisspalten: Basis.
+	 */
+	unit: InputUnit;
 	/** Das Speichern läuft; die Zelle nimmt solange keine Zeichen an. */
 	saving: boolean;
 	/** Das letzte Speichern ist gescheitert — roter Rand, Wert bleibt stehen. */
@@ -40,6 +51,13 @@ export interface CellEditorSnapshot {
 export interface CreateCellEditorOpts {
 	/** Schreibt die Zelle weg. Eine Ablehnung lässt die Zelle offen. */
 	onSave: (id: string, update: CellUpdate) => Promise<unknown>;
+	/**
+	 * Die **Eingabe-Einheit je Mengenspalte** (#218), wie die Spaltenköpfe sie
+	 * gerade zeigen. Als Geber, nicht als Wert: der Store lebt über Renderzyklen
+	 * hinweg, die Wahl liegt in der Arbeitsliste. Ohne Angabe — und ohne Antwort
+	 * — wird in der Basiseinheit getippt; dieser Rückfall steht genau hier.
+	 */
+	units?: () => InputUnits | undefined;
 	/** Wie lange der grüne Blitz nach dem Speichern steht (Vision: ~0,9 s). */
 	flashMs?: number;
 }
@@ -72,6 +90,10 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 	// Der Stand beim Öffnen: woran sich „geändert" misst und woraus die Nutzlast
 	// entsteht. Ein Nachladen der Liste darf beides nicht verschieben.
 	let origin: CellRow | null = null;
+	// Die Einheit, in der die offene Zelle getippt wird — festgehalten beim
+	// Öffnen, wie `origin` auch: was gelesen aufging, muss gleich gedeutet wieder
+	// weggeschrieben werden.
+	let unit: InputUnit = 'base';
 	let value = '';
 	let touched = false;
 	let saving = false;
@@ -90,7 +112,8 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 	function start(row: CellRow, column: EditableColumn) {
 		editing = { id: row.id, column };
 		origin = row;
-		value = cellText(column, row);
+		unit = isQuantityColumn(column) ? (opts.units?.() ?? BASE_UNITS)[column] : 'base';
+		value = cellText(column, row, unit);
 		touched = false;
 		failed = false;
 	}
@@ -98,6 +121,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 	function close() {
 		editing = null;
 		origin = null;
+		unit = 'base';
 		value = '';
 		touched = false;
 		failed = false;
@@ -144,15 +168,16 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 			const row = origin;
 			const typed = value;
 			const wasTouched = touched;
+			const typedUnit = unit;
 			const target = move ? nextCell(rows.map((r) => r.id), cell, move) : null;
 
-			if (!isCellDirty(cell.column, typed, row, wasTouched)) {
+			if (!isCellDirty(cell.column, typed, row, typedUnit, wasTouched)) {
 				go(target, rows);
 				notify();
 				return;
 			}
 
-			const update = cellUpdate(cell.column, typed, row, wasTouched);
+			const update = cellUpdate(cell.column, typed, row, typedUnit, wasTouched);
 			saving = true;
 			failed = false;
 			notify();
@@ -193,7 +218,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		},
 		getState() {
 			if (cached) return cached;
-			cached = { editing, value, touched, saving, failed, savedIds: [...savedIds] };
+			cached = { editing, value, touched, unit, saving, failed, savedIds: [...savedIds] };
 			return cached;
 		},
 		subscribe(listener) {

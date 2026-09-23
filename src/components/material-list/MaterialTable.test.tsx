@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import MaterialTable from './MaterialTable';
 import type { CellEditControls } from './MaterialTableCells';
-import type { CellRef } from '@/lib/materialCellEdit';
+import { BASE_UNITS, type CellRef } from '@/lib/materialCellEdit';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
 const noop = () => {};
@@ -10,7 +10,7 @@ const noop = () => {};
 /** Die Zellbearbeitung mit der Zelle, die ein Test offen braucht — ihr eigenes
 Spiel steht in `MaterialCellEdit.test.tsx` (#216/#217). */
 function cellEditWith(
-	over: Partial<Pick<CellEditControls, 'editing' | 'value' | 'savedIds'>> = {}
+	over: Partial<Pick<CellEditControls, 'editing' | 'value' | 'savedIds' | 'units'>> = {}
 ): CellEditControls {
 	return {
 		editing: null,
@@ -21,8 +21,11 @@ function cellEditWith(
 		saving: false,
 		failed: false,
 		savedIds: [],
+		units: BASE_UNITS,
+		unit: 'base',
 		onOpen: noop,
 		onType: noop,
+		onUnitChange: noop,
 		onCommit: noop,
 		onCancel: noop,
 		...over
@@ -57,6 +60,9 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 	};
 }
 
+/** Die Knöpfe im Kasten — ohne die Einheiten-Umschalter im Kopf (#218). */
+const tbodyButtons = (html: string) => html.match(/<tbody.*<\/tbody>/s)?.[0].match(/<button/g);
+
 const renderTable = (
 	materials: FestivalMaterialWithStation[],
 	showStation?: boolean,
@@ -73,10 +79,14 @@ const renderTable = (
 		/>
 	);
 
-/** Die Beschriftungen der Spaltenköpfe in ihrer Reihenfolge. */
+/** Die Beschriftungen der Spaltenköpfe in ihrer Reihenfolge — ohne den
+Einheiten-Umschalter der Mengenspalten (#218), der seine eigenen Tests hat. */
 function headers(html: string): string[] {
 	return [...html.matchAll(/<th[^>]*>(.*?)<\/th>/gs)].map((m) =>
-		m[1].replace(/<[^>]+>/g, '').trim()
+		m[1]
+			.replace(/<div role="radiogroup".*?<\/div>/gs, '')
+			.replace(/<[^>]+>/g, '')
+			.trim()
 	);
 }
 
@@ -135,7 +145,9 @@ describe('MaterialTable — fünf Zellen führen hinein, der Rest ist Text (#114
 			expect(html).toContain(`aria-label="${label} von Bier"`);
 		}
 		// Die fünf Zellen plus das ⋮ der Aktionen-Spalte — mehr führt nirgendwohin.
-		expect(html.match(/<button/g)).toHaveLength(6);
+		// Gezählt im Kasten: die zwei Einheiten-Umschalter im Kopf (#218) tragen
+		// ihre eigenen Segmente.
+		expect(tbodyButtons(html)).toHaveLength(6);
 	});
 
 	it('lässt Material, Lieferant, Gebinde, Δ und Gesamt als Text stehen (CONTEXT.md)', () => {
@@ -151,11 +163,69 @@ describe('MaterialTable — fünf Zellen führen hinein, der Rest ist Text (#114
 		expect(html).toContain('Metro');
 		expect(html).toContain('50 Liter pro Fass');
 		// Sie tragen keinen Knopf — die sechs sind oben abgezählt.
-		expect(html.match(/<button/g)).toHaveLength(6);
+		expect(tbodyButtons(html)).toHaveLength(6);
 	});
 
 	it('bietet je Zeile das Drei-Punkt-Menü an — der Weg zu den Stammdaten', () => {
 		expect(renderTable(rows)).toContain('Menü für Bier');
+	});
+});
+
+describe('MaterialTable — Eingabe-Einheit im Spaltenkopf (#218)', () => {
+	/** 4 Fass à 50 Liter bestellt, 3 verbraucht. */
+	const fass = material({
+		unit: 'Liter',
+		packaging_unit: 'Fass',
+		amount_per_packaging: 50,
+		ordered_quantity: 4,
+		actual_quantity: 3
+	});
+
+	it('setzt in beide Mengenspalten einen Umschalter Basis ⇄ Gebinde', () => {
+		const html = renderTable([fass], false);
+
+		expect(html).toContain('aria-label="Eingabe-Einheit für Bestellt"');
+		expect(html).toContain('aria-label="Eingabe-Einheit für Verbraucht"');
+		expect(html.match(/role="radiogroup"/g)).toHaveLength(2);
+		expect(html).toContain('Basis');
+		expect(html).toContain('Gebinde');
+	});
+
+	it('steht standardmäßig auf Basis', () => {
+		const html = renderTable([fass], false);
+		const groups = [...html.matchAll(/<div role="radiogroup".*?<\/div>/gs)].map((m) => m[0]);
+
+		expect(groups).toHaveLength(2);
+		for (const group of groups) {
+			expect(group).toMatch(/aria-checked="true"[^>]*>Basis</);
+		}
+	});
+
+	it('schaltet die Spalten unabhängig voneinander', () => {
+		const html = renderTable(
+			[fass],
+			false,
+			cellEditWith({ units: { ordered: 'base', consumed: 'packaging' } })
+		);
+		const groups = [...html.matchAll(/<div role="radiogroup".*?<\/div>/gs)].map((m) => m[0]);
+
+		expect(groups[0]).toMatch(/aria-checked="true"[^>]*>Basis</);
+		expect(groups[1]).toMatch(/aria-checked="true"[^>]*>Gebinde</);
+	});
+
+	it('lässt die lesende Anzeige unangetastet — Basiseinheit groß, Gebinde darunter', () => {
+		// „Die lesende Anzeige der Zelle bleibt unverändert" (#218): umgeschaltet
+		// wird die *Eingabe*, nicht das, was in der Spalte steht.
+		const html = renderTable(
+			[fass],
+			false,
+			cellEditWith({ units: { ordered: 'packaging', consumed: 'packaging' } })
+		);
+
+		expect(html).toContain('200'); // 4 Fass à 50 Liter
+		expect(html).toContain('→ 4 × Fass');
+		expect(html).toContain('150');
+		expect(html).toContain('→ 3 × Fass');
 	});
 });
 

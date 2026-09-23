@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import ShiftPlanningView from '@/components/shift-planning/ShiftPlanningView';
 import MaterialListView from '@/components/material-list/MaterialListView';
 import ScheduleView from '@/components/schedule/ScheduleView';
-import SponsoringView from '@/components/sponsoring/SponsoringView';
+import SponsoringsSection from '@/components/sponsoring/SponsoringsSection';
 import FestivalOverviewView from '@/components/festival-overview/FestivalOverviewView';
 import FestivalEditDialog from '@/components/festival/FestivalEditDialog';
 import FestivalShellHeader from '@/components/festival/FestivalShellHeader';
@@ -193,7 +193,7 @@ export default function FestivalResults() {
 					/>
 				)}
 				{activeTab === 'sponsoring' && (
-					<SponsoringView festivalId={festivalId} festivalName={festival.name} />
+					<SponsoringsSection festivalId={festivalId} festivalName={festival.name} />
 				)}
 			</div>
 			</div>

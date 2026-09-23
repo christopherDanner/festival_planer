@@ -10,7 +10,9 @@ import {
  * über Renderzyklen hinweg, `useSyncExternalStore` holt seinen Stand.
  *
  * `onSave` darf sich bei jedem Render ändern (react-query gibt neue
- * Mutationen); der Store bekommt darum nur einen Zeiger darauf.
+ * Mutationen); der Store bekommt darum nur einen Zeiger darauf. Dasselbe gilt
+ * für die Eingabe-Einheit der Spalten (#218) — sie liegt als Zustand in der
+ * Arbeitsliste, der Store fragt sie beim Öffnen einer Zelle ab.
  */
 export function useCellEditor(opts: CreateCellEditorOpts) {
 	const optsRef = useRef(opts);
@@ -20,6 +22,7 @@ export function useCellEditor(opts: CreateCellEditorOpts) {
 		() =>
 			createCellEditor({
 				onSave: (id, update) => optsRef.current.onSave(id, update),
+				units: () => optsRef.current.units?.(),
 				flashMs: optsRef.current.flashMs
 			}),
 		[]

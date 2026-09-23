@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	cellText,
+	cellUnit,
 	cellUpdate,
 	isCellDirty,
 	nextCell,
@@ -24,11 +25,11 @@ const fass: CellValues = {
 
 describe('cellText — was beim Öffnen der Zelle im Feld steht (#216)', () => {
 	it('zeigt die Menge in der Basiseinheit, nicht in Gebinden', () => {
-		expect(cellText('ordered', fass)).toBe('200');
+		expect(cellText('ordered', fass, 'base')).toBe('200');
 	});
 
 	it('lässt eine nicht erfasste Verbraucht-Menge leer', () => {
-		expect(cellText('consumed', fass)).toBe('');
+		expect(cellText('consumed', fass, 'base')).toBe('');
 	});
 });
 
@@ -43,33 +44,33 @@ describe('cellUpdate — leer und 0 sind bei Verbraucht zweierlei (#216)', () =>
 
 	it('speichert eine geleerte Verbraucht-Zelle als „nicht erfasst"', () => {
 		// Leer zählt nicht in den Verbrauchswert (CONTEXT.md) …
-		expect(cellUpdate('consumed', '', stueck)).toEqual({ actual_quantity: null });
+		expect(cellUpdate('consumed', '', stueck, 'base')).toEqual({ actual_quantity: null });
 	});
 
 	it('speichert eine 0 in Verbraucht als „nichts verbraucht"', () => {
 		// … eine 0 dagegen schon, mit 0 × Bruttopreis.
-		expect(cellUpdate('consumed', '0', stueck)).toEqual({ actual_quantity: 0 });
+		expect(cellUpdate('consumed', '0', stueck, 'base')).toEqual({ actual_quantity: 0 });
 	});
 
 	it('macht aus einer geleerten Bestellt-Zelle eine 0 — keine Position ohne Menge', () => {
-		expect(cellUpdate('ordered', '', stueck)).toEqual({ ordered_quantity: 0 });
+		expect(cellUpdate('ordered', '', stueck, 'base')).toEqual({ ordered_quantity: 0 });
 	});
 
 	it('rechnet die getippte Basismenge in Gebinde zurück', () => {
-		expect(cellUpdate('consumed', '150', fass)).toEqual({ actual_quantity: 3 });
+		expect(cellUpdate('consumed', '150', fass, 'base')).toEqual({ actual_quantity: 3 });
 	});
 
 	it('nimmt das Dezimalkomma, wie es auf der Rechnung steht', () => {
 		// „auch angebrochene (2,5)" (CONTEXT.md). Ein verworfenes Komma machte aus
 		// 2,5 ein „nicht erfasst" — genau das stille Verwerfen, das ADR 0013
 		// ausschließt.
-		expect(cellUpdate('consumed', '2,5', stueck)).toEqual({ actual_quantity: 2.5 });
-		expect(cellUpdate('ordered', '2,5', stueck)).toEqual({ ordered_quantity: 2.5 });
+		expect(cellUpdate('consumed', '2,5', stueck, 'base')).toEqual({ actual_quantity: 2.5 });
+		expect(cellUpdate('ordered', '2,5', stueck, 'base')).toEqual({ ordered_quantity: 2.5 });
 	});
 
 	it('lässt Gekritzeltes stehen, statt es als 0 wegzuschreiben', () => {
-		expect(cellUpdate('consumed', 'abc', stueck)).toEqual({ actual_quantity: 8 });
-		expect(cellUpdate('ordered', 'abc', stueck)).toEqual({ ordered_quantity: 10 });
+		expect(cellUpdate('consumed', 'abc', stueck, 'base')).toEqual({ actual_quantity: 8 });
+		expect(cellUpdate('ordered', 'abc', stueck, 'base')).toEqual({ ordered_quantity: 10 });
 	});
 });
 
@@ -83,24 +84,107 @@ describe('isCellDirty — geschrieben wird nur, was etwas ändert (#216)', () =>
 	};
 
 	it('hält die unberührte Zelle für unverändert', () => {
-		expect(isCellDirty('ordered', '0', stueck)).toBe(false);
-		expect(isCellDirty('consumed', '', stueck)).toBe(false);
+		expect(isCellDirty('ordered', '0', stueck, 'base')).toBe(false);
+		expect(isCellDirty('consumed', '', stueck, 'base')).toBe(false);
 	});
 
 	it('zählt eine geleerte Bestellt-Zelle über einer 0 nicht als Änderung', () => {
 		// Leer *ist* hier 0 — sonst stünde in der Liste ein Schreibvorgang, den
 		// niemand ausgelöst hat.
-		expect(isCellDirty('ordered', '', stueck)).toBe(false);
+		expect(isCellDirty('ordered', '', stueck, 'base')).toBe(false);
 	});
 
 	it('unterscheidet bei Verbraucht die 0 von der leeren Zelle', () => {
-		expect(isCellDirty('consumed', '0', stueck)).toBe(true);
-		expect(isCellDirty('consumed', '', { ...stueck, actual_quantity: 0 })).toBe(true);
+		expect(isCellDirty('consumed', '0', stueck, 'base')).toBe(true);
+		expect(isCellDirty('consumed', '', { ...stueck, actual_quantity: 0 }, 'base')).toBe(true);
 	});
 
 	it('merkt die neue Zahl — auch in Gebinden gerechnet', () => {
-		expect(isCellDirty('consumed', '150', fass)).toBe(true);
-		expect(isCellDirty('ordered', '200', fass)).toBe(false);
+		expect(isCellDirty('consumed', '150', fass, 'base')).toBe(true);
+		expect(isCellDirty('ordered', '200', fass, 'base')).toBe(false);
+	});
+});
+
+describe('cellUnit — worin diese eine Position getippt wird (#218)', () => {
+	const stueck: CellValues = {
+		...ohnePreis,
+		packaging_unit: null,
+		amount_per_packaging: null,
+		ordered_quantity: 10,
+		actual_quantity: null
+	};
+
+	it('folgt der Wahl des Spaltenkopfs, solange die Position ein Gebinde hat', () => {
+		expect(cellUnit('packaging', fass)).toBe('packaging');
+		expect(cellUnit('base', fass)).toBe('base');
+	});
+
+	it('lässt eine Position ohne Gebinde in der Basiseinheit — auch im Gebinde-Modus', () => {
+		// „Positionen ohne Gebinde bleiben in der Basiseinheit" (CONTEXT.md).
+		expect(cellUnit('packaging', stueck)).toBe('base');
+	});
+
+	it('zählt ein Gebinde ohne Inhaltsmenge nicht — 1 Karton à nichts ist keine Umrechnung', () => {
+		expect(cellUnit('packaging', { ...stueck, packaging_unit: 'Karton' })).toBe('base');
+	});
+});
+
+describe('cellText und cellUpdate im Gebinde-Modus (#218)', () => {
+	const stueck: CellValues = {
+		...ohnePreis,
+		packaging_unit: null,
+		amount_per_packaging: null,
+		ordered_quantity: 10,
+		actual_quantity: null
+	};
+
+	it('zeigt im Feld die Gebinde, nicht die Basismenge', () => {
+		// 4 Fass à 50 Liter: in Basis 200, in Gebinden 4.
+		expect(cellText('ordered', fass, 'packaging')).toBe('4');
+		expect(cellText('ordered', fass, 'base')).toBe('200');
+	});
+
+	it('schreibt angebrochene Gebinde mit Komma, wie sie auf der Rechnung stehen', () => {
+		expect(cellText('consumed', { ...fass, actual_quantity: 2.5 }, 'packaging')).toBe('2,5');
+	});
+
+	it('speichert die getippte Zahl als Gebinde, ohne sie umzurechnen', () => {
+		expect(cellUpdate('consumed', '3', fass, 'packaging')).toEqual({ actual_quantity: 3 });
+		expect(cellUpdate('ordered', '2,5', fass, 'packaging')).toEqual({ ordered_quantity: 2.5 });
+	});
+
+	it('rechnet in der Basiseinheit weiter zurück, wenn die Spalte auf Basis steht', () => {
+		expect(cellUpdate('consumed', '150', fass, 'base')).toEqual({ actual_quantity: 3 });
+	});
+
+	it('nimmt bei einer Position ohne Gebinde weiter die Basiseinheit an', () => {
+		expect(cellText('ordered', stueck, 'packaging')).toBe('10');
+		expect(cellUpdate('ordered', '12', stueck, 'packaging')).toEqual({ ordered_quantity: 12 });
+	});
+
+	it('trägt leer und 0 auch in Gebinden auseinander', () => {
+		expect(cellUpdate('consumed', '', fass, 'packaging')).toEqual({ actual_quantity: null });
+		expect(cellUpdate('consumed', '0', fass, 'packaging')).toEqual({ actual_quantity: 0 });
+		expect(cellUpdate('ordered', '', fass, 'packaging')).toEqual({ ordered_quantity: 0 });
+	});
+
+	it('kommt in beide Richtungen an derselben Zahl an', () => {
+		// Hin und zurück: was im Feld steht, speichert sich zum gespeicherten Stand.
+		for (const unit of ['base', 'packaging'] as const) {
+			const text = cellText('ordered', fass, unit);
+			expect(cellUpdate('ordered', text, fass, unit)).toEqual({ ordered_quantity: 4 });
+			expect(isCellDirty('ordered', text, fass, unit)).toBe(false);
+		}
+	});
+
+	it('merkt die neue Zahl in Gebinden', () => {
+		expect(isCellDirty('ordered', '5', fass, 'packaging')).toBe(true);
+		expect(isCellDirty('ordered', '4', fass, 'packaging')).toBe(false);
+	});
+
+	it('lässt Gekritzeltes auch in Gebinden stehen', () => {
+		expect(cellUpdate('consumed', 'abc', fass, 'packaging')).toEqual({ actual_quantity: null });
+		expect(cellUpdate('ordered', 'abc', fass, 'packaging')).toEqual({ ordered_quantity: 4 });
 	});
 });
 
@@ -135,18 +219,18 @@ describe('taxOptions — die Auswahl der MwSt-Zelle (#217)', () => {
 describe('cellText — was in den Preiszellen steht (#217)', () => {
 	it('zeigt beide Seiten des Preises mit Dezimalkomma, wie die Zelle daneben', () => {
 		// Sonst spränge der Betrag beim Anklicken von „41,67" auf „41.67".
-		expect(cellText('net', netto)).toBe('41,67');
-		expect(cellText('gross', netto)).toBe('50,00'); // 41,67 + 20 %
+		expect(cellText('net', netto, 'base')).toBe('41,67');
+		expect(cellText('gross', netto, 'base')).toBe('50,00'); // 41,67 + 20 %
 	});
 
 	it('nennt den Steuersatz als Zahl, „keine" als leere Auswahl', () => {
-		expect(cellText('tax', netto)).toBe('20');
-		expect(cellText('tax', { ...netto, tax_rate: null })).toBe('');
+		expect(cellText('tax', netto, 'base')).toBe('20');
+		expect(cellText('tax', { ...netto, tax_rate: null }, 'base')).toBe('');
 	});
 
 	it('lässt eine Preislücke leer — sie ist kein 0-Preis', () => {
-		expect(cellText('net', { ...netto, unit_price: null })).toBe('');
-		expect(cellText('gross', { ...netto, unit_price: null })).toBe('');
+		expect(cellText('net', { ...netto, unit_price: null }, 'base')).toBe('');
+		expect(cellText('gross', { ...netto, unit_price: null }, 'base')).toBe('');
 	});
 });
 
@@ -155,14 +239,14 @@ const TIPPT = true;
 
 describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () => {
 	it('macht die getippte Netto-Zelle zur Quelle', () => {
-		expect(cellUpdate('net', '10', brutto, TIPPT)).toEqual({
+		expect(cellUpdate('net', '10', brutto, 'base', TIPPT)).toEqual({
 			unit_price: 10,
 			price_is_net: true
 		});
 	});
 
 	it('macht die getippte Brutto-Zelle zur Quelle', () => {
-		expect(cellUpdate('gross', '12', netto, TIPPT)).toEqual({
+		expect(cellUpdate('gross', '12', netto, 'base', TIPPT)).toEqual({
 			unit_price: 12,
 			price_is_net: false
 		});
@@ -172,14 +256,14 @@ describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () =
 		// 50,00 steht in der Brutto-Zelle einer netto erfassten Position. Wer ihn
 		// von der Rechnung abtippt, meint: *brutto* ist die erfasste Seite — sonst
 		// rechnete der nächste Steuersatzwechsel die falsche Zahl um.
-		expect(cellUpdate('gross', '50,00', netto, TIPPT)).toEqual({
+		expect(cellUpdate('gross', '50,00', netto, 'base', TIPPT)).toEqual({
 			unit_price: 50,
 			price_is_net: false
 		});
 	});
 
 	it('nimmt auch hier das Dezimalkomma der Rechnung an', () => {
-		expect(cellUpdate('net', '2,50', brutto, TIPPT)).toEqual({
+		expect(cellUpdate('net', '2,50', brutto, 'base', TIPPT)).toEqual({
 			unit_price: 2.5,
 			price_is_net: true
 		});
@@ -188,14 +272,14 @@ describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () =
 	it('macht aus einem geleerten Preisfeld eine Preislücke, ohne die Quelle zu kippen', () => {
 		// Eine geleerte Zelle nimmt den Preis weg, sie erklärt keinen — die Basis
 		// einer Position ohne Preis sagt ohnehin nichts aus.
-		expect(cellUpdate('gross', '', netto, TIPPT)).toEqual({
+		expect(cellUpdate('gross', '', netto, 'base', TIPPT)).toEqual({
 			unit_price: null,
 			price_is_net: true
 		});
 	});
 
 	it('lässt Gekritzeltes stehen, statt den Preis zu löschen', () => {
-		expect(cellUpdate('net', '4l,67', netto, TIPPT)).toEqual({
+		expect(cellUpdate('net', '4l,67', netto, 'base', TIPPT)).toEqual({
 			unit_price: 41.67,
 			price_is_net: true
 		});
@@ -206,8 +290,8 @@ describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () =
 		// wer sie nur verlässt, dürfte das Fass nicht um 17 Cent verbilligen.
 		const feiner: CellValues = { ...netto, unit_price: 0.8334 };
 
-		expect(cellText('net', feiner)).toBe('0,83');
-		expect(cellUpdate('net', '0,83', feiner)).toEqual({
+		expect(cellText('net', feiner, 'base')).toBe('0,83');
+		expect(cellUpdate('net', '0,83', feiner, 'base')).toEqual({
 			unit_price: 0.8334,
 			price_is_net: true
 		});
@@ -216,51 +300,51 @@ describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () =
 	it('lässt die Gegenseite eines unberührten Preises die Quelle in Ruhe', () => {
 		// Die Brutto-Zelle einer netto erfassten Position zeigt 50,00. Durch sie
 		// hindurchzutabben darf `price_is_net` nicht umlegen.
-		expect(cellUpdate('gross', '50,00', netto)).toEqual({
+		expect(cellUpdate('gross', '50,00', netto, 'base')).toEqual({
 			unit_price: 41.67,
 			price_is_net: true
 		});
 	});
 
 	it('schreibt beim Steuersatz nur ihn — der erfasste Preis bleibt Quelle', () => {
-		expect(cellUpdate('tax', '10', netto, TIPPT)).toEqual({ tax_rate: 10 });
-		expect(cellUpdate('tax', '', netto, TIPPT)).toEqual({ tax_rate: null });
+		expect(cellUpdate('tax', '10', netto, 'base', TIPPT)).toEqual({ tax_rate: 10 });
+		expect(cellUpdate('tax', '', netto, 'base', TIPPT)).toEqual({ tax_rate: null });
 	});
 });
 
 describe('isCellDirty — die Preiszellen (#217)', () => {
 	it('hält ein unberührtes Preisfeld für unverändert — beide Seiten', () => {
-		expect(isCellDirty('net', '41,67', netto)).toBe(false);
-		expect(isCellDirty('gross', '50,00', netto)).toBe(false);
-		expect(isCellDirty('tax', '20', netto, TIPPT)).toBe(false);
+		expect(isCellDirty('net', '41,67', netto, 'base')).toBe(false);
+		expect(isCellDirty('gross', '50,00', netto, 'base')).toBe(false);
+		expect(isCellDirty('tax', '20', netto, 'base', TIPPT)).toBe(false);
 	});
 
 	it('zählt den Wechsel der Quelle als Änderung, auch bei gleicher Zahl', () => {
 		// 50 brutto über einer netto erfassten Position: dieselbe Zahl, andere
 		// Bedeutung — ohne das bliebe `price_is_net` für immer, wie es war.
-		expect(isCellDirty('gross', '50', netto, TIPPT)).toBe(true);
+		expect(isCellDirty('gross', '50', netto, 'base', TIPPT)).toBe(true);
 	});
 
 	it('merkt den neuen Steuersatz und den neuen Preis', () => {
-		expect(isCellDirty('tax', '10', netto, TIPPT)).toBe(true);
-		expect(isCellDirty('net', '42', netto, TIPPT)).toBe(true);
+		expect(isCellDirty('tax', '10', netto, 'base', TIPPT)).toBe(true);
+		expect(isCellDirty('net', '42', netto, 'base', TIPPT)).toBe(true);
 	});
 
 	it('zählt eine geleerte Preiszelle über einer Preislücke nicht als Änderung', () => {
 		const luecke: CellValues = { ...netto, unit_price: null };
-		expect(isCellDirty('net', '', luecke, TIPPT)).toBe(false);
+		expect(isCellDirty('net', '', luecke, 'base', TIPPT)).toBe(false);
 	});
 });
 
 describe('previewCell — die Gegenseite rechnet beim Tippen mit (#217)', () => {
 	it('lässt Brutto der getippten Netto-Zelle folgen', () => {
-		expect(cellText('gross', previewCell('net', '10', netto, TIPPT))).toBe('12,00'); // 10 + 20 %
+		expect(cellText('gross', previewCell('net', '10', netto, 'base', TIPPT), 'base')).toBe('12,00'); // 10 + 20 %
 	});
 
 	it('rechnet beim Wechsel des Steuersatzes die Gegenseite neu, nicht die Quelle', () => {
-		const zehn = previewCell('tax', '10', netto, TIPPT);
-		expect(cellText('net', zehn)).toBe('41,67');
-		expect(cellText('gross', zehn)).toBe('45,84'); // 41,67 + 10 %
+		const zehn = previewCell('tax', '10', netto, 'base', TIPPT);
+		expect(cellText('net', zehn, 'base')).toBe('41,67');
+		expect(cellText('gross', zehn, 'base')).toBe('45,84'); // 41,67 + 10 %
 	});
 });
 

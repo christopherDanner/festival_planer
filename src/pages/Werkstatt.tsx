@@ -8,7 +8,7 @@ import { NameChip } from '@/components/toolkit/NameChip';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import { Ruler } from '@/components/toolkit/Ruler';
 import { SectionHeading } from '@/components/toolkit/SectionHeading';
-import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
+import { SegmentedControl, type SegmentedControlSize } from '@/components/toolkit/SegmentedControl';
 import { Stamp } from '@/components/toolkit/Stamp';
 import { StatusBar } from '@/components/toolkit/StatusBar';
 import { ValueTag } from '@/components/toolkit/ValueTag';
@@ -36,9 +36,9 @@ interface SchalterProbeProps {
 	options: { value: string; label: string }[];
 }
 
-function SegmentedProbe({ ariaLabel, options }: SchalterProbeProps) {
+function SegmentedProbe({ ariaLabel, options, size }: SchalterProbeProps & { size?: SegmentedControlSize }) {
 	const [value, setValue] = React.useState(options[0].value);
-	return <SegmentedControl aria-label={ariaLabel} options={options} value={value} onValueChange={setValue} />;
+	return <SegmentedControl aria-label={ariaLabel} options={options} value={value} onValueChange={setValue} size={size} />;
 }
 
 function ModeToggleProbe({ ariaLabel, options }: SchalterProbeProps) {
@@ -273,6 +273,18 @@ const Werkstatt = () => (
 							{ value: 'tatsaechlich', label: 'Tatsächliche Menge' },
 						]}
 					/>
+				</Probe>
+				<Probe label="Klein (size=sm) · im Kopf einer Tabellenspalte (#218)">
+					<div className="w-[98px]">
+						<SegmentedProbe
+							ariaLabel="Eingabe-Einheit"
+							size="sm"
+							options={[
+								{ value: 'base', label: 'Basis' },
+								{ value: 'packaging', label: 'Gebinde' },
+							]}
+						/>
+					</div>
 				</Probe>
 				<Probe label="Drei Segmente · interaktiv">
 					<SegmentedProbe

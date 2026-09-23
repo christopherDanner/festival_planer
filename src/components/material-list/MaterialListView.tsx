@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
 import { useCellEditor } from '@/hooks/useCellEditor';
+import { BASE_UNITS, type InputUnits } from '@/lib/materialCellEdit';
 import {
 	groupMaterials,
 	searchMaterials,
@@ -94,13 +95,22 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	const activeCategory = resolveActiveCategory(groupChips, requestedCategory);
 	const visible = activeGroup ? filterByCategory(activeGroup.materials, activeCategory) : [];
 
+	// Die Eingabe-Einheit je Mengenspalte (#218): Standard Basis, umgeschaltet
+	// wird im Spaltenkopf. Die Wahl hängt hier und nicht an der Tabelle, damit
+	// sie Reiter, Chip und Suche übersteht — sie hält, solange man in der
+	// Materialliste bleibt.
+	const [units, setUnits] = useState<InputUnits>(BASE_UNITS);
+
 	// Zellbearbeitung (#216/#217, ADR 0013): der Klick in eine der fünf tippbaren
 	// Zellen macht *diese* Zelle zum Feld, sie speichert beim Verlassen.
 	// `mutateAsync`, weil ein Fehlschlag die Zelle offen lassen muss — `mutate`
-	// verschluckt ihn und die getippte Zahl wäre still weg.
+	// verschluckt ihn und die getippte Zahl wäre still weg. Das Umschalten der
+	// Einheit braucht keine eigene Rückfrage: der Klick in den Spaltenkopf nimmt
+	// dem Feld den Fokus, und das speichert in der Einheit, in der es aufging.
 	const cell = useCellEditor({
 		onSave: (id, update) =>
-			actions.updateMaterial.mutateAsync({ id, updates: update, silent: true })
+			actions.updateMaterial.mutateAsync({ id, updates: update, silent: true }),
+		units: () => units
 	});
 
 	// Am Desktop braucht der Sichtwechsel keine Rückfrage mehr: es gibt keine
@@ -259,8 +269,12 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 								saving: cell.snapshot.saving,
 								failed: cell.snapshot.failed,
 								savedIds: cell.snapshot.savedIds,
+								units,
+								unit: cell.snapshot.unit,
 								onOpen: (m, column) => cell.editor.open(m, column),
 								onType: cell.editor.type,
+								onUnitChange: (column, unit) =>
+									setUnits((current) => ({ ...current, [column]: unit })),
 								// Der Weg der Tastatur läuft über die *sichtbaren* Zeilen des
 								// Kastens — Suche und Kategorie-Chip bestimmen ihn mit.
 								onCommit: (move, from) => void cell.editor.commit(move, visible, from),

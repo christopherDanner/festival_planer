@@ -11,11 +11,12 @@ import {
 } from '@/components/toolkit/PaperTable';
 import {
 	EditCell,
+	QuantityUnitToggle,
 	ReadingCell,
 	type CellEditControls,
 	type ColumnKey
 } from './MaterialTableCells';
-import { isEditableColumn, previewCell } from '@/lib/materialCellEdit';
+import { isEditableColumn, isQuantityColumn, previewCell } from '@/lib/materialCellEdit';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -155,6 +156,15 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 								className={cn(HEAD_CELL, col.align === 'right' && 'text-right')}
 							>
 								{col.key === 'actions' ? <span className="sr-only">{col.label}</span> : col.label}
+								{/* Nur die Mengenspalten tragen den Einheiten-Umschalter (#218):
+								umgeschaltet wird die Spalte, nicht die einzelne Zelle. */}
+								{isQuantityColumn(col.key) && (
+									<QuantityUnitToggle
+										column={col.key}
+										unit={cellEdit.units[col.key]}
+										onChange={cellEdit.onUnitChange}
+									/>
+								)}
 							</th>
 						))}
 					</tr>
@@ -169,7 +179,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 						// `materialCellEdit`, nicht hier.
 						const open = cellEdit.editing?.id === m.id ? cellEdit.editing.column : null;
 						const preview = open
-							? previewCell(open, cellEdit.value, m, cellEdit.touched)
+							? previewCell(open, cellEdit.value, m, cellEdit.unit, cellEdit.touched)
 							: m;
 						return (
 							<tr

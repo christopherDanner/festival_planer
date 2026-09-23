@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { SponsoringWithDetails } from '@/lib/sponsorService';
+import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
 import { makeAssignment, makeCategory, makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
 import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
 
@@ -12,10 +12,14 @@ const { service } = vi.hoisted(() => ({
 	service: {
 		sponsorings: [] as unknown[],
 		getSponsorings: vi.fn(),
+		getCategories: vi.fn(),
 		updateSponsoring: vi.fn(
 			(_sponsoringId: string, _updates: unknown, _assignments: unknown): Promise<void> =>
 				Promise.resolve()
-		)
+		),
+		createCategory: vi.fn((): Promise<string> => Promise.resolve('cat-neu')),
+		updateCategory: vi.fn((): Promise<void> => Promise.resolve()),
+		deleteCategory: vi.fn((): Promise<void> => Promise.resolve())
 	}
 }));
 
@@ -24,10 +28,13 @@ vi.mock('@/lib/sponsorService', async (importOriginal) => {
 	return {
 		...actual,
 		getSponsors: () => Promise.resolve([]),
-		getCategories: () => Promise.resolve([plakat, social]),
+		getCategories: service.getCategories,
 		getSponsorings: service.getSponsorings,
 		updateSponsoring: service.updateSponsoring,
-		deleteSponsoring: () => Promise.resolve()
+		deleteSponsoring: () => Promise.resolve(),
+		createCategory: service.createCategory,
+		updateCategory: service.updateCategory,
+		deleteCategory: service.deleteCategory
 	};
 });
 
@@ -39,6 +46,20 @@ function serves(...states: SponsoringWithDetails[][]) {
 	states.forEach((state) => service.getSponsorings.mockResolvedValueOnce(state));
 	service.getSponsorings.mockResolvedValue(states[states.length - 1]);
 }
+
+/** Dasselbe für die Preisliste — sie ändert sich am Spaltenkopf (#149). */
+function servesCategories(...states: SponsoringCategory[][]) {
+	service.getCategories.mockReset();
+	states.forEach((state) => service.getCategories.mockResolvedValueOnce(state));
+	service.getCategories.mockResolvedValue(states[states.length - 1]);
+}
+
+beforeEach(() => {
+	servesCategories([plakat, social]);
+	service.createCategory.mockClear();
+	service.updateCategory.mockClear();
+	service.deleteCategory.mockClear();
+});
 
 /* Der Zettel hängt als Popover im Portal an `document.body`; jede Montage wird
 danach abgeräumt, sonst findet der nächste Test einen alten. */
@@ -223,5 +244,90 @@ describe('SponsoringsSection — Zellklick schreibt', () => {
 		expect(dialog.querySelector('[role="checkbox"]')).toBeNull();
 		expect(dialog.textContent).not.toContain('Leer lassen');
 		expect(dialog.querySelector('#free_amount')).toBeNull();
+	});
+});
+
+describe('SponsoringsSection — die Preisliste wird am Spaltenkopf verwaltet', () => {
+	it('legt über „+ KATEGORIE" eine Kategorie ohne Standardwert an', async () => {
+		// Erlaubt und nicht wegzuoptimieren: der Kopf zeigt dann keinen Wert (#149).
+		serves([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+
+		const view = await mount();
+		await view.press('Kategorie');
+		await act(async () => {
+			typeInto(view.field('Name'), 'Logo Speisekarte');
+		});
+		await view.press('Übernehmen');
+
+		expect(service.createCategory).toHaveBeenCalledWith('f1', 'Logo Speisekarte', null);
+	});
+
+	it('ändert Name und Standardwert über den Spaltenkopf', async () => {
+		serves([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+
+		const view = await mount();
+		await view.click('Kategorie Plakat, Standardwert € 200');
+		await act(async () => {
+			typeInto(view.field('Standardwert'), '250');
+		});
+		await view.press('Übernehmen');
+
+		expect(service.updateCategory).toHaveBeenCalledWith(plakat.id, {
+			name: 'Plakat',
+			value: 250
+		});
+	});
+
+	it('beziffert am Kopf die Firmen, die den Standardwert erben', async () => {
+		// Zwei Zusagen zum Standardwert, eine mit eigenem Wert — nur die zwei
+		// verschiebt ein neuer Standardwert (ADR 0009).
+		serves([
+			makeSponsoring({ companyName: 'Taxi Brandl', assignments: [makeAssignment({ category: plakat })] }),
+			makeSponsoring({ companyName: 'Bäckerei Leitner', assignments: [makeAssignment({ category: plakat })] }),
+			makeSponsoring({
+				companyName: 'Brauerei Wieselburger',
+				assignments: [makeAssignment({ category: plakat, value: 350 })]
+			})
+		]);
+
+		const view = await mount();
+		await view.click('Kategorie Plakat, Standardwert € 200');
+		await act(async () => {
+			typeInto(view.field('Standardwert'), '250');
+		});
+
+		expect(document.body.textContent).toContain('Gilt für 2 Firmen ohne eigenen Wert.');
+	});
+
+	it('löscht nach der bezifferten Rückfrage; Spalte und Summen ziehen nach', async () => {
+		const mitPlakat = makeSponsoring({
+			companyName: 'Taxi Brandl',
+			assignments: [makeAssignment({ category: plakat })]
+		});
+		serves([mitPlakat], [{ ...mitPlakat, assignments: [] }]);
+		servesCategories([plakat, social], [social]);
+		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+		const view = await mount();
+		expect(view.kopfzahl()).toContain('€ 200');
+
+		await view.click('Kategorie Plakat, Standardwert € 200');
+		await view.press('Kategorie löschen');
+
+		expect(confirmSpy.mock.calls[0][0]).toContain('1 Firma');
+		expect(service.deleteCategory).toHaveBeenCalledWith(plakat.id);
+		expect(view.container.querySelector('thead')?.textContent).not.toContain('Plakat');
+		expect(view.kopfzahl()).toContain('€ 0');
+		confirmSpy.mockRestore();
+	});
+
+	it('führt keine zweite Tabelle und keinen Kategorien-Dialog mehr', async () => {
+		// Der Bereich hat genau eine Tabelle — die Matrix (ADR 0009, #149).
+		serves([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+
+		const view = await mount();
+
+		expect(view.container.querySelectorAll('table')).toHaveLength(1);
+		expect(view.container.textContent).not.toContain('Sponsoring-Kategorien');
 	});
 });
