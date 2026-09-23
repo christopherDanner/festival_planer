@@ -52,6 +52,7 @@ Ordner `src/components/toolkit/`, CSS `src/toolkit.css`. CSS-Klassen folgen den 
 - Der Fundament-Schnitt (eigenes Umsetzungs-Issue) umfasst: Token-Umstellung auf OKLCH-Rollen, Radius 0, Font-Setup, Löschen der 27 toten ui-Dateien, Restyling der 22 genutzten ui-Dateien, `toolkit/`-Grundstock, mechanische Bereinigung der 29 Altstellen.
 - Bereiche bauen danach nur noch auf Toolkit + restyltem shadcn auf; neue Optik pro Seite entsteht ohne Sonder-CSS.
 - Die Grenze Verhalten (ui/) vs. Handschrift (toolkit/) ist im Dateisystem sichtbar.
+- **Nachtrag #163 (2026-09-21):** „bleiben als Hülle" beschreibt den Umbau, nicht die Aufbewahrung — die Regel „ungenutzte `ui/`-Dateien werden gelöscht" gilt weiter, auch für die vier namentlich genannten. Mit #163 sind `switch` (durch `SegmentedControl` ersetzt, siehe Entscheidung 1), `card` und `separator` gefallen, nachdem sie ihren letzten Nutzer verloren hatten, samt ihrer npm-Pakete. Eingeklagt wird das ab jetzt von `src/components/__tests__/componentTree.ts`: Es läuft den Import-Graph von `main.tsx` aus ab und meldet jede `ui/`-Hülle ohne Nutzer. Feature-Bauteile dürfen abgehängt sein, aber nur mit Ticket-Eintrag im Guard.
 
 ## Verworfene Alternativen
 
