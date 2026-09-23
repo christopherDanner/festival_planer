@@ -25,7 +25,12 @@ type MatrixFilter = { totalRowCount?: number; searchTerm?: string };
 const matrix = (
 	rows: SponsoringOverviewRow[],
 	categories: SponsoringCategory[],
-	handlers: Partial<Pick<SponsoringMatrixProps, 'onApply' | 'onRemove' | 'onDelete'>> = {},
+	handlers: Partial<
+		Pick<
+			SponsoringMatrixProps,
+			'onApply' | 'onRemove' | 'onDelete' | 'onOpenNote' | 'onOpenSponsor'
+		>
+	> = {},
 	filter: MatrixFilter = {}
 ) => (
 	<SponsoringMatrix
@@ -34,6 +39,8 @@ const matrix = (
 		footer={buildSponsoringOverviewFooter(rows, categories)}
 		totalRowCount={filter.totalRowCount ?? rows.length}
 		searchTerm={filter.searchTerm ?? ''}
+		onOpenNote={handlers.onOpenNote ?? (() => {})}
+		onOpenSponsor={handlers.onOpenSponsor ?? (() => {})}
 		onDelete={handlers.onDelete ?? (() => {})}
 		onApply={handlers.onApply ?? (() => {})}
 		onRemove={handlers.onRemove ?? (() => {})}

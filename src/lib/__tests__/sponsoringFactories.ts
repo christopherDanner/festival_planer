@@ -62,6 +62,10 @@ export function makeSponsoring(opts: {
 	assignments?: SponsoringAssignmentWithCategory[];
 	inKindDescription?: string | null;
 	inKindValue?: number | null;
+	/** Notiz des *Sponsorings* — nicht die der Firma (`sponsors.notes`). */
+	notes?: string | null;
+	/** Stammdaten der Firma, soweit der Test sie braucht (Telefon, Email …). */
+	sponsor?: Partial<Sponsor>;
 	/** Quellfest einer Sponsor-Übernahme; ohne eines ist das Sponsoring handeingetragen. */
 	copiedFromFestivalId?: string | null;
 }): SponsoringWithDetails {
@@ -74,10 +78,10 @@ export function makeSponsoring(opts: {
 		in_kind_description: opts.inKindDescription ?? null,
 		in_kind_value: opts.inKindValue ?? null,
 		copied_from_festival_id: opts.copiedFromFestivalId ?? null,
-		notes: null,
+		notes: opts.notes ?? null,
 		created_at: '',
 		updated_at: '',
-		sponsor: makeSponsor(opts.companyName ?? 'Firma'),
+		sponsor: { ...makeSponsor(opts.companyName ?? 'Firma'), ...opts.sponsor },
 		assignments: opts.assignments ?? []
 	};
 }

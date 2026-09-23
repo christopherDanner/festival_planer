@@ -1,11 +1,4 @@
 import React, { useState } from 'react';
-import { MoreVertical } from 'lucide-react';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ValueTag } from '@/components/toolkit/ValueTag';
 import {
@@ -13,6 +6,7 @@ import {
 	PAPER_TABLE_FOOT_CELL,
 	PAPER_TABLE_HEAD_CELL
 } from '@/components/toolkit/PaperTable';
+import SponsoringRowMenu from '@/components/sponsoring/SponsoringRowMenu';
 import SponsoringZettel from '@/components/sponsoring/SponsoringZettel';
 import { formatEuro } from '@/lib/money';
 import type { SponsoringCategory } from '@/lib/sponsorService';
@@ -39,6 +33,11 @@ export interface SponsoringMatrixProps {
 	totalRowCount: number;
 	/** Laufender Suchbegriff; nur für die Hinweiszeile, wenn nichts passt. */
 	searchTerm: string;
+	/** ⋮ → „Notiz" — die Notiz des Sponsorings (#150). */
+	onOpenNote: (sponsoringId: string) => void;
+	/** ⋮ → „Firmendaten" — die Stammdaten des globalen Sponsors (#150). */
+	onOpenSponsor: (sponsoringId: string) => void;
+	/** ⋮ → „Entfernen"; die Rückfrage stellt das Menü selbst. */
 	onDelete: (sponsoringId: string) => void;
 	/** „Übernehmen" im Zettel. */
 	onApply: (sponsoringId: string, target: ZettelTarget, input: ZettelInput) => void;
@@ -70,6 +69,11 @@ const CATEGORY_COLUMN_MIN_PX = 88;
 const HEAD_CELL = PAPER_TABLE_HEAD_CELL;
 const BODY_CELL = PAPER_TABLE_BODY_CELL;
 const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
+
+/* Die ⋮-Zelle trägt den seitlichen Innenabstand der Frachtbrief-Zelle nicht:
+in den 44px Spaltenbreite passt neben dem 40px-Tippziel (DESIGN-VISION §6) kein
+Abstand mehr, und das Tippziel ist die Auflage aus #150. */
+const MENU_CELL = 'overflow-hidden px-0.5 align-middle';
 
 /** Gestrichelte „+"-Marke für alles, was an dieser Zeile noch nicht erfasst ist. */
 const UnrecordedMark: React.FC = () => <ValueTag tone="muted">+</ValueTag>;
@@ -146,6 +150,8 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	footer,
 	totalRowCount,
 	searchTerm,
+	onOpenNote,
+	onOpenSponsor,
 	onDelete,
 	onApply,
 	onRemove
@@ -289,25 +295,16 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 									</span>
 								)}
 							</td>
-							<td className={`${BODY_CELL} ${STICKY_MENU} z-10 bg-white`}>
-								{/* Das Menü trägt vorerst nur „Entfernen"; Notiz und Firmendaten
-								kommen mit #150, ein „Bearbeiten" ist dort ausdrücklich verworfen. */}
-								<DropdownMenu>
-									<DropdownMenuTrigger
-										className="text-tinte-soft hover:text-tinte"
-										aria-label={`Menü für ${row.companyName}`}
-									>
-										<MoreVertical className="h-4 w-4" />
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											className="text-rot"
-											onSelect={() => onDelete(row.sponsoringId)}
-										>
-											Entfernen
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
+							<td className={`${MENU_CELL} ${STICKY_MENU} z-10 bg-white`}>
+								{/* Notiz · Firmendaten · Entfernen (#150) — die Dinge, die in
+								keine Zelle passen. Das 40px-Tippziel steht hier in einer 44px
+								breiten Spalte und trägt die 43px-Zeilenhöhe mit. */}
+								<SponsoringRowMenu
+									companyName={row.companyName}
+									onOpenNote={() => onOpenNote(row.sponsoringId)}
+									onOpenSponsor={() => onOpenSponsor(row.sponsoringId)}
+									onDelete={() => onDelete(row.sponsoringId)}
+								/>
 							</td>
 						</tr>
 					))}
