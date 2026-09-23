@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { SponsoringWithDetails } from '@/lib/sponsorService';
 import { makeAssignment, makeCategory, makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
-import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
+import { buttonByLabel, fieldByLabel, typeInto } from '@/lib/__tests__/domTesting';
 
 /* Der Alarm-Dialog des ⋮ rendert außerhalb der Ereignisschleife nach; ohne
 diese Fahne warnt React bei jedem Öffnen. */
@@ -129,14 +129,8 @@ async function mount() {
 			await act(async () => {});
 		},
 		/** Ein Feld des Firmendaten-Formulars über seine Aufschrift. */
-		formField: (label: string): HTMLInputElement | HTMLTextAreaElement => {
-			const dialog = document.querySelector('[role="dialog"]')!;
-			const aufschrift = [...dialog.querySelectorAll('label')].find(
-				(l) => l.textContent?.replace('*', '').trim() === label
-			);
-			if (!aufschrift) throw new Error(`Kein Feld mit der Aufschrift „${label}"`);
-			return dialog.querySelector(`#${aufschrift.htmlFor}`)!;
-		}
+		formField: (label: string) =>
+			fieldByLabel(document.querySelector('[role="dialog"]')!, label)
 	};
 }
 
@@ -274,6 +268,9 @@ describe('SponsoringsSection — Zellklick schreibt', () => {
 		expect(dialog.querySelector('[role="checkbox"]')).toBeNull();
 		expect(dialog.textContent).not.toContain('Leer lassen');
 		expect(dialog.querySelector('#free_amount')).toBeNull();
+		// Auch die Notiz nicht: sie hat seit #150 ihren Ort im ⋮, und zwei Felder
+		// für `sponsorings.notes` liefen auseinander.
+		expect(dialog.querySelector('#sponsoring_notes')).toBeNull();
 	});
 });
 

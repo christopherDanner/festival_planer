@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { makeSponsor } from '@/lib/__tests__/sponsoringFactories';
-import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
+import { buttonByLabel, fieldByLabel, typeInto } from '@/lib/__tests__/domTesting';
 import SponsorFormDialog from './SponsorFormDialog';
 
 /* Seam dieses Tests (aus den Akzeptanzkriterien von #150, vor dem ersten Test
@@ -62,15 +62,8 @@ const mount = async (over: Partial<React.ComponentProps<typeof SponsorFormDialog
 	return render;
 };
 
-/** Ein Feld so suchen, wie der Nutzer es sucht: über seine Aufschrift. */
-const feld = (label: string): HTMLInputElement | HTMLTextAreaElement => {
-	const dialog = document.querySelector('[role="dialog"]')!;
-	const aufschrift = [...dialog.querySelectorAll('label')].find(
-		(l) => l.textContent?.replace('*', '').trim() === label
-	);
-	if (!aufschrift) throw new Error(`Kein Feld mit der Aufschrift „${label}"`);
-	return dialog.querySelector(`#${aufschrift.htmlFor}`)!;
-};
+const feld = (label: string) =>
+	fieldByLabel(document.querySelector('[role="dialog"]')!, label);
 
 const druecke = async (label: string) => {
 	await act(async () => {

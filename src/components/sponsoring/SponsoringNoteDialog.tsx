@@ -18,7 +18,6 @@ export interface SponsoringNoteDialogProps {
 	notes: string | null;
 	/** Speichern — leerer Text wird zu `null`, damit kein leerer Satz entsteht. */
 	onSave: (notes: string | null) => void;
-	saving?: boolean;
 }
 
 /**
@@ -36,8 +35,7 @@ const SponsoringNoteDialog: React.FC<SponsoringNoteDialogProps> = ({
 	onOpenChange,
 	companyName,
 	notes,
-	onSave,
-	saving = false
+	onSave
 }) => (
 	<Dialog open={open} onOpenChange={onOpenChange}>
 		<DialogContent className="max-w-lg">
@@ -47,22 +45,16 @@ const SponsoringNoteDialog: React.FC<SponsoringNoteDialogProps> = ({
 			</DialogHeader>
 			{/* Der Inhalt steht erst ab dem Öffnen im Baum — so beginnt jedes Öffnen
 			beim gespeicherten Stand und nicht bei einem alten Tippstand. */}
-			<NoteForm
-				notes={notes}
-				saving={saving}
-				onSave={onSave}
-				onCancel={() => onOpenChange(false)}
-			/>
+			<NoteForm notes={notes} onSave={onSave} onCancel={() => onOpenChange(false)} />
 		</DialogContent>
 	</Dialog>
 );
 
 const NoteForm: React.FC<{
 	notes: string | null;
-	saving: boolean;
 	onSave: (notes: string | null) => void;
 	onCancel: () => void;
-}> = ({ notes, saving, onSave, onCancel }) => {
+}> = ({ notes, onSave, onCancel }) => {
 	const [text, setText] = useState(notes ?? '');
 
 	return (
@@ -83,9 +75,9 @@ const NoteForm: React.FC<{
 				<Button type="button" variant="outline" onClick={onCancel}>
 					Abbrechen
 				</Button>
-				<Button type="submit" disabled={saving}>
-					Speichern
-				</Button>
+				{/* Kein Sperren beim Speichern: die Notiz geht in die Warteschlange des
+				Bereichs und der Dialog schließt sofort, wie der Zettel (ADR 0009). */}
+				<Button type="submit">Speichern</Button>
 			</div>
 		</form>
 	);

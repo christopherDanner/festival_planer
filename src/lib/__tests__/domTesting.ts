@@ -15,6 +15,23 @@ export function typeInto(field: HTMLInputElement | HTMLTextAreaElement, text: st
 	field.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+/**
+ * Ein Formularfeld über seine Aufschrift finden — so, wie es auch der Nutzer
+ * sucht. Ein `*` an der Aufschrift („Firmenname *") gehört der Pflicht, nicht
+ * dem Namen, und zählt darum nicht mit.
+ */
+export function fieldByLabel(
+	root: ParentNode,
+	label: string
+): HTMLInputElement | HTMLTextAreaElement {
+	const caption = [...root.querySelectorAll('label')].find(
+		(l) => l.textContent?.replace('*', '').trim() === label
+	);
+	const field = caption && root.querySelector(`#${caption.htmlFor}`);
+	if (!field) throw new Error(`Kein Feld mit der Aufschrift „${label}"`);
+	return field as HTMLInputElement | HTMLTextAreaElement;
+}
+
 /** Knopf über seine Aufschrift finden — so, wie ihn auch der Nutzer sucht. */
 export function buttonByLabel(root: ParentNode, label: string): HTMLButtonElement {
 	const button = [...root.querySelectorAll('button')].find((b) => b.textContent === label);

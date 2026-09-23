@@ -34,9 +34,11 @@ export interface SponsorFormDialogProps {
 const trimmedOrNull = (value: string): string | null => (value.trim() === '' ? null : value.trim());
 
 /**
- * Die *Firmendaten* eines globalen *Sponsors* — **ein Formular, mehrere
- * Einstiege** (#150): das ⋮ der Sponsoring-Matrix, „+ SPONSOR → Neue Firma"
- * und die Sponsoren-Stammdatenseite (#101/#159).
+ * Die *Firmendaten* eines globalen *Sponsors*. Gebaut als eigene Komponente,
+ * damit sie **mehrere Einstiege** tragen kann (#150): heute hängt sie am ⋮ der
+ * Sponsoring-Matrix; „+ SPONSOR → Neue Firma" und die Sponsoren-Stammdatenseite
+ * holen sie mit ihren eigenen Slices dazu (#101/#159) — die Seite bringt bis
+ * dahin ihr eigenes Formular mit, samt Löschweg, den es hier nicht gibt.
  *
  * Es kennt darum **keinen Fest-Kontext**: der Sponsor lebt über allen Festen
  * (ADR 0011). Und es kennt keinen Datenzugriff — geschrieben wird über
@@ -148,8 +150,8 @@ const SponsorFields: React.FC<{
 			<div className="grid grid-cols-2 gap-4">
 				<div>
 					<Label htmlFor="sponsor_phone">Telefon</Label>
-					{/* `tel`: am Handy sitzt man mit dem Telefon vor der Matrix — die
-					Nummer soll wählbar sein, nicht nur lesbar (Wiederkontaktierung). */}
+					{/* `tel` schaltet am Handy die Zifferntastatur auf — ein Wählen aus
+					dem Formular heraus ist es nicht; das Feld ist zum Ablesen da. */}
 					<Input
 						id="sponsor_phone"
 						type="tel"
