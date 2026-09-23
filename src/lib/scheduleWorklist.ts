@@ -107,14 +107,6 @@ export interface WorklistInput {
 	festivalEnd?: string | null;
 }
 
-/**
- * Die Aufschrift des Tages: ausgeschriebenes Datum wie im Schichtplan (#68),
- * dahinter das freie Label.
- *
- * Das Label entfällt, wenn es nur den Wochentag wiederholt: die automatisch
- * angelegten Festtage tragen genau den (`initializeScheduleDays`), und
- * „Donnerstag 23. Juli · Donnerstag" wäre Lärm.
- */
 /** Programmpunkte bleiben draußen — sie stehen auf dem anderen Papier (ADR 0007). */
 const isTask = (entry: ScheduleEntryWithHelper): boolean => entry.type === 'task';
 
@@ -172,6 +164,14 @@ function responsiblesOf(tasks: ScheduleEntryWithHelper[]): WorklistResponsible[]
 	return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
 }
 
+/**
+ * Die Aufschrift des Tages: ausgeschriebenes Datum wie im Schichtplan (#68),
+ * dahinter das freie Label.
+ *
+ * Das Label entfällt, wenn es nur den Wochentag wiederholt: die automatisch
+ * angelegten Festtage tragen genau den (`initializeScheduleDays`), und
+ * „Donnerstag 23. Juli · Donnerstag" wäre Lärm.
+ */
 function dayTitle(day: ScheduleDayWithEntries): string {
 	const title = formatFestDayLong(day.date);
 	const label = day.label?.trim();
