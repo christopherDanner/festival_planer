@@ -10,6 +10,7 @@ import { formatFestDayLong } from '@/lib/festDates';
 import { helperName } from '@/lib/helperService';
 import { groupEntriesByPhase } from '@/lib/scheduleGrouping';
 import type {
+	ScheduleDay,
 	ScheduleDayWithEntries,
 	ScheduleEntryWithHelper,
 	SchedulePhase
@@ -110,6 +111,11 @@ export interface WorklistInput {
 /** Programmpunkte bleiben draußen — sie stehen auf dem anderen Papier (ADR 0007). */
 const isTask = (entry: ScheduleEntryWithHelper): boolean => entry.type === 'task';
 
+/** Offen ist jede Aufgabe, die keinen Haken trägt — auch eine ohne Status.
+Maßband, Tageszähler und Fußzeile fragen hier, damit sie dasselbe zählen. */
+const isOpenTask = (entry: ScheduleEntryWithHelper): boolean =>
+	isTask(entry) && entry.status !== 'done';
+
 const matchesFilter = (entry: ScheduleEntryWithHelper, filter: TaskFilter): boolean =>
 	filter === 'all' || (filter === 'done') === (entry.status === 'done');
 
@@ -144,7 +150,7 @@ function footerOf(
 		days
 			.filter((day) => matches(day.date))
 			.flatMap((day) => day.entries)
-			.filter((entry) => isTask(entry) && entry.status !== 'done').length;
+			.filter(isOpenTask).length;
 
 	return {
 		openBefore: openOn((date) => date < festivalStart),
@@ -165,17 +171,23 @@ function responsiblesOf(tasks: ScheduleEntryWithHelper[]): WorklistResponsible[]
 }
 
 /**
- * Die Aufschrift des Tages: ausgeschriebenes Datum wie im Schichtplan (#68),
- * dahinter das freie Label.
+ * Die Aufschrift eines Ablauf-Tags: ausgeschriebenes Datum wie im Schichtplan
+ * (#68), dahinter das freie Label — „Donnerstag 23. Juli · Aufbau".
  *
  * Das Label entfällt, wenn es nur den Wochentag wiederholt: die automatisch
  * angelegten Festtage tragen genau den (`initializeScheduleDays`), und
  * „Donnerstag 23. Juli · Donnerstag" wäre Lärm.
+ *
+ * Steht hier und nicht in der Ansicht, weil der Zwischentitel der Werkliste und
+ * das Tag-Auswahlfeld des Dialogs denselben Tag gleich nennen müssen.
  */
-function dayTitle(day: ScheduleDayWithEntries): string {
+export function scheduleDayTitle(day: Pick<ScheduleDay, 'date' | 'label'>): string {
 	const title = formatFestDayLong(day.date);
 	const label = day.label?.trim();
-	return label && !title.startsWith(label) ? `${title} · ${label}` : title;
+	// Verglichen wird gegen das *ganze* erste Wort: ein Label „Do" ist eine
+	// eigene Aufschrift und soll stehen bleiben, „Donnerstag" nicht.
+	const weekday = title.split(' ')[0];
+	return label && label !== weekday ? `${title} · ${label}` : title;
 }
 
 /**
@@ -192,7 +204,7 @@ export function buildWorklist({
 	festivalEnd = null
 }: WorklistInput): Worklist {
 	const all = days.flatMap((day) => day.entries.filter(isTask));
-	const done = all.filter((entry) => entry.status === 'done').length;
+	const open = all.filter(isOpenTask).length;
 	const shows = (entry: ScheduleEntryWithHelper) =>
 		isTask(entry) &&
 		matchesFilter(entry, filter) &&
@@ -217,13 +229,13 @@ export function buildWorklist({
 
 				return {
 					day,
-					title: dayTitle(day),
+					title: scheduleDayTitle(day),
 					open: groups.reduce((sum, group) => sum + (group.total - group.done), 0),
 					groups
 				};
 			})
 			.filter((day) => day.groups.length > 0),
-		counts: { all: all.length, open: all.length - done, done },
+		counts: { all: all.length, open, done: all.length - open },
 		responsibles: responsiblesOf(all),
 		footer: footerOf(days, festivalStart, festivalEnd)
 	};

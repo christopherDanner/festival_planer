@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { scheduleDayTitle } from '@/lib/scheduleWorklist';
 
 /** Der fertige Eintrag, wie ihn der Dialog abliefert — das, was der Service
 anlegt oder aktualisiert. */
@@ -26,6 +27,7 @@ interface ScheduleEntryDialogProps {
 	onOpenChange: (open: boolean) => void;
 	entry?: {
 		id: string;
+		schedule_day_id: string;
 		title: string;
 		type: 'task' | 'program';
 		start_time: string | null;
@@ -37,8 +39,12 @@ interface ScheduleEntryDialogProps {
 	/** Die Art eines **neuen** Eintrags: „+ AUFGABE" und „+ PROGRAMMPUNKT" der
 	Werkzeugleiste führen in denselben Dialog (#122). Umschalten geht weiter. */
 	defaultType?: 'task' | 'program';
-	/** Der Eintrag gehört dem Tag — die einzige Pflichtebene (ADR 0007). */
+	/** Der Eintrag gehört dem Tag — die einzige Pflichtebene (ADR 0007). Hier
+	steht der vorbelegte Tag; gewählt wird im Feld darunter. */
 	scheduleDayId: string;
+	/** Alle Ablauf-Tage des Fests zur Wahl — auch die ohne Eintrag, die in der
+	Werkliste gar nicht erscheinen (#122). */
+	days: Array<{ id: string; date: string; label: string | null }>;
 	/** Optionaler Feinschnitt; `null` heißt „direkt unter dem Tag". */
 	schedulePhaseId: string | null;
 	festivalId: string;
@@ -53,6 +59,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 	entry,
 	defaultType = 'task',
 	scheduleDayId,
+	days,
 	schedulePhaseId,
 	festivalId,
 	helpers,
@@ -61,6 +68,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 	const [form, setForm] = useState({
 		title: '',
 		type: 'task' as string,
+		schedule_day_id: '',
 		start_time: '',
 		end_time: '',
 		responsible_helper_id: '' as string,
@@ -72,6 +80,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 			setForm({
 				title: entry.title,
 				type: entry.type,
+				schedule_day_id: entry.schedule_day_id || scheduleDayId,
 				start_time: entry.start_time || '',
 				end_time: entry.end_time || '',
 				responsible_helper_id: entry.responsible_helper_id || '',
@@ -81,22 +90,25 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 			setForm({
 				title: '',
 				type: defaultType,
+				schedule_day_id: scheduleDayId,
 				start_time: '',
 				end_time: '',
 				responsible_helper_id: '',
 				description: ''
 			});
 		}
-	}, [entry, open, defaultType]);
+	}, [entry, open, defaultType, scheduleDayId]);
 
 	const handleSave = () => {
-		if (!form.title) return;
+		if (!form.title || !form.schedule_day_id) return;
 		if (form.start_time && form.end_time && form.start_time >= form.end_time) return;
 
 		const type = form.type as 'task' | 'program';
 		onSave({
-			schedule_day_id: scheduleDayId,
-			schedule_phase_id: schedulePhaseId,
+			schedule_day_id: form.schedule_day_id,
+			// Die Phase gehört ihrem Tag: zieht der Eintrag auf einen anderen Tag,
+			// lässt er sie zurück, statt unter einem fremden Zwischentitel zu hängen.
+			schedule_phase_id: form.schedule_day_id === scheduleDayId ? schedulePhaseId : null,
 			festival_id: festivalId,
 			title: form.title,
 			type,
@@ -123,6 +135,28 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 							value={form.title}
 							onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
 						/>
+					</div>
+
+					{/* Der Tag ist die Pflichtebene (ADR 0007) und seit #122 hier zu
+					wählen: mit dem Akkordeon ist der tagesbezogene „+"-Griff entfallen.
+					Zur Wahl stehen auch Tage ohne Eintrag, die in der Werkliste gar
+					nicht erscheinen. */}
+					<div>
+						<Label htmlFor="entry-day">Tag *</Label>
+						<Select
+							value={form.schedule_day_id}
+							onValueChange={(value) => setForm((prev) => ({ ...prev, schedule_day_id: value }))}>
+							<SelectTrigger id="entry-day">
+								<SelectValue placeholder="Tag auswählen" />
+							</SelectTrigger>
+							<SelectContent>
+								{days.map((day) => (
+									<SelectItem key={day.id} value={day.id}>
+										{scheduleDayTitle(day)}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 
 					<div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -202,7 +236,11 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 						</Button>
 						<Button
 							onClick={handleSave}
-							disabled={!form.title || (!!form.start_time && !!form.end_time && form.start_time >= form.end_time)}
+							disabled={
+								!form.title ||
+								!form.schedule_day_id ||
+								(!!form.start_time && !!form.end_time && form.start_time >= form.end_time)
+							}
 							size="sm"
 						>
 							{entry ? 'Aktualisieren' : 'Hinzufügen'}

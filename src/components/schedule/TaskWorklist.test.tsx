@@ -10,6 +10,31 @@ import {
 } from '@/lib/__tests__/scheduleFactories';
 import { buildWorklist, type TaskFilter, type WorklistInput } from '@/lib/scheduleWorklist';
 
+// Das Radix-Select ist in jsdom nicht bedienbar (es hängt an Pointer-Capture).
+// Der Ersatz macht aus jedem Eintrag einen Knopf, der die Wahl meldet — geprüft
+// wird, was die Werkliste mit der Wahl macht, nicht das Aufklappen.
+vi.mock('@/components/ui/select', async () => {
+	const React = await import('react');
+	const Pick = React.createContext<(value: string) => void>(() => {});
+	type Kinder = { children?: React.ReactNode };
+
+	return {
+		Select: ({ onValueChange, children }: Kinder & { onValueChange: (v: string) => void }) =>
+			React.createElement(Pick.Provider, { value: onValueChange }, children),
+		SelectTrigger: ({ children }: Kinder) => React.createElement('div', null, children),
+		SelectValue: () => null,
+		SelectContent: ({ children }: Kinder) => React.createElement('div', null, children),
+		SelectItem: ({ value, children }: Kinder & { value: string }) => {
+			const pick = React.useContext(Pick);
+			return React.createElement(
+				'button',
+				{ type: 'button', 'data-verantwortlich': value, onClick: () => pick(value) },
+				children
+			);
+		}
+	};
+});
+
 import TaskWorklist from './TaskWorklist';
 
 /**
@@ -279,26 +304,15 @@ describe('TaskWorklist — Bedienung', () => {
 
 	it('meldet die Wahl eines Verantwortlichen — und „alle" als niemand', async () => {
 		const { host, spies } = await mount();
-		const feld = host.querySelector('select') as HTMLSelectElement;
+		const eintrag = (value: string) => host.querySelector(`[data-verantwortlich="${value}"]`);
 
-		await act(async () => {
-			select(feld, 'h1');
-		});
+		await click(eintrag('h1'));
 		expect(spies.onResponsibleChange).toHaveBeenLastCalledWith('h1');
 
-		await act(async () => {
-			select(feld, '__all__');
-		});
+		await click(eintrag('__all__'));
 		expect(spies.onResponsibleChange).toHaveBeenLastCalledWith(null);
 	});
 });
-
-/** Auswahl so setzen, dass React sie sieht — wie `typeInto` fürs Eingabefeld. */
-function select(field: HTMLSelectElement, value: string): void {
-	const setValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
-	setValue.call(field, value);
-	field.dispatchEvent(new Event('change', { bubbles: true }));
-}
 
 describe('TaskWorklist — Leerzustände', () => {
 	it('sagt, wenn das Fest noch keine Aufgabe hat', () => {

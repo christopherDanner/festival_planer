@@ -378,6 +378,14 @@ describe('buildWorklist — die Aufschrift des Tages', () => {
 		expect(worklist.days[0].title).toBe('Donnerstag 23. Juli');
 	});
 
+	it('behält ein Label, das dem Wochentag nur ähnelt', () => {
+		const worklist = buildWorklist({
+			days: [day({ date: '2026-07-23', label: 'Do', entries: [task()] })]
+		});
+
+		expect(worklist.days[0].title).toBe('Donnerstag 23. Juli · Do');
+	});
+
 	it('kommt ohne Label aus', () => {
 		const worklist = buildWorklist({
 			days: [day({ date: '2026-07-23', label: null, entries: [task()] })]

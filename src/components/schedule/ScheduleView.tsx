@@ -4,7 +4,6 @@ import { useScheduleActions } from './hooks/useScheduleActions';
 import ScheduleToolbar from './ScheduleToolbar';
 import TaskWorklist from './TaskWorklist';
 import ScheduleEntryDialog, { type ScheduleEntryFormData } from './dialogs/ScheduleEntryDialog';
-import { Poster } from '@/components/toolkit/Poster';
 import { exportScheduleToPdf } from '@/lib/scheduleExportService';
 import { buildWorklist, type TaskFilter } from '@/lib/scheduleWorklist';
 import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
@@ -48,7 +47,8 @@ export default function ScheduleView({
 	const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
 	const [initialized, setInitialized] = useState(false);
 
-	// Auto-initialize days from festival dates on first load
+	// Die Festtage entstehen beim ersten Öffnen aus dem Fest-Datum (CONTEXT.md,
+	// *Ablauf-Tag*); jeder weitere Tag wird von Hand angelegt.
 	useEffect(() => {
 		if (!initialized && !isLoading && days.length === 0 && festivalStartDate) {
 			actions.initDays.mutate(
@@ -72,10 +72,18 @@ export default function ScheduleView({
 		[days, filter, responsibleId, festivalStartDate, festivalEndDate]
 	);
 
-	const programCount = days.reduce(
-		(sum, day) => sum + day.entries.filter((entry) => entry.type === 'program').length,
-		0
-	);
+	/** Die Tage der Werkliste in der Form der Abfrage — die Zeilen, die gerade
+	am Bildschirm stehen, für den Druck der Aufgabenliste. */
+	const shownDays = useMemo(() => {
+		const shown = new Set(
+			worklist.days.flatMap((day) =>
+				day.groups.flatMap((group) => group.tasks.map((task) => task.entry.id))
+			)
+		);
+		return days
+			.map((day) => ({ ...day, entries: day.entries.filter((entry) => shown.has(entry.id)) }))
+			.filter((day) => day.entries.length > 0);
+	}, [days, worklist]);
 
 	const handleSaveEntry = (data: ScheduleEntryFormData) => {
 		if (dialogState.type === 'entry' && dialogState.entry) {
@@ -107,21 +115,24 @@ export default function ScheduleView({
 	};
 
 	/**
-	 * Beide Papiere aufs Papier. Ausgewählt wird nichts mehr — „was du siehst,
-	 * kommt raus"; die zwei getrennten Exporte in Plakat-Optik samt dem Filter
-	 * der Werkliste baut #126.
+	 * Gedruckt wird ohne Auswahl-Dialog — „was du siehst, kommt raus" (#126).
+	 *
+	 * Der **Programmzettel** zeigt das ganze Fest: ein Aushang kennt keinen
+	 * Filter. Die **Aufgabenliste** dagegen ist die Kopie des Bildschirms und
+	 * druckt genau die Zeilen der Werkliste, samt Filter und Verantwortlichem.
+	 * Die zwei getrennten Papiere in Plakat-Optik baut #126.
 	 */
 	const handleExport = (entryTypeFilter: 'task' | 'program') => {
+		const printed = entryTypeFilter === 'task' ? shownDays : days;
 		exportScheduleToPdf({
 			festivalName: festivalName || 'Ablaufplan',
-			days,
-			selectedDayIds: new Set(days.map((day) => day.id)),
-			selectedPhaseIds: new Set(days.flatMap((day) => day.phases.map((phase) => phase.id))),
+			days: printed,
+			selectedDayIds: new Set(printed.map((day) => day.id)),
+			selectedPhaseIds: new Set(printed.flatMap((day) => day.phases.map((phase) => phase.id))),
 			entryTypeFilter
 		});
 	};
 
-	// Loading state
 	if (isLoading || !initialized) {
 		return (
 			<div className="space-y-4">
@@ -132,7 +143,7 @@ export default function ScheduleView({
 		);
 	}
 
-	// No festival dates set
+	// Ohne Fest-Datum gibt es keine Tage, an denen ein Eintrag hängen könnte.
 	if (!festivalStartDate) {
 		return (
 			<div className="py-12 text-center text-tinte-soft">
@@ -166,23 +177,15 @@ export default function ScheduleView({
 					onDeleteTask={(entry) => actions.removeEntry.mutate(entry.id)}
 				/>
 
-				{/* Das rechte Papier. Bedienbar — mit Zeilen, ⋮ und „+ PROGRAMMPUNKT"
-				je Tag — wird es in #123; bis dahin sagt es, was es trägt, statt den
-				Platz leer zu lassen. */}
-				<aside className="border-2.5 border-tinte bg-white min-[900px]:sticky min-[900px]:top-3">
-					<Poster className="border-0 border-b-2 px-4 py-3.5 text-center">
-						<span className="font-display text-[11.5px] font-semibold uppercase tracking-[.1em] text-gelb">
-							{festivalName}
-						</span>
-						<h3 className="font-display text-[21px] font-semibold uppercase tracking-[.03em]">
-							Programm
-						</h3>
-					</Poster>
-					<p className="px-4 py-4 text-[13px] text-tinte-soft">
-						{programCount === 0
-							? 'Noch kein Programmpunkt erfasst.'
-							: `${programCount} ${programCount === 1 ? 'Programmpunkt' : 'Programmpunkte'} erfasst.`}{' '}
-						Der Programmzettel wird hier zum druckfertigen Aushang; angelegt wird ein Punkt
+				{/* Der Platz des zweiten Papiers. Das Papier selbst — grüner
+				Halftone-Kopf, Zeilen, ⋮ und „+ PROGRAMMPUNKT" je Tag — ist #123;
+				hier steht nur, wem der Platz gehört. */}
+				<aside className="border-2.5 border-dashed border-linie bg-white px-4 py-4">
+					<h3 className="font-display text-[15px] font-semibold uppercase tracking-[.03em] text-tinte-soft">
+						Programmzettel
+					</h3>
+					<p className="mt-1.5 text-[13px] text-tinte-soft">
+						Das zweite Papier des Ablaufplans entsteht hier. Angelegt wird ein Programmpunkt
 						vorerst über „+ PROGRAMMPUNKT" in der Werkzeugleiste.
 					</p>
 				</aside>
@@ -195,9 +198,9 @@ export default function ScheduleView({
 				}}
 				entry={dialogState.type === 'entry' ? dialogState.entry : null}
 				defaultType={dialogState.type === 'entry' ? dialogState.defaultType : 'task'}
-				// Der Eintrag gehört einem Tag (ADR 0007); solange der Dialog kein
-				// Tag-Auswahlfeld hat, nimmt er den ersten Tag des Fests. Das Feld
-				// über alle Ablauf-Tage baut #124.
+				days={days}
+				// Der vorbelegte Tag: beim Bearbeiten seiner, beim Anlegen der erste
+				// des Fests. Gewählt wird im Dialog.
 				scheduleDayId={
 					dialogState.type === 'entry' && dialogState.entry
 						? dialogState.entry.schedule_day_id

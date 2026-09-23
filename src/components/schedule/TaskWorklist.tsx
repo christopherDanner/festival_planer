@@ -5,6 +5,14 @@ import { ActionMenu } from '@/components/toolkit/ActionMenu';
 import { NameChip } from '@/components/toolkit/NameChip';
 import { SectionHeading } from '@/components/toolkit/SectionHeading';
 import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
+import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@/components/ui/select';
 import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 import type { TaskFilter, Worklist, WorklistTask } from '@/lib/scheduleWorklist';
 
@@ -23,8 +31,8 @@ export interface TaskWorklistProps {
 /** Aufschrift eines Zählers: klein, fett, Versalien, Ziffern in fester Breite. */
 const COUNTER = 'text-[10.5px] font-extrabold uppercase tracking-[.05em] tabular-nums';
 
-/** Der Wert des Verantwortlichen-Felds für „alle" — ein leerer `value` wäre in
-einer `<option>` nicht von „kein Wert gesetzt" zu unterscheiden. */
+/** Der Wert des Verantwortlichen-Felds für „alle" — ein leerer `value` ist im
+Radix-Select der Platzhalter und damit kein wählbarer Eintrag. */
 const ALL_RESPONSIBLES = '__all__';
 
 /**
@@ -63,25 +71,28 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 				onValueChange={onFilterChange}
 				aria-label="Aufgaben-Filter"
 			/>
-			<select
+			<Select
 				value={responsibleId ?? ALL_RESPONSIBLES}
-				onChange={(e) =>
-					onResponsibleChange(e.target.value === ALL_RESPONSIBLES ? null : e.target.value)
+				onValueChange={(value) =>
+					onResponsibleChange(value === ALL_RESPONSIBLES ? null : value)
 				}
-				aria-label="Verantwortlicher"
-				className={cn(
-					'border-2 border-tinte bg-white px-2 py-1.5 text-[11.5px] font-semibold text-tinte',
-					'max-[899px]:min-h-10',
-					'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte'
-				)}
 			>
-				<option value={ALL_RESPONSIBLES}>Verantwortlich: alle</option>
-				{worklist.responsibles.map((responsible) => (
-					<option key={responsible.id} value={responsible.id}>
-						{responsible.name}
-					</option>
-				))}
-			</select>
+				<SelectTrigger
+					id="worklist-responsible"
+					aria-label="Verantwortlicher"
+					className={cn('h-10 w-auto gap-2 border-2 border-tinte bg-white text-[12px] font-bold text-tinte', FOCUS_INK)}
+				>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value={ALL_RESPONSIBLES}>Verantwortlich: alle</SelectItem>
+					{worklist.responsibles.map((responsible) => (
+						<SelectItem key={responsible.id} value={responsible.id}>
+							{responsible.name}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
 		</div>
 
 		{worklist.days.map((day, index) => (
