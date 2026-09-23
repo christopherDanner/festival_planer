@@ -7,15 +7,11 @@ also über genau das, was der Fokus-Kasten daneben zeigt. Eine eigene Zählung
 nennt die Frage eine andere Zahl als das Bild. */
 
 import { formatFestDayLong } from '@/lib/festDates';
+import { countLabel } from '@/lib/plural';
 import { shiftTimeLabel, type StationBoard } from '@/lib/shiftBoard';
 import type { StationShift } from '@/lib/shiftService';
 
 const UNWIDERRUFLICH = 'Das lässt sich nicht rückgängig machen.';
-
-/** „3 Schichten", „1 Zuteilung" — ein Posten mit richtigem Numerus. */
-function posten(n: number, einzahl: string, mehrzahl: string): string {
-	return `${n} ${n === 1 ? einzahl : mehrzahl}`;
-}
 
 /** Was an einer Station hängt und mit ihr fällt. Beide Arten von Zuteilung
 zählen mit — die auf einer Schicht und die Stationsmitgliedschaft ohne Schicht;
@@ -39,8 +35,8 @@ export function stationDeletionMessage(board: StationBoard): string {
 	const { shifts, assignments } = cascadeCounts(board);
 	// Leere Posten fallen weg, statt als Null dazustehen.
 	const mit = [
-		shifts > 0 ? posten(shifts, 'Schicht', 'Schichten') : null,
-		assignments > 0 ? posten(assignments, 'Zuteilung', 'Zuteilungen') : null
+		shifts > 0 ? countLabel(shifts, 'Schicht', 'Schichten') : null,
+		assignments > 0 ? countLabel(assignments, 'Zuteilung', 'Zuteilungen') : null
 	].filter((t): t is string => t !== null);
 
 	// Auch die leere Station verschwindet endgültig — gerade dort ist der Satz
@@ -62,5 +58,5 @@ export function shiftDeletionMessage(shift: StationShift, assigned: number): str
 	const schicht = `Die Schicht ${name}am ${wann}`;
 
 	if (assigned === 0) return `${schicht} wird gelöscht. Sie ist unbesetzt. ${UNWIDERRUFLICH}`;
-	return `${schicht} wird gelöscht — samt ${posten(assigned, 'Zuteilung', 'Zuteilungen')}. ${UNWIDERRUFLICH}`;
+	return `${schicht} wird gelöscht — samt ${countLabel(assigned, 'Zuteilung', 'Zuteilungen')}. ${UNWIDERRUFLICH}`;
 }

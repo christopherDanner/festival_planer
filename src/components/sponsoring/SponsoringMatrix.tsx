@@ -6,7 +6,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ValueTag } from '@/components/toolkit/ValueTag';
 import {
 	PAPER_TABLE_BODY_CELL,
@@ -14,7 +13,16 @@ import {
 	PAPER_TABLE_HEAD_CELL
 } from '@/components/toolkit/PaperTable';
 import SponsoringZettel from '@/components/sponsoring/SponsoringZettel';
+import PreislisteZettel from '@/components/sponsoring/PreislisteZettel';
+import ZettelPopover from '@/components/sponsoring/ZettelPopover';
 import { formatEuro } from '@/lib/money';
+import {
+	buildCategoryZettel,
+	categoryHeadLabel,
+	NO_CATEGORY_IMPACT,
+	type CategoryImpact,
+	type CategoryZettelInput
+} from '@/lib/sponsoringPreisliste';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
 	sponsoringFooterLabel,
@@ -39,16 +47,29 @@ export interface SponsoringMatrixProps {
 	totalRowCount: number;
 	/** Laufender Suchbegriff; nur für die Hinweiszeile, wenn nichts passt. */
 	searchTerm: string;
+	/**
+	 * Reichweite je Kategorie-Id über **alle** Sponsorings des Fests — was der
+	 * Zettel am Spaltenkopf beziffern muss (ADR 0009). Bewusst nicht aus `rows`
+	 * gerechnet: die sind gefiltert, die Rückwirkung ist es nicht.
+	 */
+	categoryImpacts: Record<string, CategoryImpact>;
 	onDelete: (sponsoringId: string) => void;
 	/** „Übernehmen" im Zettel. */
 	onApply: (sponsoringId: string, target: ZettelTarget, input: ZettelInput) => void;
 	/** „Entfernen" im Zettel. */
 	onRemove: (sponsoringId: string, target: ZettelTarget) => void;
+	/** „Übernehmen" im Zettel am Spaltenkopf — Name und Standardwert. */
+	onCategoryApply: (category: SponsoringCategory, input: CategoryZettelInput) => void;
+	/** „Kategorie löschen" — die Rückfrage hat der Zettel schon gestellt. */
+	onCategoryDelete: (category: SponsoringCategory) => void;
 }
 
 /** Eindeutig je Zelle — sagt, welcher Zettel offen ist. */
 const cellKey = (sponsoringId: string, target: ZettelTarget): string =>
 	`${sponsoringId}:${target.kind === 'category' ? `category:${target.category.id}` : target.kind}`;
+
+/** Derselbe Schlüsselraum für die Spaltenköpfe — höchstens ein Zettel ist offen. */
+const headKey = (category: SponsoringCategory): string => `head:${category.id}`;
 
 /* Firma klebt links, Gesamt und ⋮ kleben rechts: bei Überhang verschwinden
 zuerst die rechten Spalten — man sähe sonst Kategorie-Werte ohne Zeilensumme
@@ -84,15 +105,10 @@ const CELL_ALIGN = {
 	end: 'justify-end'
 } as const;
 
-/* Der Zettel bringt seinen eigenen Rahmen mit; der Popover steuert nur noch
-Platzierung, Schließen und Fokus bei. */
-const ZETTEL_CONTENT = 'w-auto border-0 bg-transparent p-0 shadow-none';
-
 /**
  * Eine wertetragende Zelle: ihr ganzer Inhalt ist der Knopf, der den Zettel
  * öffnet. Er füllt die Zeilenhöhe, damit auch der Rand einer leeren Zelle
- * trifft. Der Zettel hängt als Popover daran — Platzierung, Klick außerhalb,
- * Escape und Fokus-Rückgabe kommen von Radix, nicht von uns (ADR 0003).
+ * trifft.
  */
 const ZettelCell: React.FC<{
 	label: string;
@@ -104,8 +120,10 @@ const ZettelCell: React.FC<{
 	onRemove: () => void;
 	children: React.ReactNode;
 }> = ({ label, align, open, onOpenChange, zettel, onApply, onRemove, children }) => (
-	<Popover open={open} onOpenChange={onOpenChange}>
-		<PopoverTrigger asChild>
+	<ZettelPopover
+		open={open}
+		onOpenChange={onOpenChange}
+		trigger={
 			<button
 				type="button"
 				aria-label={label}
@@ -113,19 +131,10 @@ const ZettelCell: React.FC<{
 			>
 				{children}
 			</button>
-		</PopoverTrigger>
-		{/* Schwebt unter der Zelle und verdeckt dabei die Folgezeile — ausdrücklich
-		abgenommen (ADR 0009). Den Fokus setzt der Zettel selbst: er selektiert das
-		vorbelegte Feld, was Radix' Standard-Fokus überschreiben würde. */}
-		<PopoverContent
-			align="start"
-			sideOffset={2}
-			className={ZETTEL_CONTENT}
-			onOpenAutoFocus={(e) => e.preventDefault()}
-		>
-			<SponsoringZettel zettel={zettel} onApply={onApply} onRemove={onRemove} />
-		</PopoverContent>
-	</Popover>
+		}
+	>
+		<SponsoringZettel zettel={zettel} onApply={onApply} onRemove={onRemove} />
+	</ZettelPopover>
 );
 
 /**
@@ -146,9 +155,12 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	footer,
 	totalRowCount,
 	searchTerm,
+	categoryImpacts,
 	onDelete,
 	onApply,
-	onRemove
+	onRemove,
+	onCategoryApply,
+	onCategoryDelete
 }) => {
 	/* Höchstens ein Zettel ist offen: der Klick auf eine andere Zelle schließt
 	den alten, ohne zu speichern (ADR 0009). */
@@ -172,6 +184,15 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 		};
 	};
 
+	/** Wann der Zettel eines Spaltenkopfs offen ist — derselbe Schlüsselraum. */
+	const categoryHead = (category: SponsoringCategory) => {
+		const key = headKey(category);
+		return {
+			open: openCell === key,
+			onOpenChange: (open: boolean) => setOpenCell(open ? key : null)
+		};
+	};
+
 	return (
 		<div className="overflow-x-auto border-2.5 border-tinte bg-white">
 			<table
@@ -192,12 +213,46 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 								lang="de"
 								className={`${HEAD_CELL} hyphens-auto text-center`}
 							>
-								{category.name}
-								{category.value != null && (
-									<span className="block font-display text-xs font-semibold normal-case tracking-normal text-gruen">
-										{formatEuro(category.value)}
-									</span>
-								)}
+								{/* Der Kopf **ist** die Preisliste: hier wird angelegt, umbenannt,
+								der Standardwert geändert und gelöscht — die frühere zweite Tabelle
+								„Sponsoring-Kategorien" entfällt damit (ADR 0009, #149). Versalien
+								und Worttrennung stehen am Knopf, weil Tailwinds Preflight einem
+								<button> das `text-transform` der <th> zurücknimmt. */}
+								<ZettelPopover
+									{...categoryHead(category)}
+									trigger={
+										/* Der Knopf nimmt den Innenabstand der Kopfzelle mit
+										(`-my-2 py-2`), damit die ganze Zelle trifft — dieselbe
+										Regel wie an der Zelle, wo der Knopf die Zeilenhöhe trägt. */
+										<button
+											type="button"
+											aria-label={categoryHeadLabel(category)}
+											className="-my-2 block w-full min-w-0 hyphens-auto py-2 uppercase"
+										>
+											{category.name}
+											{category.value != null && (
+												<span className="block font-display text-xs font-semibold normal-case tracking-normal text-gruen">
+													{formatEuro(category.value)}
+												</span>
+											)}
+										</button>
+									}
+								>
+									<PreislisteZettel
+										zettel={buildCategoryZettel(
+											category,
+											categoryImpacts[category.id] ?? NO_CATEGORY_IMPACT
+										)}
+										onApply={(input) => {
+											onCategoryApply(category, input);
+											setOpenCell(null);
+										}}
+										onDelete={() => {
+											onCategoryDelete(category);
+											setOpenCell(null);
+										}}
+									/>
+								</ZettelPopover>
 							</th>
 						))}
 						<th scope="col" className={`${HEAD_CELL} w-[8%] text-right`}>

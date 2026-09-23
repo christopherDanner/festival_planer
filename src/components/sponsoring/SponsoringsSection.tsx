@@ -22,6 +22,9 @@ import {
 	getSponsors,
 	createSponsor,
 	getCategories,
+	createCategory,
+	updateCategory,
+	deleteCategory,
 	getSponsorings,
 	createSponsoring,
 	updateSponsoring,
@@ -31,6 +34,12 @@ import {
 	type SponsoringWithDetails
 } from '@/lib/sponsorService';
 import { buildSponsoringOverviewRows } from '@/lib/sponsoringTotals';
+import {
+	categoryImpact,
+	categoryZettelWrite,
+	type CategoryImpact,
+	type CategoryZettelInput
+} from '@/lib/sponsoringPreisliste';
 import {
 	applyZettel,
 	clearZettel,
@@ -198,6 +207,53 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		}
 	};
 
+	/* Die Preisliste wird am Spaltenkopf verwaltet (ADR 0009, #149) — anlegen,
+	umbenennen, Standardwert ändern, löschen. Eine zweite Tabelle gibt es nicht
+	mehr. Nach jedem Schreiben neu laden, damit Spalten, Fuß und Kopfzahl über
+	denselben Rechenweg nachziehen. */
+	const handleCategoryApply = async (
+		category: SponsoringCategory | null,
+		input: CategoryZettelInput
+	) => {
+		const { name, value } = categoryZettelWrite(input);
+		try {
+			if (category) {
+				await updateCategory(category.id, { name, value });
+			} else {
+				await createCategory(festivalId, name, value);
+			}
+			loadData();
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	/* Die bezifferte Rückfrage hat der Zettel schon gestellt — hier fällt nur
+	noch die Kategorie samt ihren Zuweisungen (ON DELETE CASCADE). */
+	const handleCategoryDelete = async (category: SponsoringCategory) => {
+		try {
+			await deleteCategory(category.id);
+			loadData();
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: error instanceof Error ? error.message : 'Fehler beim Löschen',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	/* Über **alle** Sponsorings gezählt, nicht über die gefilterten Zeilen: was
+	ein neuer Standardwert verschiebt und was das Löschen mitreißt, hängt nicht
+	am Suchfeld (ADR 0006). */
+	const categoryImpacts: Record<string, CategoryImpact> = Object.fromEntries(
+		categories.map((c) => [c.id, categoryImpact(sponsorings, c.id)])
+	);
+
 	// Beim Anlegen nur Firmen anbieten, die das Fest noch nicht sponsern (UNIQUE).
 	const availableSponsors = sponsors.filter(
 		(s) => !sponsorings.some((sp) => sp.sponsor_id === s.id)
@@ -236,6 +292,9 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				onDelete={handleDeleteById}
 				onApply={handleApply}
 				onRemove={handleRemove}
+				categoryImpacts={categoryImpacts}
+				onCategoryApply={handleCategoryApply}
+				onCategoryDelete={handleCategoryDelete}
 			/>
 
 			<SponsorUebernahmeDialog
