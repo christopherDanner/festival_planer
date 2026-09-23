@@ -1,3 +1,5 @@
+import { Pencil } from 'lucide-react';
+
 import { ActionMenu } from '@/components/toolkit/ActionMenu';
 
 interface PosterMenuProps {
@@ -28,7 +30,7 @@ export default function PosterMenu({
 	return (
 		<ActionMenu
 			menuLabel={`Menü für ${festivalName}`}
-			editLabel="Bearbeiten"
+			entries={[{ label: 'Bearbeiten', icon: Pencil, onSelect: onEdit }]}
 			deleteLabel="Löschen"
 			confirmTitle="Fest löschen"
 			confirmMessage={
@@ -37,7 +39,6 @@ export default function PosterMenu({
 					nicht rückgängig machen.
 				</>
 			}
-			onEdit={onEdit}
 			onDelete={onDelete}
 			tone={tone}
 			align="start"
