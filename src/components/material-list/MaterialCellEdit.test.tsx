@@ -93,6 +93,7 @@ const Harness: React.FC<{
 				failed: snapshot.failed,
 				savedIds: snapshot.savedIds,
 				units,
+				unit: snapshot.unit,
 				onOpen: (m, column) => editor.open(m, column),
 				onType: editor.type,
 				onUnitChange: (column, unit) => setUnits((now) => ({ ...now, [column]: unit })),
@@ -398,7 +399,9 @@ describe('Eingabe-Einheit per Spaltenkopf (#218)', () => {
 		await click(byLabel('Verbraucht von Bier'));
 		await type(openField(), '80');
 
-		expect(hintUnderField()).toBe('= 80 Liter');
+		// Keine Umrechnung, nur die Einheit: hier wird trotz Gebinde-Modus in der
+		// Basiseinheit getippt, und genau das soll man sehen.
+		expect(hintUnderField()).toBe('Liter');
 
 		await press('Enter');
 		expect(save).toHaveBeenCalledWith('bier', { actual_quantity: 80 });

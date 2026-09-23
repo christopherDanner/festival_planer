@@ -25,8 +25,15 @@ export type CellRow = CellQuantities & { id: string };
 export interface CellEditorSnapshot {
 	/** Die offene Zelle — höchstens eine, wie beim Zettel des Sponsorings. */
 	editing: CellRef | null;
-	/** Was darin steht, als Text in der Basiseinheit. */
+	/** Was darin steht, als Text in der Eingabe-Einheit der Spalte. */
 	value: string;
+	/**
+	 * Worin die offene Zelle getippt wird (#218) — festgehalten beim Öffnen.
+	 * Wer den Text deutet, muss diese Einheit nehmen und nicht die, auf der der
+	 * Spaltenkopf inzwischen steht; sonst rechnete die Vorschau anders als das
+	 * Speichern. Ohne offene Zelle: Basis.
+	 */
+	unit: InputUnit;
 	/** Das Speichern läuft; die Zelle nimmt solange keine Zeichen an. */
 	saving: boolean;
 	/** Das letzte Speichern ist gescheitert — roter Rand, Wert bleibt stehen. */
@@ -41,10 +48,10 @@ export interface CreateCellEditorOpts {
 	/**
 	 * Die **Eingabe-Einheit je Mengenspalte** (#218), wie die Spaltenköpfe sie
 	 * gerade zeigen. Als Geber, nicht als Wert: der Store lebt über Renderzyklen
-	 * hinweg, die Wahl liegt in der Arbeitsliste. Ohne Angabe wird in der
-	 * Basiseinheit getippt.
+	 * hinweg, die Wahl liegt in der Arbeitsliste. Ohne Angabe — und ohne Antwort
+	 * — wird in der Basiseinheit getippt; dieser Rückfall steht genau hier.
 	 */
-	units?: () => InputUnits;
+	units?: () => InputUnits | undefined;
 	/** Wie lange der grüne Blitz nach dem Speichern steht (Vision: ~0,9 s). */
 	flashMs?: number;
 }
@@ -191,7 +198,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		},
 		getState() {
 			if (cached) return cached;
-			cached = { editing, value, saving, failed, savedIds: [...savedIds] };
+			cached = { editing, value, unit, saving, failed, savedIds: [...savedIds] };
 			return cached;
 		},
 		subscribe(listener) {

@@ -4,7 +4,6 @@ import {
 	type CellEditorSnapshot,
 	type CreateCellEditorOpts
 } from '@/lib/materialCellEditor';
-import { BASE_UNITS } from '@/lib/materialCellEdit';
 
 /**
  * Bindet die Zellbearbeitung (`materialCellEditor`) an React — dasselbe Muster
@@ -24,7 +23,7 @@ export function useCellEditor(opts: CreateCellEditorOpts) {
 		() =>
 			createCellEditor({
 				onSave: (id, update) => optsRef.current.onSave(id, update),
-				units: () => optsRef.current.units?.() ?? BASE_UNITS,
+				units: () => optsRef.current.units?.(),
 				flashMs: optsRef.current.flashMs
 			}),
 		[]

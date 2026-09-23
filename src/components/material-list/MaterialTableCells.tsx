@@ -95,11 +95,16 @@ export interface CellEditControls {
 	/** Eben gespeicherte Zeilen — der kurze grüne Blitz. */
 	savedIds: string[];
 	/**
-	 * Die **Eingabe-Einheit** je Mengenspalte (#218) — die Wahl ihres
-	 * Spaltenkopfs. Der `materialCellEditor` liest dieselbe Wahl; sie steht
-	 * darum an *einer* Stelle in der Arbeitsliste und reist von dort in beide.
+	 * Die **Eingabe-Einheit** je Mengenspalte (#218) — die Wahl ihrer
+	 * Spaltenköpfe, für die Schalter im Kopf.
 	 */
 	units: InputUnits;
+	/**
+	 * Worin die **offene** Zelle getippt wird. Sie kommt aus dem Store, nicht aus
+	 * `units`: dort steht sie eingefroren, seit die Zelle aufging, und nur so
+	 * deutet die Umrechnung unter dem Feld den Text wie das Speichern.
+	 */
+	unit: InputUnit;
 	onOpen: (material: FestivalMaterialWithStation, column: QuantityColumn) => void;
 	onType: (value: string) => void;
 	onUnitChange: (column: QuantityColumn, unit: InputUnit) => void;
@@ -146,31 +151,34 @@ const PriceGap = () => (
 	</span>
 );
 
-/** Die Gebinde-Umrechnung unter einer Menge: „→ 4 × Fass". Sie steht unter der
-gelesenen Zelle, unter dem Feld der offenen Zeile und unter dem der offenen
-Zelle — eine Zeile, ein Rezept (ADR 0003 §2). */
-const PackagingLine: React.FC<{
-	stored: number | null;
-	material: FestivalMaterialWithStation;
-}> = ({ stored, material }) => {
-	const hint = formatRequiredPackaging(stored, material);
-	return hint ? (
-		<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
-	) : null;
-};
+const HINT_LINE = 'block truncate text-[10px] leading-tight text-tinte-soft';
 
-/** Die Gegenrichtung unter dem Feld, wenn die Spalte auf **Gebinde** steht
-(#218): „= 200 Liter". Sie steht auch bei Positionen ohne Gebinde — dort nennt
-sie die Einheit, in der diese eine Zelle trotzdem getippt wird. Derselbe Platz
-wie die `PackagingLine`, damit die Zeile beim Umschalten nicht wächst. */
-const BaseLine: React.FC<{
+/**
+ * Die Zeile unter einer Menge — sie rechnet in die *andere* Einheit um und
+ * hängt darum an der Eingabe-Einheit der Spalte (#218):
+ *
+ * - **Basis** (auch lesend und im Zeilenmodus): die Gebinde-Umrechnung
+ *   „→ 4 × Fass", und nichts, wo es kein Gebinde gibt.
+ * - **Gebinde**: die Basis-Umrechnung „= 200 Liter" — und bei einer Position
+ *   **ohne** Gebinde die blanke Einheit („Stück"), weil dort trotz des Modus in
+ *   der Basiseinheit getippt wird und man genau das sehen soll (CONTEXT.md).
+ *
+ * Eine Zeile, ein Rezept: sie steht unter der gelesenen Zelle, unter dem Feld
+ * der offenen Zeile und unter dem der offenen Zelle (ADR 0003 §2).
+ */
+const QuantityHint: React.FC<{
 	stored: number | null;
 	material: FestivalMaterialWithStation;
-}> = ({ stored, material }) => (
-	<span className="block truncate text-[10px] leading-tight text-tinte-soft">
-		{formatBaseAmount(stored, material)}
-	</span>
-);
+	/** Lesend und im Zeilenmodus immer die Basiseinheit. */
+	unit?: InputUnit;
+}> = ({ stored, material, unit = 'base' }) => {
+	if (unit === 'packaging') {
+		const base = formatBaseAmount(stored, material);
+		return <span className={HINT_LINE}>{base ? `= ${base}` : material.unit}</span>;
+	}
+	const packaging = formatRequiredPackaging(stored, material);
+	return packaging ? <span className={HINT_LINE}>{`→ ${packaging}`}</span> : null;
+};
 
 /** Menge in Basiseinheiten samt Einheit, darunter die Gebinde-Umrechnung. */
 const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterialWithStation }> = ({
@@ -182,7 +190,7 @@ const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterial
 		<>
 			<span className="font-medium">{formatQuantity(toBaseQuantity(stored, material) ?? 0)}</span>{' '}
 			<span className="text-[10.5px] text-tinte-soft">{material.unit}</span>
-			<PackagingLine stored={stored} material={material} />
+			<QuantityHint stored={stored} material={material} />
 		</>
 	);
 };
@@ -371,7 +379,6 @@ export const QuantityEditCell: React.FC<{
 }> = ({ column, material: m, cellEdit }) => {
 	const label = `${QUANTITY_LABEL[column]} von ${m.name}`;
 	const open = cellEdit.editing?.id === m.id && cellEdit.editing.column === column;
-	const unit = cellEdit.units[column];
 	const field = React.useRef<HTMLInputElement>(null);
 	const failed = open && cellEdit.failed;
 
@@ -394,6 +401,8 @@ export const QuantityEditCell: React.FC<{
 		);
 	}
 
+	// Die Einheit der offenen Zelle steht im Store — eingefroren, seit sie aufging.
+	const unit = cellEdit.unit;
 	const preview = previewCell(column, cellEdit.value, m, unit);
 	const cell: CellRef = { id: m.id, column };
 
@@ -429,10 +438,8 @@ export const QuantityEditCell: React.FC<{
 				>
 					Nicht gespeichert — Enter
 				</span>
-			) : unit === 'packaging' ? (
-				<BaseLine stored={storedQuantity(column, preview)} material={m} />
 			) : (
-				<PackagingLine stored={storedQuantity(column, preview)} material={m} />
+				<QuantityHint stored={storedQuantity(column, preview)} material={m} unit={unit} />
 			)}
 		</>
 	);
@@ -596,5 +603,5 @@ const PackagingHint: React.FC<{
 }> = ({ draft, material, which }) => {
 	const preview = draftPreview(draft, material);
 	const stored = which === 'ordered' ? preview.ordered_quantity : preview.actual_quantity;
-	return <PackagingLine stored={stored} material={material} />;
+	return <QuantityHint stored={stored} material={material} />;
 };

@@ -306,6 +306,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 									failed: cell.snapshot.failed,
 									savedIds: cell.snapshot.savedIds,
 									units,
+									unit: cell.snapshot.unit,
 									onOpen: (m, column) => cell.editor.open(m, column),
 									onType: cell.editor.type,
 									onUnitChange: (column, unit) =>

@@ -2,6 +2,10 @@ import { cn } from '@/lib/utils';
 
 import { SegmentedBase, type SegmentedOption } from './SegmentedBase';
 
+/** Die zwei Größen des Segment-Schalters. Ein Name für alle drei Stellen, die
+sie nennen — Prop, Rezepttabelle und Aufrufer. */
+export type SegmentedControlSize = 'sm' | 'md';
+
 export interface SegmentedControlProps<T extends string = string> {
 	options: readonly SegmentedOption<T>[];
 	value: T;
@@ -13,11 +17,11 @@ export interface SegmentedControlProps<T extends string = string> {
 	 * nur so klein, dass er in eine 9 %-Spalte passt, und ohne das
 	 * Handy-Tippziel — er steht dort, wo es ohnehin keine Handy-Sicht gibt.
 	 */
-	size?: 'sm' | 'md';
+	size?: SegmentedControlSize;
 	className?: string;
 }
 
-const SIZE: Record<'sm' | 'md', string> = {
+const SIZE: Record<SegmentedControlSize, string> = {
 	sm: 'px-1 py-0.5 text-[10px]',
 	md: 'px-1 py-1.5 text-xs max-[899px]:min-h-10',
 };

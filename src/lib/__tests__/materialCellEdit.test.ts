@@ -11,11 +11,11 @@ const fass = {
 
 describe('cellText — was beim Öffnen der Zelle im Feld steht (#216)', () => {
 	it('zeigt die Menge in der Basiseinheit, nicht in Gebinden', () => {
-		expect(cellText('ordered', fass)).toBe('200');
+		expect(cellText('ordered', fass, 'base')).toBe('200');
 	});
 
 	it('lässt eine nicht erfasste Verbraucht-Menge leer', () => {
-		expect(cellText('consumed', fass)).toBe('');
+		expect(cellText('consumed', fass, 'base')).toBe('');
 	});
 });
 
@@ -29,33 +29,33 @@ describe('cellUpdate — leer und 0 sind bei Verbraucht zweierlei (#216)', () =>
 
 	it('speichert eine geleerte Verbraucht-Zelle als „nicht erfasst"', () => {
 		// Leer zählt nicht in den Verbrauchswert (CONTEXT.md) …
-		expect(cellUpdate('consumed', '', stueck)).toEqual({ actual_quantity: null });
+		expect(cellUpdate('consumed', '', stueck, 'base')).toEqual({ actual_quantity: null });
 	});
 
 	it('speichert eine 0 in Verbraucht als „nichts verbraucht"', () => {
 		// … eine 0 dagegen schon, mit 0 × Bruttopreis.
-		expect(cellUpdate('consumed', '0', stueck)).toEqual({ actual_quantity: 0 });
+		expect(cellUpdate('consumed', '0', stueck, 'base')).toEqual({ actual_quantity: 0 });
 	});
 
 	it('macht aus einer geleerten Bestellt-Zelle eine 0 — keine Position ohne Menge', () => {
-		expect(cellUpdate('ordered', '', stueck)).toEqual({ ordered_quantity: 0 });
+		expect(cellUpdate('ordered', '', stueck, 'base')).toEqual({ ordered_quantity: 0 });
 	});
 
 	it('rechnet die getippte Basismenge in Gebinde zurück', () => {
-		expect(cellUpdate('consumed', '150', fass)).toEqual({ actual_quantity: 3 });
+		expect(cellUpdate('consumed', '150', fass, 'base')).toEqual({ actual_quantity: 3 });
 	});
 
 	it('nimmt das Dezimalkomma, wie es auf der Rechnung steht', () => {
 		// „auch angebrochene (2,5)" (CONTEXT.md). Ein verworfenes Komma machte aus
 		// 2,5 ein „nicht erfasst" — genau das stille Verwerfen, das ADR 0013
 		// ausschließt.
-		expect(cellUpdate('consumed', '2,5', stueck)).toEqual({ actual_quantity: 2.5 });
-		expect(cellUpdate('ordered', '2,5', stueck)).toEqual({ ordered_quantity: 2.5 });
+		expect(cellUpdate('consumed', '2,5', stueck, 'base')).toEqual({ actual_quantity: 2.5 });
+		expect(cellUpdate('ordered', '2,5', stueck, 'base')).toEqual({ ordered_quantity: 2.5 });
 	});
 
 	it('lässt Gekritzeltes stehen, statt es als 0 wegzuschreiben', () => {
-		expect(cellUpdate('consumed', 'abc', stueck)).toEqual({ actual_quantity: 8 });
-		expect(cellUpdate('ordered', 'abc', stueck)).toEqual({ ordered_quantity: 10 });
+		expect(cellUpdate('consumed', 'abc', stueck, 'base')).toEqual({ actual_quantity: 8 });
+		expect(cellUpdate('ordered', 'abc', stueck, 'base')).toEqual({ ordered_quantity: 10 });
 	});
 });
 
@@ -68,24 +68,24 @@ describe('isCellDirty — geschrieben wird nur, was etwas ändert (#216)', () =>
 	};
 
 	it('hält die unberührte Zelle für unverändert', () => {
-		expect(isCellDirty('ordered', '0', stueck)).toBe(false);
-		expect(isCellDirty('consumed', '', stueck)).toBe(false);
+		expect(isCellDirty('ordered', '0', stueck, 'base')).toBe(false);
+		expect(isCellDirty('consumed', '', stueck, 'base')).toBe(false);
 	});
 
 	it('zählt eine geleerte Bestellt-Zelle über einer 0 nicht als Änderung', () => {
 		// Leer *ist* hier 0 — sonst stünde in der Liste ein Schreibvorgang, den
 		// niemand ausgelöst hat.
-		expect(isCellDirty('ordered', '', stueck)).toBe(false);
+		expect(isCellDirty('ordered', '', stueck, 'base')).toBe(false);
 	});
 
 	it('unterscheidet bei Verbraucht die 0 von der leeren Zelle', () => {
-		expect(isCellDirty('consumed', '0', stueck)).toBe(true);
-		expect(isCellDirty('consumed', '', { ...stueck, actual_quantity: 0 })).toBe(true);
+		expect(isCellDirty('consumed', '0', stueck, 'base')).toBe(true);
+		expect(isCellDirty('consumed', '', { ...stueck, actual_quantity: 0 }, 'base')).toBe(true);
 	});
 
 	it('merkt die neue Zahl — auch in Gebinden gerechnet', () => {
-		expect(isCellDirty('consumed', '150', fass)).toBe(true);
-		expect(isCellDirty('ordered', '200', fass)).toBe(false);
+		expect(isCellDirty('consumed', '150', fass, 'base')).toBe(true);
+		expect(isCellDirty('ordered', '200', fass, 'base')).toBe(false);
 	});
 });
 

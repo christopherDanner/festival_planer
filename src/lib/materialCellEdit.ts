@@ -43,8 +43,10 @@ export const BASE_UNITS: InputUnits = { ordered: 'base', consumed: 'base' };
  * in der Basiseinheit, auch wenn die Spalte auf Gebinde steht — es gibt nichts
  * umzurechnen, und eine getippte Zahl ohne Bezug wäre eine stille Fehldeutung.
  */
-export function cellUnit(chosen: InputUnit, m: CellQuantities): InputUnit {
-	return chosen === 'packaging' && m.packaging_unit && m.amount_per_packaging ? 'packaging' : 'base';
+export function cellUnit(columnUnit: InputUnit, m: CellQuantities): InputUnit {
+	return columnUnit === 'packaging' && m.packaging_unit && m.amount_per_packaging
+		? 'packaging'
+		: 'base';
 }
 
 /** Die gespeicherte Menge der Spalte, in Gebinden wie in der Datenbank. Eine
@@ -65,9 +67,13 @@ export function storedQuantity(column: QuantityColumn, m: CellQuantities): numbe
  * (2,5) sind der Regelfall des Gebinde-Modus, und eine gerundete Anzeige spräche
  * beim nächsten Verlassen eine Änderung aus, die niemand getippt hat.
  */
-export function cellText(column: QuantityColumn, m: CellQuantities, chosen: InputUnit = 'base'): string {
+export function cellText(
+	column: QuantityColumn,
+	m: CellQuantities,
+	columnUnit: InputUnit
+): string {
 	const stored = storedQuantity(column, m);
-	const shown = cellUnit(chosen, m) === 'packaging' ? stored : toBaseQuantity(stored, m);
+	const shown = cellUnit(columnUnit, m) === 'packaging' ? stored : toBaseQuantity(stored, m);
 	return shown == null ? '' : String(shown).replace('.', ',');
 }
 
@@ -115,7 +121,7 @@ export function cellUpdate(
 	column: QuantityColumn,
 	text: string,
 	m: CellQuantities,
-	chosen: InputUnit = 'base'
+	columnUnit: InputUnit
 ): CellUpdate {
 	const typed = read(text);
 	if (typed.kind === 'unreadable') {
@@ -126,7 +132,7 @@ export function cellUpdate(
 	const stored =
 		typed.kind === 'empty'
 			? null
-			: cellUnit(chosen, m) === 'packaging'
+			: cellUnit(columnUnit, m) === 'packaging'
 				? typed.value
 				: fromBaseQuantity(typed.value, m);
 	if (column === 'ordered') {
@@ -148,9 +154,11 @@ export function isCellDirty(
 	column: QuantityColumn,
 	text: string,
 	m: CellQuantities,
-	chosen: InputUnit = 'base'
+	columnUnit: InputUnit
 ): boolean {
-	return storedQuantity(column, previewCell(column, text, m, chosen)) !== storedQuantity(column, m);
+	return (
+		storedQuantity(column, previewCell(column, text, m, columnUnit)) !== storedQuantity(column, m)
+	);
 }
 
 /** Die Position, wie sie mit dem Getippten aussähe. Die Gebinde-Umrechnung
@@ -160,9 +168,9 @@ export function previewCell<T extends CellQuantities>(
 	column: QuantityColumn,
 	text: string,
 	m: T,
-	chosen: InputUnit = 'base'
+	columnUnit: InputUnit
 ): T {
-	return { ...m, ...cellUpdate(column, text, m, chosen) };
+	return { ...m, ...cellUpdate(column, text, m, columnUnit) };
 }
 
 /** Eine Mengenzelle, benannt wie die Tabelle sie kennt: Position und Spalte. */

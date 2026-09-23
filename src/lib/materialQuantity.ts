@@ -47,21 +47,18 @@ export function formatRequiredPackaging(
 }
 
 /**
- * Die Gegenrichtung für den **Gebinde-Modus** (#218): „= 200 Liter" unter dem
- * Feld, in dem Gebinde getippt werden. Sie steht dort, wo im Basis-Modus
- * `formatRequiredPackaging` steht — derselbe Platz, damit die Zeile beim
- * Umschalten nicht wächst.
- *
- * Ohne Menge bleibt die Einheit allein stehen, und bei einer Position **ohne
- * Gebinde** nennt sie genau die Einheit, in der diese eine Zelle trotz des
- * Gebinde-Modus getippt wird (CONTEXT.md).
+ * Die Gegenrichtung für den **Gebinde-Modus** (#218): „200 Liter" zu einer in
+ * Gebinden getippten Menge. Wie `formatRequiredPackaging` liefert sie **null**,
+ * wo es nichts umzurechnen gibt — ohne Gebinde und ohne Menge; die Zeile unter
+ * dem Feld entscheidet dann selbst, was dort steht.
  */
 export function formatBaseAmount(
 	stored: number | null,
 	material: QuantityContext & { unit: string }
-): string {
+): string | null {
+	if (!material.packaging_unit || !material.amount_per_packaging) return null;
 	const base = toBaseQuantity(stored, material);
-	return base == null ? material.unit : `= ${formatQuantity(base)} ${material.unit}`;
+	return base == null ? null : `${formatQuantity(base)} ${material.unit}`;
 }
 
 /**

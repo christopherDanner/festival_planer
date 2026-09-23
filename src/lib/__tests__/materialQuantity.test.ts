@@ -93,23 +93,21 @@ describe('formatBaseAmount — die Umrechnung unter dem Gebinde-Feld (#218)', ()
 	const fass = { unit: 'Liter', packaging_unit: 'Fass', amount_per_packaging: 50 };
 
 	it('nennt die Basismenge samt Einheit', () => {
-		expect(formatBaseAmount(4, fass)).toBe('= 200 Liter');
+		expect(formatBaseAmount(4, fass)).toBe('200 Liter');
 	});
 
 	it('rechnet auch angebrochene Gebinde aus', () => {
-		expect(formatBaseAmount(2.5, fass)).toBe('= 125 Liter');
+		expect(formatBaseAmount(2.5, fass)).toBe('125 Liter');
 	});
 
-	it('nennt bei einer Position ohne Gebinde ihre Einheit — dort wird Basis getippt', () => {
+	it('schweigt bei einer Position ohne Gebinde — dort wird ohnehin Basis getippt', () => {
 		expect(
 			formatBaseAmount(12, { unit: 'Stück', packaging_unit: null, amount_per_packaging: null })
-		).toBe('= 12 Stück');
+		).toBeNull();
 	});
 
-	it('lässt bei leerer Zelle die Einheit allein stehen', () => {
-		// Es gibt nichts umzurechnen — die Einheit ist trotzdem die Auskunft,
-		// worin diese Zelle gerade rechnet.
-		expect(formatBaseAmount(null, fass)).toBe('Liter');
+	it('schweigt bei leerer Zelle — es gibt nichts umzurechnen', () => {
+		expect(formatBaseAmount(null, fass)).toBeNull();
 	});
 });
 

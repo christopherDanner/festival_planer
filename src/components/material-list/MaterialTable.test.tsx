@@ -32,6 +32,7 @@ function cellEditWith(savedIds: string[] = [], units: InputUnits = BASE_UNITS): 
 		failed: false,
 		savedIds,
 		units,
+		unit: 'base',
 		onOpen: noop,
 		onType: noop,
 		onUnitChange: noop,
