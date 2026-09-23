@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import type { Station } from '@/lib/shiftService';
-import { ZEILEN_HINWEIS } from '@/lib/materialDialogForm';
+import { TABELLEN_HINWEIS } from '@/lib/materialDialogForm';
 import MaterialDialog from './MaterialDialog';
 
 /* Seam dieses Tests (aus #117 abgeleitet): MaterialDialog ist der Rahmen —
@@ -73,7 +73,7 @@ describe('MaterialDialog', () => {
 		await mount({ material: material() });
 		const text = document.body.textContent ?? '';
 		expect(text).toContain('Position bearbeiten');
-		expect(text).toContain(ZEILEN_HINWEIS);
+		expect(text).toContain(TABELLEN_HINWEIS);
 		expect(text).not.toContain('Verbraucht');
 	});
 

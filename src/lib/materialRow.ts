@@ -14,9 +14,10 @@ export interface RowQuantities {
 
 /**
  * Die Steuersätze, die die Materialliste zur Wahl stellt. Sie stehen hier
- * neben `taxCell`, weil der Stammdaten-Dialog (#117) und der Zeilenmodus
- * (#115/#116) dasselbe Feld anbieten — zweimal getippt liefe ein neuer Satz
- * unweigerlich auseinander.
+ * neben `taxCell`, weil der Stammdaten-Dialog (#117) und der Kartenmodus am
+ * Handy (#116) dasselbe Feld anbieten — zweimal getippt liefe ein neuer Satz
+ * unweigerlich auseinander. Die MwSt-Zelle der Tabelle fragt `taxOptions` in
+ * `materialCellEdit` (#217).
  *
  * Der Hinweis ist der österreichische Anlass des Satzes; wo das Feld dafür zu
  * schmal ist (die Kachel der Handy-Karte), steht nur der Satz.

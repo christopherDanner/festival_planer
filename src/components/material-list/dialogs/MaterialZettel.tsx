@@ -27,7 +27,7 @@ import {
 	canSave,
 	KEINE,
 	showsQuantityAndPrice,
-	ZEILEN_HINWEIS,
+	TABELLEN_HINWEIS,
 	type MaterialDialogMode,
 	type MaterialForm,
 	type PriceBase,
@@ -61,7 +61,7 @@ export interface MaterialZettelProps {
  *
  * Inhaltlich ist er auf **Stammdaten** geschnitten (Entscheid Wayfinder #66):
  * Bezeichnung, Kategorie, Station, Lieferant, Gebinde, Einheit, Stück je
- * Gebinde, Notiz. Mengen und Preise ändert man in der Zeile (#115) — beim
+ * Gebinde, Notiz. Mengen und Preise ändert man in der Tabelle (ADR 0013) — beim
  * *Anlegen* stehen sie trotzdem hier, damit eine Position in einem Zug
  * vollständig wird.
  *
@@ -139,7 +139,7 @@ const MaterialZettel: React.FC<MaterialZettelProps> = ({
 				{mode === 'edit' && (
 					// Der Hinweis steht neben der Lücke, nicht im Changelog.
 					<PaperSheetNote wide>
-						Hier liegen die <b>Stammdaten</b> der Position. {ZEILEN_HINWEIS}
+						Hier liegen die <b>Stammdaten</b> der Position. {TABELLEN_HINWEIS}
 					</PaperSheetNote>
 				)}
 

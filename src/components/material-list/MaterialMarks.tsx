@@ -15,8 +15,8 @@ export const PackagingHint = ({ hint }: { hint: string | null }) =>
 Summe und das muss man an ihr sehen (#114).
 
 Bewusst kein `<OpenSlot>`: der trägt dieselbe Grafik, ist aber ein Knopf zum
-Besetzen. Lesend führt die Stelle nirgendwohin — erst der Zeilenmodus macht sie
-zum Eingabefeld. */
+Besetzen. Hier ist der Knopf die Zelle selbst (ADR 0013) — die Grafik sitzt in
+ihr und darf nicht ein zweites Mal irgendwohin führen. */
 export const PriceGap = () => (
 	<span className="inline-block border-1.5 border-dashed border-rot px-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-rot">
 		Fehlt

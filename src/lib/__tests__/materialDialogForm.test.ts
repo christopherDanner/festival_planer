@@ -10,7 +10,7 @@ import {
 	formFromMaterial,
 	isFullPayload,
 	showsQuantityAndPrice,
-	ZEILEN_HINWEIS,
+	TABELLEN_HINWEIS,
 	type MaterialForm
 } from '@/lib/materialDialogForm';
 
@@ -20,7 +20,7 @@ import {
    werden darf und was gespeichert wird. Kein React, kein Supabase; die
    Optik liegt im Zettel-Seam (MaterialZettel.test.tsx).
 
-   Die Arbeitsteilung aus #117/#115: Zeile (✎) = Mengen und Preise,
+   Die Arbeitsteilung aus #117/ADR 0013: Tabelle = Mengen und Preise,
    Dialog (⋮) = Stammdaten. Beim *Anlegen* trägt der Dialog trotzdem
    Mengen und Preis, damit eine Position in einem Zug vollständig wird. */
 
@@ -75,8 +75,10 @@ describe('showsQuantityAndPrice', () => {
 	});
 
 	it('nennt den Grund in einem Satz, den der Zettel anzeigen kann', () => {
-		expect(ZEILEN_HINWEIS).toContain('Mengen und Preise');
-		expect(ZEILEN_HINWEIS).toContain('Zeile');
+		expect(TABELLEN_HINWEIS).toContain('Mengen und Preise');
+		// Nicht mehr „in der Zeile": den Zeilenmodus gibt es nicht mehr (#217).
+		expect(TABELLEN_HINWEIS).toContain('Tabelle');
+		expect(TABELLEN_HINWEIS).not.toContain('Zeile');
 	});
 });
 

@@ -8,6 +8,9 @@ function row(over: Partial<CellRow> = {}): CellRow {
 		actual_quantity: null,
 		packaging_unit: null,
 		amount_per_packaging: null,
+		unit_price: 2,
+		tax_rate: 20,
+		price_is_net: true,
 		...over
 	};
 }
@@ -75,9 +78,43 @@ describe('createCellEditor — der Tastaturfluss (#216)', () => {
 		editor.open(ROWS[0], 'consumed');
 		await editor.commit('forward', ROWS);
 
-		// Tab geht von Verbraucht in die Bestellt-Zelle der nächsten Zeile.
+		// Tab geht von Verbraucht in die MwSt-Zelle derselben Zeile (#217).
+		expect(editor.getState().editing).toEqual({ id: 'bier', column: 'tax' });
+		expect(editor.getState().value).toBe('20');
+	});
+
+	it('läuft mit Tab bis in die Brutto-Zelle und dann erst in die nächste Zeile (#217)', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'gross');
+		expect(editor.getState().value).toBe('2.40'); // 2 netto + 20 %
+		await editor.commit('forward', ROWS);
+
+		expect(onSave).not.toHaveBeenCalled(); // unberührt — die Quelle bleibt netto
 		expect(editor.getState().editing).toEqual({ id: 'wein', column: 'ordered' });
-		expect(editor.getState().value).toBe('10');
+	});
+
+	it('schreibt die getippte Preisseite samt ihrer Quelle weg (#217)', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'gross');
+		editor.type('3');
+		await editor.commit(null, ROWS);
+
+		expect(onSave).toHaveBeenCalledWith('bier', { unit_price: 3, price_is_net: false });
+	});
+
+	it('schreibt die gewählte MwSt sofort weg — der Preis bleibt, wie er erfasst ist (#217)', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'tax');
+		editor.type('10');
+		await editor.commit(null, ROWS);
+
+		expect(onSave).toHaveBeenCalledWith('bier', { tax_rate: 10 });
 	});
 
 	it('schließt am unteren Rand, statt oben wieder anzufangen', async () => {

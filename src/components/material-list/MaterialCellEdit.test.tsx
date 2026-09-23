@@ -8,29 +8,16 @@ import { useCellEditor } from '@/hooks/useCellEditor';
 import type { CellUpdate } from '@/lib/materialCellEdit';
 
 import MaterialTable from './MaterialTable';
-import type { RowEditControls } from './MaterialTableCells';
 
-/* Seam dieses Tests (Acceptance Criteria aus #216): `useCellEditor` hält die
-   offene Zelle, `MaterialTable` malt sie und meldet Klick und Taste. Die
+/* Seam dieses Tests (Acceptance Criteria aus #216/#217): `useCellEditor` hält
+   die offene Zelle, `MaterialTable` malt sie und meldet Klick und Taste. Die
    Rechenregeln stehen in `materialCellEdit`, das Zustandsspiel in
-   `materialCellEditor` — hier zählt, dass Klick, Enter, Tab, Esc und ein
-   fehlgeschlagenes Speichern zusammen das Richtige tun. */
+   `materialCellEditor` — hier zählt, dass Klick, Auswahl, Enter, Tab, Esc und
+   ein fehlgeschlagenes Speichern zusammen das Richtige tun. */
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const noop = () => {};
-
-/** Der Zeilenmodus ✎ bleibt vorerst für die Preise stehen (#216) — hier hat er
-nichts offen, damit die Zellbearbeitung allein an der Reihe ist. */
-const CLOSED_ROWS: RowEditControls = {
-	draftsById: {},
-	savedIds: [],
-	focusId: null,
-	onStartEdit: noop,
-	onDraftChange: noop,
-	onSaveRow: noop,
-	onCancelRow: noop
-};
 
 function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMaterialWithStation {
 	return {
@@ -82,7 +69,6 @@ const Harness: React.FC<{
 			onEdit={noop}
 			onDelete={noop}
 			onCopy={noop}
-			rowEdit={CLOSED_ROWS}
 			cellEdit={{
 				editing: snapshot.editing,
 				value: snapshot.value,
@@ -141,6 +127,21 @@ const press = async (key: string, shiftKey = false) => {
 
 /** Das Eingabefeld, das gerade offen steht — es gibt höchstens eines. */
 const openField = () => document.querySelector<HTMLInputElement>('tbody input');
+
+/** Die MwSt-Zelle ist eine Auswahl, kein Tippfeld (#217). */
+const openSelect = () => document.querySelector<HTMLSelectElement>('tbody select');
+
+/** Die offene Zelle, gleich welcher Art — ihre Vorlesehilfe nennt sie. */
+const openCell = () => openField() ?? openSelect();
+
+/** Eine Auswahl treffen, wie es die Maus tut: Wert setzen, `change` melden. */
+const choose = async (el: HTMLSelectElement | null, value: string) => {
+	const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+	await act(async () => {
+		setter?.call(el, value);
+		el?.dispatchEvent(new Event('change', { bubbles: true }));
+	});
+};
 
 describe('Zellbearbeitung — ein Klick macht die Zelle zum Feld (#216)', () => {
 	it('öffnet genau die angeklickte Zelle, nicht die ganze Zeile', async () => {
@@ -238,18 +239,32 @@ describe('Zellbearbeitung — der Tastaturfluss des Rechnungsabgleichs (#216)', 
 		expect(openField()?.getAttribute('aria-label')).toBe('Verbraucht von Bier');
 	});
 
-	it('läuft mit Tab durch die Mengenzellen — rechts, dann eine Zeile tiefer', async () => {
+	it('läuft mit Tab durch alle fünf tippbaren Zellen und dann in die nächste Zeile (#217)', async () => {
 		await mount([material(), WEIN]);
 
 		await click(byLabel('Bestellt von Bier'));
-		await press('Tab');
-		expect(openField()?.getAttribute('aria-label')).toBe('Verbraucht von Bier');
+		const weg: (string | null | undefined)[] = [];
+		for (let i = 0; i < 5; i++) {
+			await press('Tab');
+			weg.push(openCell()?.getAttribute('aria-label'));
+		}
 
-		await press('Tab');
-		expect(openField()?.getAttribute('aria-label')).toBe('Bestellt von Wein');
+		expect(weg).toEqual([
+			'Verbraucht von Bier',
+			'MwSt von Bier',
+			'Netto von Bier',
+			'Brutto von Bier',
+			'Bestellt von Wein'
+		]);
+	});
 
+	it('führt Shift+Tab denselben Weg zurück', async () => {
+		await mount([material(), WEIN]);
+
+		await click(byLabel('Bestellt von Wein'));
 		await press('Tab', true);
-		expect(openField()?.getAttribute('aria-label')).toBe('Verbraucht von Bier');
+
+		expect(openCell()?.getAttribute('aria-label')).toBe('Brutto von Bier');
 	});
 
 	it('stellt mit Esc den gespeicherten Wert wieder her', async () => {
@@ -313,6 +328,116 @@ describe('Zellbearbeitung — leer und 0 bei Verbraucht (#216)', () => {
 		await press('Enter');
 
 		expect(save).toHaveBeenCalledWith('bier', { ordered_quantity: 0 });
+	});
+});
+
+describe('Zellbearbeitung — die Preise in der Zelle (#217)', () => {
+	/** 10 € netto, 20 % — Netto ist die Quelle. */
+	const PREIS = material({ unit_price: 10, tax_rate: 20, price_is_net: true });
+
+	it('macht die MwSt-Zelle zur Auswahl — keine, 10, 13, 20 %', async () => {
+		await mount([PREIS]);
+
+		await click(byLabel('MwSt von Bier'));
+
+		const options = [...(openSelect()?.options ?? [])].map((o) => o.value);
+		expect(options).toEqual(['', '10', '13', '20']);
+		expect(openSelect()?.value).toBe('20');
+	});
+
+	it('lässt einen abweichend erfassten Satz wählbar, statt ihn zu schlucken', async () => {
+		await mount([material({ unit_price: 10, tax_rate: 7, price_is_net: true })]);
+
+		await click(byLabel('MwSt von Bier'));
+
+		expect([...(openSelect()?.options ?? [])].map((o) => o.value)).toContain('7');
+	});
+
+	it('speichert die gewählte MwSt sofort — ohne zweiten Handgriff', async () => {
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([PREIS], save);
+
+		await click(byLabel('MwSt von Bier'));
+		await choose(openSelect(), '10');
+
+		expect(save).toHaveBeenCalledWith('bier', { tax_rate: 10 });
+	});
+
+	it('rechnet nach dem Steuersatzwechsel die Gegenseite neu, nicht die Quelle', async () => {
+		await mount([PREIS]);
+
+		await click(byLabel('MwSt von Bier'));
+		await choose(openSelect(), '10');
+
+		const zeile = document.querySelector('tbody tr')?.textContent ?? '';
+		expect(zeile).toContain('10,00'); // Netto bleibt die erfasste Quelle
+		expect(zeile).toContain('11,00'); // Brutto folgt dem neuen Satz
+	});
+
+	it('macht Netto tippbar und schreibt es als Quelle weg', async () => {
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([material({ unit_price: 12, tax_rate: 20, price_is_net: false })], save);
+
+		await click(byLabel('Netto von Bier'));
+		expect(openField()?.value).toBe('10.00'); // 12 brutto bei 20 %
+		await type(openField(), '20');
+		await press('Enter');
+
+		expect(save).toHaveBeenCalledWith('bier', { unit_price: 20, price_is_net: true });
+	});
+
+	it('macht Brutto tippbar und schreibt es als Quelle weg', async () => {
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([PREIS], save);
+
+		await click(byLabel('Brutto von Bier'));
+		await type(openField(), '24');
+		await press('Enter');
+
+		expect(save).toHaveBeenCalledWith('bier', { unit_price: 24, price_is_net: false });
+	});
+
+	it('lässt die Gegenseite schon beim Tippen mitrechnen', async () => {
+		await mount([PREIS]);
+
+		await click(byLabel('Netto von Bier'));
+		await type(openField(), '20');
+
+		// Noch nichts gespeichert — die Brutto-Zelle zeigt trotzdem 20 + 20 %.
+		expect(byLabel('Brutto von Bier')?.textContent).toContain('24,00');
+	});
+
+	it('lässt Gesamt der Zeile beim Tippen mitrechnen', async () => {
+		await mount([material({ unit_price: 10, tax_rate: null, ordered_quantity: 10 })]);
+
+		await click(byLabel('Brutto von Bier'));
+		await type(openField(), '3');
+
+		expect(document.querySelector('tbody tr')?.textContent).toContain('30,00');
+	});
+
+	it('macht aus einem geleerten Preisfeld eine Preislücke', async () => {
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([PREIS], save);
+
+		await click(byLabel('Netto von Bier'));
+		await type(openField(), '');
+		await press('Enter');
+
+		expect(save).toHaveBeenCalledWith('bier', { unit_price: null, price_is_net: true });
+	});
+
+	it('verändert einen unberührten Preis nicht durch seine Rundung', async () => {
+		// 0,8334 € je Liter steht in der Zelle als 0,83. Wer nur hindurchtabt,
+		// darf den gespeicherten Preis nicht auf Cent kürzen.
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([material({ unit_price: 0.8334, tax_rate: 20, price_is_net: true })], save);
+
+		await click(byLabel('Netto von Bier'));
+		expect(openField()?.value).toBe('0.83');
+		await press('Tab');
+
+		expect(save).not.toHaveBeenCalled();
 	});
 });
 

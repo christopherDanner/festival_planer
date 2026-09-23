@@ -2,13 +2,7 @@ import React from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
-import {
-	toBaseQuantity,
-	fromBaseQuantity,
-	formatPackaging,
-	formatRequiredPackaging
-} from '@/lib/materialQuantity';
-import { grossPrice, netPrice, rowTotal, sumTotals } from '@/lib/materialCosts';
+import { sumTotals } from '@/lib/materialCosts';
 import { formatAmount } from '@/lib/money';
 import {
 	PAPER_TABLE_BODY_CELL,
@@ -16,14 +10,12 @@ import {
 	PAPER_TABLE_HEAD_CELL
 } from '@/components/toolkit/PaperTable';
 import {
-	EditingCell,
-	QuantityEditCell,
+	EditCell,
 	ReadingCell,
 	type CellEditControls,
-	type ColumnKey,
-	type RowEditControls
+	type ColumnKey
 } from './MaterialTableCells';
-import { isQuantityColumn } from '@/lib/materialCellEdit';
+import { isEditableColumn, previewCell } from '@/lib/materialCellEdit';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -39,7 +31,6 @@ interface MaterialTableProps {
 	onEdit: (material: FestivalMaterialWithStation) => void;
 	onDelete: (id: string) => void;
 	onCopy: (material: FestivalMaterialWithStation) => void;
-	rowEdit: RowEditControls;
 	cellEdit: CellEditControls;
 }
 
@@ -111,14 +102,15 @@ const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
 /* ------------------------------------------------------------------ */
 
 /**
- * Positionstabelle des Gruppen-Kastens (#114): elf Spalten in Plakat-Optik,
- * **nur lesend**. Eingaben passieren im Zeilenmodus (#115) und im
- * Stammdaten-Dialog (#117) — verstreute Klick-zum-Aufklappen-Zellen machten die
- * Tabelle unruhig (Entscheid aus #66).
+ * Positionstabelle des Gruppen-Kastens (#114): elf Spalten in Plakat-Optik.
+ * Fünf davon führen in die **Zellbearbeitung** (ADR 0013) — Bestellt,
+ * Verbraucht, MwSt, Netto, Brutto; die Stammdaten einer Position gehören dem
+ * Dialog hinter ⋮ (#117).
  *
- * Zwei Auflagen tragen den Zeilenmodus mit: `table-layout: fixed` mit gesetzten
- * Spaltenbreiten und eine feste Zeilenhöhe von 56 px. Ohne beides verschöbe das
- * Umschalten auf Eingabefelder jede Spalte und schöbe alles darunter nach unten.
+ * Zwei Auflagen tragen die Zellbearbeitung mit: `table-layout: fixed` mit
+ * gesetzten Spaltenbreiten und eine feste Zeilenhöhe von 56 px. Ohne beides
+ * verschöbe das Umschalten auf ein Eingabefeld jede Spalte und schöbe alles
+ * darunter nach unten.
  *
  * Hier steht nur das Gerüst — Kopf, Raster, Zeilenzustand und Fuß. Was *in*
  * einer Zelle steht, lesend wie in Bearbeitung, steht in `MaterialTableCells`:
@@ -128,7 +120,7 @@ const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
  * Gerechnet wird in `materialCosts` (ADR 0006), umgerechnet in
  * `materialQuantity`, gelesen in `materialRow` — die Tabelle malt nur.
  */
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, rowEdit, cellEdit }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, cellEdit }) => {
 	const totalCost = sumTotals(materials);
 	const hasCosts = materials.some((m) => m.unit_price != null);
 	const cols = columns(showStation);
@@ -170,22 +162,20 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 
 				<tbody>
 					{materials.map((m) => {
-						const draft = rowEdit.draftsById[m.id];
-						// Zeilenmodus und Zellbearbeitung blitzen an derselben Stelle grün:
-						// gespeichert ist gespeichert, egal welcher Weg es war.
-						const flash = rowEdit.savedIds.includes(m.id) || cellEdit.savedIds.includes(m.id);
+						const flash = cellEdit.savedIds.includes(m.id);
+						// Die Zeile mit der offenen Zelle rechnet mit dem Getippten: die
+						// Gegenseite des Preises, Δ und Gesamt folgen ihm, noch bevor
+						// gespeichert ist (#217). Die Regel dafür steht in
+						// `materialCellEdit`, nicht hier.
+						const open = cellEdit.editing?.id === m.id ? cellEdit.editing.column : null;
+						const preview = open ? previewCell(open, cellEdit.value, m) : m;
 						return (
 							<tr
 								key={m.id}
 								className={cn(
 									'h-[56px] border-b border-linie',
-									// Die offene Zeile trägt gelben Grund und einen Tinte-Strich
-									// oben und unten — als Innenschatten, damit sie dabei keinen
-									// Pixel höher wird (#114).
-									draft && 'bg-gelb/25 shadow-zeile-offen',
-									// Nach dem Speichern blitzt sie grün auf und verklingt.
-									!draft && flash && 'animate-blitz-gruen',
-									!draft && !flash && 'hover:bg-papier'
+									// Nach dem Speichern blitzt die Zeile grün auf und verklingt.
+									flash ? 'animate-blitz-gruen' : 'hover:bg-papier'
 								)}
 							>
 								{cols.map((col) => (
@@ -193,24 +183,18 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 										key={col.key}
 										className={cn(BODY_CELL, col.align === 'right' && 'text-right')}
 									>
-										{draft ? (
-											<EditingCell
+										{isEditableColumn(col.key) ? (
+											<EditCell
 												column={col.key}
 												material={m}
-												draft={draft}
-												autoFocus={rowEdit.focusId === m.id}
-												rowEdit={rowEdit}
+												preview={preview}
+												cellEdit={cellEdit}
 											/>
-										) : isQuantityColumn(col.key) ? (
-											// Mengen werden in der Zelle getippt (#216) — solange die
-											// Zeile nicht ohnehin im Zeilenmodus offen steht.
-											<QuantityEditCell column={col.key} material={m} cellEdit={cellEdit} />
 										) : (
 											<ReadingCell
 												column={col.key}
-												material={m}
+												material={preview}
 												actions={{ onEdit, onCopy, onDelete }}
-												onStartEdit={rowEdit.onStartEdit}
 											/>
 										)}
 									</td>

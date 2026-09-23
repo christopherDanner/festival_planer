@@ -1,8 +1,8 @@
-/** Die Zellbearbeitung der Mengen (#216, ADR 0013) als Zustand ohne React:
-welche Zelle offen ist, was darin steht und was ein fehlgeschlagenes Speichern
-daraus macht. Dasselbe Store-Muster wie `materialRowEditor` — subscribe/getState,
-damit die Regeln ohne Browser prüfbar bleiben. Gerechnet wird in
-`materialCellEdit`. */
+/** Die Zellbearbeitung der Arbeitsliste (#216/#217, ADR 0013) als Zustand ohne
+React: welche Zelle offen ist, was darin steht und was ein fehlgeschlagenes
+Speichern daraus macht. Store-Muster wie der `materialSaveOrchestrator` der
+Übernahme — subscribe/getState, damit die Regeln ohne Browser prüfbar bleiben.
+Gerechnet wird in `materialCellEdit`. */
 
 import {
 	cellText,
@@ -10,19 +10,21 @@ import {
 	isCellDirty,
 	nextCell,
 	type CellMove,
-	type CellQuantities,
 	type CellRef,
 	type CellUpdate,
-	type QuantityColumn
+	type CellValues,
+	type EditableColumn
 } from './materialCellEdit';
 
-/** Eine Zeile, wie die Zellbearbeitung sie kennt: Mengen, Gebinde, Kennung. */
-export type CellRow = CellQuantities & { id: string };
+/** Eine Zeile, wie die Zellbearbeitung sie kennt: Mengen, Preis, Gebinde,
+Kennung. */
+export type CellRow = CellValues & { id: string };
 
 export interface CellEditorSnapshot {
 	/** Die offene Zelle — höchstens eine, wie beim Zettel des Sponsorings. */
 	editing: CellRef | null;
-	/** Was darin steht, als Text in der Basiseinheit. */
+	/** Was darin steht: Mengen als Text in der Basiseinheit, Preise auf Cent,
+	MwSt als Prozentzahl (leer = keine). */
 	value: string;
 	/** Das Speichern läuft; die Zelle nimmt solange keine Zeichen an. */
 	saving: boolean;
@@ -40,7 +42,7 @@ export interface CreateCellEditorOpts {
 }
 
 export interface CellEditor {
-	open: (row: CellRow, column: QuantityColumn) => void;
+	open: (row: CellRow, column: EditableColumn) => void;
 	type: (value: string) => void;
 	/**
 	 * Speichert die offene Zelle und geht weiter. `move` ist die Taste, die das
@@ -73,7 +75,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 	// Der Klick auf die nächste Zelle kommt vor dem Ausgang des Speicherns, das
 	// sein eigener Blur ausgelöst hat — er wartet hier, bis feststeht, ob die
 	// getippte Zelle überhaupt weichen darf.
-	let pendingOpen: { row: CellRow; column: QuantityColumn } | null = null;
+	let pendingOpen: { row: CellRow; column: EditableColumn } | null = null;
 	let cached: CellEditorSnapshot | null = null;
 
 	function notify() {
@@ -81,7 +83,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		for (const listener of listeners) listener();
 	}
 
-	function start(row: CellRow, column: QuantityColumn) {
+	function start(row: CellRow, column: EditableColumn) {
 		editing = { id: row.id, column };
 		origin = row;
 		value = cellText(column, row);
