@@ -1,225 +1,217 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useScheduleData } from './hooks/useScheduleData';
 import { useScheduleActions } from './hooks/useScheduleActions';
-import { useIsMobile } from '@/hooks/use-mobile';
-import ScheduleHeader from './ScheduleHeader';
-import ScheduleDayAccordion from './ScheduleDayAccordion';
-import ScheduleDayDialog from './dialogs/ScheduleDayDialog';
-import SchedulePhaseDialog from './dialogs/SchedulePhaseDialog';
-import ScheduleEntryDialog from './dialogs/ScheduleEntryDialog';
-import ScheduleExportDialog from './dialogs/ScheduleExportDialog';
-import type {
-  ScheduleDayWithEntries,
-  SchedulePhase,
-  ScheduleEntryWithHelper,
-} from '@/lib/scheduleService';
+import ScheduleToolbar from './ScheduleToolbar';
+import TaskWorklist from './TaskWorklist';
+import ScheduleEntryDialog, { type ScheduleEntryFormData } from './dialogs/ScheduleEntryDialog';
+import { Poster } from '@/components/toolkit/Poster';
+import { exportScheduleToPdf } from '@/lib/scheduleExportService';
+import { buildWorklist, type TaskFilter } from '@/lib/scheduleWorklist';
+import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
 
 // `type: 'none'` statt `null`: das Projekt kompiliert ohne strictNullChecks,
 // dort trägt `null` keine Unterscheidungskraft und die Fallunterscheidung unten
 // würde still nichts verengen.
 type DialogState =
-  | { type: 'none' }
-  | { type: 'day'; day?: ScheduleDayWithEntries }
-  | { type: 'phase'; phase?: SchedulePhase; scheduleDayId: string }
-  | { type: 'entry'; entry?: ScheduleEntryWithHelper; scheduleDayId: string; schedulePhaseId: string | null }
-  | { type: 'export' };
+	| { type: 'none' }
+	| { type: 'entry'; entry?: ScheduleEntryWithHelper; defaultType: 'task' | 'program' };
 
 const CLOSED: DialogState = { type: 'none' };
 
 interface ScheduleViewProps {
-  festivalId: string;
-  festivalName?: string;
-  festivalStartDate?: string;
-  festivalEndDate?: string;
+	festivalId: string;
+	festivalName?: string;
+	festivalStartDate?: string;
+	festivalEndDate?: string;
 }
 
-export default function ScheduleView({ festivalId, festivalName, festivalStartDate, festivalEndDate }: ScheduleViewProps) {
-  const { days, helpers, isLoading } = useScheduleData(festivalId);
-  const actions = useScheduleActions(festivalId);
-  const isMobile = useIsMobile();
-  const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
-  const [initialized, setInitialized] = useState(false);
+/**
+ * Der Ablaufplan als **Schreibtisch** (#122, Variante C der DESIGN-VISION):
+ * Werkzeugleiste mit KPI-Maßband, darunter zwei Papiere nebeneinander — links
+ * die Aufgaben-Werkliste über alle Tage, rechts der Programmzettel.
+ *
+ * Das Akkordeon aus Tag → Phase → Tabelle ist damit weg, samt seinem Drag &
+ * Drop: gereiht wird nach Uhrzeit (ADR 0007). Gezählt und gegliedert wird in
+ * `scheduleWorklist`; diese Ansicht hält den Zustand (Filter, Dialog) und
+ * verdrahtet die Griffe.
+ */
+export default function ScheduleView({
+	festivalId,
+	festivalName,
+	festivalStartDate,
+	festivalEndDate
+}: ScheduleViewProps) {
+	const { days, helpers, isLoading } = useScheduleData(festivalId);
+	const actions = useScheduleActions(festivalId);
+	const [filter, setFilter] = useState<TaskFilter>('all');
+	const [responsibleId, setResponsibleId] = useState<string | null>(null);
+	const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
+	const [initialized, setInitialized] = useState(false);
 
-  // Auto-initialize days from festival dates on first load
-  useEffect(() => {
-    if (!initialized && !isLoading && days.length === 0 && festivalStartDate) {
-      actions.initDays.mutate(
-        { startDate: festivalStartDate, endDate: festivalEndDate },
-        { onSuccess: () => setInitialized(true) }
-      );
-    } else if (!initialized) {
-      setInitialized(true);
-    }
-  }, [isLoading, days.length, festivalStartDate]);
+	// Auto-initialize days from festival dates on first load
+	useEffect(() => {
+		if (!initialized && !isLoading && days.length === 0 && festivalStartDate) {
+			actions.initDays.mutate(
+				{ startDate: festivalStartDate, endDate: festivalEndDate },
+				{ onSuccess: () => setInitialized(true) }
+			);
+		} else if (!initialized) {
+			setInitialized(true);
+		}
+	}, [isLoading, days.length, festivalStartDate]);
 
-  // Handlers
-  const handleSaveDay = (data: any) => {
-    if (dialogState.type === 'day' && dialogState.day) {
-      actions.editDay.mutate({ id: dialogState.day.id, updates: { date: data.date, label: data.label } });
-    } else {
-      actions.createDay.mutate(data);
-    }
-  };
+	const worklist = useMemo(
+		() =>
+			buildWorklist({
+				days,
+				filter,
+				responsibleId,
+				festivalStart: festivalStartDate,
+				festivalEnd: festivalEndDate
+			}),
+		[days, filter, responsibleId, festivalStartDate, festivalEndDate]
+	);
 
-  const handleSavePhase = (data: any) => {
-    if (dialogState.type === 'phase' && dialogState.phase) {
-      actions.editPhase.mutate({ id: dialogState.phase.id, updates: { name: data.name } });
-    } else {
-      actions.createPhase.mutate(data);
-    }
-  };
+	const programCount = days.reduce(
+		(sum, day) => sum + day.entries.filter((entry) => entry.type === 'program').length,
+		0
+	);
 
-  const handleSaveEntry = (data: any) => {
-    if (dialogState.type === 'entry' && dialogState.entry) {
-      actions.editEntry.mutate({
-        id: dialogState.entry.id,
-        updates: {
-          title: data.title,
-          type: data.type,
-          start_time: data.start_time,
-          end_time: data.end_time,
-          responsible_helper_id: data.responsible_helper_id,
-          status: data.status,
-          description: data.description,
-        }
-      });
-    } else {
-      // Die Uhrzeit reiht (ADR 0007) — beim Anlegen ist nichts einzusortieren.
-      actions.createEntry.mutate(data);
-    }
-  };
+	const handleSaveEntry = (data: ScheduleEntryFormData) => {
+		if (dialogState.type === 'entry' && dialogState.entry) {
+			actions.editEntry.mutate({
+				id: dialogState.entry.id,
+				updates: {
+					title: data.title,
+					type: data.type,
+					start_time: data.start_time,
+					end_time: data.end_time,
+					responsible_helper_id: data.responsible_helper_id,
+					status: data.status,
+					description: data.description
+				}
+			});
+		} else {
+			// Die Uhrzeit reiht (ADR 0007) — beim Anlegen ist nichts einzusortieren.
+			actions.createEntry.mutate(data);
+		}
+	};
 
-  const handleToggleEntryStatus = (entry: ScheduleEntryWithHelper) => {
-    if (entry.type !== 'task') return;
-    actions.editEntry.mutate({
-      id: entry.id,
-      updates: { status: entry.status === 'done' ? 'open' : 'done' }
-    });
-  };
+	/** Abhaken wirkt sofort auf alle Zähler: die Mutation lädt den Tag neu, und
+	`buildWorklist` rechnet Maßband, Gruppenköpfe und Fußzeile daraus (Vision §5). */
+	const handleToggleTask = (entry: ScheduleEntryWithHelper) => {
+		actions.editEntry.mutate({
+			id: entry.id,
+			updates: { status: entry.status === 'done' ? 'open' : 'done' }
+		});
+	};
 
-  const handleReorderPhases = (dayId: string, orderedIds: string[]) => {
-    const items = orderedIds.map((id, index) => ({ id, sort_order: index }));
-    actions.reorderPhases.mutate(items);
-  };
+	/**
+	 * Beide Papiere aufs Papier. Ausgewählt wird nichts mehr — „was du siehst,
+	 * kommt raus"; die zwei getrennten Exporte in Plakat-Optik samt dem Filter
+	 * der Werkliste baut #126.
+	 */
+	const handleExport = (entryTypeFilter: 'task' | 'program') => {
+		exportScheduleToPdf({
+			festivalName: festivalName || 'Ablaufplan',
+			days,
+			selectedDayIds: new Set(days.map((day) => day.id)),
+			selectedPhaseIds: new Set(days.flatMap((day) => day.phases.map((phase) => phase.id))),
+			entryTypeFilter
+		});
+	};
 
-  const handleDeleteDay = (id: string) => {
-    if (!window.confirm('Tag und alle zugehörigen Phasen und Einträge wirklich löschen?')) return;
-    actions.removeDay.mutate(id);
-  };
+	// Loading state
+	if (isLoading || !initialized) {
+		return (
+			<div className="space-y-4">
+				<div className="h-10 animate-pulse bg-linie/40" />
+				<div className="h-16 animate-pulse bg-linie/40" />
+				<div className="h-16 animate-pulse bg-linie/40" />
+			</div>
+		);
+	}
 
-  const handleDeletePhase = (id: string) => {
-    if (!window.confirm('Phase und alle zugehörigen Einträge wirklich löschen?')) return;
-    actions.removePhase.mutate(id);
-  };
+	// No festival dates set
+	if (!festivalStartDate) {
+		return (
+			<div className="py-12 text-center text-tinte-soft">
+				Bitte zuerst Start- und Enddatum des Festes festlegen.
+			</div>
+		);
+	}
 
-  const handleDeleteEntry = (id: string) => {
-    if (!window.confirm('Eintrag wirklich löschen?')) return;
-    actions.removeEntry.mutate(id);
-  };
+	return (
+		<div className="space-y-3 sm:space-y-4">
+			<ScheduleToolbar
+				counts={worklist.counts}
+				onAddTask={() => setDialogState({ type: 'entry', defaultType: 'task' })}
+				onAddProgram={() => setDialogState({ type: 'entry', defaultType: 'program' })}
+				onExportProgram={() => handleExport('program')}
+				onExportTasks={() => handleExport('task')}
+			/>
 
-  // Loading state
-  if (isLoading || !initialized) {
-    return (
-      <div className="space-y-4">
-        <div className="h-10 bg-muted/50 rounded animate-pulse" />
-        <div className="h-16 bg-muted/50 rounded animate-pulse" />
-        <div className="h-16 bg-muted/50 rounded animate-pulse" />
-      </div>
-    );
-  }
+			{/* Der Schreibtisch: Werkliste 1.5fr, Programmzettel 1fr. Unter 900px
+			bleibt eine Spalte — den Zettel unter die Werkliste zu legen ist der
+			Schnitt von #125. */}
+			<div className="grid items-start gap-4 min-[900px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+				<TaskWorklist
+					worklist={worklist}
+					filter={filter}
+					onFilterChange={setFilter}
+					responsibleId={responsibleId}
+					onResponsibleChange={setResponsibleId}
+					onToggleTask={handleToggleTask}
+					onEditTask={(entry) => setDialogState({ type: 'entry', entry, defaultType: 'task' })}
+					onDeleteTask={(entry) => actions.removeEntry.mutate(entry.id)}
+				/>
 
-  // No festival dates set
-  if (!festivalStartDate) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        Bitte zuerst Start- und Enddatum des Festes festlegen.
-      </div>
-    );
-  }
+				{/* Das rechte Papier. Bedienbar — mit Zeilen, ⋮ und „+ PROGRAMMPUNKT"
+				je Tag — wird es in #123; bis dahin sagt es, was es trägt, statt den
+				Platz leer zu lassen. */}
+				<aside className="border-2.5 border-tinte bg-white min-[900px]:sticky min-[900px]:top-3">
+					<Poster className="border-0 border-b-2 px-4 py-3.5 text-center">
+						<span className="font-display text-[11.5px] font-semibold uppercase tracking-[.1em] text-gelb">
+							{festivalName}
+						</span>
+						<h3 className="font-display text-[21px] font-semibold uppercase tracking-[.03em]">
+							Programm
+						</h3>
+					</Poster>
+					<p className="px-4 py-4 text-[13px] text-tinte-soft">
+						{programCount === 0
+							? 'Noch kein Programmpunkt erfasst.'
+							: `${programCount} ${programCount === 1 ? 'Programmpunkt' : 'Programmpunkte'} erfasst.`}{' '}
+						Der Programmzettel wird hier zum druckfertigen Aushang; angelegt wird ein Punkt
+						vorerst über „+ PROGRAMMPUNKT" in der Werkzeugleiste.
+					</p>
+				</aside>
+			</div>
 
-  return (
-    <div>
-      <ScheduleHeader
-        onAddDay={() => setDialogState({ type: 'day' })}
-        onExport={() => setDialogState({ type: 'export' })}
-        hasData={days.length > 0}
-      />
-
-      {days.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Keine Tage vorhanden. Füge einen Tag hinzu, um mit der Planung zu beginnen.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {days.map((day) => (
-            <ScheduleDayAccordion
-              key={day.id}
-              day={day}
-              onEditDay={(d) => setDialogState({ type: 'day', day: d })}
-              onDeleteDay={handleDeleteDay}
-              onEditPhase={(p) => setDialogState({ type: 'phase', phase: p, scheduleDayId: p.schedule_day_id })}
-              onDeletePhase={handleDeletePhase}
-              onAddPhase={(dayId) => setDialogState({ type: 'phase', scheduleDayId: dayId })}
-              onEditEntry={(e) => setDialogState({
-                type: 'entry',
-                entry: e,
-                scheduleDayId: e.schedule_day_id,
-                schedulePhaseId: e.schedule_phase_id,
-              })}
-              onDeleteEntry={handleDeleteEntry}
-              onToggleEntryStatus={handleToggleEntryStatus}
-              onAddEntry={(dayId, phaseId) => setDialogState({ type: 'entry', scheduleDayId: dayId, schedulePhaseId: phaseId })}
-              onReorderPhases={handleReorderPhases}
-              isMobile={isMobile}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Day Dialog */}
-      <ScheduleDayDialog
-        open={dialogState.type === 'day'}
-        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
-        day={dialogState.type === 'day' ? dialogState.day : null}
-        festivalId={festivalId}
-        existingDaysCount={days.length}
-        onSave={handleSaveDay}
-      />
-
-      {/* Phase Dialog */}
-      <SchedulePhaseDialog
-        open={dialogState.type === 'phase'}
-        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
-        phase={dialogState.type === 'phase' ? dialogState.phase : null}
-        scheduleDayId={dialogState.type === 'phase' ? dialogState.scheduleDayId : ''}
-        festivalId={festivalId}
-        existingPhasesCount={
-          dialogState.type === 'phase'
-            ? (days.find(d => d.id === dialogState.scheduleDayId)?.phases.length ?? 0)
-            : 0
-        }
-        onSave={handleSavePhase}
-      />
-
-      {/* Entry Dialog */}
-      <ScheduleEntryDialog
-        open={dialogState.type === 'entry'}
-        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
-        entry={dialogState.type === 'entry' ? dialogState.entry : null}
-        scheduleDayId={dialogState.type === 'entry' ? dialogState.scheduleDayId : ''}
-        schedulePhaseId={dialogState.type === 'entry' ? dialogState.schedulePhaseId : null}
-        festivalId={festivalId}
-        helpers={helpers}
-        onSave={handleSaveEntry}
-      />
-
-      {/* Export Dialog */}
-      <ScheduleExportDialog
-        open={dialogState.type === 'export'}
-        onOpenChange={(open) => { if (!open) setDialogState(CLOSED); }}
-        festivalName={festivalName || ''}
-        days={days}
-      />
-    </div>
-  );
+			<ScheduleEntryDialog
+				open={dialogState.type === 'entry'}
+				onOpenChange={(open) => {
+					if (!open) setDialogState(CLOSED);
+				}}
+				entry={dialogState.type === 'entry' ? dialogState.entry : null}
+				defaultType={dialogState.type === 'entry' ? dialogState.defaultType : 'task'}
+				// Der Eintrag gehört einem Tag (ADR 0007); solange der Dialog kein
+				// Tag-Auswahlfeld hat, nimmt er den ersten Tag des Fests. Das Feld
+				// über alle Ablauf-Tage baut #124.
+				scheduleDayId={
+					dialogState.type === 'entry' && dialogState.entry
+						? dialogState.entry.schedule_day_id
+						: days[0]?.id ?? ''
+				}
+				schedulePhaseId={
+					dialogState.type === 'entry' && dialogState.entry
+						? dialogState.entry.schedule_phase_id
+						: null
+				}
+				festivalId={festivalId}
+				helpers={helpers}
+				onSave={handleSaveEntry}
+			/>
+		</div>
+	);
 }

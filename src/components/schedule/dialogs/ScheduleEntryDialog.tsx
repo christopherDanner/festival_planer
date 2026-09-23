@@ -6,6 +6,21 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+/** Der fertige Eintrag, wie ihn der Dialog abliefert — das, was der Service
+anlegt oder aktualisiert. */
+export interface ScheduleEntryFormData {
+	schedule_day_id: string;
+	schedule_phase_id: string | null;
+	festival_id: string;
+	title: string;
+	type: 'task' | 'program';
+	start_time: string | null;
+	end_time: string | null;
+	responsible_helper_id: string | null;
+	status: 'open' | 'done' | null;
+	description: string | null;
+}
+
 interface ScheduleEntryDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -19,6 +34,9 @@ interface ScheduleEntryDialogProps {
 		status: 'open' | 'done' | null;
 		description: string | null;
 	} | null;
+	/** Die Art eines **neuen** Eintrags: „+ AUFGABE" und „+ PROGRAMMPUNKT" der
+	Werkzeugleiste führen in denselben Dialog (#122). Umschalten geht weiter. */
+	defaultType?: 'task' | 'program';
 	/** Der Eintrag gehört dem Tag — die einzige Pflichtebene (ADR 0007). */
 	scheduleDayId: string;
 	/** Optionaler Feinschnitt; `null` heißt „direkt unter dem Tag". */
@@ -26,24 +44,14 @@ interface ScheduleEntryDialogProps {
 	festivalId: string;
 	/** Die Verantwortlichen sind die Helfer dieses Fests (ADR 0005). */
 	helpers: Array<{ id: string; first_name: string; last_name: string }>;
-	onSave: (data: {
-		schedule_day_id: string;
-		schedule_phase_id: string | null;
-		festival_id: string;
-		title: string;
-		type: 'task' | 'program';
-		start_time: string | null;
-		end_time: string | null;
-		responsible_helper_id: string | null;
-		status: 'open' | 'done' | null;
-		description: string | null;
-	}) => void;
+	onSave: (data: ScheduleEntryFormData) => void;
 }
 
 const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 	open,
 	onOpenChange,
 	entry,
+	defaultType = 'task',
 	scheduleDayId,
 	schedulePhaseId,
 	festivalId,
@@ -72,14 +80,14 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 		} else {
 			setForm({
 				title: '',
-				type: 'task',
+				type: defaultType,
 				start_time: '',
 				end_time: '',
 				responsible_helper_id: '',
 				description: ''
 			});
 		}
-	}, [entry, open]);
+	}, [entry, open, defaultType]);
 
 	const handleSave = () => {
 		if (!form.title) return;

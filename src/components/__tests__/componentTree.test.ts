@@ -13,7 +13,12 @@ const PARKED = [
 	// #103 hat den Dialog abgehängt („Bewusste Lücke bis #107"): das ⋮-Menü
 	// der Helferliste öffnet vorerst nur den Helfer-Dialog. #107 verschmilzt
 	// beide und nimmt ihn hier wieder raus.
-	'components/shift-planning/dialogs/PreferenceDialog.tsx'
+	'components/shift-planning/dialogs/PreferenceDialog.tsx',
+	// #122 hat das Akkordeon des Ablaufplans durch Werkzeugleiste + Werkliste
+	// ersetzt. Tag und Phase werden ab #124 an ihren eigenen Zwischentiteln
+	// verwaltet — bis dahin hat kein Griff mehr auf diese beiden Dialoge.
+	'components/schedule/dialogs/ScheduleDayDialog.tsx',
+	'components/schedule/dialogs/SchedulePhaseDialog.tsx'
 ];
 
 /**
