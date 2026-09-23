@@ -5,8 +5,12 @@
  * geht an der kontrollierten Eingabe vorbei, weil React den eigenen Setter des
  * Elements überschreibt.
  */
-export function typeInto(field: HTMLInputElement, text: string): void {
-	const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+export function typeInto(field: HTMLInputElement | HTMLTextAreaElement, text: string): void {
+	// Der Setter gehört dem jeweiligen Prototyp — ein Freitextfeld ist ein
+	// `textarea`, kein `input`, und React hört nur auf den eigenen.
+	const prototype =
+		field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+	const setValue = Object.getOwnPropertyDescriptor(prototype, 'value')!.set!;
 	setValue.call(field, text);
 	field.dispatchEvent(new Event('input', { bubbles: true }));
 }

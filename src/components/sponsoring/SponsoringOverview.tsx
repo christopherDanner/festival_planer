@@ -1,8 +1,9 @@
 import React from 'react';
-import { Building2, FileDown, Import, Plus, Trash2 } from 'lucide-react';
+import { Building2, FileDown, Import, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
 import SponsoringMatrix from '@/components/sponsoring/SponsoringMatrix';
+import SponsoringRowMenu from '@/components/sponsoring/SponsoringRowMenu';
 import SponsoringSearch from '@/components/sponsoring/SponsoringSearch';
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
 import type { ZettelInput, ZettelTarget } from '@/lib/sponsoringZettel';
@@ -27,6 +28,11 @@ export interface SponsoringOverviewProps {
 	onCreate: () => void;
 	onTransfer: () => void;
 	onExportPdf: () => void;
+	/** ⋮ → „Notiz" (#150). */
+	onOpenNote: (sponsoringId: string) => void;
+	/** ⋮ → „Firmendaten" (#150). */
+	onOpenSponsor: (sponsoringId: string) => void;
+	/** ⋮ → „Entfernen"; die Rückfrage stellt das Menü selbst. */
 	onDelete: (sponsoringId: string) => void;
 	/** „Übernehmen" im Zettel der Matrix. */
 	onApply: (sponsoringId: string, target: ZettelTarget, input: ZettelInput) => void;
@@ -54,6 +60,8 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	onCreate,
 	onTransfer,
 	onExportPdf,
+	onOpenNote,
+	onOpenSponsor,
 	onDelete,
 	onApply,
 	onRemove
@@ -133,14 +141,16 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 										<div className="font-medium truncate">{row.companyName}</div>
 										<div className="text-sm font-semibold mt-0.5">{formatEuro(row.total)}</div>
 									</div>
-									<Button
-										size="icon"
-										variant="ghost"
-										className="h-8 w-8 shrink-0 text-destructive/70 hover:text-destructive"
-										aria-label={`Sponsoring von ${row.companyName} entfernen`}
-										onClick={() => onDelete(row.sponsoringId)}>
-										<Trash2 className="h-4 w-4" />
-									</Button>
+									{/* Am Handy dasselbe ⋮ wie in der Matrix (#150) — der frühere
+									Papierkorb war ein zweiter Weg zu einer der drei Sachen und
+									blieb unter 40px. */}
+									<SponsoringRowMenu
+										companyName={row.companyName}
+										onOpenNote={() => onOpenNote(row.sponsoringId)}
+										onOpenSponsor={() => onOpenSponsor(row.sponsoringId)}
+										onDelete={() => onDelete(row.sponsoringId)}
+										className="shrink-0"
+									/>
 								</div>
 								{(row.positions.length > 0 || row.freeAmount != null) && (
 									<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1.5">
@@ -175,6 +185,8 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 					footer={footer}
 					totalRowCount={allRows.length}
 					searchTerm={searchTerm}
+					onOpenNote={onOpenNote}
+					onOpenSponsor={onOpenSponsor}
 					onDelete={onDelete}
 					onApply={onApply}
 					onRemove={onRemove}

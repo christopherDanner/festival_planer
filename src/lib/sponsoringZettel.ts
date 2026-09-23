@@ -110,12 +110,17 @@ export interface ZettelInput {
  * `updates` trägt nur die Felder, die der Zettel wirklich anfasst.
  */
 export interface SponsoringWrite {
-	updates: Partial<Pick<Sponsoring, 'free_amount'> & SponsoringInKind>;
+	updates: Partial<Pick<Sponsoring, 'free_amount' | 'notes'> & SponsoringInKind>;
 	assignments: SponsoringAssignmentInput[];
 }
 
-/** Die bestehenden Zuweisungen als Schreib-Eingabe. */
-function keptAssignments(
+/**
+ * Die bestehenden Zuweisungen als Schreib-Eingabe. **Jeder** Schreibvorgang
+ * muss sie mitführen, auch einer, der sie gar nicht meint (die Notiz aus #150):
+ * `updateSponsoring` ersetzt die Liste vollständig. Darum steht die Regel hier
+ * einmal und nicht in jedem Aufrufer.
+ */
+export function keptAssignments(
 	sponsoring: SponsoringWithDetails,
 	exceptCategoryId?: string
 ): SponsoringAssignmentInput[] {

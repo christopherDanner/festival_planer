@@ -16,7 +16,9 @@ import {
 	DialogTitle
 } from '@/components/ui/dialog';
 import SponsorUebernahmeDialog from '@/components/sponsoring/SponsorUebernahmeDialog';
+import SponsoringNoteDialog from '@/components/sponsoring/SponsoringNoteDialog';
 import SponsoringOverview from '@/components/sponsoring/SponsoringOverview';
+import SponsorFormDialog, { type SponsorFormValues } from '@/components/sponsors/SponsorFormDialog';
 import { useToast } from '@/hooks/use-toast';
 import {
 	getSponsors,
@@ -25,6 +27,7 @@ import {
 	getSponsorings,
 	createSponsoring,
 	updateSponsoring,
+	updateSponsor,
 	deleteSponsoring,
 	type Sponsor,
 	type SponsoringCategory,
@@ -34,6 +37,7 @@ import { buildSponsoringOverviewRows } from '@/lib/sponsoringTotals';
 import {
 	applyZettel,
 	clearZettel,
+	keptAssignments,
 	type SponsoringWrite,
 	type ZettelInput,
 	type ZettelTarget
@@ -57,6 +61,11 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 
 	const [showDialog, setShowDialog] = useState(false);
 	const [showTransferDialog, setShowTransferDialog] = useState(false);
+	/* Die zwei Dialoge hinter dem ⋮ (#150) hängen an der Sponsoring-Id, nicht an
+	einer Kopie der Zeile: nach jedem Schreibvorgang lädt der Bereich neu, und der
+	Dialog soll dann den neuen Stand zeigen, nicht den von vorhin. */
+	const [noteFor, setNoteFor] = useState<string | null>(null);
+	const [sponsorFor, setSponsorFor] = useState<string | null>(null);
 	/* Suchzustand der Werkzeugleiste; er filtert nur die Zeilen der Übersicht
 	(ADR 0006, #151) — die Fest-Kennzahl im Bereichskopf sieht ihn nie. */
 	const [searchTerm, setSearchTerm] = useState('');
@@ -176,15 +185,38 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 	const handleRemove = (sponsoringId: string, target: ZettelTarget) =>
 		enqueueWrite(sponsoringId, (sponsoring) => clearZettel(sponsoring, target));
 
-	const handleDelete = async (sponsoring: SponsoringWithDetails) => {
-		if (
-			!confirm(
-				`Möchten Sie das Sponsoring von "${sponsoring.sponsor.company_name}" wirklich entfernen?`
-			)
-		) {
-			return;
-		}
+	/* Die Notiz ist der einzige Schreibvorgang, den keine Zelle anfasst — sie muss
+	die Zuweisungen der Zeile trotzdem mitführen, weil `updateSponsoring` sie
+	vollständig ersetzt. */
+	const handleSaveNote = (sponsoringId: string, notes: string | null) => {
+		enqueueWrite(sponsoringId, (sponsoring) => ({
+			updates: { notes },
+			assignments: keptAssignments(sponsoring)
+		}));
+		setNoteFor(null);
+	};
 
+	/* Firmendaten schreiben den **globalen** Sponsor (ADR 0011): dieselbe Nummer
+	steht danach auf der Sponsoren-Seite. Das Sponsoring bleibt unberührt. */
+	const handleSaveSponsor = async (sponsorId: string, values: SponsorFormValues) => {
+		try {
+			await updateSponsor(sponsorId, values);
+			toast({ title: 'Erfolg', description: 'Firmendaten wurden gespeichert.' });
+			setSponsorFor(null);
+			loadData();
+		} catch (error) {
+			toast({
+				title: 'Fehler',
+				description: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
+				variant: 'destructive'
+			});
+		}
+	};
+
+	/* Die Rückfrage stellt das ⋮ selbst (`ActionMenu`) — hier wird nur noch
+	gelöscht, und zwar allein das *Sponsoring*: der Sponsor ist globaler
+	Stammsatz und bliebe sonst einem vergangenen Fest weg (ADR 0010). */
+	const handleDelete = async (sponsoring: SponsoringWithDetails) => {
 		try {
 			await deleteSponsoring(sponsoring.id);
 			toast({ title: 'Erfolg', description: 'Sponsoring wurde entfernt.' });
@@ -207,6 +239,13 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		const sponsoring = sponsorings.find((s) => s.id === sponsoringId);
 		if (sponsoring) handleDelete(sponsoring);
 	};
+
+	/** Die Zeile, an der ein Dialog des ⋮ gerade hängt — immer der frische Stand. */
+	const sponsoringById = (sponsoringId: string | null) =>
+		sponsoringId == null ? null : (sponsorings.find((s) => s.id === sponsoringId) ?? null);
+
+	const noteSponsoring = sponsoringById(noteFor);
+	const sponsorSponsoring = sponsoringById(sponsorFor);
 
 	/* Der Export nimmt bewusst **alle** Zeilen: ein PDF verlässt den Bildschirm
 	und trägt seine Beschriftung nicht mit — ein gefilterter Ausdruck wäre die
@@ -233,10 +272,33 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				onCreate={openCreate}
 				onTransfer={() => setShowTransferDialog(true)}
 				onExportPdf={handleExportPdf}
+				onOpenNote={setNoteFor}
+				onOpenSponsor={setSponsorFor}
 				onDelete={handleDeleteById}
 				onApply={handleApply}
 				onRemove={handleRemove}
 			/>
+
+			{/* Notiz und Firmendaten — die zwei Dinge hinter dem ⋮, die kein Zettel
+			trägt (#150). Ein „Bearbeiten" gibt es daneben ausdrücklich nicht. */}
+			{noteSponsoring && (
+				<SponsoringNoteDialog
+					open
+					onOpenChange={(open) => !open && setNoteFor(null)}
+					companyName={noteSponsoring.sponsor.company_name}
+					notes={noteSponsoring.notes}
+					onSave={(notes) => handleSaveNote(noteSponsoring.id, notes)}
+				/>
+			)}
+
+			{sponsorSponsoring && (
+				<SponsorFormDialog
+					open
+					onOpenChange={(open) => !open && setSponsorFor(null)}
+					sponsor={sponsorSponsoring.sponsor}
+					onSave={(values) => handleSaveSponsor(sponsorSponsoring.sponsor_id, values)}
+				/>
+			)}
 
 			<SponsorUebernahmeDialog
 				open={showTransferDialog}
