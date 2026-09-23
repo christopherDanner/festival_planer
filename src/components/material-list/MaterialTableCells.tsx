@@ -8,6 +8,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MissingValue } from '@/components/toolkit/PaperTable';
 import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
+// Die Preislücke sieht in Tabelle und Handy-Karte gleich aus — sie steht darum
+// einmal in `MaterialMarks` (ADR 0003 §2), nicht hier noch einmal.
+import { PriceGap } from './MaterialMarks';
 import { cn } from '@/lib/utils';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { grossPrice, netPrice, rowTotal } from '@/lib/materialCosts';
@@ -59,6 +62,9 @@ export interface CellEditControls {
 	/** Die offene Zelle — höchstens eine im ganzen Kasten. */
 	editing: CellRef | null;
 	value: string;
+	/** Ob in der offenen Zelle getippt wurde — der Preis hängt daran (siehe
+	`materialCellEdit`). */
+	touched: boolean;
 	/** Das Speichern läuft; das Feld nimmt solange keine Zeichen an. */
 	saving: boolean;
 	/** Das letzte Speichern ist gescheitert — roter Rand, Wert bleibt stehen. */
@@ -97,18 +103,6 @@ export const DeltaText: React.FC<{
 	const delta = deltaCell(material);
 	return <span className={cn(DELTA_TONE[delta.tone], className)}>{delta.text}</span>;
 };
-
-/** Preislücke: rot gestrichelt statt still leer — die Position zählt in keine
-Summe und das muss man in der Zeile sehen (#114).
-
-Bewusst kein `<OpenSlot>`: der trägt dieselbe Grafik, ist aber ein Knopf zum
-Besetzen. Hier ist der Knopf die Zelle selbst (#217) — die Grafik sitzt in ihr
-und darf nicht ein zweites Mal irgendwohin führen. */
-const PriceGap = () => (
-	<span className="inline-block border-1.5 border-dashed border-rot px-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-rot">
-		Fehlt
-	</span>
-);
 
 /** Die Gebinde-Umrechnung unter einer Menge: „→ 4 × Fass". Sie steht unter der
 gelesenen Zelle wie unter dem Feld der offenen — eine Zeile, ein Rezept
@@ -243,6 +237,9 @@ const CELL_BUTTON = cn(
 
 /** Die Beschriftung der fünf tippbaren Spalten — Kopf und Vorlesehilfe nennen
 sie gleich. */
+/** Tasten, mit denen man in einer Auswahl *blättert*, ohne sich zu entscheiden. */
+const BROWSING_KEYS = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+
 const CELL_LABEL: Record<EditableColumn, string> = {
 	ordered: 'Bestellt',
 	consumed: 'Verbraucht',
@@ -274,6 +271,11 @@ export const EditCell: React.FC<{
 	const open = cellEdit.editing?.id === m.id && cellEdit.editing.column === column;
 	const field = React.useRef<HTMLInputElement | HTMLSelectElement>(null);
 	const failed = open && cellEdit.failed;
+	// Ein geschlossenes `<select>` meldet bei *jeder* Pfeiltaste ein `change`.
+	// Ohne diese Notiz spränge das Blättern von 20 auf 10 unterwegs davon und
+	// schriebe die 13 weg, die niemand gemeint hat. Mit der Tastatur bestätigt
+	// darum erst Enter oder Tab, mit der Maus die Auswahl selbst.
+	const blaettert = React.useRef(false);
 
 	// Der Fehlschlag kommt typisch aus dem Blur — der Fokus ist dann woanders,
 	// und „Enter versucht es erneut" braucht ihn hier.
@@ -300,6 +302,12 @@ export const EditCell: React.FC<{
 	return (
 		<>
 			{column === 'tax' ? (
+				// Ein natives `<select>`, nicht die Radix-Hülle `ui/select` (ADR 0003
+				// §1 behält sie für ihr Verhalten). Hier arbeitet dieses Verhalten
+				// gegen die Zelle: Radix fängt Enter, Esc und Tab für seine Liste ab
+				// und rendert sie in ein Portal — genau die drei Tasten, die den
+				// Tastaturfluss des Rechnungsabgleichs tragen (ADR 0013). Dasselbe
+				// galt schon im Zeilenmodus, den diese Zelle ablöst.
 				<select
 					ref={field as React.Ref<HTMLSelectElement>}
 					value={cellEdit.value}
@@ -308,12 +316,17 @@ export const EditCell: React.FC<{
 					aria-label={label}
 					aria-invalid={failed || undefined}
 					// „Auswahl speichert sofort" (#217): eine getroffene Wahl ist fertig,
-					// ein zweiter Handgriff wäre nur im Weg.
+					// ein zweiter Handgriff wäre nur im Weg. Sie geht dabei weiter nach
+					// Netto statt ins Leere — sonst bräche der Tastaturfluss genau hier
+					// ab und der Fokus läge im Dokument statt in der Tabelle.
 					onChange={(e) => {
 						cellEdit.onType(e.target.value);
-						cellEdit.onCommit(null, cell);
+						if (!blaettert.current) cellEdit.onCommit('forward', cell);
 					}}
-					onKeyDown={(e) => onCellKey(e, cellEdit, cell)}
+					onKeyDown={(e) => {
+						blaettert.current = BROWSING_KEYS.includes(e.key);
+						onCellKey(e, cellEdit, cell);
+					}}
 					onBlur={() => cellEdit.onCommit(null, cell)}
 					className={cn(TABLE_INPUT, 'text-left', tone)}
 				>

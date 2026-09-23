@@ -133,9 +133,10 @@ describe('taxOptions — die Auswahl der MwSt-Zelle (#217)', () => {
 });
 
 describe('cellText — was in den Preiszellen steht (#217)', () => {
-	it('zeigt beide Seiten des Preises, die erfasste wie die gerechnete', () => {
-		expect(cellText('net', netto)).toBe('41.67');
-		expect(cellText('gross', netto)).toBe('50.00'); // 41,67 + 20 %
+	it('zeigt beide Seiten des Preises mit Dezimalkomma, wie die Zelle daneben', () => {
+		// Sonst spränge der Betrag beim Anklicken von „41,67" auf „41.67".
+		expect(cellText('net', netto)).toBe('41,67');
+		expect(cellText('gross', netto)).toBe('50,00'); // 41,67 + 20 %
 	});
 
 	it('nennt den Steuersatz als Zahl, „keine" als leere Auswahl', () => {
@@ -149,25 +150,55 @@ describe('cellText — was in den Preiszellen steht (#217)', () => {
 	});
 });
 
+/** Getippt — der vierte Parameter sagt, dass jemand in der Zelle war. */
+const TIPPT = true;
+
 describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () => {
 	it('macht die getippte Netto-Zelle zur Quelle', () => {
-		expect(cellUpdate('net', '10', brutto)).toEqual({ unit_price: 10, price_is_net: true });
+		expect(cellUpdate('net', '10', brutto, TIPPT)).toEqual({
+			unit_price: 10,
+			price_is_net: true
+		});
 	});
 
 	it('macht die getippte Brutto-Zelle zur Quelle', () => {
-		expect(cellUpdate('gross', '12', netto)).toEqual({ unit_price: 12, price_is_net: false });
+		expect(cellUpdate('gross', '12', netto, TIPPT)).toEqual({
+			unit_price: 12,
+			price_is_net: false
+		});
+	});
+
+	it('macht sie auch dann zur Quelle, wenn derselbe Betrag dastand', () => {
+		// 50,00 steht in der Brutto-Zelle einer netto erfassten Position. Wer ihn
+		// von der Rechnung abtippt, meint: *brutto* ist die erfasste Seite — sonst
+		// rechnete der nächste Steuersatzwechsel die falsche Zahl um.
+		expect(cellUpdate('gross', '50,00', netto, TIPPT)).toEqual({
+			unit_price: 50,
+			price_is_net: false
+		});
 	});
 
 	it('nimmt auch hier das Dezimalkomma der Rechnung an', () => {
-		expect(cellUpdate('net', '2,50', brutto)).toEqual({ unit_price: 2.5, price_is_net: true });
+		expect(cellUpdate('net', '2,50', brutto, TIPPT)).toEqual({
+			unit_price: 2.5,
+			price_is_net: true
+		});
 	});
 
-	it('macht aus einem geleerten Preisfeld eine Preislücke', () => {
-		expect(cellUpdate('net', '', netto)).toEqual({ unit_price: null, price_is_net: true });
+	it('macht aus einem geleerten Preisfeld eine Preislücke, ohne die Quelle zu kippen', () => {
+		// Eine geleerte Zelle nimmt den Preis weg, sie erklärt keinen — die Basis
+		// einer Position ohne Preis sagt ohnehin nichts aus.
+		expect(cellUpdate('gross', '', netto, TIPPT)).toEqual({
+			unit_price: null,
+			price_is_net: true
+		});
 	});
 
 	it('lässt Gekritzeltes stehen, statt den Preis zu löschen', () => {
-		expect(cellUpdate('net', '4l,67', netto)).toEqual({ unit_price: 41.67, price_is_net: true });
+		expect(cellUpdate('net', '4l,67', netto, TIPPT)).toEqual({
+			unit_price: 41.67,
+			price_is_net: true
+		});
 	});
 
 	it('schreibt ein unberührtes Preisfeld nicht auf seine Cent-Anzeige zurück', () => {
@@ -175,68 +206,63 @@ describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () =
 		// wer sie nur verlässt, dürfte das Fass nicht um 17 Cent verbilligen.
 		const feiner: CellValues = { ...netto, unit_price: 0.8334 };
 
-		expect(cellText('net', feiner)).toBe('0.83');
-		expect(cellUpdate('net', '0.83', feiner)).toEqual({
+		expect(cellText('net', feiner)).toBe('0,83');
+		expect(cellUpdate('net', '0,83', feiner)).toEqual({
 			unit_price: 0.8334,
 			price_is_net: true
 		});
 	});
 
 	it('lässt die Gegenseite eines unberührten Preises die Quelle in Ruhe', () => {
-		// Die Brutto-Zelle einer netto erfassten Position zeigt 50,00. Verlassen
-		// ohne Tippen darf `price_is_net` nicht umlegen.
-		expect(cellUpdate('gross', '50.00', netto)).toEqual({
+		// Die Brutto-Zelle einer netto erfassten Position zeigt 50,00. Durch sie
+		// hindurchzutabben darf `price_is_net` nicht umlegen.
+		expect(cellUpdate('gross', '50,00', netto)).toEqual({
 			unit_price: 41.67,
 			price_is_net: true
 		});
 	});
 
 	it('schreibt beim Steuersatz nur ihn — der erfasste Preis bleibt Quelle', () => {
-		expect(cellUpdate('tax', '10', netto)).toEqual({ tax_rate: 10 });
-		expect(cellUpdate('tax', '', netto)).toEqual({ tax_rate: null });
+		expect(cellUpdate('tax', '10', netto, TIPPT)).toEqual({ tax_rate: 10 });
+		expect(cellUpdate('tax', '', netto, TIPPT)).toEqual({ tax_rate: null });
 	});
 });
 
 describe('isCellDirty — die Preiszellen (#217)', () => {
 	it('hält ein unberührtes Preisfeld für unverändert — beide Seiten', () => {
-		expect(isCellDirty('net', '41.67', netto)).toBe(false);
-		expect(isCellDirty('gross', '50.00', netto)).toBe(false);
-		expect(isCellDirty('tax', '20', netto)).toBe(false);
+		expect(isCellDirty('net', '41,67', netto)).toBe(false);
+		expect(isCellDirty('gross', '50,00', netto)).toBe(false);
+		expect(isCellDirty('tax', '20', netto, TIPPT)).toBe(false);
 	});
 
 	it('zählt den Wechsel der Quelle als Änderung, auch bei gleicher Zahl', () => {
 		// 50 brutto über einer netto erfassten Position: dieselbe Zahl, andere
 		// Bedeutung — ohne das bliebe `price_is_net` für immer, wie es war.
-		expect(isCellDirty('gross', '50', netto)).toBe(true);
+		expect(isCellDirty('gross', '50', netto, TIPPT)).toBe(true);
 	});
 
 	it('merkt den neuen Steuersatz und den neuen Preis', () => {
-		expect(isCellDirty('tax', '10', netto)).toBe(true);
-		expect(isCellDirty('net', '42', netto)).toBe(true);
+		expect(isCellDirty('tax', '10', netto, TIPPT)).toBe(true);
+		expect(isCellDirty('net', '42', netto, TIPPT)).toBe(true);
 	});
 
 	it('zählt eine geleerte Preiszelle über einer Preislücke nicht als Änderung', () => {
 		const luecke: CellValues = { ...netto, unit_price: null };
-		expect(isCellDirty('net', '', luecke)).toBe(false);
+		expect(isCellDirty('net', '', luecke, TIPPT)).toBe(false);
 	});
 });
 
 describe('previewCell — die Gegenseite rechnet beim Tippen mit (#217)', () => {
 	it('lässt Brutto der getippten Netto-Zelle folgen', () => {
-		expect(cellText('gross', previewNet('10'))).toBe('12.00'); // 10 + 20 %
+		expect(cellText('gross', previewCell('net', '10', netto, TIPPT))).toBe('12,00'); // 10 + 20 %
 	});
 
 	it('rechnet beim Wechsel des Steuersatzes die Gegenseite neu, nicht die Quelle', () => {
-		const zehn = previewCell('tax', '10', netto);
-		expect(cellText('net', zehn)).toBe('41.67');
-		expect(cellText('gross', zehn)).toBe('45.84'); // 41,67 + 10 %
+		const zehn = previewCell('tax', '10', netto, TIPPT);
+		expect(cellText('net', zehn)).toBe('41,67');
+		expect(cellText('gross', zehn)).toBe('45,84'); // 41,67 + 10 %
 	});
 });
-
-/** Die Position, wie sie mit `value` in der Netto-Zelle aussähe. */
-function previewNet(value: string): CellValues {
-	return previewCell('net', value, netto);
-}
 
 describe('nextCell — der Tastaturfluss des Rechnungsabgleichs (#216)', () => {
 	const ids = ['bier', 'wein', 'saft'];

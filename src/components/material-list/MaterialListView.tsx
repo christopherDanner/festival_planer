@@ -255,6 +255,7 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 							cellEdit={{
 								editing: cell.snapshot.editing,
 								value: cell.snapshot.value,
+								touched: cell.snapshot.touched,
 								saving: cell.snapshot.saving,
 								failed: cell.snapshot.failed,
 								savedIds: cell.snapshot.savedIds,

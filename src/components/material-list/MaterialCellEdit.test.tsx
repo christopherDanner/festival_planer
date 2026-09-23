@@ -72,6 +72,7 @@ const Harness: React.FC<{
 			cellEdit={{
 				editing: snapshot.editing,
 				value: snapshot.value,
+				touched: snapshot.touched,
 				saving: snapshot.saving,
 				failed: snapshot.failed,
 				savedIds: snapshot.savedIds,
@@ -353,7 +354,9 @@ describe('Zellbearbeitung — die Preise in der Zelle (#217)', () => {
 		expect([...(openSelect()?.options ?? [])].map((o) => o.value)).toContain('7');
 	});
 
-	it('speichert die gewählte MwSt sofort — ohne zweiten Handgriff', async () => {
+	it('speichert die gewählte MwSt sofort und geht weiter nach Netto', async () => {
+		// Ohne den Sprung bräche der Tastaturfluss genau hier ab: die Zelle ginge
+		// zu und der Fokus läge im Dokument statt in der Tabelle.
 		const save = vi.fn().mockResolvedValue(undefined);
 		await mount([PREIS], save);
 
@@ -361,6 +364,26 @@ describe('Zellbearbeitung — die Preise in der Zelle (#217)', () => {
 		await choose(openSelect(), '10');
 
 		expect(save).toHaveBeenCalledWith('bier', { tax_rate: 10 });
+		expect(openCell()?.getAttribute('aria-label')).toBe('Netto von Bier');
+	});
+
+	it('speichert beim Blättern mit der Pfeiltaste noch nicht', async () => {
+		// Ein geschlossenes `<select>` meldet jede Pfeiltaste als `change`. Wer
+		// von 20 nach 10 blättert, käme sonst nie an — die 13 unterwegs wäre
+		// gespeichert und die Zelle zu.
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([PREIS], save);
+
+		await click(byLabel('MwSt von Bier'));
+		await press('ArrowUp');
+		await choose(openSelect(), '13');
+
+		expect(save).not.toHaveBeenCalled();
+		expect(openSelect()?.value).toBe('13');
+
+		// Erst Tab bestätigt — dann speichert die Zelle und geht weiter.
+		await press('Tab');
+		expect(save).toHaveBeenCalledWith('bier', { tax_rate: 13 });
 	});
 
 	it('rechnet nach dem Steuersatzwechsel die Gegenseite neu, nicht die Quelle', async () => {
@@ -369,9 +392,10 @@ describe('Zellbearbeitung — die Preise in der Zelle (#217)', () => {
 		await click(byLabel('MwSt von Bier'));
 		await choose(openSelect(), '10');
 
-		const zeile = document.querySelector('tbody tr')?.textContent ?? '';
-		expect(zeile).toContain('10,00'); // Netto bleibt die erfasste Quelle
-		expect(zeile).toContain('11,00'); // Brutto folgt dem neuen Satz
+		// Die Auswahl ist weitergesprungen: Netto steht als Feld da und trägt
+		// unverändert die erfasste Quelle.
+		expect(openField()?.value).toBe('10,00');
+		expect(byLabel('Brutto von Bier')?.textContent).toContain('11,00'); // 10 + 10 %
 	});
 
 	it('macht Netto tippbar und schreibt es als Quelle weg', async () => {
@@ -379,7 +403,9 @@ describe('Zellbearbeitung — die Preise in der Zelle (#217)', () => {
 		await mount([material({ unit_price: 12, tax_rate: 20, price_is_net: false })], save);
 
 		await click(byLabel('Netto von Bier'));
-		expect(openField()?.value).toBe('10.00'); // 12 brutto bei 20 %
+		// Mit Komma wie die gelesene Zelle — der Betrag darf beim Anklicken nicht
+		// die Schreibweise wechseln.
+		expect(openField()?.value).toBe('10,00'); // 12 brutto bei 20 %
 		await type(openField(), '20');
 		await press('Enter');
 
@@ -434,10 +460,26 @@ describe('Zellbearbeitung — die Preise in der Zelle (#217)', () => {
 		await mount([material({ unit_price: 0.8334, tax_rate: 20, price_is_net: true })], save);
 
 		await click(byLabel('Netto von Bier'));
-		expect(openField()?.value).toBe('0.83');
+		expect(openField()?.value).toBe('0,83');
 		await press('Tab');
 
 		expect(save).not.toHaveBeenCalled();
+	});
+
+	it('macht die Gegenseite zur Quelle, wenn man ihren Betrag abtippt', async () => {
+		// 50,00 steht in Brutto einer netto erfassten Position. Wer ihn von der
+		// Rechnung abtippt, meint *brutto* — sonst rechnete der nächste
+		// Steuersatzwechsel die falsche Seite um.
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([material({ unit_price: 41.67, tax_rate: 20, price_is_net: true })], save);
+
+		await click(byLabel('Brutto von Bier'));
+		// So tippt man wirklich: leeren und den Betrag von der Rechnung setzen.
+		await type(openField(), '');
+		await type(openField(), '50,00');
+		await press('Enter');
+
+		expect(save).toHaveBeenCalledWith('bier', { unit_price: 50, price_is_net: false });
 	});
 });
 

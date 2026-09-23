@@ -88,11 +88,33 @@ describe('createCellEditor — der Tastaturfluss (#216)', () => {
 		const editor = createCellEditor({ onSave });
 
 		editor.open(ROWS[0], 'gross');
-		expect(editor.getState().value).toBe('2.40'); // 2 netto + 20 %
+		expect(editor.getState().value).toBe('2,40'); // 2 netto + 20 %
 		await editor.commit('forward', ROWS);
 
 		expect(onSave).not.toHaveBeenCalled(); // unberührt — die Quelle bleibt netto
 		expect(editor.getState().editing).toEqual({ id: 'wein', column: 'ordered' });
+	});
+
+	it('merkt sich, ob in der Zelle getippt wurde — daran hängt der Preis (#217)', () => {
+		const editor = createCellEditor({ onSave: vi.fn().mockResolvedValue(undefined) });
+
+		editor.open(ROWS[0], 'gross');
+		expect(editor.getState().touched).toBe(false);
+
+		editor.type('2,40');
+		// Derselbe Betrag, aber jetzt getippt: Brutto wird damit die Quelle.
+		expect(editor.getState().touched).toBe(true);
+	});
+
+	it('macht die getippte Seite zur Quelle, auch wenn ihr Betrag schon dastand', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'gross');
+		editor.type('2,40');
+		await editor.commit(null, ROWS);
+
+		expect(onSave).toHaveBeenCalledWith('bier', { unit_price: 2.4, price_is_net: false });
 	});
 
 	it('schreibt die getippte Preisseite samt ihrer Quelle weg (#217)', async () => {

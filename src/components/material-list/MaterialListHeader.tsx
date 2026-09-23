@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import MaterialModeBar, { type MaterialMode } from './MaterialModeBar';
 
-
 export type { MaterialMode };
 
 export interface MaterialListHeaderProps {

@@ -5,6 +5,7 @@ wohin die Tastatur führt. */
 
 import { grossPrice, netPrice, type MaterialPosition } from './materialCosts';
 import { fromBaseQuantity, toBaseQuantity } from './materialQuantity';
+import { TAX_RATES } from './materialRow';
 
 /** Die zwei Mengenspalten. Sie stehen für sich, weil nur sie eine Gebinde-
 Umrechnung unter dem Feld tragen. */
@@ -51,18 +52,21 @@ export function storedQuantity(column: QuantityColumn, m: CellValues): number | 
 	return column === 'ordered' ? m.ordered_quantity : m.actual_quantity;
 }
 
-/** Die geläufigen österreichischen Steuersätze; leer heißt „keine". */
-const TAX_RATES = ['', '10', '13', '20'];
-
 /**
- * Die Auswahl der MwSt-Zelle (#217). Ein Satz, der nicht in der Liste steht,
- * kommt dazu — sonst schluckte das Öffnen der Zelle still den erfassten Wert
- * und die Auswahl schriebe einen anderen, als vorher dastand.
+ * Die Auswahl der MwSt-Zelle (#217). *Welche* Sätze die Materialliste anbietet,
+ * steht in `materialRow` — Dialog, Handy-Karte und Zelle bieten dasselbe Feld
+ * an, und zweimal getippt liefe ein neuer Satz unweigerlich auseinander. Leer
+ * heißt „keine".
+ *
+ * Ein Satz, der nicht in der Liste steht, kommt dazu — sonst schluckte das
+ * Öffnen der Zelle still den erfassten Wert und die Auswahl schriebe einen
+ * anderen, als vorher dastand.
  */
 export function taxOptions(current: number | null): string[] {
+	const known = ['', ...TAX_RATES.map((tax) => String(tax.rate))];
 	const rate = current == null ? '' : String(current);
-	if (TAX_RATES.includes(rate)) return TAX_RATES;
-	return [...TAX_RATES, rate].sort((a, b) => Number(a || 0) - Number(b || 0));
+	if (known.includes(rate)) return known;
+	return [...known, rate].sort((a, b) => Number(a || 0) - Number(b || 0));
 }
 
 /**
@@ -72,13 +76,18 @@ export function taxOptions(current: number | null): string[] {
  * dastehen; Preise auf Cent, beide Seiten aus `materialCosts`. Nicht erfasst
  * heißt leer — das ist bei Verbraucht wie beim Preis ein eigener Zustand, keine
  * 0 (CONTEXT.md).
+ *
+ * Gezeigt wird mit **Dezimalkomma**, wie die gelesene Zelle daneben: sonst
+ * spränge „41,67" beim Anklicken auf „41.67" und wieder zurück. Gerundet wird
+ * dabei nur beim Preis (er *ist* ein Betrag auf Cent) — eine Menge zu runden
+ * verlöre den Wert, den man gar nicht anfassen wollte.
  */
 export function cellText(column: EditableColumn, m: CellValues): string {
 	switch (column) {
 		case 'ordered':
 		case 'consumed': {
 			const base = toBaseQuantity(storedQuantity(column, m), m);
-			return base == null ? '' : String(base);
+			return base == null ? '' : decimalComma(String(base));
 		}
 		case 'tax':
 			return m.tax_rate == null ? '' : String(m.tax_rate);
@@ -89,10 +98,13 @@ export function cellText(column: EditableColumn, m: CellValues): string {
 	}
 }
 
-/** Ein Betrag, wie er im Preisfeld steht: auf Cent, mit Punkt — das Komma nimmt
-`read` beim Lesen an. */
+/** Ein Betrag, wie er im Preisfeld steht: auf Cent, mit Dezimalkomma. */
 function priceText(value: number | null): string {
-	return value == null ? '' : value.toFixed(2);
+	return value == null ? '' : decimalComma(value.toFixed(2));
+}
+
+function decimalComma(value: string): string {
+	return value.replace('.', ',');
 }
 
 /** Leer, eine Zahl — oder Gekritzel, das keine ist. Die drei laufen im
@@ -124,6 +136,17 @@ export type CellUpdate =
 	| { unit_price: number | null; price_is_net: boolean };
 
 /**
+ * Ob in der Zelle getippt wurde, seit sie aufging.
+ *
+ * „Unberührt" ist ein Zustand der Bearbeitung, keine Eigenschaft des Textes —
+ * derselbe Betrag kann dastehen, weil ihn niemand angefasst hat, oder weil ihn
+ * jemand von einer Rechnung abgetippt hat, und beim Preis bedeutet das
+ * Verschiedenes. Wer es nicht weiß, sagt `false`: das lässt den gespeicherten
+ * Stand in Ruhe.
+ */
+export type Touched = boolean;
+
+/**
  * Der getippte Text als Änderung an der Position.
  *
  * Die zwei Mengenspalten lesen eine **leere** Zelle verschieden (CONTEXT.md):
@@ -136,7 +159,12 @@ export type CellUpdate =
  * damit keine Änderung und schreibt nichts. Ein Zahlendreher darf die
  * Verbraucht-Menge nicht auf „nicht erfasst" zurücksetzen.
  */
-export function cellUpdate(column: EditableColumn, text: string, m: CellValues): CellUpdate {
+export function cellUpdate(
+	column: EditableColumn,
+	text: string,
+	m: CellValues,
+	touched: Touched = false
+): CellUpdate {
 	const typed = read(text);
 	switch (column) {
 		case 'ordered':
@@ -154,7 +182,7 @@ export function cellUpdate(column: EditableColumn, text: string, m: CellValues):
 			return { tax_rate: typed.kind === 'empty' ? null : typed.value };
 		case 'net':
 		case 'gross':
-			return priceUpdate(column, typed, text, m);
+			return priceUpdate(column, typed, m, touched);
 	}
 }
 
@@ -168,23 +196,25 @@ export function cellUpdate(column: EditableColumn, text: string, m: CellValues):
  * 0,83 € gekürzt und das Fass um 17 Cent verbilligt (#217). Unberührt heißt
  * auch: die Quelle bleibt, wo sie war — die gerechnete Gegenseite legt
  * `price_is_net` nicht um, bloß weil man durch sie hindurchgetabt ist.
+ *
+ * Eine **geleerte** Zelle ist dagegen keine getippte Seite: sie nimmt den Preis
+ * weg, sie erklärt keinen. Die Quelle bleibt stehen, bis wieder ein Betrag
+ * dasteht — sonst kippte „Brutto löschen" die Basis einer Position, die gar
+ * keinen Preis mehr hat.
  */
 function priceUpdate(
 	column: 'net' | 'gross',
 	typed: Typed,
-	text: string,
-	m: CellValues
+	m: CellValues,
+	touched: Touched
 ): CellUpdate {
-	const untouched = text.trim().replace(',', '.') === cellText(column, m);
-	if (untouched || typed.kind === 'unreadable') {
+	if (!touched || typed.kind === 'unreadable') {
 		return { unit_price: m.unit_price, price_is_net: m.price_is_net };
 	}
+	if (typed.kind === 'empty') return { unit_price: null, price_is_net: m.price_is_net };
 	// Die getippte Seite wird Quelle — sie ist die Zahl, die jemand von einer
 	// Rechnung abgelesen hat (CONTEXT.md „Quelle des Preises").
-	return {
-		unit_price: typed.kind === 'empty' ? null : typed.value,
-		price_is_net: column === 'net'
-	};
+	return { unit_price: typed.value, price_is_net: column === 'net' };
 }
 
 /**
@@ -193,24 +223,35 @@ function priceUpdate(
  * Verglichen wird, was **gespeichert würde**, gegen das, was steht — nicht der
  * Text gegen den Text: eine geleerte Bestellt-Zelle über einer gespeicherten 0
  * schriebe dieselbe 0 und ist darum keine Änderung, während leer und 0 bei
- * Verbraucht zwei verschiedene Stände sind. Beim Preis zählt auch der Wechsel
- * der Quelle: 50 brutto über einer netto erfassten Position ist dieselbe Zahl
- * mit anderer Bedeutung — ohne Preis sagt die Quelle dagegen nichts aus.
+ * Verbraucht zwei verschiedene Stände sind. Gefragt wird die Nutzlast, nicht
+ * die Spalte: welches Feld sie trägt, sagt schon, was zu vergleichen ist.
+ *
+ * Beim Preis zählt auch der Wechsel der Quelle: 50 brutto über einer netto
+ * erfassten Position ist dieselbe Zahl mit anderer Bedeutung — ohne Preis sagt
+ * die Quelle dagegen nichts aus und zählt darum nicht.
  */
-export function isCellDirty(column: EditableColumn, text: string, m: CellValues): boolean {
-	const update = cellUpdate(column, text, m) as Record<string, number | boolean | null>;
-	if ('price_is_net' in update && update.unit_price == null) {
-		return m.unit_price != null;
-	}
-	return Object.entries(update).some(([field, value]) => !same(value, m[field as keyof CellValues]));
+export function isCellDirty(
+	column: EditableColumn,
+	text: string,
+	m: CellValues,
+	touched: Touched = false
+): boolean {
+	const update = cellUpdate(column, text, m, touched);
+	if ('ordered_quantity' in update) return !same(update.ordered_quantity, m.ordered_quantity);
+	if ('actual_quantity' in update) return !same(update.actual_quantity, m.actual_quantity);
+	if ('tax_rate' in update) return !same(update.tax_rate, m.tax_rate);
+	return (
+		!same(update.unit_price, m.unit_price) ||
+		(update.unit_price != null && update.price_is_net !== m.price_is_net)
+	);
 }
 
 /** Zwei Werte sind derselbe, wenn sie auf Centbruchteile übereinstimmen — sonst
 erklärte ein Fließkomma-Rest aus der Gebinde-Umrechnung eine unberührte Zelle
 für geändert. */
-function same(a: unknown, b: unknown): boolean {
-	if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) < 1e-9;
-	return a === b;
+function same(a: number | null, b: number | null): boolean {
+	if (a == null || b == null) return a === b;
+	return Math.abs(a - b) < 1e-9;
 }
 
 /** Die Position, wie sie mit dem Getippten aussähe. Die Gebinde-Umrechnung
@@ -219,9 +260,10 @@ ohne eine zweite Formel zu bekommen (ADR 0003 §2). */
 export function previewCell<T extends CellValues>(
 	column: EditableColumn,
 	text: string,
-	m: T
+	m: T,
+	touched: Touched = false
 ): T {
-	return { ...m, ...cellUpdate(column, text, m) };
+	return { ...m, ...cellUpdate(column, text, m, touched) };
 }
 
 /** Eine Zelle, benannt wie die Tabelle sie kennt: Position und Spalte. */

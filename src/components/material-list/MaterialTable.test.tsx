@@ -15,6 +15,9 @@ function cellEditWith(
 	return {
 		editing: null,
 		value: '',
+		// Die Tests der offenen Zelle stehen für „jemand tippt gerade" — nur dann
+		// rechnet die Gegenseite des Preises mit (#217).
+		touched: true,
 		saving: false,
 		failed: false,
 		savedIds: [],

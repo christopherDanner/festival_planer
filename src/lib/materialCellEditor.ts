@@ -26,6 +26,9 @@ export interface CellEditorSnapshot {
 	/** Was darin steht: Mengen als Text in der Basiseinheit, Preise auf Cent,
 	MwSt als Prozentzahl (leer = keine). */
 	value: string;
+	/** Ob darin getippt wurde, seit sie aufging — beim Preis entscheidet das
+	über die Quelle und über die Rundung (siehe `materialCellEdit`). */
+	touched: boolean;
 	/** Das Speichern läuft; die Zelle nimmt solange keine Zeichen an. */
 	saving: boolean;
 	/** Das letzte Speichern ist gescheitert — roter Rand, Wert bleibt stehen. */
@@ -70,6 +73,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 	// entsteht. Ein Nachladen der Liste darf beides nicht verschieben.
 	let origin: CellRow | null = null;
 	let value = '';
+	let touched = false;
 	let saving = false;
 	let failed = false;
 	// Der Klick auf die nächste Zelle kommt vor dem Ausgang des Speicherns, das
@@ -87,6 +91,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		editing = { id: row.id, column };
 		origin = row;
 		value = cellText(column, row);
+		touched = false;
 		failed = false;
 	}
 
@@ -94,6 +99,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		editing = null;
 		origin = null;
 		value = '';
+		touched = false;
 		failed = false;
 		pendingOpen = null;
 	}
@@ -128,6 +134,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		type(next) {
 			if (!editing || saving) return;
 			value = next;
+			touched = true;
 			notify();
 		},
 		async commit(move, rows, from) {
@@ -136,9 +143,10 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 			const cell = editing;
 			const row = origin;
 			const typed = value;
+			const wasTouched = touched;
 			const target = move ? nextCell(rows.map((r) => r.id), cell, move) : null;
 
-			if (!isCellDirty(cell.column, typed, row)) {
+			if (!isCellDirty(cell.column, typed, row, wasTouched)) {
 				go(target, rows);
 				notify();
 				return;
@@ -148,7 +156,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 			failed = false;
 			notify();
 			try {
-				await opts.onSave(cell.id, cellUpdate(cell.column, typed, row));
+				await opts.onSave(cell.id, cellUpdate(cell.column, typed, row, wasTouched));
 			} catch {
 				// Nie ein stilles Verwerfen: die Zelle bleibt offen, samt Getipptem —
 				// und der wartende Klick verfällt, statt später an ihrer Stelle zu
@@ -176,7 +184,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		},
 		getState() {
 			if (cached) return cached;
-			cached = { editing, value, saving, failed, savedIds: [...savedIds] };
+			cached = { editing, value, touched, saving, failed, savedIds: [...savedIds] };
 			return cached;
 		},
 		subscribe(listener) {

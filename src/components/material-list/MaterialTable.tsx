@@ -168,7 +168,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 						// gespeichert ist (#217). Die Regel dafür steht in
 						// `materialCellEdit`, nicht hier.
 						const open = cellEdit.editing?.id === m.id ? cellEdit.editing.column : null;
-						const preview = open ? previewCell(open, cellEdit.value, m) : m;
+						const preview = open
+							? previewCell(open, cellEdit.value, m, cellEdit.touched)
+							: m;
 						return (
 							<tr
 								key={m.id}
