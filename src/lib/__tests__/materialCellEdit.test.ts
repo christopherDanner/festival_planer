@@ -44,6 +44,19 @@ describe('cellUpdate — leer und 0 sind bei Verbraucht zweierlei (#216)', () =>
 	it('rechnet die getippte Basismenge in Gebinde zurück', () => {
 		expect(cellUpdate('consumed', '150', fass)).toEqual({ actual_quantity: 3 });
 	});
+
+	it('nimmt das Dezimalkomma, wie es auf der Rechnung steht', () => {
+		// „auch angebrochene (2,5)" (CONTEXT.md). Ein verworfenes Komma machte aus
+		// 2,5 ein „nicht erfasst" — genau das stille Verwerfen, das ADR 0013
+		// ausschließt.
+		expect(cellUpdate('consumed', '2,5', stueck)).toEqual({ actual_quantity: 2.5 });
+		expect(cellUpdate('ordered', '2,5', stueck)).toEqual({ ordered_quantity: 2.5 });
+	});
+
+	it('lässt Gekritzeltes stehen, statt es als 0 wegzuschreiben', () => {
+		expect(cellUpdate('consumed', 'abc', stueck)).toEqual({ actual_quantity: 8 });
+		expect(cellUpdate('ordered', 'abc', stueck)).toEqual({ ordered_quantity: 10 });
+	});
 });
 
 describe('isCellDirty — geschrieben wird nur, was etwas ändert (#216)', () => {

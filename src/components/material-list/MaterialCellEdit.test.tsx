@@ -291,6 +291,19 @@ describe('Zellbearbeitung — leer und 0 bei Verbraucht (#216)', () => {
 		expect(save).toHaveBeenCalledWith('bier', { actual_quantity: 0 });
 	});
 
+	it('nimmt das Dezimalkomma der Lieferantenrechnung an', async () => {
+		// Ein `type="number"` verwürfe es still: die Zelle zeigte „2,5" und
+		// speicherte „nicht erfasst".
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([material()], save);
+
+		await click(byLabel('Verbraucht von Bier'));
+		await type(openField(), '2,5');
+		await press('Enter');
+
+		expect(save).toHaveBeenCalledWith('bier', { actual_quantity: 2.5 });
+	});
+
 	it('macht aus einer geleerten Bestellt-Zelle eine 0', async () => {
 		const save = vi.fn().mockResolvedValue(undefined);
 		await mount([material()], save);
@@ -318,6 +331,21 @@ describe('Zellbearbeitung — Speicherfehler (#216)', () => {
 		expect(field?.getAttribute('aria-invalid')).toBe('true');
 		expect(field?.className).toContain('border-rot');
 		expect(document.querySelector('[role="alert"]')?.textContent).toContain('Nicht gespeichert');
+	});
+
+	it('holt den Fokus zurück ins Feld — „Enter versucht es erneut" braucht ihn', async () => {
+		// Der Fehlschlag kommt typisch aus dem Blur: der Fokus ist dann längst
+		// woanders, und die rote Zelle wäre nur per Klick wieder erreichbar.
+		const save = vi.fn().mockRejectedValue(new Error('offline'));
+		await mount([material(), WEIN], save);
+
+		await click(byLabel('Verbraucht von Bier'));
+		await type(openField(), '80');
+		await act(async () => {
+			openField()?.blur();
+		});
+
+		expect(document.activeElement).toBe(openField());
 	});
 
 	it('speichert beim nächsten Enter und geht dann erst weiter', async () => {

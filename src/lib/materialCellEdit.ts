@@ -23,7 +23,10 @@ export interface CellQuantities {
 	amount_per_packaging: number | null | undefined;
 }
 
-function stored(column: QuantityColumn, m: CellQuantities): number | null {
+/** Die gespeicherte Menge der Spalte, in Gebinden wie in der Datenbank. Eine
+Stelle für „welches Feld gehört zu welcher Spalte" — Zelle, Entwurfsvorschau und
+Vergleich fragen sie alle drei. */
+export function storedQuantity(column: QuantityColumn, m: CellQuantities): number | null {
 	return column === 'ordered' ? m.ordered_quantity : m.actual_quantity;
 }
 
@@ -33,15 +36,27 @@ function stored(column: QuantityColumn, m: CellQuantities): number | null {
  * das ist bei Verbraucht ein eigener Zustand, kein 0 (CONTEXT.md).
  */
 export function cellText(column: QuantityColumn, m: CellQuantities): string {
-	const base = toBaseQuantity(stored(column, m), m);
+	const base = toBaseQuantity(storedQuantity(column, m), m);
 	return base == null ? '' : String(base);
 }
 
-function numberOrNull(text: string): number | null {
+/** Leer, eine Zahl — oder Gekritzel, das keine ist. Die drei laufen im
+`cellUpdate` auseinander, darum sind sie hier drei Fälle und nicht zwei. */
+type Typed = { kind: 'empty' } | { kind: 'number'; value: number } | { kind: 'unreadable' };
+
+/**
+ * Was in der Zelle steht, gelesen.
+ *
+ * Das **Dezimalkomma** zählt: auf einer österreichischen Lieferantenrechnung
+ * stehen 2,5 Fass, und CONTEXT.md nennt angebrochene Gebinde ausdrücklich.
+ * Ein verworfenes Komma machte aus 2,5 ein „nicht erfasst" — genau das stille
+ * Verwerfen, das ADR 0013 ausschließt.
+ */
+function read(text: string): Typed {
 	const trimmed = text.trim();
-	if (trimmed === '') return null;
-	const value = Number(trimmed);
-	return Number.isNaN(value) ? null : value;
+	if (trimmed === '') return { kind: 'empty' };
+	const value = Number(trimmed.replace(',', '.'));
+	return Number.isNaN(value) ? { kind: 'unreadable' } : { kind: 'number', value };
 }
 
 /** Was eine gespeicherte Mengenzelle an der Position ändert — genau ein Feld.
@@ -53,17 +68,23 @@ export type CellUpdate =
 /**
  * Der getippte Text als Änderung an der Position, in Gebinden zurückgerechnet.
  *
- * Die zwei Spalten lesen eine leere Zelle **verschieden** (CONTEXT.md): eine
+ * Die zwei Spalten lesen eine **leere** Zelle verschieden (CONTEXT.md): eine
  * Position ohne Bestellmenge ist eine mit 0, eine ohne Verbraucht-Menge ist
  * eine, an der nichts nachgetragen wurde — sie zählt in keinen Verbrauchswert.
  * Eine getippte 0 in Verbraucht heißt dagegen „nichts verbraucht".
+ *
+ * **Unlesbares** ist etwas Drittes: es steht für den gespeicherten Stand, ist
+ * damit keine Änderung und schreibt nichts. Ein Zahlendreher darf die
+ * Verbraucht-Menge nicht auf „nicht erfasst" zurücksetzen.
  */
-export function cellUpdate(
-	column: QuantityColumn,
-	text: string,
-	m: CellQuantities
-): CellUpdate {
-	const base = numberOrNull(text);
+export function cellUpdate(column: QuantityColumn, text: string, m: CellQuantities): CellUpdate {
+	const typed = read(text);
+	if (typed.kind === 'unreadable') {
+		return column === 'ordered'
+			? { ordered_quantity: m.ordered_quantity }
+			: { actual_quantity: m.actual_quantity };
+	}
+	const base = typed.kind === 'empty' ? null : typed.value;
 	if (column === 'ordered') {
 		return { ordered_quantity: base == null ? 0 : fromBaseQuantity(base, m) };
 	}
@@ -80,10 +101,18 @@ export function cellUpdate(
  * und `cellText` rechnen mit demselben Faktor hin und her.
  */
 export function isCellDirty(column: QuantityColumn, text: string, m: CellQuantities): boolean {
-	const update = cellUpdate(column, text, m);
-	return 'ordered_quantity' in update
-		? update.ordered_quantity !== m.ordered_quantity
-		: update.actual_quantity !== m.actual_quantity;
+	return storedQuantity(column, previewCell(column, text, m)) !== storedQuantity(column, m);
+}
+
+/** Die Position, wie sie mit dem Getippten aussähe. Die Gebinde-Umrechnung
+unter dem Feld rechnet darüber mit, ohne eine zweite Formel zu bekommen —
+dasselbe Mittel wie `draftPreview` im Zeilenmodus. */
+export function previewCell<T extends CellQuantities>(
+	column: QuantityColumn,
+	text: string,
+	m: T
+): T {
+	return { ...m, ...cellUpdate(column, text, m) };
 }
 
 /** Eine Mengenzelle, benannt wie die Tabelle sie kennt: Position und Spalte. */
@@ -119,11 +148,12 @@ export function nextCell(ids: string[], from: CellRef, move: CellMove): CellRef 
 		return target == null ? null : { id: target, column: from.column };
 	}
 
+	// Tab liest das Gitter zeilenweise: alle Mengenzellen hintereinander
+	// durchnummeriert, ein Schritt vor oder zurück, dann wieder in Zeile und
+	// Spalte zerlegt.
+	const width = COLUMN_ORDER.length;
 	const step = move === 'forward' ? 1 : -1;
-	const flat = row * COLUMN_ORDER.length + COLUMN_ORDER.indexOf(from.column) + step;
-	if (flat < 0 || flat >= ids.length * COLUMN_ORDER.length) return null;
-	return {
-		id: ids[Math.floor(flat / COLUMN_ORDER.length)],
-		column: COLUMN_ORDER[flat % COLUMN_ORDER.length]
-	};
+	const seat = row * width + COLUMN_ORDER.indexOf(from.column) + step;
+	if (seat < 0 || seat >= ids.length * width) return null;
+	return { id: ids[Math.floor(seat / width)], column: COLUMN_ORDER[seat % width] };
 }
