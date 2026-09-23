@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import MaterialTable from './MaterialTable';
-import type { RowEditControls } from './MaterialTableCells';
+import type { CellEditControls, RowEditControls } from './MaterialTableCells';
 import { draftFromMaterial, editDraft, type RowDraft } from '@/lib/materialRowDraft';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
@@ -18,6 +18,22 @@ function rowEditWith(draftsById: Record<string, RowDraft> = {}, savedIds: string
 		onDraftChange: noop,
 		onSaveRow: noop,
 		onCancelRow: noop
+	};
+}
+
+/** Die Zellbearbeitung der Mengen mit keiner offenen Zelle — ihr eigenes Spiel
+steht in `MaterialCellEdit.test.tsx` (#216). */
+function cellEditWith(savedIds: string[] = []): CellEditControls {
+	return {
+		editing: null,
+		value: '',
+		saving: false,
+		failed: false,
+		savedIds,
+		onOpen: noop,
+		onType: noop,
+		onCommit: noop,
+		onCancel: noop
 	};
 }
 
@@ -48,7 +64,8 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 const renderTable = (
 	materials: FestivalMaterialWithStation[],
 	showStation?: boolean,
-	rowEdit: RowEditControls = rowEditWith()
+	rowEdit: RowEditControls = rowEditWith(),
+	cellEdit: CellEditControls = cellEditWith()
 ) =>
 	renderToStaticMarkup(
 		<MaterialTable
@@ -58,6 +75,7 @@ const renderTable = (
 			onDelete={noop}
 			onCopy={noop}
 			rowEdit={rowEdit}
+			cellEdit={cellEdit}
 		/>
 	);
 
@@ -105,16 +123,24 @@ describe('MaterialTable — die elf Spalten (#114)', () => {
 	// Dieselbe Regel für die Handy-Karte steht in `MaterialCard.test.tsx` (#116).
 });
 
-describe('MaterialTable — nur lesend, solange keine Zeile offen ist (#114)', () => {
+describe('MaterialTable — die Mengen führen in die Zelle, der Rest ist Text (#114/#216)', () => {
 	const rows = [material({ ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true })];
 
-	it('macht keine Zelle tippbar — getippt wird erst, wenn ✎ die Zeile öffnet', () => {
+	it('lässt kein Feld offenstehen, solange niemand hineingeklickt hat', () => {
 		const html = renderTable(rows);
 
 		expect(html).not.toContain('<input');
 		expect(html).not.toContain('<select');
 		expect(html).not.toContain('contenteditable');
-		expect(html).not.toContain('Klicken zum Bearbeiten');
+	});
+
+	it('macht Bestellt und Verbraucht anklickbar — sonst nur ✎ und ⋮', () => {
+		// Die Preise bleiben vorerst beim Zeilenmodus (Übergang aus #216).
+		const html = renderTable(rows, false);
+
+		expect(html).toContain('aria-label="Bestellt von Bier"');
+		expect(html).toContain('aria-label="Verbraucht von Bier"');
+		expect(html.match(/<button/g)).toHaveLength(4); // Bestellt, Verbraucht, ✎, ⋮
 	});
 
 	it('bietet je Zeile das Drei-Punkt-Menü an — der Weg zu den Stammdaten', () => {
