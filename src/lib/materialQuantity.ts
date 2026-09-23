@@ -47,6 +47,21 @@ export function formatRequiredPackaging(
 }
 
 /**
+ * Die Gegenrichtung für den **Gebinde-Modus** (#218): „200 Liter" zu einer in
+ * Gebinden getippten Menge. Wie `formatRequiredPackaging` liefert sie **null**,
+ * wo es nichts umzurechnen gibt — ohne Gebinde und ohne Menge; die Zeile unter
+ * dem Feld entscheidet dann selbst, was dort steht.
+ */
+export function formatBaseAmount(
+	stored: number | null,
+	material: QuantityContext & { unit: string }
+): string | null {
+	if (!material.packaging_unit || !material.amount_per_packaging) return null;
+	const base = toBaseQuantity(stored, material);
+	return base == null ? null : `${formatQuantity(base)} ${material.unit}`;
+}
+
+/**
  * Eine Menge fürs Auge: auf zwei Stellen und mit Dezimalkomma. Ohne das steht
  * in der Zelle, was der Fließkomma-Rest hergibt („0.9899999999999999") und
  * daneben in der Geldspalte ein Komma.

@@ -18,6 +18,7 @@ import {
 import {
 	EditingCell,
 	QuantityEditCell,
+	QuantityUnitToggle,
 	ReadingCell,
 	type CellEditControls,
 	type ColumnKey,
@@ -163,6 +164,15 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 								className={cn(HEAD_CELL, col.align === 'right' && 'text-right')}
 							>
 								{col.key === 'actions' ? <span className="sr-only">{col.label}</span> : col.label}
+								{/* Nur die Mengenspalten tragen den Einheiten-Umschalter (#218):
+								umgeschaltet wird die Spalte, nicht die einzelne Zelle. */}
+								{isQuantityColumn(col.key) && (
+									<QuantityUnitToggle
+										column={col.key}
+										unit={cellEdit.units[col.key]}
+										onChange={cellEdit.onUnitChange}
+									/>
+								)}
 							</th>
 						))}
 					</tr>

@@ -5,6 +5,7 @@ damit die Regeln ohne Browser prüfbar bleiben. Gerechnet wird in
 `materialCellEdit`. */
 
 import {
+	BASE_UNITS,
 	cellText,
 	cellUpdate,
 	isCellDirty,
@@ -13,6 +14,8 @@ import {
 	type CellQuantities,
 	type CellRef,
 	type CellUpdate,
+	type InputUnit,
+	type InputUnits,
 	type QuantityColumn
 } from './materialCellEdit';
 
@@ -22,8 +25,15 @@ export type CellRow = CellQuantities & { id: string };
 export interface CellEditorSnapshot {
 	/** Die offene Zelle — höchstens eine, wie beim Zettel des Sponsorings. */
 	editing: CellRef | null;
-	/** Was darin steht, als Text in der Basiseinheit. */
+	/** Was darin steht, als Text in der Eingabe-Einheit der Spalte. */
 	value: string;
+	/**
+	 * Worin die offene Zelle getippt wird (#218) — festgehalten beim Öffnen.
+	 * Wer den Text deutet, muss diese Einheit nehmen und nicht die, auf der der
+	 * Spaltenkopf inzwischen steht; sonst rechnete die Vorschau anders als das
+	 * Speichern. Ohne offene Zelle: Basis.
+	 */
+	unit: InputUnit;
 	/** Das Speichern läuft; die Zelle nimmt solange keine Zeichen an. */
 	saving: boolean;
 	/** Das letzte Speichern ist gescheitert — roter Rand, Wert bleibt stehen. */
@@ -35,6 +45,13 @@ export interface CellEditorSnapshot {
 export interface CreateCellEditorOpts {
 	/** Schreibt die Zelle weg. Eine Ablehnung lässt die Zelle offen. */
 	onSave: (id: string, update: CellUpdate) => Promise<unknown>;
+	/**
+	 * Die **Eingabe-Einheit je Mengenspalte** (#218), wie die Spaltenköpfe sie
+	 * gerade zeigen. Als Geber, nicht als Wert: der Store lebt über Renderzyklen
+	 * hinweg, die Wahl liegt in der Arbeitsliste. Ohne Angabe — und ohne Antwort
+	 * — wird in der Basiseinheit getippt; dieser Rückfall steht genau hier.
+	 */
+	units?: () => InputUnits | undefined;
 	/** Wie lange der grüne Blitz nach dem Speichern steht (Vision: ~0,9 s). */
 	flashMs?: number;
 }
@@ -67,6 +84,10 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 	// Der Stand beim Öffnen: woran sich „geändert" misst und woraus die Nutzlast
 	// entsteht. Ein Nachladen der Liste darf beides nicht verschieben.
 	let origin: CellRow | null = null;
+	// Die Einheit, in der die offene Zelle getippt wird — festgehalten beim
+	// Öffnen, wie `origin` auch: was gelesen aufging, muss gleich gedeutet wieder
+	// weggeschrieben werden.
+	let unit: InputUnit = 'base';
 	let value = '';
 	let saving = false;
 	let failed = false;
@@ -84,13 +105,15 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 	function start(row: CellRow, column: QuantityColumn) {
 		editing = { id: row.id, column };
 		origin = row;
-		value = cellText(column, row);
+		unit = (opts.units?.() ?? BASE_UNITS)[column];
+		value = cellText(column, row, unit);
 		failed = false;
 	}
 
 	function close() {
 		editing = null;
 		origin = null;
+		unit = 'base';
 		value = '';
 		failed = false;
 		pendingOpen = null;
@@ -134,9 +157,10 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 			const cell = editing;
 			const row = origin;
 			const typed = value;
+			const typedUnit = unit;
 			const target = move ? nextCell(rows.map((r) => r.id), cell, move) : null;
 
-			if (!isCellDirty(cell.column, typed, row)) {
+			if (!isCellDirty(cell.column, typed, row, typedUnit)) {
 				go(target, rows);
 				notify();
 				return;
@@ -146,7 +170,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 			failed = false;
 			notify();
 			try {
-				await opts.onSave(cell.id, cellUpdate(cell.column, typed, row));
+				await opts.onSave(cell.id, cellUpdate(cell.column, typed, row, typedUnit));
 			} catch {
 				// Nie ein stilles Verwerfen: die Zelle bleibt offen, samt Getipptem —
 				// und der wartende Klick verfällt, statt später an ihrer Stelle zu
@@ -174,7 +198,7 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 		},
 		getState() {
 			if (cached) return cached;
-			cached = { editing, value, saving, failed, savedIds: [...savedIds] };
+			cached = { editing, value, unit, saving, failed, savedIds: [...savedIds] };
 			return cached;
 		},
 		subscribe(listener) {

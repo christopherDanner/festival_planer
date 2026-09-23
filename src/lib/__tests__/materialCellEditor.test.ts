@@ -195,6 +195,62 @@ describe('createCellEditor — Speicherfehler (#216)', () => {
 	});
 });
 
+describe('createCellEditor — die Eingabe-Einheit der Spalte (#218)', () => {
+	/** 4 Fass à 50 Liter bestellt. */
+	const fass = row({ packaging_unit: 'Fass', amount_per_packaging: 50, ordered_quantity: 4 });
+
+	it('öffnet die Zelle in Gebinden, wenn der Spaltenkopf darauf steht', () => {
+		const editor = createCellEditor({
+			onSave: vi.fn().mockResolvedValue(undefined),
+			units: () => ({ ordered: 'packaging', consumed: 'base' })
+		});
+
+		editor.open(fass, 'ordered');
+		expect(editor.getState().value).toBe('4');
+
+		editor.cancel();
+		editor.open(fass, 'consumed');
+		expect(editor.getState().value).toBe('');
+	});
+
+	it('speichert die getippte Zahl der Gebinde-Spalte als Gebinde', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({
+			onSave,
+			units: () => ({ ordered: 'base', consumed: 'packaging' })
+		});
+
+		editor.open(fass, 'consumed');
+		editor.type('2,5');
+		await editor.commit(null, [fass]);
+
+		expect(onSave).toHaveBeenCalledWith('bier', { actual_quantity: 2.5 });
+	});
+
+	it('nimmt beim Sprung die Einheit der Spalte an, in die es geht', async () => {
+		// Tab führt von Bestellt (Basis) nach Verbraucht (Gebinde) — dieselbe
+		// Zeile, zwei Einheiten, weil der Kopf je Spalte entscheidet.
+		const editor = createCellEditor({
+			onSave: vi.fn().mockResolvedValue(undefined),
+			units: () => ({ ordered: 'base', consumed: 'packaging' })
+		});
+
+		editor.open({ ...fass, actual_quantity: 3 }, 'ordered');
+		expect(editor.getState().value).toBe('200');
+
+		await editor.commit('forward', [{ ...fass, actual_quantity: 3 }]);
+		expect(editor.getState().editing).toEqual({ id: 'bier', column: 'consumed' });
+		expect(editor.getState().value).toBe('3');
+	});
+
+	it('bleibt ohne Angabe bei der Basiseinheit', () => {
+		const editor = createCellEditor({ onSave: vi.fn().mockResolvedValue(undefined) });
+
+		editor.open(fass, 'ordered');
+		expect(editor.getState().value).toBe('200');
+	});
+});
+
 describe('createCellEditor — der Blur der verlassenen Zelle (#216)', () => {
 	it('überhört ihn, statt die eben aufgegangene Zelle wieder zuzumachen', async () => {
 		const editor = createCellEditor({ onSave: vi.fn().mockResolvedValue(undefined) });

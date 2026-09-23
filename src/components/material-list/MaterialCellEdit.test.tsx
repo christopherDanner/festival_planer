@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { useCellEditor } from '@/hooks/useCellEditor';
-import type { CellUpdate } from '@/lib/materialCellEdit';
+import { BASE_UNITS, type CellUpdate, type InputUnits } from '@/lib/materialCellEdit';
 
 import MaterialTable from './MaterialTable';
 import type { RowEditControls } from './MaterialTableCells';
@@ -69,11 +69,14 @@ const Harness: React.FC<{
 	save?: (id: string, update: CellUpdate) => Promise<unknown>;
 }> = ({ start, save }) => {
 	const [materials, setMaterials] = useState(start);
+	// Die Eingabe-Einheit je Mengenspalte, wie die Arbeitsliste sie hält (#218).
+	const [units, setUnits] = useState<InputUnits>(BASE_UNITS);
 	const { editor, snapshot } = useCellEditor({
 		onSave: async (id, update) => {
 			await save?.(id, update);
 			setMaterials((rows) => rows.map((r) => (r.id === id ? { ...r, ...update } : r)));
-		}
+		},
+		units: () => units
 	});
 	return (
 		<MaterialTable
@@ -89,8 +92,11 @@ const Harness: React.FC<{
 				saving: snapshot.saving,
 				failed: snapshot.failed,
 				savedIds: snapshot.savedIds,
+				units,
+				unit: snapshot.unit,
 				onOpen: (m, column) => editor.open(m, column),
 				onType: editor.type,
+				onUnitChange: (column, unit) => setUnits((now) => ({ ...now, [column]: unit })),
 				onCommit: (move) => void editor.commit(move, materials),
 				onCancel: editor.cancel
 			}}
@@ -313,6 +319,118 @@ describe('Zellbearbeitung — leer und 0 bei Verbraucht (#216)', () => {
 		await press('Enter');
 
 		expect(save).toHaveBeenCalledWith('bier', { ordered_quantity: 0 });
+	});
+});
+
+/** Der Umschalter im Spaltenkopf (#218). */
+const switchUnit = async (column: string, unit: 'Basis' | 'Gebinde') => {
+	const group = byLabel(`Eingabe-Einheit für ${column}`);
+	await click([...(group?.querySelectorAll('button') ?? [])].find((b) => b.textContent === unit));
+};
+
+/** Die Zeile unter dem offenen Feld — Umrechnung oder Einheit. */
+const hintUnderField = () => openField()?.nextElementSibling?.textContent ?? '';
+
+describe('Eingabe-Einheit per Spaltenkopf (#218)', () => {
+	/** 4 Fass à 50 Liter bestellt — 200 Liter in der Basiseinheit. */
+	const FASS = material({
+		unit: 'Liter',
+		packaging_unit: 'Fass',
+		amount_per_packaging: 50,
+		ordered_quantity: 4
+	});
+
+	it('steht standardmäßig auf Basis — die Zelle geht in Basiseinheiten auf', async () => {
+		await mount([FASS]);
+
+		await click(byLabel('Bestellt von Bier'));
+
+		expect(openField()?.value).toBe('200');
+	});
+
+	it('speichert die getippte Zahl im Gebinde-Modus als Gebinde', async () => {
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([FASS], save);
+
+		await switchUnit('Verbraucht', 'Gebinde');
+		await click(byLabel('Verbraucht von Bier'));
+		// Angebrochene Gebinde stehen so auf der Rechnung (CONTEXT.md).
+		await type(openField(), '2,5');
+		await press('Enter');
+
+		expect(save).toHaveBeenCalledWith('bier', { actual_quantity: 2.5 });
+	});
+
+	it('rechnet unter dem Feld live in die Basiseinheit um', async () => {
+		await mount([FASS]);
+
+		await switchUnit('Bestellt', 'Gebinde');
+		await click(byLabel('Bestellt von Bier'));
+		expect(openField()?.value).toBe('4');
+		expect(hintUnderField()).toBe('= 200 Liter');
+
+		await type(openField(), '6');
+		expect(hintUnderField()).toBe('= 300 Liter');
+	});
+
+	it('schaltet die zwei Spalten unabhängig voneinander', async () => {
+		const save = vi.fn().mockResolvedValue(undefined);
+		await mount([FASS], save);
+
+		await switchUnit('Verbraucht', 'Gebinde');
+
+		await click(byLabel('Bestellt von Bier'));
+		expect(openField()?.value).toBe('200'); // Bestellt blieb auf Basis
+
+		// Tab führt in die Verbraucht-Zelle — dieselbe Zeile, andere Einheit.
+		await press('Tab');
+		await type(openField(), '3');
+		await press('Enter');
+
+		expect(save).toHaveBeenCalledWith('bier', { actual_quantity: 3 });
+	});
+
+	it('lässt eine Position ohne Gebinde in der Basiseinheit und nennt sie im Feld', async () => {
+		const save = vi.fn().mockResolvedValue(undefined);
+		// `material()` führt Liter ohne Gebinde.
+		await mount([material({ actual_quantity: null })], save);
+
+		await switchUnit('Verbraucht', 'Gebinde');
+		await click(byLabel('Verbraucht von Bier'));
+		await type(openField(), '80');
+
+		// Keine Umrechnung, nur die Einheit: hier wird trotz Gebinde-Modus in der
+		// Basiseinheit getippt, und genau das soll man sehen.
+		expect(hintUnderField()).toBe('Liter');
+
+		await press('Enter');
+		expect(save).toHaveBeenCalledWith('bier', { actual_quantity: 80 });
+	});
+
+	it('lässt die lesende Anzeige unverändert — Basiseinheit groß, Gebinde darunter', async () => {
+		await mount([FASS]);
+
+		await switchUnit('Bestellt', 'Gebinde');
+
+		const reading = byLabel('Bestellt von Bier')?.textContent ?? '';
+		expect(reading).toContain('200');
+		expect(reading).toContain('→ 4 × Fass');
+	});
+
+	it('hält die Wahl über die Zellen hinweg', async () => {
+		await mount([FASS, material({ id: 'wein', name: 'Wein', ...{
+			unit: 'Liter',
+			packaging_unit: 'Fass',
+			amount_per_packaging: 50,
+			ordered_quantity: 10
+		} })]);
+
+		await switchUnit('Bestellt', 'Gebinde');
+		await click(byLabel('Bestellt von Bier'));
+		await press('Enter');
+
+		expect(openField()?.getAttribute('aria-label')).toBe('Bestellt von Wein');
+		expect(openField()?.value).toBe('10');
 	});
 });
 
