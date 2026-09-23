@@ -1,4 +1,4 @@
-import { formatEuro } from '@/lib/money';
+import { formatAmountInput, formatEuro } from '@/lib/money';
 import {
 	parseCategoryValue,
 	type Sponsoring,
@@ -42,11 +42,6 @@ const NO_DEFAULT_HINT = 'Kein Standardwert — freier Betrag.';
 /** Zustand einer leeren Zelle — Freibetrag und Sachleistung werden erfasst, nicht zugewiesen. */
 const NOT_RECORDED = 'noch nicht erfasst';
 
-/** Betrag als Eingabe-Text in deutscher Schreibweise; `null` wird zum leeren Feld. */
-function amountInput(value: number | null): string {
-	return value == null ? '' : String(value).replace('.', ',');
-}
-
 /**
  * Formt den Zettel zu einer Zelle: vorbelegt und selektiert ist das Wertfeld
  * erst in der Oberfläche, den *Inhalt* der Vorbelegung entscheidet diese Regel.
@@ -59,7 +54,7 @@ export function buildZettel(row: SponsoringOverviewRow, target: ZettelTarget): Z
 		return {
 			target,
 			title: 'Freibetrag',
-			valueInput: amountInput(row.freeAmount),
+			valueInput: formatAmountInput(row.freeAmount),
 			descriptionInput: null,
 			hint: NO_DEFAULT_HINT,
 			stateLabel: recorded ? null : NOT_RECORDED,
@@ -72,7 +67,7 @@ export function buildZettel(row: SponsoringOverviewRow, target: ZettelTarget): Z
 		return {
 			target,
 			title: 'Sachleistung',
-			valueInput: row.inKind ? amountInput(row.inKind.value) : '',
+			valueInput: row.inKind ? formatAmountInput(row.inKind.value) : '',
 			descriptionInput: row.inKind?.description ?? '',
 			hint: 'Zählt nie in die Geldsumme.',
 			stateLabel: recorded ? null : NOT_RECORDED,
@@ -88,7 +83,7 @@ export function buildZettel(row: SponsoringOverviewRow, target: ZettelTarget): Z
 		title: category.name,
 		/* Belegt: der wirksame Wert. Leer: der Standardwert — genau deshalb
 		weist `Übernehmen` ohne Tippen den Normalfall zu (ADR 0009). */
-		valueInput: amountInput(position ? position.value : category.value),
+		valueInput: formatAmountInput(position ? position.value : category.value),
 		descriptionInput: null,
 		hint:
 			category.value != null ? `Standardwert ${formatEuro(category.value)}` : NO_DEFAULT_HINT,

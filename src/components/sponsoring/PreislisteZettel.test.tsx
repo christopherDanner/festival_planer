@@ -59,8 +59,11 @@ describe('PreislisteZettel — Aufbau', () => {
 		expect(html).toContain('Übernehmen');
 	});
 
-	it('beziffert die Rückwirkung, bevor jemand den Standardwert ändert', () => {
-		expect(markup(bestehend())).toContain('Gilt für 4 Firmen ohne eigenen Wert.');
+	it('sagt am ruhenden Zettel nur, welcher Standardwert gilt', () => {
+		const html = markup(bestehend());
+
+		expect(html).toContain('Standardwert € 200');
+		expect(html).not.toContain('ohne eigenen Wert');
 	});
 
 	it('führt Löschen als einzigen destruktiven Eintrag, optisch abgesetzt', () => {
@@ -97,6 +100,31 @@ describe('PreislisteZettel — Bedienung', () => {
 		});
 
 		expect(onApply).toHaveBeenCalledWith({ name: 'Werbeplakat', value: '350' });
+	});
+
+	it('beziffert die Rückwirkung, sobald der Standardwert wandert', async () => {
+		// Erst dann — beim bloßen Umbenennen passiert nichts, wovor zu warnen wäre.
+		const view = await mount(bestehend());
+
+		await act(async () => {
+			typeInto(view.value, '350');
+		});
+		expect(view.container.textContent).toContain('Gilt für 4 Firmen ohne eigenen Wert.');
+
+		await act(async () => {
+			typeInto(view.value, '200');
+		});
+		expect(view.container.textContent).toContain('Standardwert € 200');
+	});
+
+	it('sperrt Übernehmen bei einem Tippfehler im Standardwert', async () => {
+		const view = await mount(bestehend());
+
+		await act(async () => {
+			typeInto(view.value, '35O');
+		});
+
+		expect(view.button('Übernehmen').disabled).toBe(true);
 	});
 
 	it('legt eine Kategorie ohne Standardwert an', async () => {

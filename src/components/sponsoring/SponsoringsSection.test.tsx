@@ -266,7 +266,7 @@ describe('SponsoringsSection — die Preisliste wird am Spaltenkopf verwaltet', 
 		serves([makeSponsoring({ companyName: 'Taxi Brandl' })]);
 
 		const view = await mount();
-		await view.click('Kategorie Plakat');
+		await view.click('Kategorie Plakat, Standardwert € 200');
 		await act(async () => {
 			typeInto(view.field('Standardwert'), '250');
 		});
@@ -291,7 +291,10 @@ describe('SponsoringsSection — die Preisliste wird am Spaltenkopf verwaltet', 
 		]);
 
 		const view = await mount();
-		await view.click('Kategorie Plakat');
+		await view.click('Kategorie Plakat, Standardwert € 200');
+		await act(async () => {
+			typeInto(view.field('Standardwert'), '250');
+		});
 
 		expect(document.body.textContent).toContain('Gilt für 2 Firmen ohne eigenen Wert.');
 	});
@@ -308,7 +311,7 @@ describe('SponsoringsSection — die Preisliste wird am Spaltenkopf verwaltet', 
 		const view = await mount();
 		expect(view.kopfzahl()).toContain('€ 200');
 
-		await view.click('Kategorie Plakat');
+		await view.click('Kategorie Plakat, Standardwert € 200');
 		await view.press('Kategorie löschen');
 
 		expect(confirmSpy.mock.calls[0][0]).toContain('1 Firma');

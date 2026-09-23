@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
 	canApplyCategoryZettel,
+	categoryZettelHint,
 	type CategoryZettel,
 	type CategoryZettelInput
 } from '@/lib/sponsoringPreisliste';
@@ -40,9 +41,11 @@ const PreislisteZettel: React.FC<PreislisteZettelProps> = ({ zettel, onApply, on
 	const [value, setValue] = useState(zettel.valueInput);
 	const nameRef = useRef<HTMLInputElement>(null);
 
-	/* Der Fokus beginnt im Namen: umbenennen ist der Vorgang, der ohne Tippen
-	nicht geht, und der vorbelegte Name ist selektiert, damit er sich ersetzen
-	lässt. Nur beim Öffnen — je Kopf gibt es einen eigenen `key`. */
+	/* Der Fokus beginnt im Namen, nicht wie an der Zelle im Wertfeld: beim
+	Anlegen ist er das Pflichtfeld, und ein zum Standardwert vorbelegtes Feld
+	hätte hier auch nichts zu „übernehmen" — der Standardwert steht ja schon
+	drin. Selektiert, damit Tippen ihn ersetzt. Nur beim Öffnen; der Popover
+	hängt den Zettel beim Schließen aus, der Zustand beginnt also neu. */
 	useEffect(() => {
 		nameRef.current?.focus();
 		nameRef.current?.select();
@@ -77,7 +80,9 @@ const PreislisteZettel: React.FC<PreislisteZettelProps> = ({ zettel, onApply, on
 				onChange={(e) => setValue(e.target.value)}
 			/>
 
-			<div className={ZETTEL_HINT}>{zettel.hint}</div>
+			{/* Die Zeile springt beim Tippen auf die bezifferte Warnung um — sie steht
+			damit da, bevor „Übernehmen" sie wahr macht (ADR 0009). */}
+			<div className={ZETTEL_HINT}>{categoryZettelHint(zettel, { name, value })}</div>
 
 			<div className="mt-2 flex gap-1.5">
 				<button

@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { Building2, FileDown, Import, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
 import SponsoringMatrix from '@/components/sponsoring/SponsoringMatrix';
 import SponsoringSearch from '@/components/sponsoring/SponsoringSearch';
 import PreislisteZettel from '@/components/sponsoring/PreislisteZettel';
+import ZettelPopover from '@/components/sponsoring/ZettelPopover';
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
 import type { ZettelInput, ZettelTarget } from '@/lib/sponsoringZettel';
 import {
 	buildCategoryZettel,
+	NO_CATEGORY_IMPACT,
 	type CategoryImpact,
 	type CategoryZettelInput
 } from '@/lib/sponsoringPreisliste';
@@ -124,28 +125,27 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 					</Button>
 					{/* Derselbe Zettel wie am Spaltenkopf, nur leer — die Preisliste ist
 					der erste Schritt im Bereich, vor den Firmen (CONTEXT.md „Preisliste"). */}
-					<Popover open={creating} onOpenChange={setCreating}>
-						<PopoverTrigger asChild>
+					<ZettelPopover
+						open={creating}
+						onOpenChange={setCreating}
+						align="end"
+						trigger={
 							<Button size="sm" variant="outline" aria-label="Kategorie anlegen">
 								<Plus className="h-4 w-4 mr-2" />
 								<span>Kategorie</span>
 							</Button>
-						</PopoverTrigger>
-						<PopoverContent
-							align="end"
-							sideOffset={2}
-							className="w-auto border-0 bg-transparent p-0 shadow-none"
-							onOpenAutoFocus={(e) => e.preventDefault()}
-						>
-							<PreislisteZettel
-								zettel={buildCategoryZettel(null, { assigned: 0, inheriting: 0 })}
-								onApply={(input) => {
-									onCategoryApply(null, input);
-									setCreating(false);
-								}}
-							/>
-						</PopoverContent>
-					</Popover>
+						}
+					>
+						{/* Ohne Löschen: eine Kategorie, die es noch nicht gibt, kann man
+						nicht löschen — der Zettel zeigt den Knopf dann gar nicht. */}
+						<PreislisteZettel
+							zettel={buildCategoryZettel(null, NO_CATEGORY_IMPACT)}
+							onApply={(input) => {
+								onCategoryApply(null, input);
+								setCreating(false);
+							}}
+						/>
+					</ZettelPopover>
 					<Button onClick={onCreate} size="sm">
 						<Plus className="h-4 w-4 mr-2" />
 						<span>Sponsoring</span>
@@ -161,7 +161,11 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 			/>
 
 			{/* Mobile: Karten-Liste. Bedient wird sie noch nicht — die Karten-Form
-			des Zettels ist ein eigener Slice (ADR 0009). */}
+			des Zettels ist ein eigener Slice (ADR 0009). Das betrifft seit #149 auch
+			die Preisliste: ohne Spaltenköpfe lässt sich am Handy nur anlegen
+			(„+ KATEGORIE" steht in der Werkzeugleiste), nicht umbenennen, ändern
+			oder löschen. Die abgelöste zweite Tabelle konnte das — bewusst in
+			Kauf genommen, weil der Bereich genau eine Tabelle haben soll. */}
 			<div className="md:hidden space-y-2">
 				{allRows.length === 0 ? (
 					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">

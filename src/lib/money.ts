@@ -13,6 +13,16 @@ export function formatEuro(value: number): string {
 }
 
 /**
+ * Betrag als Inhalt eines **Eingabefelds**: deutsche Schreibweise mit Komma,
+ * `null` wird zum leeren Feld. Bewusst ohne Tausenderpunkt und ohne erzwungene
+ * Cent-Stellen — was hier steht, tippt der Nutzer weiter und `parseCategoryValue`
+ * liest es zurück. Gegenstück zu jenem Parser, nicht zu `formatAmount`.
+ */
+export function formatAmountInput(value: number | null): string {
+	return value == null ? '' : String(value).replace('.', ',');
+}
+
+/**
  * Betrag auf Cent für Geldspalten: „1.234,50". **Ohne €-Zeichen** — in einer
  * Spalte steht es im Kopf, nicht in jeder Zelle.
  *

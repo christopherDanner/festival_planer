@@ -3,6 +3,8 @@ import {
 	type SponsoringCategory,
 	type SponsoringWithDetails
 } from '@/lib/sponsorService';
+import { formatAmountInput, formatEuro } from '@/lib/money';
+import { countLabel } from '@/lib/plural';
 
 /**
  * Wie weit ein Eingriff in eine *Sponsoring-Kategorie* reicht — die zwei Zahlen,
@@ -20,6 +22,13 @@ export interface CategoryImpact {
 	/** Davon ohne eigenen Wert; sie erben den Standardwert. */
 	inheriting: number;
 }
+
+/**
+ * Eine Kategorie, an der nichts hängt: der Stand einer neuen und die Antwort
+ * für eine, die kein Sponsoring trägt. Dann verschiebt ein neuer Standardwert
+ * niemanden, und Löschen nimmt nur die Spalte.
+ */
+export const NO_CATEGORY_IMPACT: CategoryImpact = { assigned: 0, inheriting: 0 };
 
 /** Zählt die Reichweite einer Kategorie über **alle** Sponsorings des Fests. */
 export function categoryImpact(
@@ -46,21 +55,20 @@ export interface CategoryZettel {
 	nameInput: string;
 	/** Vorbelegter Standardwert; leer heißt **kein** Standardwert, nicht null Euro. */
 	valueInput: string;
-	/** Zeile unter den Feldern — sie beziffert die Rückwirkung, bevor sie eintritt. */
+	/** Zeile unter den Feldern, solange der Standardwert unangetastet ist. */
 	hint: string;
+	/**
+	 * Was an ihre Stelle tritt, **sobald** im Wertfeld etwas anderes steht: die
+	 * bezifferte Rückwirkung. Umbenennen allein löst sie nicht aus — sonst stünde
+	 * die Warnung auch dort, wo nichts passiert, und wäre bald Tapete.
+	 */
+	retroactiveHint: string;
 	/** Rückfrage vor dem Löschen; `null` beim Anlegen — da gibt es nichts zu löschen. */
 	deleteMessage: string | null;
 }
 
-/** „3 Firmen", „1 Firma" — ein Posten mit richtigem Numerus. */
-function posten(n: number, einzahl: string, mehrzahl: string): string {
-	return `${n} ${n === 1 ? einzahl : mehrzahl}`;
-}
-
-/** Betrag als Eingabe-Text in deutscher Schreibweise; `null` wird zum leeren Feld. */
-function amountInput(value: number | null): string {
-	return value == null ? '' : String(value).replace('.', ',');
-}
+/** Ohne Standardwert gibt es nichts zu erben — der Betrag wird je Firma getippt. */
+const NO_DEFAULT_HINT = 'Ohne Standardwert wird der Betrag je Firma getippt.';
 
 /**
  * Was ein neuer Standardwert anrichtet. Eine Zuweisung ohne eigenen Wert erbt
@@ -70,7 +78,7 @@ function amountInput(value: number | null): string {
  */
 function defaultValueHint(impact: CategoryImpact): string {
 	if (impact.inheriting === 0) return 'Keine Firma erbt diesen Wert.';
-	return `Gilt für ${posten(impact.inheriting, 'Firma', 'Firmen')} ohne eigenen Wert.`;
+	return `Gilt für ${countLabel(impact.inheriting, 'Firma', 'Firmen')} ohne eigenen Wert.`;
 }
 
 /**
@@ -85,7 +93,7 @@ function deletionMessage(category: SponsoringCategory, impact: CategoryImpact): 
 	}
 	const zuweisungen =
 		impact.assigned === 1 ? 'diese Zuweisung' : `diese ${impact.assigned} Zuweisungen`;
-	return `${name} ist ${posten(impact.assigned, 'Firma', 'Firmen')} zugewiesen. Löschen entfernt ${zuweisungen}.`;
+	return `${name} ist ${countLabel(impact.assigned, 'Firma', 'Firmen')} zugewiesen. Löschen entfernt ${zuweisungen}.`;
 }
 
 /**
@@ -103,8 +111,10 @@ export function buildCategoryZettel(
 			nameInput: '',
 			valueInput: '',
 			/* Eine Kategorie **ohne** Standardwert ist erlaubt (#149): der Kopf zeigt
-			dann keinen Wert und der Zellen-Zettel hat nichts vorzubelegen. */
-			hint: 'Ohne Standardwert wird der Betrag je Firma getippt.',
+			dann keinen Wert und der Zellen-Zettel hat nichts vorzubelegen. Eine neue
+			Kategorie kann noch niemand erben, also gibt es nichts zu beziffern. */
+			hint: NO_DEFAULT_HINT,
+			retroactiveHint: NO_DEFAULT_HINT,
 			deleteMessage: null
 		};
 	}
@@ -112,10 +122,32 @@ export function buildCategoryZettel(
 	return {
 		title: category.name,
 		nameInput: category.name,
-		valueInput: amountInput(category.value),
-		hint: defaultValueHint(impact),
+		valueInput: formatAmountInput(category.value),
+		hint: category.value != null ? `Standardwert ${formatEuro(category.value)}` : NO_DEFAULT_HINT,
+		retroactiveHint: defaultValueHint(impact),
 		deleteMessage: deletionMessage(category, impact)
 	};
+}
+
+/**
+ * Die Zeile, die der Zettel **gerade** zeigt. Steht im Wertfeld noch der
+ * gespeicherte Standardwert, sagt sie, was gilt; sobald er wandert — auch ins
+ * Leere —, beziffert sie, wen das rückwirkend trifft (ADR 0009: beziffern,
+ * bevor er es tut).
+ */
+export function categoryZettelHint(zettel: CategoryZettel, input: CategoryZettelInput): string {
+	return input.value.trim() === zettel.valueInput.trim() ? zettel.hint : zettel.retroactiveHint;
+}
+
+/**
+ * Die Ansage des Kopf-Knopfs. Nötig, weil der Knopf den Text der Kopfzelle
+ * ersetzt: ohne sie verlöre eine Vorlesehilfe den Standardwert, der am Bildschirm
+ * unter dem Namen steht.
+ */
+export function categoryHeadLabel(category: SponsoringCategory): string {
+	const wert =
+		category.value != null ? `Standardwert ${formatEuro(category.value)}` : 'kein Standardwert';
+	return `Kategorie ${category.name}, ${wert}`;
 }
 
 /** Was im Kategorie-Zettel steht, wenn „Übernehmen" gedrückt wird. */
@@ -130,7 +162,12 @@ export interface CategoryZettelInput {
  * der Verein da anbietet. Der Standardwert darf fehlen (#149).
  */
 export function canApplyCategoryZettel(input: CategoryZettelInput): boolean {
-	return input.name.trim() !== '';
+	if (input.name.trim() === '') return false;
+	/* Ein Wertfeld, das keine Zahl hergibt, wäre still ein **gelöschter**
+	Standardwert: `parseCategoryValue` gibt für „35O" dasselbe `null` wie für das
+	leere Feld, und genau die Firmen, die der Zettel eine Zeile darüber beziffert,
+	fielen rückwirkend auf € 0. Der Tippfehler sperrt den Knopf, statt durchzugehen. */
+	return input.value.trim() === '' || parseCategoryValue(input.value) != null;
 }
 
 /** Was „Übernehmen" in die Kategorie schreibt. */

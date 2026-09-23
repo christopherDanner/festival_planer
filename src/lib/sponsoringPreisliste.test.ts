@@ -3,7 +3,9 @@ import { makeAssignment, makeCategory, makeSponsoring } from '@/lib/__tests__/sp
 import {
 	buildCategoryZettel,
 	canApplyCategoryZettel,
+	categoryHeadLabel,
 	categoryImpact,
+	categoryZettelHint,
 	categoryZettelWrite
 } from '@/lib/sponsoringPreisliste';
 
@@ -52,16 +54,16 @@ describe('buildCategoryZettel — was am Spaltenkopf steht', () => {
 	it('beziffert vor dem Ändern, wie viele Firmen den Standardwert erben', () => {
 		// Ohne die Zahl verschiebt ein Tastendruck die Fest-Gesamtsumme um
 		// Hunderte Euro, ohne dass eine Firma gefragt wurde (ADR 0009).
-		expect(buildCategoryZettel(plakat, impact(6, 4)).hint).toBe(
+		expect(buildCategoryZettel(plakat, impact(6, 4)).retroactiveHint).toBe(
 			'Gilt für 4 Firmen ohne eigenen Wert.'
 		);
-		expect(buildCategoryZettel(plakat, impact(3, 1)).hint).toBe(
+		expect(buildCategoryZettel(plakat, impact(3, 1)).retroactiveHint).toBe(
 			'Gilt für 1 Firma ohne eigenen Wert.'
 		);
 	});
 
 	it('sagt es auch, wenn ein neuer Standardwert niemanden verschiebt', () => {
-		expect(buildCategoryZettel(plakat, impact(2, 0)).hint).toBe(
+		expect(buildCategoryZettel(plakat, impact(2, 0)).retroactiveHint).toBe(
 			'Keine Firma erbt diesen Wert.'
 		);
 	});
@@ -112,5 +114,61 @@ describe('Übernehmen am Kategorie-Zettel', () => {
 
 	it('nimmt ein leeres Wertfeld als „kein Standardwert" statt als Null-Euro-Leistung', () => {
 		expect(categoryZettelWrite({ name: 'Logo Speisekarte', value: '' }).value).toBeNull();
+	});
+});
+
+describe('Der Standardwert fällt nicht durch einen Tippfehler', () => {
+	it('sperrt Übernehmen, wenn im Wertfeld keine Zahl steht', () => {
+		// „35O" mit Buchstaben-O parst zu null — das hieße *kein* Standardwert,
+		// und genau die bezifferten Firmen fielen rückwirkend auf € 0.
+		expect(canApplyCategoryZettel({ name: 'Transparent', value: '35O' })).toBe(false);
+		expect(canApplyCategoryZettel({ name: 'Transparent', value: '350 €' })).toBe(false);
+		expect(canApplyCategoryZettel({ name: 'Transparent', value: '-5' })).toBe(false);
+	});
+
+	it('lässt das leere Feld durch — kein Standardwert ist eine gültige Ansage', () => {
+		expect(canApplyCategoryZettel({ name: 'Logo Speisekarte', value: '  ' })).toBe(true);
+		expect(canApplyCategoryZettel({ name: 'Transparent', value: '350,50' })).toBe(true);
+	});
+});
+
+describe('categoryZettelHint — beziffert erst, wenn der Standardwert wirklich wandert', () => {
+	const zettel = buildCategoryZettel(plakat, impact(6, 4));
+
+	it('sagt beim bloßen Umbenennen, was gilt', () => {
+		expect(categoryZettelHint(zettel, { name: 'Werbeplakat groß', value: '200' })).toBe(
+			'Standardwert € 200'
+		);
+	});
+
+	it('beziffert die Rückwirkung, sobald im Wertfeld etwas anderes steht', () => {
+		expect(categoryZettelHint(zettel, { name: 'Werbeplakat', value: '250' })).toBe(
+			'Gilt für 4 Firmen ohne eigenen Wert.'
+		);
+	});
+
+	it('beziffert auch das Leeren des Standardwerts — das trifft dieselben Firmen', () => {
+		expect(categoryZettelHint(zettel, { name: 'Werbeplakat', value: '' })).toBe(
+			'Gilt für 4 Firmen ohne eigenen Wert.'
+		);
+	});
+
+	it('bleibt beim Anlegen bei der Ansage, dass der Wert leer bleiben darf', () => {
+		const neu = buildCategoryZettel(null, impact(0, 0));
+
+		expect(categoryZettelHint(neu, { name: 'Logo', value: '' })).toContain('Ohne Standardwert');
+		expect(categoryZettelHint(neu, { name: 'Logo', value: '150' })).toContain('Ohne Standardwert');
+	});
+});
+
+describe('categoryHeadLabel — der Spaltenkopf sagt an, was er trägt', () => {
+	it('nennt Kategorie und Standardwert, weil der Knopf den Kopftext ersetzt', () => {
+		expect(categoryHeadLabel(plakat)).toBe('Kategorie Werbeplakat, Standardwert € 200');
+	});
+
+	it('sagt es auch, wenn es keinen Standardwert gibt', () => {
+		expect(categoryHeadLabel(makeCategory('Logo Speisekarte', null))).toBe(
+			'Kategorie Logo Speisekarte, kein Standardwert'
+		);
 	});
 });

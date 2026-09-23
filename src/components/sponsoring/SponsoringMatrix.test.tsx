@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { buttonByLabel } from '@/lib/__tests__/domTesting';
+import { buttonByLabel, typeInto } from '@/lib/__tests__/domTesting';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
 	buildSponsoringOverviewFooter,
@@ -192,31 +192,52 @@ describe('SponsoringMatrix — Spaltenkopf verwaltet die Preisliste', () => {
 
 	it('macht jeden Kategorie-Spaltenkopf zu einem Knopf', () => {
 		const html = render([], [transparent]);
-		expect(html).toContain('aria-label="Kategorie Transparent"');
+		expect(html).toContain('aria-label="Kategorie Transparent, Standardwert € 300"');
 	});
 
 	it('öffnet am Kopf den Zettel mit Name und Standardwert', async () => {
 		const view = await mount([], [transparent]);
 
-		await view.click('Kategorie Transparent');
+		await view.click('Kategorie Transparent, Standardwert € 300');
 
 		expect(view.field('Name').value).toBe('Transparent');
 		expect(view.field('Standardwert').value).toBe('300');
 	});
 
-	it('beziffert im Zettel die Firmen, die den Standardwert erben', async () => {
+	it('beziffert die Rückwirkung, sobald der Standardwert getippt wird', async () => {
 		const view = await mount([], [transparent], {}, { categoryImpacts: mitZusagen });
 
-		await view.click('Kategorie Transparent');
+		await view.click('Kategorie Transparent, Standardwert € 300');
+		// Unangetastet sagt der Zettel nur, was gilt — die Warnung wäre sonst Tapete.
+		expect(view.zettel()?.textContent).toContain('Standardwert € 300');
+		expect(view.zettel()?.textContent).not.toContain('ohne eigenen Wert');
+
+		await act(async () => {
+			typeInto(view.field('Standardwert'), '350');
+		});
 
 		expect(view.zettel()?.textContent).toContain('Gilt für 4 Firmen ohne eigenen Wert.');
+	});
+
+	it('sperrt Übernehmen bei einem Tippfehler im Standardwert', async () => {
+		// Sonst hieße „35O" stumm *kein* Standardwert, und genau die vier Firmen
+		// aus der Warnzeile fielen rückwirkend auf € 0.
+		const onCategoryApply = vi.fn();
+		const view = await mount([], [transparent], { onCategoryApply }, { categoryImpacts: mitZusagen });
+
+		await view.click('Kategorie Transparent, Standardwert € 300');
+		await act(async () => {
+			typeInto(view.field('Standardwert'), '35O');
+		});
+
+		expect(buttonByLabel(document.body, 'Übernehmen').disabled).toBe(true);
 	});
 
 	it('schreibt Name und Standardwert über Übernehmen', async () => {
 		const onCategoryApply = vi.fn();
 		const view = await mount([], [transparent], { onCategoryApply });
 
-		await view.click('Kategorie Transparent');
+		await view.click('Kategorie Transparent, Standardwert € 300');
 		await view.press('Übernehmen');
 
 		expect(onCategoryApply).toHaveBeenCalledWith(transparent, {
@@ -230,7 +251,7 @@ describe('SponsoringMatrix — Spaltenkopf verwaltet die Preisliste', () => {
 		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const view = await mount([], [transparent], { onCategoryDelete }, { categoryImpacts: mitZusagen });
 
-		await view.click('Kategorie Transparent');
+		await view.click('Kategorie Transparent, Standardwert € 300');
 		await view.press('Kategorie löschen');
 
 		expect(confirmSpy.mock.calls[0][0]).toContain('6 Zuweisungen');
@@ -245,7 +266,7 @@ describe('SponsoringMatrix — Spaltenkopf verwaltet die Preisliste', () => {
 		await view.click('Transparent bei Taxi Brandl');
 		expect(preislisteZettel()).toBeNull();
 
-		await view.click('Kategorie Transparent');
+		await view.click('Kategorie Transparent, Standardwert € 300');
 		expect(preislisteZettel()).not.toBeNull();
 		expect(document.body.querySelectorAll('form[aria-label^="Zettel"]')).toHaveLength(1);
 	});
@@ -256,7 +277,7 @@ describe('SponsoringMatrix — Spaltenkopf verwaltet die Preisliste', () => {
 		const html = render([], [transparent]);
 		const kopf = html
 			.split('<button')
-			.find((teil) => teil.includes('aria-label="Kategorie Transparent"'))!;
+			.find((teil) => teil.includes('aria-label="Kategorie Transparent, Standardwert € 300"'))!;
 
 		expect(kopf).toContain('uppercase');
 		expect(kopf).toContain('hyphens-auto');
