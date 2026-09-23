@@ -235,11 +235,11 @@ const CELL_BUTTON = cn(
 	FOCUS_INK
 );
 
-/** Die Beschriftung der fünf tippbaren Spalten — Kopf und Vorlesehilfe nennen
-sie gleich. */
 /** Tasten, mit denen man in einer Auswahl *blättert*, ohne sich zu entscheiden. */
 const BROWSING_KEYS = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
 
+/** Die Beschriftung der fünf tippbaren Spalten — Kopf und Vorlesehilfe nennen
+sie gleich. */
 const CELL_LABEL: Record<EditableColumn, string> = {
 	ordered: 'Bestellt',
 	consumed: 'Verbraucht',
@@ -275,7 +275,7 @@ export const EditCell: React.FC<{
 	// Ohne diese Notiz spränge das Blättern von 20 auf 10 unterwegs davon und
 	// schriebe die 13 weg, die niemand gemeint hat. Mit der Tastatur bestätigt
 	// darum erst Enter oder Tab, mit der Maus die Auswahl selbst.
-	const blaettert = React.useRef(false);
+	const browsing = React.useRef(false);
 
 	// Der Fehlschlag kommt typisch aus dem Blur — der Fokus ist dann woanders,
 	// und „Enter versucht es erneut" braucht ihn hier.
@@ -321,10 +321,10 @@ export const EditCell: React.FC<{
 					// ab und der Fokus läge im Dokument statt in der Tabelle.
 					onChange={(e) => {
 						cellEdit.onType(e.target.value);
-						if (!blaettert.current) cellEdit.onCommit('forward', cell);
+						if (!browsing.current) cellEdit.onCommit('forward', cell);
 					}}
 					onKeyDown={(e) => {
-						blaettert.current = BROWSING_KEYS.includes(e.key);
+						browsing.current = BROWSING_KEYS.includes(e.key);
 						onCellKey(e, cellEdit, cell);
 					}}
 					onBlur={() => cellEdit.onCommit(null, cell)}

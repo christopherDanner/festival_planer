@@ -196,7 +196,14 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 											<ReadingCell
 												column={col.key}
 												material={preview}
-												actions={{ onEdit, onCopy, onDelete }}
+												// Das ⋮-Menü führt zu den **Stammdaten** der gespeicherten
+												// Position (#117) — nie zu einem halb getippten
+												// Zwischenstand, den nur die Zelle kennt.
+												actions={{
+													onEdit: () => onEdit(m),
+													onCopy: () => onCopy(m),
+													onDelete
+												}}
 											/>
 										)}
 									</td>

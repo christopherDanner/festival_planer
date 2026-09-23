@@ -152,11 +152,12 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 				return;
 			}
 
+			const update = cellUpdate(cell.column, typed, row, wasTouched);
 			saving = true;
 			failed = false;
 			notify();
 			try {
-				await opts.onSave(cell.id, cellUpdate(cell.column, typed, row, wasTouched));
+				await opts.onSave(cell.id, update);
 			} catch {
 				// Nie ein stilles Verwerfen: die Zelle bleibt offen, samt Getipptem —
 				// und der wartende Klick verfällt, statt später an ihrer Stelle zu
@@ -169,12 +170,20 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 			}
 			saving = false;
 			flash(cell.id);
+			// `rows` ist der Stand vom Tastendruck — das Nachladen der Liste ist noch
+			// unterwegs. Die eine Zeile, die sich geändert hat, kennt der Store aber
+			// genauer als die Liste: es ist die, die er eben selbst geschrieben hat.
+			// Ohne sie stünde in der Brutto-Zelle nach dem Tippen in Netto noch der
+			// Preis von vorher, und „die andere Seite rechnet sofort nach" bräche
+			// genau dort, wo man hinsieht (#217).
+			const saved: CellRow = { ...row, ...update };
+			const fresh = (r: CellRow) => (r.id === saved.id ? saved : r);
 			// Ein Klick, der während des Speicherns wartete, schlägt die Taste: er
 			// nennt die Zelle, die der Bediener wirklich meint.
 			const queued = pendingOpen;
 			pendingOpen = null;
-			if (queued) start(queued.row, queued.column);
-			else go(target, rows);
+			if (queued) start(fresh(queued.row), queued.column);
+			else go(target, rows.map(fresh));
 			notify();
 		},
 		cancel() {

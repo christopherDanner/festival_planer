@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { useCellEditor } from '@/hooks/useCellEditor';
@@ -85,18 +85,28 @@ const Harness: React.FC<{
 	);
 };
 
+let root: Root | null = null;
+
 const mount = async (
 	start: FestivalMaterialWithStation[],
 	save?: (id: string, update: CellUpdate) => Promise<unknown>
 ) => {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
+	root = createRoot(host);
 	await act(async () => {
-		createRoot(host).render(<Harness start={start} save={save} />);
+		root?.render(<Harness start={start} save={save} />);
 	});
 };
 
-afterEach(() => {
+afterEach(async () => {
+	// Abhängen, nicht nur leerräumen: der grüne Blitz läuft auf einem Timer
+	// weiter, und meldete er sich nach dem Abbau der Testumgebung, griffe React
+	// ins tote `window` — ein unbehandelter Fehler, der andere Suites verfälscht.
+	await act(async () => {
+		root?.unmount();
+	});
+	root = null;
 	document.body.innerHTML = '';
 });
 
@@ -421,6 +431,19 @@ describe('Zellbearbeitung — die Preise in der Zelle (#217)', () => {
 		await press('Enter');
 
 		expect(save).toHaveBeenCalledWith('bier', { unit_price: 24, price_is_net: false });
+	});
+
+	it('zeigt der Nachbarzelle den eben gespeicherten Preis, nicht den von vorher', async () => {
+		// Netto 10 → 20 tippen, Tab: Brutto muss mit 24,00 aufgehen. Das Nachladen
+		// der Liste ist da noch unterwegs — der Sprung darf nicht auf ihm warten.
+		await mount([PREIS]);
+
+		await click(byLabel('Netto von Bier'));
+		await type(openField(), '20');
+		await press('Tab');
+
+		expect(openField()?.getAttribute('aria-label')).toBe('Brutto von Bier');
+		expect(openField()?.value).toBe('24,00');
 	});
 
 	it('lässt die Gegenseite schon beim Tippen mitrechnen', async () => {

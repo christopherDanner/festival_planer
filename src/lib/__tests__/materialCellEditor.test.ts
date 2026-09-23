@@ -164,6 +164,53 @@ describe('createCellEditor — der Tastaturfluss (#216)', () => {
 	});
 });
 
+describe('createCellEditor — die Nachbarzelle kennt den eben gespeicherten Stand (#217)', () => {
+	it('öffnet Brutto mit dem eben getippten Netto, nicht mit dem Betrag von vorher', async () => {
+		// `rows` ist der Stand beim Tastendruck; das Nachladen der Liste ist beim
+		// Sprung noch unterwegs. Ohne den eben geschriebenen Wert stünde in der
+		// Brutto-Zelle 2,40 — der Preis von *vor* dem Tippen, und „die andere Seite
+		// rechnet sofort nach" (#217) bräche genau an der Stelle, an der man hinsieht.
+		const editor = createCellEditor({ onSave: vi.fn().mockResolvedValue(undefined) });
+
+		editor.open(ROWS[0], 'net');
+		editor.type('10');
+		await editor.commit('forward', ROWS);
+
+		expect(editor.getState().editing).toEqual({ id: 'bier', column: 'gross' });
+		expect(editor.getState().value).toBe('12,00'); // 10 netto + 20 %
+	});
+
+	it('misst „unberührt" danach am neuen Stand, nicht am alten', async () => {
+		// Sonst verglich die Brutto-Zelle ihre 12,00 gegen den überholten Preis.
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'net');
+		editor.type('10');
+		await editor.commit('forward', ROWS);
+		await editor.commit('forward', ROWS);
+
+		expect(onSave).toHaveBeenCalledTimes(1);
+	});
+
+	it('nimmt ihn auch in den Klick mit, der während des Speicherns wartete', async () => {
+		let release: (() => void) | null = null;
+		const onSave = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'net');
+		editor.type('10');
+		const done = editor.commit(null, ROWS);
+		// Der Klick trägt die Zeile mit, wie sie beim Klick dastand — auch sie ist
+		// beim Ausgang des Speicherns überholt.
+		editor.open(ROWS[0], 'gross');
+		release!();
+		await done;
+
+		expect(editor.getState().value).toBe('12,00');
+	});
+});
+
 describe('createCellEditor — Speicherfehler (#216)', () => {
 	const reject = () => vi.fn().mockRejectedValue(new Error('offline'));
 
