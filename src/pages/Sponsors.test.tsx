@@ -19,7 +19,7 @@ const render = () =>
 	);
 
 describe('Sponsoren-Seite', () => {
-	it('lädt unter dem Mast, nicht unter einem PageHeader', () => {
+	it('lädt unter dem Mast, nicht unter der alten Zurück-Zeile', () => {
 		const html = render();
 		expect(html).toContain('FESTMEISTER');
 		expect(html).toContain('Sponsoren');

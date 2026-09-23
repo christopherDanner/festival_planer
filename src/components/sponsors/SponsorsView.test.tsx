@@ -169,3 +169,42 @@ describe('SponsorsView', () => {
 		expect(render()).not.toContain('rounded');
 	});
 });
+
+describe('SponsorsView unter 900px (#160)', () => {
+	it('zeigt Karten statt der Tabelle', () => {
+		const html = render({ compact: true });
+		expect(html).not.toContain('<table');
+		expect(html.match(/<article/g)).toHaveLength(3);
+		expect(html).toContain('Baumeister Deim');
+	});
+
+	it('lässt die Tabelle am Desktop stehen', () => {
+		const html = render();
+		expect(html).toContain('<table');
+		expect(html).not.toContain('<article');
+	});
+
+	it('filtert die Karten mit Suche und Segment wie die Tabelle', () => {
+		const html = render({ compact: true, searchTerm: 'e', segment: 'nicht-gefragt' });
+		expect(html.match(/<article/g)).toHaveLength(2);
+		expect(html).toContain('Elektro Pichler');
+		expect(html).toContain('Zeltverleih Festkultur');
+		expect(html).not.toContain('Baumeister Deim');
+		expect(html).toContain('2 von 3');
+	});
+
+	it('hält die Werkzeugleiste auch im langen Scrollweg oben', () => {
+		const html = render({ compact: true });
+		// Suche und Segment-Schalter bleiben erreichbar, während 40 Karten
+		// darunter durchlaufen — das ist der Gegenwert für den langen Weg.
+		expect(html).toContain('sticky top-0');
+		expect(html).toContain('Firma suchen');
+		expect(html).toContain('SPONSERT 2026');
+	});
+
+	it('zeigt bei leerem Bestand auch am Handy den Leerzustand', () => {
+		const html = render({ compact: true, sponsors: [] });
+		expect(html).toContain('NOCH KEINE FIRMA');
+		expect(html).not.toContain('<article');
+	});
+});
