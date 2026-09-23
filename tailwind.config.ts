@@ -91,11 +91,10 @@ export default {
         // keine Spaltenbreite kostet.
         "kante-links": "2px 0 0 oklch(var(--tinte))",
         "kante-rechts": "-2px 0 0 oklch(var(--tinte))",
-        // Tinte-Strich über und unter der Zeile in Bearbeitung (#115) — als
-        // Innenschatten, damit das Umschalten die Zeile keinen Pixel höher
-        // macht (Auflage aus #114: gemessen 44 → 56 px).
-        "zeile-offen":
-          "inset 0 2px 0 oklch(var(--tinte)), inset 0 -2px 0 oklch(var(--tinte))",
+        // `zeile-offen` (Tinte-Strich um die Zeile in Bearbeitung, #115) ist mit
+        // dem Zeilenmodus entfallen (#217, ADR 0013): den Rahmen trägt jetzt das
+        // Feld der einzelnen Zelle. Ungenutzte Tokens werden gelöscht, nicht
+        // aufbewahrt (ADR 0003 §3).
       },
       borderWidth: {
         "1.5": "1.5px",

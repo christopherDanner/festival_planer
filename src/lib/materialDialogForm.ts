@@ -6,8 +6,8 @@ import { toBaseQuantity, fromBaseQuantity } from '@/lib/materialQuantity';
 /**
  * Der Schnitt des Positions-Dialogs (#117) als reine Logik.
  *
- * Arbeitsteilung mit dem Zeilenmodus (#115, Entscheid Wayfinder #66):
- * die **Zeile (✎)** trägt Mengen und Preise, der **Dialog (⋮)** die
+ * Arbeitsteilung mit der Zellbearbeitung (ADR 0013, Entscheid Wayfinder #66):
+ * die **Tabelle** trägt Mengen und Preise, der **Dialog (⋮)** die
  * *Stammdaten* — Bezeichnung, Kategorie, Station, Lieferant, Gebinde,
  * Einheit, Stück je Gebinde, Notiz. Beim **Anlegen** trägt der Dialog
  * trotzdem Mengen und Preis, damit eine Position in einem Zug vollständig
@@ -84,8 +84,9 @@ export interface PayloadContext {
 
 /** Der Satz, mit dem der Zettel beim Bearbeiten die fehlenden Mengenfelder
 erklärt — die Begründung gehört neben die Lücke, nicht ins Changelog. Wortlaut
-aus #117; auf den ✎-Knopf zeigt er erst, wenn #115 ihn gebaut hat. */
-export const ZEILEN_HINWEIS = 'Mengen und Preise ändert man schneller direkt in der Zeile.';
+aus #117; er zeigt auf die **Tabelle**, seit die Zelle selbst das Eingabefeld
+ist und der Zeilenmodus entfallen ist (#217, ADR 0013). */
+export const TABELLEN_HINWEIS = 'Mengen und Preise ändert man schneller direkt in der Tabelle.';
 
 /** Sentinel der Select-Felder: „keine Station" / „keine MwSt" — Radix kennt
 keinen leeren Wert, der Zettel setzt ihn und diese Datei liest ihn wieder weg. */

@@ -8,6 +8,9 @@ function row(over: Partial<CellRow> = {}): CellRow {
 		actual_quantity: null,
 		packaging_unit: null,
 		amount_per_packaging: null,
+		unit_price: 2,
+		tax_rate: 20,
+		price_is_net: true,
 		...over
 	};
 }
@@ -75,9 +78,65 @@ describe('createCellEditor — der Tastaturfluss (#216)', () => {
 		editor.open(ROWS[0], 'consumed');
 		await editor.commit('forward', ROWS);
 
-		// Tab geht von Verbraucht in die Bestellt-Zelle der nächsten Zeile.
+		// Tab geht von Verbraucht in die MwSt-Zelle derselben Zeile (#217).
+		expect(editor.getState().editing).toEqual({ id: 'bier', column: 'tax' });
+		expect(editor.getState().value).toBe('20');
+	});
+
+	it('läuft mit Tab bis in die Brutto-Zelle und dann erst in die nächste Zeile (#217)', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'gross');
+		expect(editor.getState().value).toBe('2,40'); // 2 netto + 20 %
+		await editor.commit('forward', ROWS);
+
+		expect(onSave).not.toHaveBeenCalled(); // unberührt — die Quelle bleibt netto
 		expect(editor.getState().editing).toEqual({ id: 'wein', column: 'ordered' });
-		expect(editor.getState().value).toBe('10');
+	});
+
+	it('merkt sich, ob in der Zelle getippt wurde — daran hängt der Preis (#217)', () => {
+		const editor = createCellEditor({ onSave: vi.fn().mockResolvedValue(undefined) });
+
+		editor.open(ROWS[0], 'gross');
+		expect(editor.getState().touched).toBe(false);
+
+		editor.type('2,40');
+		// Derselbe Betrag, aber jetzt getippt: Brutto wird damit die Quelle.
+		expect(editor.getState().touched).toBe(true);
+	});
+
+	it('macht die getippte Seite zur Quelle, auch wenn ihr Betrag schon dastand', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'gross');
+		editor.type('2,40');
+		await editor.commit(null, ROWS);
+
+		expect(onSave).toHaveBeenCalledWith('bier', { unit_price: 2.4, price_is_net: false });
+	});
+
+	it('schreibt die getippte Preisseite samt ihrer Quelle weg (#217)', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'gross');
+		editor.type('3');
+		await editor.commit(null, ROWS);
+
+		expect(onSave).toHaveBeenCalledWith('bier', { unit_price: 3, price_is_net: false });
+	});
+
+	it('schreibt die gewählte MwSt sofort weg — der Preis bleibt, wie er erfasst ist (#217)', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'tax');
+		editor.type('10');
+		await editor.commit(null, ROWS);
+
+		expect(onSave).toHaveBeenCalledWith('bier', { tax_rate: 10 });
 	});
 
 	it('schließt am unteren Rand, statt oben wieder anzufangen', async () => {
@@ -102,6 +161,53 @@ describe('createCellEditor — der Tastaturfluss (#216)', () => {
 
 		editor.open(ROWS[0], 'ordered');
 		expect(editor.getState().value).toBe('10');
+	});
+});
+
+describe('createCellEditor — die Nachbarzelle kennt den eben gespeicherten Stand (#217)', () => {
+	it('öffnet Brutto mit dem eben getippten Netto, nicht mit dem Betrag von vorher', async () => {
+		// `rows` ist der Stand beim Tastendruck; das Nachladen der Liste ist beim
+		// Sprung noch unterwegs. Ohne den eben geschriebenen Wert stünde in der
+		// Brutto-Zelle 2,40 — der Preis von *vor* dem Tippen, und „die andere Seite
+		// rechnet sofort nach" (#217) bräche genau an der Stelle, an der man hinsieht.
+		const editor = createCellEditor({ onSave: vi.fn().mockResolvedValue(undefined) });
+
+		editor.open(ROWS[0], 'net');
+		editor.type('10');
+		await editor.commit('forward', ROWS);
+
+		expect(editor.getState().editing).toEqual({ id: 'bier', column: 'gross' });
+		expect(editor.getState().value).toBe('12,00'); // 10 netto + 20 %
+	});
+
+	it('misst „unberührt" danach am neuen Stand, nicht am alten', async () => {
+		// Sonst verglich die Brutto-Zelle ihre 12,00 gegen den überholten Preis.
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'net');
+		editor.type('10');
+		await editor.commit('forward', ROWS);
+		await editor.commit('forward', ROWS);
+
+		expect(onSave).toHaveBeenCalledTimes(1);
+	});
+
+	it('nimmt ihn auch in den Klick mit, der während des Speicherns wartete', async () => {
+		let release: (() => void) | null = null;
+		const onSave = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'net');
+		editor.type('10');
+		const done = editor.commit(null, ROWS);
+		// Der Klick trägt die Zeile mit, wie sie beim Klick dastand — auch sie ist
+		// beim Ausgang des Speicherns überholt.
+		editor.open(ROWS[0], 'gross');
+		release!();
+		await done;
+
+		expect(editor.getState().value).toBe('12,00');
 	});
 });
 

@@ -1,45 +1,40 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import MaterialTable from './MaterialTable';
-import type { CellEditControls, RowEditControls } from './MaterialTableCells';
-import { draftFromMaterial, editDraft, type RowDraft } from '@/lib/materialRowDraft';
-import { BASE_UNITS, type InputUnits } from '@/lib/materialCellEdit';
+import type { CellEditControls } from './MaterialTableCells';
+import { BASE_UNITS, type CellRef } from '@/lib/materialCellEdit';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 
 const noop = () => {};
 
-/** Der Zeilenmodus mit den offenen Zeilen, die ein Test braucht — die Handler
-interessieren ihn nicht, das gerenderte Markup schon. */
-function rowEditWith(draftsById: Record<string, RowDraft> = {}, savedIds: string[] = []): RowEditControls {
-	return {
-		draftsById,
-		savedIds,
-		focusId: null,
-		onStartEdit: noop,
-		onDraftChange: noop,
-		onSaveRow: noop,
-		onCancelRow: noop
-	};
-}
-
-/** Die Zellbearbeitung der Mengen mit keiner offenen Zelle — ihr eigenes Spiel
-steht in `MaterialCellEdit.test.tsx` (#216). */
-function cellEditWith(savedIds: string[] = [], units: InputUnits = BASE_UNITS): CellEditControls {
+/** Die Zellbearbeitung mit der Zelle, die ein Test offen braucht — ihr eigenes
+Spiel steht in `MaterialCellEdit.test.tsx` (#216/#217). */
+function cellEditWith(
+	over: Partial<Pick<CellEditControls, 'editing' | 'value' | 'savedIds' | 'units'>> = {}
+): CellEditControls {
 	return {
 		editing: null,
 		value: '',
+		// Die Tests der offenen Zelle stehen für „jemand tippt gerade" — nur dann
+		// rechnet die Gegenseite des Preises mit (#217).
+		touched: true,
 		saving: false,
 		failed: false,
-		savedIds,
-		units,
+		savedIds: [],
+		units: BASE_UNITS,
 		unit: 'base',
 		onOpen: noop,
 		onType: noop,
 		onUnitChange: noop,
 		onCommit: noop,
-		onCancel: noop
+		onCancel: noop,
+		...over
 	};
 }
+
+/** Eine offene Zelle samt getipptem Wert. */
+const openCell = (editing: CellRef, value: string): CellEditControls =>
+	cellEditWith({ editing, value });
 
 function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMaterialWithStation {
 	return {
@@ -65,10 +60,12 @@ function material(over: Partial<FestivalMaterialWithStation> = {}): FestivalMate
 	};
 }
 
+/** Die Knöpfe im Kasten — ohne die Einheiten-Umschalter im Kopf (#218). */
+const tbodyButtons = (html: string) => html.match(/<tbody.*<\/tbody>/s)?.[0].match(/<button/g);
+
 const renderTable = (
 	materials: FestivalMaterialWithStation[],
 	showStation?: boolean,
-	rowEdit: RowEditControls = rowEditWith(),
 	cellEdit: CellEditControls = cellEditWith()
 ) =>
 	renderToStaticMarkup(
@@ -78,7 +75,6 @@ const renderTable = (
 			onEdit={noop}
 			onDelete={noop}
 			onCopy={noop}
-			rowEdit={rowEdit}
 			cellEdit={cellEdit}
 		/>
 	);
@@ -131,7 +127,7 @@ describe('MaterialTable — die elf Spalten (#114)', () => {
 	// Dieselbe Regel für die Handy-Karte steht in `MaterialCard.test.tsx` (#116).
 });
 
-describe('MaterialTable — die Mengen führen in die Zelle, der Rest ist Text (#114/#216)', () => {
+describe('MaterialTable — fünf Zellen führen hinein, der Rest ist Text (#114/#217)', () => {
 	const rows = [material({ ordered_quantity: 10, unit_price: 2, tax_rate: 20, price_is_net: true })];
 
 	it('lässt kein Feld offenstehen, solange niemand hineingeklickt hat', () => {
@@ -142,15 +138,32 @@ describe('MaterialTable — die Mengen führen in die Zelle, der Rest ist Text (
 		expect(html).not.toContain('contenteditable');
 	});
 
-	it('macht Bestellt und Verbraucht anklickbar — sonst nur ✎ und ⋮', () => {
-		// Die Preise bleiben vorerst beim Zeilenmodus (Übergang aus #216).
+	it('macht genau Bestellt, Verbraucht, MwSt, Netto und Brutto anklickbar', () => {
 		const html = renderTable(rows, false);
 
-		expect(html).toContain('aria-label="Bestellt von Bier"');
-		expect(html).toContain('aria-label="Verbraucht von Bier"');
-		// Bestellt, Verbraucht, ✎, ⋮ — dazu die vier Segmente der zwei
-		// Einheiten-Umschalter im Kopf (#218).
-		expect(html.match(/<tbody.*<\/tbody>/s)?.[0].match(/<button/g)).toHaveLength(4);
+		for (const label of ['Bestellt', 'Verbraucht', 'MwSt', 'Netto', 'Brutto']) {
+			expect(html).toContain(`aria-label="${label} von Bier"`);
+		}
+		// Die fünf Zellen plus das ⋮ der Aktionen-Spalte — mehr führt nirgendwohin.
+		// Gezählt im Kasten: die zwei Einheiten-Umschalter im Kopf (#218) tragen
+		// ihre eigenen Segmente.
+		expect(tbodyButtons(html)).toHaveLength(6);
+	});
+
+	it('lässt Material, Lieferant, Gebinde, Δ und Gesamt als Text stehen (CONTEXT.md)', () => {
+		const fass = material({
+			supplier: 'Metro',
+			unit: 'Liter',
+			packaging_unit: 'Fass',
+			amount_per_packaging: 50,
+			ordered_quantity: 4
+		});
+		const html = renderTable([fass], false);
+
+		expect(html).toContain('Metro');
+		expect(html).toContain('50 Liter pro Fass');
+		// Sie tragen keinen Knopf — die sechs sind oben abgezählt.
+		expect(tbodyButtons(html)).toHaveLength(6);
 	});
 
 	it('bietet je Zeile das Drei-Punkt-Menü an — der Weg zu den Stammdaten', () => {
@@ -189,10 +202,11 @@ describe('MaterialTable — Eingabe-Einheit im Spaltenkopf (#218)', () => {
 	});
 
 	it('schaltet die Spalten unabhängig voneinander', () => {
-		const html = renderTable([fass], false, rowEditWith(), cellEditWith([], {
-			ordered: 'base',
-			consumed: 'packaging'
-		}));
+		const html = renderTable(
+			[fass],
+			false,
+			cellEditWith({ units: { ordered: 'base', consumed: 'packaging' } })
+		);
 		const groups = [...html.matchAll(/<div role="radiogroup".*?<\/div>/gs)].map((m) => m[0]);
 
 		expect(groups[0]).toMatch(/aria-checked="true"[^>]*>Basis</);
@@ -202,10 +216,11 @@ describe('MaterialTable — Eingabe-Einheit im Spaltenkopf (#218)', () => {
 	it('lässt die lesende Anzeige unangetastet — Basiseinheit groß, Gebinde darunter', () => {
 		// „Die lesende Anzeige der Zelle bleibt unverändert" (#218): umgeschaltet
 		// wird die *Eingabe*, nicht das, was in der Spalte steht.
-		const html = renderTable([fass], false, rowEditWith(), cellEditWith([], {
-			ordered: 'packaging',
-			consumed: 'packaging'
-		}));
+		const html = renderTable(
+			[fass],
+			false,
+			cellEditWith({ units: { ordered: 'packaging', consumed: 'packaging' } })
+		);
 
 		expect(html).toContain('200'); // 4 Fass à 50 Liter
 		expect(html).toContain('→ 4 × Fass');
@@ -214,37 +229,39 @@ describe('MaterialTable — Eingabe-Einheit im Spaltenkopf (#218)', () => {
 	});
 });
 
-describe('MaterialTable — Zeilenmodus ✎ (#115)', () => {
-	const bier = material({ ordered_quantity: 30, actual_quantity: 30, unit_price: 2, tax_rate: 20, price_is_net: true });
-
-	it('trägt je Zeile einen ✎-Knopf für Mengen und Preise', () => {
-		expect(renderTable([bier], false)).toContain('Mengen und Preise von Bier');
+describe('MaterialTable — die offene Zelle (#217)', () => {
+	const bier = material({
+		ordered_quantity: 30,
+		actual_quantity: 30,
+		unit_price: 2,
+		tax_rate: 20,
+		price_is_net: true
 	});
 
-	it('macht in der offenen Zeile genau Bestellt, Verbraucht, MwSt, Netto und Brutto tippbar', () => {
-		const html = renderTable([bier], false, rowEditWith({ mat1: draftFromMaterial(bier) }));
+	it('macht aus der MwSt-Zelle eine Auswahl, aus den übrigen ein Tippfeld', () => {
+		const mwst = renderTable([bier], false, openCell({ id: 'mat1', column: 'tax' }, '20'));
 
-		expect(html.match(/<input/g)).toHaveLength(4);
-		expect(html.match(/<select/g)).toHaveLength(1);
-		expect(html).toContain('Bestellt von Bier');
-		expect(html).toContain('Verbraucht von Bier');
-		expect(html).toContain('MwSt von Bier');
-		expect(html).toContain('Netto von Bier');
-		expect(html).toContain('Brutto von Bier');
+		expect(mwst.match(/<select/g)).toHaveLength(1);
+		expect(mwst).not.toContain('<input');
+		expect(renderTable([bier], false, openCell({ id: 'mat1', column: 'net' }, '2')))
+			.toContain('<input');
 	});
 
-	it('lässt Material, Lieferant und Gebinde auch in der offenen Zeile lesend', () => {
-		const rows = [material({ ...bier, supplier: 'Metro', packaging_unit: 'Fass', amount_per_packaging: 50 })];
-		const html = renderTable(rows, false, rowEditWith({ mat1: draftFromMaterial(rows[0]) }));
+	it('behält einen ungewöhnlichen Steuersatz in der Auswahl, statt ihn still zu schlucken', () => {
+		const exotisch = material({ unit_price: 10, tax_rate: 7, price_is_net: true });
+		const html = renderTable([exotisch], false, openCell({ id: 'mat1', column: 'tax' }, '7'));
 
-		expect(html).toContain('Bier');
-		expect(html).toContain('Metro');
-		expect(html).toContain('50 Stk pro Fass');
+		expect(html).toContain('>7 %<');
 	});
 
-	it('lässt Δ und Gesamt dem Entwurf folgen, nicht der gespeicherten Zahl', () => {
-		const draft = editDraft(draftFromMaterial(bier), 'actual', '25');
-		const html = renderTable([bier], false, rowEditWith({ mat1: draft }));
+	it('lässt die Gegenseite des Preises dem Getippten folgen, nicht der gespeicherten Zahl', () => {
+		const html = renderTable([bier], false, openCell({ id: 'mat1', column: 'net' }, '5'));
+
+		expect(html).toContain('6,00'); // Brutto = 5 netto + 20 %
+	});
+
+	it('lässt Δ und Gesamt dem Getippten folgen', () => {
+		const html = renderTable([bier], false, openCell({ id: 'mat1', column: 'consumed' }, '25'));
 
 		expect(html).toContain('-5'); // 25 verbraucht statt 30 bestellt
 		expect(html).toContain('60,00'); // 2 netto + 20 % = 2,40 × 25
@@ -257,62 +274,43 @@ describe('MaterialTable — Zeilenmodus ✎ (#115)', () => {
 			amount_per_packaging: 50,
 			ordered_quantity: 4
 		});
-		const draft = editDraft(draftFromMaterial(fass), 'ordered', '250');
+		const html = renderTable([fass], false, openCell({ id: 'mat1', column: 'ordered' }, '250'));
 
-		expect(renderTable([fass], false, rowEditWith({ mat1: draft }))).toContain('→ 5 × Fass');
+		expect(html).toContain('→ 5 × Fass');
 	});
 
-	it('nennt die Tastatur in der offenen Zeile — Enter speichert, Esc bricht ab', () => {
-		const html = renderTable([bier], false, rowEditWith({ mat1: draftFromMaterial(bier) }));
-
-		expect(html).toContain('Enter speichert');
-		expect(html).toContain('Esc bricht ab');
-	});
-
-	it('tauscht ✎ und ⋮ gegen Speichern und Abbrechen', () => {
-		const html = renderTable([bier], false, rowEditWith({ mat1: draftFromMaterial(bier) }));
-
-		expect(html).toContain('Zeile Bier speichern');
-		expect(html).toContain('Zeile Bier abbrechen');
-		expect(html).not.toContain('Mengen und Preise von Bier');
-	});
-
-	it('nimmt ✓ und ✕ aus dem Tab-Pfad — Tab geht von Feld zu Feld und in die nächste Zeile', () => {
-		// Spec #115: „Tab bewegt sich innerhalb und in die nächste Zeile." Mit den
-		// zwei Knöpfen im Pfad stünden beim Nachtragen über 76 Positionen 152
-		// Extra-Stopps zwischen den Feldern. Klicken, Enter und Esc bleiben.
-		const html = renderTable([bier], false, rowEditWith({ mat1: draftFromMaterial(bier) }));
-
-		// Im Kasten selbst — der Einheiten-Umschalter im Kopf (#218) trägt seinen
-		// eigenen rollenden Tab-Index und ist genau *ein* Stopp je Spalte.
-		expect(html.match(/<tbody.*<\/tbody>/s)?.[0].match(/tabindex="-1"/g)).toHaveLength(2);
-	});
-
-	it('hält die offene Zeile auf 56 px — sonst schöbe das Umschalten alles nach unten', () => {
+	it('hält die Zeile mit der offenen Zelle auf 56 px — sonst schöbe sie alles nach unten', () => {
 		// Auflage aus #114, nachgemessen: 44 → 56 px, wenn die Höhe nicht steht.
 		const rows = [bier, material({ id: 'mat2', name: 'Wein' })];
-		const html = renderTable(rows, false, rowEditWith({ mat1: draftFromMaterial(bier) }));
+		const html = renderTable(rows, false, openCell({ id: 'mat1', column: 'net' }, '2'));
 
 		expect(html.match(/h-\[56px\]/g)).toHaveLength(2);
 	});
 
-	it('legt die offene Zeile auf gelben Grund mit Tinte-Rahmen', () => {
-		const html = renderTable([bier], false, rowEditWith({ mat1: draftFromMaterial(bier) }));
-
-		expect(html).toContain('bg-gelb/25');
-		expect(html).toContain('shadow-zeile-offen');
-	});
-
 	it('lässt die eben gespeicherte Zeile grün aufblitzen und verklingen', () => {
 		// Als Animation, nicht als Farbe mit Übergang: sofort grün, dann aus.
-		expect(renderTable([bier], false, rowEditWith({}, ['mat1']))).toContain('animate-blitz-gruen');
+		const html = renderTable([bier], false, cellEditWith({ savedIds: ['mat1'] }));
+
+		expect(html).toContain('animate-blitz-gruen');
+	});
+});
+
+describe('MaterialTable — die Aktionen-Spalte trägt nur noch ⋮ (#217)', () => {
+	const bier = material({ ordered_quantity: 30, unit_price: 2 });
+
+	it('kennt kein ✎ mehr — Mengen und Preise stehen in der Zelle', () => {
+		expect(renderTable([bier], false)).not.toContain('Mengen und Preise von Bier');
 	});
 
-	it('behält einen ungewöhnlichen Steuersatz in der Auswahl, statt ihn still zu schlucken', () => {
-		const exotisch = material({ unit_price: 10, tax_rate: 7, price_is_net: true });
-		const html = renderTable([exotisch], false, rowEditWith({ mat1: draftFromMaterial(exotisch) }));
+	it('stellt genau einen Knopf in die Spalte, damit nichts abgeschnitten wird', () => {
+		// Abgeschnitten war ✎ neben ⋮ in den 5 % der Spalte (ADR 0013); mit einem
+		// Knopf ist der Platz da.
+		const zeile = renderTable([bier], false).match(/<tbody>.*?<\/tbody>/s)?.[0] ?? '';
+		const zellen = [...zeile.matchAll(/<td[^>]*>(.*?)<\/td>/gs)];
+		const aktionen = zellen[zellen.length - 1][1];
 
-		expect(html).toContain('>7 %<');
+		expect(aktionen.match(/<button/g)).toHaveLength(1);
+		expect(aktionen).toContain('Menü für Bier');
 	});
 });
 
@@ -320,8 +318,9 @@ describe('MaterialTable — feste Spaltenbreiten (#114)', () => {
 	const rows = [material(), material({ id: 'mat2', name: 'Wein' })];
 
 	it('setzt die Breiten im colgroup, statt sie vom Inhalt bestimmen zu lassen', () => {
-		// Auflage aus #114: im Zeilenmodus (#115) werden Zellen zu Eingabefeldern —
-		// mit inhaltsabhängiger Breite verschöbe sich dabei jede Spalte.
+		// Auflage aus #114: in der Zellbearbeitung (ADR 0013) werden Zellen zu
+		// Eingabefeldern — mit inhaltsabhängiger Breite verschöbe sich dabei jede
+		// Spalte.
 		const html = renderTable(rows, false);
 
 		expect(html).toContain('table-fixed');
@@ -346,7 +345,7 @@ describe('MaterialTable — feste Spaltenbreiten (#114)', () => {
 		expect(renderTable(rows, true)).toContain('min-width:1085px');
 	});
 
-	it('hält jede Zeile auf 56 px — im Zeilenmodus wächst sie sonst und schiebt alles nach unten', () => {
+	it('hält jede Zeile auf 56 px — mit offener Zelle wächst sie sonst und schiebt alles nach unten', () => {
 		expect(renderTable(rows, false).match(/h-\[56px\]/g)).toHaveLength(2);
 	});
 });

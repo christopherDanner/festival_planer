@@ -11,8 +11,6 @@ import MaterialGroupBox from './MaterialGroupBox';
 import MaterialTable from './MaterialTable';
 import MaterialCardList from './MaterialCardList';
 import UnsavedCardsDialog from './UnsavedCardsDialog';
-import RowEditBulkBar from './RowEditBulkBar';
-import RowEditGuardDialog from './RowEditGuardDialog';
 import { useMaterialCardDrafts } from './hooks/useMaterialCardDrafts';
 import MaterialDialog from './dialogs/MaterialDialog';
 import MaterialExportDialog from './dialogs/MaterialExportDialog';
@@ -20,9 +18,7 @@ import OrderListExportDialog from './dialogs/OrderListExportDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
-import { useRowEditor } from '@/hooks/useRowEditor';
 import { useCellEditor } from '@/hooks/useCellEditor';
-import type { ViewChange } from '@/lib/materialRowEditor';
 import { BASE_UNITS, type InputUnits } from '@/lib/materialCellEdit';
 import {
 	groupMaterials,
@@ -99,45 +95,32 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 	const activeCategory = resolveActiveCategory(groupChips, requestedCategory);
 	const visible = activeGroup ? filterByCategory(activeGroup.materials, activeCategory) : [];
 
-	// Zeilenmodus (#115): ✎ macht Mengen und Preise *einer* Zeile tippbar,
-	// mehrere dürfen offen sein, gespeichert wird über die Sammel-Fußleiste.
-	// Der Zustand liegt im `materialRowEditor`, nicht hier.
-	const { editor, snapshot } = useRowEditor({
-		onSave: (id, updates) => actions.updateMaterial.mutate({ id, updates })
-	});
-	const allRowsOpen = visible.length > 0 && visible.every((m) => snapshot.draftsById[m.id]);
-
 	// Die Eingabe-Einheit je Mengenspalte (#218): Standard Basis, umgeschaltet
 	// wird im Spaltenkopf. Die Wahl hängt hier und nicht an der Tabelle, damit
 	// sie Reiter, Chip und Suche übersteht — sie hält, solange man in der
 	// Materialliste bleibt.
 	const [units, setUnits] = useState<InputUnits>(BASE_UNITS);
 
-	// Zellbearbeitung der Mengen (#216, ADR 0013): der Klick in Bestellt oder
-	// Verbraucht macht *diese* Zelle zum Feld, sie speichert beim Verlassen.
+	// Zellbearbeitung (#216/#217, ADR 0013): der Klick in eine der fünf tippbaren
+	// Zellen macht *diese* Zelle zum Feld, sie speichert beim Verlassen.
 	// `mutateAsync`, weil ein Fehlschlag die Zelle offen lassen muss — `mutate`
-	// verschluckt ihn und die getippte Zahl wäre still weg. Der Sichtwechsel
-	// braucht keine eigene Rückfrage: er löst erst den Blur aus, und der
-	// speichert. Dasselbe gilt fürs Umschalten der Einheit: der Klick in den
-	// Spaltenkopf nimmt dem Feld den Fokus, und das speichert in der Einheit,
-	// in der es aufging.
+	// verschluckt ihn und die getippte Zahl wäre still weg. Das Umschalten der
+	// Einheit braucht keine eigene Rückfrage: der Klick in den Spaltenkopf nimmt
+	// dem Feld den Fokus, und das speichert in der Einheit, in der es aufging.
 	const cell = useCellEditor({
 		onSave: (id, update) =>
 			actions.updateMaterial.mutateAsync({ id, updates: update, silent: true }),
 		units: () => units
 	});
 
-	// Achse, Reiter, Chip und Suche nehmen offene Eingaben aus dem Bild — mit
-	// ungespeicherten Änderungen wird erst gefragt. *Welche* Rückfrage greift,
-	// hängt am Gerät: am Handy hält der Kartenmodus (#116) das Getippte, am
-	// Desktop der Zeilenmodus (#115). Beide Wege gehen durch diese eine Stelle,
-	// damit kein Sichtwechsel an der Rückfrage vorbeikommt.
+	// Am Desktop braucht der Sichtwechsel keine Rückfrage mehr: es gibt keine
+	// offenen Entwürfe, und Achse, Reiter, Chip und Suche lösen erst den Blur der
+	// offenen Zelle aus — der speichert (ADR 0013). Am Handy hält der Kartenmodus
+	// (#116) weiter Getipptes, darum fragt er.
 	const guarded =
-		<T,>(change: ViewChange, set: (value: T) => void) =>
+		<T,>(set: (value: T) => void) =>
 		(value: T) =>
-			isMobile
-				? cards.attempt(() => set(value))
-				: editor.requestViewChange(change, () => set(value));
+			isMobile ? cards.attempt(() => set(value)) : set(value);
 
 	// Die Bestellliste kennt nur zwei Achsen (CONTEXT.md): wer nach Station
 	// plant, bestellt für die Station; sonst beim Lieferanten. Der Reiter reist
@@ -209,28 +192,18 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 		<div className="space-y-3 sm:space-y-4 overflow-x-hidden">
 			<MaterialListHeader
 				mode="arbeitsliste"
-				onModeChange={(mode) => {
-					// Der Umschalter navigiert, er blendet nicht um (Entscheid aus #66) —
-					// und nimmt dabei offene Zeilen mit, fragt also wie jeder Sichtwechsel.
+				onModeChange={guarded((mode) => {
+					// Der Umschalter navigiert, er blendet nicht um (Entscheid aus #66).
 					if (mode === 'uebernahme') {
-						editor.requestViewChange('mode', () =>
-							navigate(`/festivals/${festivalId}/material-uebernahme`)
-						);
+						navigate(`/festivals/${festivalId}/material-uebernahme`);
 					}
-				}}
+				})}
 				searchTerm={searchTerm}
-				onSearchChange={guarded('search', setSearchTerm)}
+				onSearchChange={guarded(setSearchTerm)}
 				positionCount={materials.length}
 				onAddMaterial={() => openNewPosition()}
 				onExport={() => setDialogState({ type: 'export' })}
 				onExportOrderList={() => setDialogState({ type: 'order-export' })}
-				allRowsOpen={allRowsOpen}
-				onToggleAllRows={() => {
-					// Aufklappen ist harmlos; Zuklappen kann Getipptes kosten und
-					// läuft darum über dieselbe Rückfrage wie ein Sichtwechsel.
-					if (allRowsOpen) editor.requestViewChange('rows', () => editor.cancelAll());
-					else editor.openAll(visible);
-				}}
 			/>
 
 			{/* Der Bereichskopf folgt der Suche, nicht dem Reiter und nicht dem
@@ -241,21 +214,21 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 
 			{/* Der Achsen-Umschalter bleibt am Handy oben als Knöpfe wie am Desktop
 			(#116) — nur die Gruppen-Auswahl darunter wechselt die Gestalt. */}
-			<MaterialAxisBar axis={axis} onAxisChange={guarded('axis', setAxis)} />
+			<MaterialAxisBar axis={axis} onAxisChange={guarded(setAxis)} />
 
 			{isMobile ? (
 				<MaterialGroupDrawer
 					groups={groups}
 					axis={axis}
 					activeGroupId={activeGroupId}
-					onSelect={guarded('group', setRequestedGroupId)}
+					onSelect={guarded(setRequestedGroupId)}
 				/>
 			) : (
 				<MaterialGroupTabs
 					groups={groups}
 					axis={axis}
 					activeGroupId={activeGroupId}
-					onSelect={guarded('group', setRequestedGroupId)}
+					onSelect={guarded(setRequestedGroupId)}
 				/>
 			)}
 
@@ -266,9 +239,9 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 					visibleMaterials={visible}
 					categories={groupChips}
 					activeCategory={activeCategory}
-					// Der Chip nimmt Karten bzw. Zeilen aus der Sicht wie ein
-					// Gruppenwechsel — darum durch dieselbe Rückfrage (#115/#116).
-					onCategoryChange={guarded('category', setRequestedCategory)}
+					// Der Chip nimmt Karten aus der Sicht wie ein Gruppenwechsel — darum
+					// am Handy durch dieselbe Rückfrage (#116).
+					onCategoryChange={guarded(setRequestedCategory)}
 					onAddPosition={() => openNewPosition(prefillFromGroup(activeGroup, axis))}
 				>
 					{isMobile ? (
@@ -282,64 +255,40 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 							onDelete={(id) => actions.deleteMaterial.mutate(id)}
 						/>
 					) : (
-						<>
-							<MaterialTable
-								materials={visible}
-								// Im Stations-Kasten wäre die Station in jeder Zeile dieselbe.
-								showStation={axis !== 'station'}
-								onEdit={openPosition}
-								onDelete={(id) => actions.deleteMaterial.mutate(id)}
-								onCopy={copyPosition}
-								rowEdit={{
-									draftsById: snapshot.draftsById,
-									savedIds: snapshot.savedIds,
-									focusId: snapshot.focusId,
-									onStartEdit: editor.open,
-									onDraftChange: editor.edit,
-									onSaveRow: editor.save,
-									onCancelRow: editor.cancel
-								}}
-								cellEdit={{
-									editing: cell.snapshot.editing,
-									value: cell.snapshot.value,
-									saving: cell.snapshot.saving,
-									failed: cell.snapshot.failed,
-									savedIds: cell.snapshot.savedIds,
-									units,
-									unit: cell.snapshot.unit,
-									onOpen: (m, column) => cell.editor.open(m, column),
-									onType: cell.editor.type,
-									onUnitChange: (column, unit) =>
-										setUnits((current) => ({ ...current, [column]: unit })),
-									// Der Weg der Tastatur läuft über die *sichtbaren* Zeilen des
-									// Kastens — Suche und Kategorie-Chip bestimmen ihn mit.
-									onCommit: (move, from) => void cell.editor.commit(move, visible, from),
-									onCancel: cell.editor.cancel
-								}}
-							/>
-							{/* Die Fußleiste zählt den Kasten, nicht das Fest — offen ist, was
-							man vor sich sieht. */}
-							<RowEditBulkBar
-								open={snapshot.open}
-								dirty={snapshot.dirty}
-								onSaveAll={editor.saveAll}
-								onCancelAll={editor.cancelAll}
-							/>
-						</>
+						<MaterialTable
+							materials={visible}
+							// Im Stations-Kasten wäre die Station in jeder Zeile dieselbe.
+							showStation={axis !== 'station'}
+							onEdit={openPosition}
+							onDelete={(id) => actions.deleteMaterial.mutate(id)}
+							onCopy={copyPosition}
+							cellEdit={{
+								editing: cell.snapshot.editing,
+								value: cell.snapshot.value,
+								touched: cell.snapshot.touched,
+								saving: cell.snapshot.saving,
+								failed: cell.snapshot.failed,
+								savedIds: cell.snapshot.savedIds,
+								units,
+								unit: cell.snapshot.unit,
+								onOpen: (m, column) => cell.editor.open(m, column),
+								onType: cell.editor.type,
+								onUnitChange: (column, unit) =>
+									setUnits((current) => ({ ...current, [column]: unit })),
+								// Der Weg der Tastatur läuft über die *sichtbaren* Zeilen des
+								// Kastens — Suche und Kategorie-Chip bestimmen ihn mit.
+								onCommit: (move, from) => void cell.editor.commit(move, visible, from),
+								onCancel: cell.editor.cancel
+							}}
+						/>
 					)}
 				</MaterialGroupBox>
 			)}
 
-			{/* Je Gerät fragt der Modus, der dort tippen lässt: am Handy die Karten,
-			am Desktop die Zeilen. Beide hängen an derselben Stelle, damit keiner
-			von beiden still offen bleibt. */}
+			{/* Nur noch am Handy: dort hält der Kartenmodus (#116) Getipptes über
+			einen Sichtwechsel hinweg. Am Desktop speichert jede Zelle für sich, es
+			gibt nichts, was still offen bliebe (ADR 0013). */}
 			<UnsavedCardsDialog cards={cards} />
-
-			<RowEditGuardDialog
-				change={snapshot.guard}
-				dirty={snapshot.dirty}
-				onAnswer={editor.resolveGuard}
-			/>
 
 			<MaterialDialog
 				open={dialogState.type === 'material'}

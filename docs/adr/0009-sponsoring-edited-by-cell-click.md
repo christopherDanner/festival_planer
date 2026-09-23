@@ -21,7 +21,9 @@ Der Grund für den Unterschied liegt im Datenmodell, nicht in der Optik: eine *S
 
 **Die App hat bewusst zwei Bearbeitungs-Idiomatiken in Tabellen.** Wer sie später vereinheitlichen will, muss die Messung oben widerlegen, nicht die Uneinheitlichkeit beklagen. Die Regel, wann welche gilt: **hat das Feld einen Standardwert, den das System kennt → Zellklick; muss der Wert getippt werden → Zeilenmodus.**
 
-**Der Schutz gegen versehentliches Löschen wandert.** Beim Material trägt ihn die strikt lesende Tabelle. Hier trägt ihn der Zettel: Entfernen ist ein eigener, benannter Knopf, nie ein Nebeneffekt des Klicks. Zwei bewusste Klicks statt einem — ohne Rückfrage, aber auch ohne Weg, es versehentlich zu tun.
+> **Nachtrag #217.** Den Zeilenmodus gibt es nicht mehr: ADR 0013 hat ihn für das Material durch die Zellbearbeitung ersetzt, #216 und #217 haben ihn samt Code entfernt. Die Regel oben gilt in ihrer Sache weiter, nur heißt die zweite Hälfte jetzt anders: **hat das Feld einen Standardwert → Zellklick mit Zettel (Sponsoring); muss der Wert getippt werden → Zellklick, der die Zelle selbst zum Feld macht (Material).** Beide Tabellen werden per Zellklick bedient — der Unterschied liegt darin, ob es etwas zu *übernehmen* und zu *entfernen* gibt, was den Zettel rechtfertigt (siehe ADR 0013).
+
+**Der Schutz gegen versehentliches Löschen wandert.** Beim Material trug ihn die strikt lesende Tabelle — seit #217 trägt ihn dort Esc: die Zelle nimmt Getipptes an, aber verwirft es auf Verlangen, und Entfernen liegt hinter ⋮. Hier trägt ihn der Zettel: Entfernen ist ein eigener, benannter Knopf, nie ein Nebeneffekt des Klicks. Zwei bewusste Klicks statt einem — ohne Rückfrage, aber auch ohne Weg, es versehentlich zu tun.
 
 **Der Kategorie-Spaltenkopf wird bedienbar** und ersetzt die bisherige zweite Tabelle „Sponsoring-Kategorien" samt eigenem Dialog; der Bereich hat danach genau eine Tabelle. Zwei Dinge muss der Zettel dort beziffern, weil das Datenmodell sie so vorgibt:
 

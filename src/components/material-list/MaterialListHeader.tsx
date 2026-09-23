@@ -15,9 +15,6 @@ export interface MaterialListHeaderProps {
 	onAddMaterial: () => void;
 	onExport: () => void;
 	onExportOrderList: () => void;
-	/** Ob der Zeilenmodus gerade alle Zeilen der Gruppe offen hat (#115). */
-	allRowsOpen: boolean;
-	onToggleAllRows: () => void;
 }
 
 /**
@@ -38,9 +35,7 @@ const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({
 	positionCount,
 	onAddMaterial,
 	onExport,
-	onExportOrderList,
-	allRowsOpen,
-	onToggleAllRows
+	onExportOrderList
 }) => (
 	<MaterialModeBar
 		mode={mode}
@@ -50,18 +45,8 @@ const MaterialListHeader: React.FC<MaterialListHeaderProps> = ({
 		searchPlaceholder={`Suche in ${positionCount} Positionen …`}
 		searchLabel="Material suchen"
 	>
-		{/* Öffnet alle Zeilen der Gruppe auf einmal — fürs Nachtragen der
-		Verbraucht-Mengen nach dem Fest (#115). Ein Schalter, kein Knopf: er sagt
-		auch, dass gerade alles offen ist. */}
-		<Button
-			variant={allRowsOpen ? 'default' : 'outline'}
-			size="sm"
-			aria-pressed={allRowsOpen}
-			className="text-[12.5px] max-[899px]:min-h-10"
-			onClick={onToggleAllRows}
-		>
-			ALLE ZEILEN
-		</Button>
+		{/* „ALLE ZEILEN" ist mit dem Zeilenmodus entfallen (ADR 0013): jede Zelle
+		speichert für sich, es gibt nichts mehr aufzuklappen. */}
 		<Button variant="outline" size="sm" className="text-[12.5px] max-[899px]:min-h-10" onClick={onExport}>
 			MATERIALLISTE
 		</Button>

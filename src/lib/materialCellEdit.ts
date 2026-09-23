@@ -1,24 +1,46 @@
-/** Die Regeln *einer* Mengenzelle der Arbeitsliste (#216, ADR 0013). Reines
-Logikmodul ohne React: umgerechnet wird in `materialQuantity`, hier steht nur,
-was aus den getippten Zeichen wird und wohin die Tastatur führt. */
+/** Die Regeln *einer* Zelle der Arbeitsliste (#216/#217, ADR 0013). Reines
+Logikmodul ohne React: gerechnet wird in `materialCosts` (ADR 0006), umgerechnet
+in `materialQuantity` — hier steht nur, was aus den getippten Zeichen wird und
+wohin die Tastatur führt. */
 
+import { grossPrice, netPrice, type MaterialPosition } from './materialCosts';
 import { fromBaseQuantity, toBaseQuantity } from './materialQuantity';
+import { TAX_RATES } from './materialRow';
 
-/** Die zwei Mengenspalten, die in der Zelle getippt werden. Preise und MwSt
-bleiben vorerst beim Zeilenmodus (Übergang aus #216). */
+/** Die zwei Mengenspalten. Sie stehen für sich, weil nur sie eine Gebinde-
+Umrechnung unter dem Feld tragen. */
 export type QuantityColumn = 'ordered' | 'consumed';
 
-/** Ob eine Spalte der Positionstabelle in der Zelle getippt wird. Sie steht
-hier und nicht bei den Zellen, damit „welche Spalten sind Mengen" genau einmal
-festgeschrieben ist. */
+/** Die drei Spalten, in denen der Preis einer Position erfasst wird (#217). */
+export type PriceColumn = 'tax' | 'net' | 'gross';
+
+/** Die fünf tippbaren Zellen der Positionstabelle, in der Reihenfolge, in der
+Tab sie abläuft (CONTEXT.md „Zellbearbeitung"). */
+export type EditableColumn = QuantityColumn | PriceColumn;
+
+/** Die Mengenspalten in der Reihenfolge der Tabelle. */
+const QUANTITY_COLUMNS: QuantityColumn[] = ['ordered', 'consumed'];
+
+/** Alle fünf in der Reihenfolge, in der Tab sie abläuft: Bestellt → Verbraucht
+→ MwSt → Netto → Brutto → nächste Zeile (#217). */
+const COLUMN_ORDER: EditableColumn[] = [...QUANTITY_COLUMNS, 'tax', 'net', 'gross'];
+
+/** Ob eine Spalte der Positionstabelle eine Mengenspalte ist — sie allein
+rechnet in Gebinde um. */
 export function isQuantityColumn(column: string): column is QuantityColumn {
-	return column === 'ordered' || column === 'consumed';
+	return (QUANTITY_COLUMNS as string[]).includes(column);
 }
 
-/** Mengen samt Gebinde — mehr braucht eine Mengenzelle nicht. */
-export interface CellQuantities {
-	ordered_quantity: number;
-	actual_quantity: number | null;
+/** Ob eine Spalte der Positionstabelle in der Zelle getippt wird. Sie steht
+hier und nicht bei den Zellen, damit „welche Spalten sind tippbar" genau einmal
+festgeschrieben ist. */
+export function isEditableColumn(column: string): column is EditableColumn {
+	return (COLUMN_ORDER as string[]).includes(column);
+}
+
+/** Mengen, Preis und Gebinde — mehr braucht eine Zelle nicht. Die Preisfelder
+kommen aus `materialCosts`, damit Zelle und Tabelle denselben Betrag rechnen. */
+export interface CellValues extends MaterialPosition {
 	packaging_unit: string | null | undefined;
 	amount_per_packaging: number | null | undefined;
 }
@@ -43,7 +65,7 @@ export const BASE_UNITS: InputUnits = { ordered: 'base', consumed: 'base' };
  * in der Basiseinheit, auch wenn die Spalte auf Gebinde steht — es gibt nichts
  * umzurechnen, und eine getippte Zahl ohne Bezug wäre eine stille Fehldeutung.
  */
-export function cellUnit(columnUnit: InputUnit, m: CellQuantities): InputUnit {
+export function cellUnit(columnUnit: InputUnit, m: CellValues): InputUnit {
 	return columnUnit === 'packaging' && m.packaging_unit && m.amount_per_packaging
 		? 'packaging'
 		: 'base';
@@ -52,29 +74,67 @@ export function cellUnit(columnUnit: InputUnit, m: CellQuantities): InputUnit {
 /** Die gespeicherte Menge der Spalte, in Gebinden wie in der Datenbank. Eine
 Stelle für „welches Feld gehört zu welcher Spalte" — Zelle, Entwurfsvorschau und
 Vergleich fragen sie alle drei. */
-export function storedQuantity(column: QuantityColumn, m: CellQuantities): number | null {
+export function storedQuantity(column: QuantityColumn, m: CellValues): number | null {
 	return column === 'ordered' ? m.ordered_quantity : m.actual_quantity;
 }
 
 /**
- * Was beim Öffnen im Feld steht: die gespeicherte Menge in der **Eingabe-Einheit
- * der Spalte** — in der Basiseinheit (Flaschen, Liter), so wie sie auch gelesen
- * dasteht, oder in Gebinden, wenn die Spalte darauf umgeschaltet ist (#218).
- * Nicht erfasst heißt leer — das ist bei Verbraucht ein eigener Zustand, kein 0
- * (CONTEXT.md).
+ * Die Auswahl der MwSt-Zelle (#217). *Welche* Sätze die Materialliste anbietet,
+ * steht in `materialRow` — Dialog, Handy-Karte und Zelle bieten dasselbe Feld
+ * an, und zweimal getippt liefe ein neuer Satz unweigerlich auseinander. Leer
+ * heißt „keine".
  *
- * Geschrieben wird mit **Dezimalkomma** und ohne Rundung: angebrochene Gebinde
- * (2,5) sind der Regelfall des Gebinde-Modus, und eine gerundete Anzeige spräche
- * beim nächsten Verlassen eine Änderung aus, die niemand getippt hat.
+ * Ein Satz, der nicht in der Liste steht, kommt dazu — sonst schluckte das
+ * Öffnen der Zelle still den erfassten Wert und die Auswahl schriebe einen
+ * anderen, als vorher dastand.
  */
-export function cellText(
-	column: QuantityColumn,
-	m: CellQuantities,
-	columnUnit: InputUnit
-): string {
-	const stored = storedQuantity(column, m);
-	const shown = cellUnit(columnUnit, m) === 'packaging' ? stored : toBaseQuantity(stored, m);
-	return shown == null ? '' : String(shown).replace('.', ',');
+export function taxOptions(current: number | null): string[] {
+	const known = ['', ...TAX_RATES.map((tax) => String(tax.rate))];
+	const rate = current == null ? '' : String(current);
+	if (known.includes(rate)) return known;
+	return [...known, rate].sort((a, b) => Number(a || 0) - Number(b || 0));
+}
+
+/**
+ * Was beim Öffnen in der Zelle steht.
+ *
+ * Mengen in der **Eingabe-Einheit der Spalte** — in der Basiseinheit (Flaschen,
+ * Liter), so wie sie auch gelesen dastehen, oder in Gebinden, wenn die Spalte
+ * darauf umgeschaltet ist (#218). Preise auf Cent, beide Seiten aus
+ * `materialCosts`; die Preisspalten kennen keine Eingabe-Einheit. Nicht erfasst
+ * heißt leer — das ist bei Verbraucht wie beim Preis ein eigener Zustand, keine
+ * 0 (CONTEXT.md).
+ *
+ * Gezeigt wird mit **Dezimalkomma**, wie die gelesene Zelle daneben: sonst
+ * spränge „41,67" beim Anklicken auf „41.67" und wieder zurück. Gerundet wird
+ * dabei nur beim Preis (er *ist* ein Betrag auf Cent) — eine Menge zu runden
+ * verlöre den Wert, den man gar nicht anfassen wollte, und angebrochene Gebinde
+ * (2,5) sind der Regelfall des Gebinde-Modus.
+ */
+export function cellText(column: EditableColumn, m: CellValues, columnUnit: InputUnit): string {
+	switch (column) {
+		case 'ordered':
+		case 'consumed': {
+			const stored = storedQuantity(column, m);
+			const shown = cellUnit(columnUnit, m) === 'packaging' ? stored : toBaseQuantity(stored, m);
+			return shown == null ? '' : decimalComma(String(shown));
+		}
+		case 'tax':
+			return m.tax_rate == null ? '' : String(m.tax_rate);
+		case 'net':
+			return priceText(netPrice(m));
+		case 'gross':
+			return priceText(grossPrice(m));
+	}
+}
+
+/** Ein Betrag, wie er im Preisfeld steht: auf Cent, mit Dezimalkomma. */
+function priceText(value: number | null): string {
+	return value == null ? '' : decimalComma(value.toFixed(2));
+}
+
+function decimalComma(value: string): string {
+	return value.replace('.', ',');
 }
 
 /** Leer, eine Zahl — oder Gekritzel, das keine ist. Die drei laufen im
@@ -85,9 +145,9 @@ type Typed = { kind: 'empty' } | { kind: 'number'; value: number } | { kind: 'un
  * Was in der Zelle steht, gelesen.
  *
  * Das **Dezimalkomma** zählt: auf einer österreichischen Lieferantenrechnung
- * stehen 2,5 Fass, und CONTEXT.md nennt angebrochene Gebinde ausdrücklich.
- * Ein verworfenes Komma machte aus 2,5 ein „nicht erfasst" — genau das stille
- * Verwerfen, das ADR 0013 ausschließt.
+ * stehen 2,5 Fass und 2,50 €, und CONTEXT.md nennt angebrochene Gebinde
+ * ausdrücklich. Ein verworfenes Komma machte aus 2,5 ein „nicht erfasst" —
+ * genau das stille Verwerfen, das ADR 0013 ausschließt.
  */
 function read(text: string): Typed {
 	const trimmed = text.trim();
@@ -96,19 +156,34 @@ function read(text: string): Typed {
 	return Number.isNaN(value) ? { kind: 'unreadable' } : { kind: 'number', value };
 }
 
-/** Was eine gespeicherte Mengenzelle an der Position ändert — genau ein Feld.
-Die Stammdaten und die Preise bleiben unberührt. */
+/** Was eine gespeicherte Zelle an der Position ändert — genau ein Wert. Der
+Preis nimmt seine Quelle mit: welche Seite getippt wurde, *ist* die Angabe
+`price_is_net` (ADR 0006). Die Stammdaten bleiben unberührt. */
 export type CellUpdate =
 	| { ordered_quantity: number }
-	| { actual_quantity: number | null };
+	| { actual_quantity: number | null }
+	| { tax_rate: number | null }
+	| { unit_price: number | null; price_is_net: boolean };
 
 /**
- * Der getippte Text als Änderung an der Position, in Gebinden zurückgerechnet.
+ * Ob in der Zelle getippt wurde, seit sie aufging.
  *
- * Die zwei Spalten lesen eine **leere** Zelle verschieden (CONTEXT.md): eine
- * Position ohne Bestellmenge ist eine mit 0, eine ohne Verbraucht-Menge ist
- * eine, an der nichts nachgetragen wurde — sie zählt in keinen Verbrauchswert.
- * Eine getippte 0 in Verbraucht heißt dagegen „nichts verbraucht".
+ * „Unberührt" ist ein Zustand der Bearbeitung, keine Eigenschaft des Textes —
+ * derselbe Betrag kann dastehen, weil ihn niemand angefasst hat, oder weil ihn
+ * jemand von einer Rechnung abgetippt hat, und beim Preis bedeutet das
+ * Verschiedenes. Wer es nicht weiß, sagt `false`: das lässt den gespeicherten
+ * Stand in Ruhe.
+ */
+export type Touched = boolean;
+
+/**
+ * Der getippte Text als Änderung an der Position.
+ *
+ * Die zwei Mengenspalten lesen eine **leere** Zelle verschieden (CONTEXT.md):
+ * eine Position ohne Bestellmenge ist eine mit 0, eine ohne Verbraucht-Menge
+ * ist eine, an der nichts nachgetragen wurde — sie zählt in keinen
+ * Verbrauchswert. Eine getippte 0 in Verbraucht heißt dagegen „nichts
+ * verbraucht". Ein leeres Preisfeld ist eine *Preislücke*.
  *
  * **Unlesbares** ist etwas Drittes: es steht für den gespeicherten Stand, ist
  * damit keine Änderung und schreibt nichts. Ein Zahlendreher darf die
@@ -118,27 +193,69 @@ export type CellUpdate =
  * gespeicherte — die Datenbank führt Mengen in Gebinden, wo es welche gibt.
  */
 export function cellUpdate(
-	column: QuantityColumn,
+	column: EditableColumn,
 	text: string,
-	m: CellQuantities,
-	columnUnit: InputUnit
+	m: CellValues,
+	columnUnit: InputUnit,
+	touched: Touched = false
 ): CellUpdate {
 	const typed = read(text);
-	if (typed.kind === 'unreadable') {
-		return column === 'ordered'
-			? { ordered_quantity: m.ordered_quantity }
-			: { actual_quantity: m.actual_quantity };
+	switch (column) {
+		case 'ordered':
+			if (typed.kind === 'unreadable') return { ordered_quantity: m.ordered_quantity };
+			return {
+				ordered_quantity: typed.kind === 'empty' ? 0 : typedQuantity(typed.value, m, columnUnit)
+			};
+		case 'consumed':
+			if (typed.kind === 'unreadable') return { actual_quantity: m.actual_quantity };
+			return {
+				actual_quantity:
+					typed.kind === 'empty' ? null : typedQuantity(typed.value, m, columnUnit)
+			};
+		case 'tax':
+			if (typed.kind === 'unreadable') return { tax_rate: m.tax_rate };
+			return { tax_rate: typed.kind === 'empty' ? null : typed.value };
+		case 'net':
+		case 'gross':
+			return priceUpdate(column, typed, m, touched);
 	}
-	const stored =
-		typed.kind === 'empty'
-			? null
-			: cellUnit(columnUnit, m) === 'packaging'
-				? typed.value
-				: fromBaseQuantity(typed.value, m);
-	if (column === 'ordered') {
-		return { ordered_quantity: stored ?? 0 };
+}
+
+/** Eine getippte Menge, wie sie gespeichert wird: in Gebinden schon fertig,
+in der Basiseinheit noch umzurechnen. */
+function typedQuantity(value: number, m: CellValues, columnUnit: InputUnit): number {
+	return cellUnit(columnUnit, m) === 'packaging' ? value : fromBaseQuantity(value, m);
+}
+
+/**
+ * Was eine Preiszelle schreibt.
+ *
+ * Ein **unberührtes** Feld schreibt den gespeicherten Preis zurück, nicht die
+ * Zahl, die dort steht: die Zelle zeigt Cent, der gespeicherte Preis kann
+ * feiner sein. 41,67 € pro 50-Liter-Fass sind 0,8334 € je Liter — wer an so
+ * einer Zeile nur die Verbraucht-Menge nachträgt, hätte sonst nebenbei auf
+ * 0,83 € gekürzt und das Fass um 17 Cent verbilligt (#217). Unberührt heißt
+ * auch: die Quelle bleibt, wo sie war — die gerechnete Gegenseite legt
+ * `price_is_net` nicht um, bloß weil man durch sie hindurchgetabt ist.
+ *
+ * Eine **geleerte** Zelle ist dagegen keine getippte Seite: sie nimmt den Preis
+ * weg, sie erklärt keinen. Die Quelle bleibt stehen, bis wieder ein Betrag
+ * dasteht — sonst kippte „Brutto löschen" die Basis einer Position, die gar
+ * keinen Preis mehr hat.
+ */
+function priceUpdate(
+	column: 'net' | 'gross',
+	typed: Typed,
+	m: CellValues,
+	touched: Touched
+): CellUpdate {
+	if (!touched || typed.kind === 'unreadable') {
+		return { unit_price: m.unit_price, price_is_net: m.price_is_net };
 	}
-	return { actual_quantity: stored };
+	if (typed.kind === 'empty') return { unit_price: null, price_is_net: m.price_is_net };
+	// Die getippte Seite wird Quelle — sie ist die Zahl, die jemand von einer
+	// Rechnung abgelesen hat (CONTEXT.md „Quelle des Preises").
+	return { unit_price: typed.value, price_is_net: column === 'net' };
 }
 
 /**
@@ -147,36 +264,55 @@ export function cellUpdate(
  * Verglichen wird, was **gespeichert würde**, gegen das, was steht — nicht der
  * Text gegen den Text: eine geleerte Bestellt-Zelle über einer gespeicherten 0
  * schriebe dieselbe 0 und ist darum keine Änderung, während leer und 0 bei
- * Verbraucht zwei verschiedene Stände sind. Gerundet wird nicht: `cellUpdate`
- * und `cellText` rechnen mit demselben Faktor hin und her.
+ * Verbraucht zwei verschiedene Stände sind. Gefragt wird die Nutzlast, nicht
+ * die Spalte: welches Feld sie trägt, sagt schon, was zu vergleichen ist.
+ *
+ * Beim Preis zählt auch der Wechsel der Quelle: 50 brutto über einer netto
+ * erfassten Position ist dieselbe Zahl mit anderer Bedeutung — ohne Preis sagt
+ * die Quelle dagegen nichts aus und zählt darum nicht.
  */
 export function isCellDirty(
-	column: QuantityColumn,
+	column: EditableColumn,
 	text: string,
-	m: CellQuantities,
-	columnUnit: InputUnit
+	m: CellValues,
+	columnUnit: InputUnit,
+	touched: Touched = false
 ): boolean {
+	const update = cellUpdate(column, text, m, columnUnit, touched);
+	if ('ordered_quantity' in update) return !same(update.ordered_quantity, m.ordered_quantity);
+	if ('actual_quantity' in update) return !same(update.actual_quantity, m.actual_quantity);
+	if ('tax_rate' in update) return !same(update.tax_rate, m.tax_rate);
 	return (
-		storedQuantity(column, previewCell(column, text, m, columnUnit)) !== storedQuantity(column, m)
+		!same(update.unit_price, m.unit_price) ||
+		(update.unit_price != null && update.price_is_net !== m.price_is_net)
 	);
 }
 
-/** Die Position, wie sie mit dem Getippten aussähe. Die Gebinde-Umrechnung
-unter dem Feld rechnet darüber mit, ohne eine zweite Formel zu bekommen —
-dasselbe Mittel wie `draftPreview` im Zeilenmodus. */
-export function previewCell<T extends CellQuantities>(
-	column: QuantityColumn,
-	text: string,
-	m: T,
-	columnUnit: InputUnit
-): T {
-	return { ...m, ...cellUpdate(column, text, m, columnUnit) };
+/** Zwei Werte sind derselbe, wenn sie auf Centbruchteile übereinstimmen — sonst
+erklärte ein Fließkomma-Rest aus der Gebinde-Umrechnung eine unberührte Zelle
+für geändert. */
+function same(a: number | null, b: number | null): boolean {
+	if (a == null || b == null) return a === b;
+	return Math.abs(a - b) < 1e-9;
 }
 
-/** Eine Mengenzelle, benannt wie die Tabelle sie kennt: Position und Spalte. */
+/** Die Position, wie sie mit dem Getippten aussähe. Die Gebinde-Umrechnung
+unter dem Feld, die Gegenseite des Preises, Δ und Gesamt rechnen darüber mit,
+ohne eine zweite Formel zu bekommen (ADR 0003 §2). */
+export function previewCell<T extends CellValues>(
+	column: EditableColumn,
+	text: string,
+	m: T,
+	columnUnit: InputUnit,
+	touched: Touched = false
+): T {
+	return { ...m, ...cellUpdate(column, text, m, columnUnit, touched) };
+}
+
+/** Eine Zelle, benannt wie die Tabelle sie kennt: Position und Spalte. */
 export interface CellRef {
 	id: string;
-	column: QuantityColumn;
+	column: EditableColumn;
 }
 
 /**
@@ -185,9 +321,6 @@ export interface CellRef {
  * oben nach unten ab, das Nachtragen einer ganzen Zeile läuft quer.
  */
 export type CellMove = 'down' | 'up' | 'forward' | 'back';
-
-/** Die Mengenspalten in der Reihenfolge, in der Tab sie abläuft. */
-const COLUMN_ORDER: QuantityColumn[] = ['ordered', 'consumed'];
 
 /**
  * Die Zelle, die nach dem Speichern aufgeht — `null` am Rand des Kastens.
@@ -206,7 +339,7 @@ export function nextCell(ids: string[], from: CellRef, move: CellMove): CellRef 
 		return target == null ? null : { id: target, column: from.column };
 	}
 
-	// Tab liest das Gitter zeilenweise: alle Mengenzellen hintereinander
+	// Tab liest das Gitter zeilenweise: alle tippbaren Zellen hintereinander
 	// durchnummeriert, ein Schritt vor oder zurück, dann wieder in Zeile und
 	// Spalte zerlegt.
 	const width = COLUMN_ORDER.length;

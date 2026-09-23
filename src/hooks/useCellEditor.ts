@@ -6,9 +6,8 @@ import {
 } from '@/lib/materialCellEditor';
 
 /**
- * Bindet die Zellbearbeitung (`materialCellEditor`) an React — dasselbe Muster
- * wie `useRowEditor` für den Zeilenmodus: der Store lebt über Renderzyklen
- * hinweg, `useSyncExternalStore` holt seinen Stand.
+ * Bindet die Zellbearbeitung (`materialCellEditor`) an React: der Store lebt
+ * über Renderzyklen hinweg, `useSyncExternalStore` holt seinen Stand.
  *
  * `onSave` darf sich bei jedem Render ändern (react-query gibt neue
  * Mutationen); der Store bekommt darum nur einen Zeiger darauf. Dasselbe gilt

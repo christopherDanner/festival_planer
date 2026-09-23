@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { Station } from '@/lib/shiftService';
-import { emptyMaterialForm, ZEILEN_HINWEIS, type MaterialForm } from '@/lib/materialDialogForm';
+import { emptyMaterialForm, TABELLEN_HINWEIS, type MaterialForm } from '@/lib/materialDialogForm';
 import MaterialZettel, { type MaterialZettelProps } from './MaterialZettel';
 
 /* Seam dieses Tests (aus #117 abgeleitet, vor dem ersten Test festgehalten):
@@ -111,7 +111,7 @@ describe('MaterialZettel — Stammdaten-Schnitt', () => {
 		}
 	});
 
-	it('lässt Mengen und Preise beim Bearbeiten weg — die macht die Zeile', () => {
+	it('lässt Mengen und Preise beim Bearbeiten weg — die macht die Tabelle', () => {
 		const html = render(EDIT);
 		expect(html).not.toContain('Bestellt');
 		expect(html).not.toContain('Verbraucht');
@@ -120,7 +120,7 @@ describe('MaterialZettel — Stammdaten-Schnitt', () => {
 	});
 
 	it('erklärt die Lücke an Ort und Stelle', () => {
-		expect(render(EDIT)).toContain(ZEILEN_HINWEIS);
+		expect(render(EDIT)).toContain(TABELLEN_HINWEIS);
 	});
 
 	it('macht eine neue Position in einem Zug vollständig', () => {
@@ -130,7 +130,7 @@ describe('MaterialZettel — Stammdaten-Schnitt', () => {
 		expect(html).toContain('MwSt');
 		expect(html).toContain('Preisbasis');
 		// Beim Anlegen sind die Felder da — der Hinweis wäre dann falsch.
-		expect(html).not.toContain(ZEILEN_HINWEIS);
+		expect(html).not.toContain(TABELLEN_HINWEIS);
 	});
 
 	it('bietet die Bezugsgröße des Preises erst mit Gebinde an', () => {

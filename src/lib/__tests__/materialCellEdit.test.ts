@@ -1,8 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { cellText, cellUnit, cellUpdate, isCellDirty, nextCell } from '../materialCellEdit';
+import {
+	cellText,
+	cellUnit,
+	cellUpdate,
+	isCellDirty,
+	nextCell,
+	previewCell,
+	taxOptions,
+	type CellValues,
+	type EditableColumn
+} from '../materialCellEdit';
+
+/** Ohne Preis — die Mengenfälle interessiert er nicht. */
+const ohnePreis = { unit_price: null, tax_rate: null, price_is_net: false };
 
 /** 4 Fass à 50 Liter bestellt, nichts nachgetragen. */
-const fass = {
+const fass: CellValues = {
+	...ohnePreis,
 	packaging_unit: 'Fass',
 	amount_per_packaging: 50,
 	ordered_quantity: 4,
@@ -20,7 +34,8 @@ describe('cellText — was beim Öffnen der Zelle im Feld steht (#216)', () => {
 });
 
 describe('cellUpdate — leer und 0 sind bei Verbraucht zweierlei (#216)', () => {
-	const stueck = {
+	const stueck: CellValues = {
+		...ohnePreis,
 		packaging_unit: null,
 		amount_per_packaging: null,
 		ordered_quantity: 10,
@@ -60,7 +75,8 @@ describe('cellUpdate — leer und 0 sind bei Verbraucht zweierlei (#216)', () =>
 });
 
 describe('isCellDirty — geschrieben wird nur, was etwas ändert (#216)', () => {
-	const stueck = {
+	const stueck: CellValues = {
+		...ohnePreis,
 		packaging_unit: null,
 		amount_per_packaging: null,
 		ordered_quantity: 0,
@@ -90,7 +106,8 @@ describe('isCellDirty — geschrieben wird nur, was etwas ändert (#216)', () =>
 });
 
 describe('cellUnit — worin diese eine Position getippt wird (#218)', () => {
-	const stueck = {
+	const stueck: CellValues = {
+		...ohnePreis,
 		packaging_unit: null,
 		amount_per_packaging: null,
 		ordered_quantity: 10,
@@ -113,7 +130,8 @@ describe('cellUnit — worin diese eine Position getippt wird (#218)', () => {
 });
 
 describe('cellText und cellUpdate im Gebinde-Modus (#218)', () => {
-	const stueck = {
+	const stueck: CellValues = {
+		...ohnePreis,
 		packaging_unit: null,
 		amount_per_packaging: null,
 		ordered_quantity: 10,
@@ -170,6 +188,166 @@ describe('cellText und cellUpdate im Gebinde-Modus (#218)', () => {
 	});
 });
 
+/* ------------------------------------------------------------------ */
+/*  Die Preiszellen (#217)                                             */
+/* ------------------------------------------------------------------ */
+
+/** 41,67 € netto je Fass, 20 % — netto erfasst. */
+const netto: CellValues = {
+	packaging_unit: null,
+	amount_per_packaging: null,
+	ordered_quantity: 1,
+	actual_quantity: null,
+	unit_price: 41.67,
+	tax_rate: 20,
+	price_is_net: true
+};
+
+/** Derselbe Preis, brutto erfasst. */
+const brutto: CellValues = { ...netto, unit_price: 50, price_is_net: false };
+
+describe('taxOptions — die Auswahl der MwSt-Zelle (#217)', () => {
+	it('bietet keine, 10, 13 und 20 %', () => {
+		expect(taxOptions(null)).toEqual(['', '10', '13', '20']);
+	});
+
+	it('lässt einen abweichend erfassten Satz wählbar, statt ihn still zu schlucken', () => {
+		expect(taxOptions(7)).toEqual(['', '7', '10', '13', '20']);
+	});
+});
+
+describe('cellText — was in den Preiszellen steht (#217)', () => {
+	it('zeigt beide Seiten des Preises mit Dezimalkomma, wie die Zelle daneben', () => {
+		// Sonst spränge der Betrag beim Anklicken von „41,67" auf „41.67".
+		expect(cellText('net', netto, 'base')).toBe('41,67');
+		expect(cellText('gross', netto, 'base')).toBe('50,00'); // 41,67 + 20 %
+	});
+
+	it('nennt den Steuersatz als Zahl, „keine" als leere Auswahl', () => {
+		expect(cellText('tax', netto, 'base')).toBe('20');
+		expect(cellText('tax', { ...netto, tax_rate: null }, 'base')).toBe('');
+	});
+
+	it('lässt eine Preislücke leer — sie ist kein 0-Preis', () => {
+		expect(cellText('net', { ...netto, unit_price: null }, 'base')).toBe('');
+		expect(cellText('gross', { ...netto, unit_price: null }, 'base')).toBe('');
+	});
+});
+
+/** Getippt — der vierte Parameter sagt, dass jemand in der Zelle war. */
+const TIPPT = true;
+
+describe('cellUpdate — die zuletzt getippte Seite ist die Quelle (#217)', () => {
+	it('macht die getippte Netto-Zelle zur Quelle', () => {
+		expect(cellUpdate('net', '10', brutto, 'base', TIPPT)).toEqual({
+			unit_price: 10,
+			price_is_net: true
+		});
+	});
+
+	it('macht die getippte Brutto-Zelle zur Quelle', () => {
+		expect(cellUpdate('gross', '12', netto, 'base', TIPPT)).toEqual({
+			unit_price: 12,
+			price_is_net: false
+		});
+	});
+
+	it('macht sie auch dann zur Quelle, wenn derselbe Betrag dastand', () => {
+		// 50,00 steht in der Brutto-Zelle einer netto erfassten Position. Wer ihn
+		// von der Rechnung abtippt, meint: *brutto* ist die erfasste Seite — sonst
+		// rechnete der nächste Steuersatzwechsel die falsche Zahl um.
+		expect(cellUpdate('gross', '50,00', netto, 'base', TIPPT)).toEqual({
+			unit_price: 50,
+			price_is_net: false
+		});
+	});
+
+	it('nimmt auch hier das Dezimalkomma der Rechnung an', () => {
+		expect(cellUpdate('net', '2,50', brutto, 'base', TIPPT)).toEqual({
+			unit_price: 2.5,
+			price_is_net: true
+		});
+	});
+
+	it('macht aus einem geleerten Preisfeld eine Preislücke, ohne die Quelle zu kippen', () => {
+		// Eine geleerte Zelle nimmt den Preis weg, sie erklärt keinen — die Basis
+		// einer Position ohne Preis sagt ohnehin nichts aus.
+		expect(cellUpdate('gross', '', netto, 'base', TIPPT)).toEqual({
+			unit_price: null,
+			price_is_net: true
+		});
+	});
+
+	it('lässt Gekritzeltes stehen, statt den Preis zu löschen', () => {
+		expect(cellUpdate('net', '4l,67', netto, 'base', TIPPT)).toEqual({
+			unit_price: 41.67,
+			price_is_net: true
+		});
+	});
+
+	it('schreibt ein unberührtes Preisfeld nicht auf seine Cent-Anzeige zurück', () => {
+		// 41,67 € je 50-Liter-Fass sind 0,8334 € je Liter. Die Zelle zeigt 0,83 —
+		// wer sie nur verlässt, dürfte das Fass nicht um 17 Cent verbilligen.
+		const feiner: CellValues = { ...netto, unit_price: 0.8334 };
+
+		expect(cellText('net', feiner, 'base')).toBe('0,83');
+		expect(cellUpdate('net', '0,83', feiner, 'base')).toEqual({
+			unit_price: 0.8334,
+			price_is_net: true
+		});
+	});
+
+	it('lässt die Gegenseite eines unberührten Preises die Quelle in Ruhe', () => {
+		// Die Brutto-Zelle einer netto erfassten Position zeigt 50,00. Durch sie
+		// hindurchzutabben darf `price_is_net` nicht umlegen.
+		expect(cellUpdate('gross', '50,00', netto, 'base')).toEqual({
+			unit_price: 41.67,
+			price_is_net: true
+		});
+	});
+
+	it('schreibt beim Steuersatz nur ihn — der erfasste Preis bleibt Quelle', () => {
+		expect(cellUpdate('tax', '10', netto, 'base', TIPPT)).toEqual({ tax_rate: 10 });
+		expect(cellUpdate('tax', '', netto, 'base', TIPPT)).toEqual({ tax_rate: null });
+	});
+});
+
+describe('isCellDirty — die Preiszellen (#217)', () => {
+	it('hält ein unberührtes Preisfeld für unverändert — beide Seiten', () => {
+		expect(isCellDirty('net', '41,67', netto, 'base')).toBe(false);
+		expect(isCellDirty('gross', '50,00', netto, 'base')).toBe(false);
+		expect(isCellDirty('tax', '20', netto, 'base', TIPPT)).toBe(false);
+	});
+
+	it('zählt den Wechsel der Quelle als Änderung, auch bei gleicher Zahl', () => {
+		// 50 brutto über einer netto erfassten Position: dieselbe Zahl, andere
+		// Bedeutung — ohne das bliebe `price_is_net` für immer, wie es war.
+		expect(isCellDirty('gross', '50', netto, 'base', TIPPT)).toBe(true);
+	});
+
+	it('merkt den neuen Steuersatz und den neuen Preis', () => {
+		expect(isCellDirty('tax', '10', netto, 'base', TIPPT)).toBe(true);
+		expect(isCellDirty('net', '42', netto, 'base', TIPPT)).toBe(true);
+	});
+
+	it('zählt eine geleerte Preiszelle über einer Preislücke nicht als Änderung', () => {
+		const luecke: CellValues = { ...netto, unit_price: null };
+		expect(isCellDirty('net', '', luecke, 'base', TIPPT)).toBe(false);
+	});
+});
+
+describe('previewCell — die Gegenseite rechnet beim Tippen mit (#217)', () => {
+	it('lässt Brutto der getippten Netto-Zelle folgen', () => {
+		expect(cellText('gross', previewCell('net', '10', netto, 'base', TIPPT), 'base')).toBe('12,00'); // 10 + 20 %
+	});
+
+	it('rechnet beim Wechsel des Steuersatzes die Gegenseite neu, nicht die Quelle', () => {
+		const zehn = previewCell('tax', '10', netto, 'base', TIPPT);
+		expect(cellText('net', zehn, 'base')).toBe('41,67');
+		expect(cellText('gross', zehn, 'base')).toBe('45,84'); // 41,67 + 10 %
+	});
+});
+
 describe('nextCell — der Tastaturfluss des Rechnungsabgleichs (#216)', () => {
 	const ids = ['bier', 'wein', 'saft'];
 
@@ -187,32 +365,42 @@ describe('nextCell — der Tastaturfluss des Rechnungsabgleichs (#216)', () => {
 		});
 	});
 
-	it('lässt Tab durch die Mengenzellen laufen — erst rechts, dann eine Zeile tiefer', () => {
-		expect(nextCell(ids, { id: 'bier', column: 'ordered' }, 'forward')).toEqual({
-			id: 'bier',
-			column: 'consumed'
-		});
-		expect(nextCell(ids, { id: 'bier', column: 'consumed' }, 'forward')).toEqual({
-			id: 'wein',
-			column: 'ordered'
-		});
+	it('läuft mit Tab durch alle fünf tippbaren Zellen und dann in die nächste Zeile (#217)', () => {
+		// Bestellt → Verbraucht → MwSt → Netto → Brutto → nächste Zeile.
+		const spalten: EditableColumn[] = ['ordered', 'consumed', 'tax', 'net', 'gross'];
+		const weg = spalten.map((column) => nextCell(ids, { id: 'bier', column }, 'forward'));
+
+		expect(weg).toEqual([
+			{ id: 'bier', column: 'consumed' },
+			{ id: 'bier', column: 'tax' },
+			{ id: 'bier', column: 'net' },
+			{ id: 'bier', column: 'gross' },
+			{ id: 'wein', column: 'ordered' }
+		]);
 	});
 
 	it('führt Shift+Tab denselben Weg zurück', () => {
 		expect(nextCell(ids, { id: 'wein', column: 'ordered' }, 'back')).toEqual({
 			id: 'bier',
-			column: 'consumed'
+			column: 'gross'
 		});
-		expect(nextCell(ids, { id: 'bier', column: 'consumed' }, 'back')).toEqual({
+		expect(nextCell(ids, { id: 'bier', column: 'net' }, 'back')).toEqual({
 			id: 'bier',
-			column: 'ordered'
+			column: 'tax'
+		});
+	});
+
+	it('führt Enter auch in den Preisspalten dieselbe Spalte hinunter', () => {
+		expect(nextCell(ids, { id: 'bier', column: 'net' }, 'down')).toEqual({
+			id: 'wein',
+			column: 'net'
 		});
 	});
 
 	it('hört am Rand des Kastens auf, statt umzubrechen', () => {
 		expect(nextCell(ids, { id: 'saft', column: 'consumed' }, 'down')).toBeNull();
 		expect(nextCell(ids, { id: 'bier', column: 'consumed' }, 'up')).toBeNull();
-		expect(nextCell(ids, { id: 'saft', column: 'consumed' }, 'forward')).toBeNull();
+		expect(nextCell(ids, { id: 'saft', column: 'gross' }, 'forward')).toBeNull();
 		expect(nextCell(ids, { id: 'bier', column: 'ordered' }, 'back')).toBeNull();
 	});
 
