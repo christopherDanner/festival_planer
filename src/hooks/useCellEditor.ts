@@ -4,6 +4,7 @@ import {
 	type CellEditorSnapshot,
 	type CreateCellEditorOpts
 } from '@/lib/materialCellEditor';
+import { BASE_UNITS } from '@/lib/materialCellEdit';
 
 /**
  * Bindet die Zellbearbeitung (`materialCellEditor`) an React — dasselbe Muster
@@ -11,7 +12,9 @@ import {
  * hinweg, `useSyncExternalStore` holt seinen Stand.
  *
  * `onSave` darf sich bei jedem Render ändern (react-query gibt neue
- * Mutationen); der Store bekommt darum nur einen Zeiger darauf.
+ * Mutationen); der Store bekommt darum nur einen Zeiger darauf. Dasselbe gilt
+ * für die Eingabe-Einheit der Spalten (#218) — sie liegt als Zustand in der
+ * Arbeitsliste, der Store fragt sie beim Öffnen einer Zelle ab.
  */
 export function useCellEditor(opts: CreateCellEditorOpts) {
 	const optsRef = useRef(opts);
@@ -21,6 +24,7 @@ export function useCellEditor(opts: CreateCellEditorOpts) {
 		() =>
 			createCellEditor({
 				onSave: (id, update) => optsRef.current.onSave(id, update),
+				units: () => optsRef.current.units?.() ?? BASE_UNITS,
 				flashMs: optsRef.current.flashMs
 			}),
 		[]

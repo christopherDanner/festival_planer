@@ -34,11 +34,12 @@ function Probe({ label, children }: { label: string; children: React.ReactNode }
 interface SchalterProbeProps {
 	ariaLabel: string;
 	options: { value: string; label: string }[];
+	size?: 'sm' | 'md';
 }
 
-function SegmentedProbe({ ariaLabel, options }: SchalterProbeProps) {
+function SegmentedProbe({ ariaLabel, options, size }: SchalterProbeProps) {
 	const [value, setValue] = React.useState(options[0].value);
-	return <SegmentedControl aria-label={ariaLabel} options={options} value={value} onValueChange={setValue} />;
+	return <SegmentedControl aria-label={ariaLabel} options={options} value={value} onValueChange={setValue} size={size} />;
 }
 
 function ModeToggleProbe({ ariaLabel, options }: SchalterProbeProps) {
@@ -273,6 +274,18 @@ const Werkstatt = () => (
 							{ value: 'tatsaechlich', label: 'Tatsächliche Menge' },
 						]}
 					/>
+				</Probe>
+				<Probe label="Klein (size=sm) · im Kopf einer Tabellenspalte (#218)">
+					<div className="w-[98px]">
+						<SegmentedProbe
+							ariaLabel="Eingabe-Einheit"
+							size="sm"
+							options={[
+								{ value: 'base', label: 'Basis' },
+								{ value: 'packaging', label: 'Gebinde' },
+							]}
+						/>
+					</div>
 				</Probe>
 				<Probe label="Drei Segmente · interaktiv">
 					<SegmentedProbe

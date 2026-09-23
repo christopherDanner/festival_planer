@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cellText, cellUpdate, isCellDirty, nextCell } from '../materialCellEdit';
+import { cellText, cellUnit, cellUpdate, isCellDirty, nextCell } from '../materialCellEdit';
 
 /** 4 Fass à 50 Liter bestellt, nichts nachgetragen. */
 const fass = {
@@ -86,6 +86,87 @@ describe('isCellDirty — geschrieben wird nur, was etwas ändert (#216)', () =>
 	it('merkt die neue Zahl — auch in Gebinden gerechnet', () => {
 		expect(isCellDirty('consumed', '150', fass)).toBe(true);
 		expect(isCellDirty('ordered', '200', fass)).toBe(false);
+	});
+});
+
+describe('cellUnit — worin diese eine Position getippt wird (#218)', () => {
+	const stueck = {
+		packaging_unit: null,
+		amount_per_packaging: null,
+		ordered_quantity: 10,
+		actual_quantity: null
+	};
+
+	it('folgt der Wahl des Spaltenkopfs, solange die Position ein Gebinde hat', () => {
+		expect(cellUnit('packaging', fass)).toBe('packaging');
+		expect(cellUnit('base', fass)).toBe('base');
+	});
+
+	it('lässt eine Position ohne Gebinde in der Basiseinheit — auch im Gebinde-Modus', () => {
+		// „Positionen ohne Gebinde bleiben in der Basiseinheit" (CONTEXT.md).
+		expect(cellUnit('packaging', stueck)).toBe('base');
+	});
+
+	it('zählt ein Gebinde ohne Inhaltsmenge nicht — 1 Karton à nichts ist keine Umrechnung', () => {
+		expect(cellUnit('packaging', { ...stueck, packaging_unit: 'Karton' })).toBe('base');
+	});
+});
+
+describe('cellText und cellUpdate im Gebinde-Modus (#218)', () => {
+	const stueck = {
+		packaging_unit: null,
+		amount_per_packaging: null,
+		ordered_quantity: 10,
+		actual_quantity: null
+	};
+
+	it('zeigt im Feld die Gebinde, nicht die Basismenge', () => {
+		// 4 Fass à 50 Liter: in Basis 200, in Gebinden 4.
+		expect(cellText('ordered', fass, 'packaging')).toBe('4');
+		expect(cellText('ordered', fass, 'base')).toBe('200');
+	});
+
+	it('schreibt angebrochene Gebinde mit Komma, wie sie auf der Rechnung stehen', () => {
+		expect(cellText('consumed', { ...fass, actual_quantity: 2.5 }, 'packaging')).toBe('2,5');
+	});
+
+	it('speichert die getippte Zahl als Gebinde, ohne sie umzurechnen', () => {
+		expect(cellUpdate('consumed', '3', fass, 'packaging')).toEqual({ actual_quantity: 3 });
+		expect(cellUpdate('ordered', '2,5', fass, 'packaging')).toEqual({ ordered_quantity: 2.5 });
+	});
+
+	it('rechnet in der Basiseinheit weiter zurück, wenn die Spalte auf Basis steht', () => {
+		expect(cellUpdate('consumed', '150', fass, 'base')).toEqual({ actual_quantity: 3 });
+	});
+
+	it('nimmt bei einer Position ohne Gebinde weiter die Basiseinheit an', () => {
+		expect(cellText('ordered', stueck, 'packaging')).toBe('10');
+		expect(cellUpdate('ordered', '12', stueck, 'packaging')).toEqual({ ordered_quantity: 12 });
+	});
+
+	it('trägt leer und 0 auch in Gebinden auseinander', () => {
+		expect(cellUpdate('consumed', '', fass, 'packaging')).toEqual({ actual_quantity: null });
+		expect(cellUpdate('consumed', '0', fass, 'packaging')).toEqual({ actual_quantity: 0 });
+		expect(cellUpdate('ordered', '', fass, 'packaging')).toEqual({ ordered_quantity: 0 });
+	});
+
+	it('kommt in beide Richtungen an derselben Zahl an', () => {
+		// Hin und zurück: was im Feld steht, speichert sich zum gespeicherten Stand.
+		for (const unit of ['base', 'packaging'] as const) {
+			const text = cellText('ordered', fass, unit);
+			expect(cellUpdate('ordered', text, fass, unit)).toEqual({ ordered_quantity: 4 });
+			expect(isCellDirty('ordered', text, fass, unit)).toBe(false);
+		}
+	});
+
+	it('merkt die neue Zahl in Gebinden', () => {
+		expect(isCellDirty('ordered', '5', fass, 'packaging')).toBe(true);
+		expect(isCellDirty('ordered', '4', fass, 'packaging')).toBe(false);
+	});
+
+	it('lässt Gekritzeltes auch in Gebinden stehen', () => {
+		expect(cellUpdate('consumed', 'abc', fass, 'packaging')).toEqual({ actual_quantity: null });
+		expect(cellUpdate('ordered', 'abc', fass, 'packaging')).toEqual({ ordered_quantity: 4 });
 	});
 });
 
