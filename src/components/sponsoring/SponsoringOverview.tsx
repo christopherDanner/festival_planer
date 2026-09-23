@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Building2, FileDown, Import, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
 import SponsoringMatrix from '@/components/sponsoring/SponsoringMatrix';
 import SponsoringSearch from '@/components/sponsoring/SponsoringSearch';
+import PreislisteZettel from '@/components/sponsoring/PreislisteZettel';
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
 import type { ZettelInput, ZettelTarget } from '@/lib/sponsoringZettel';
+import {
+	buildCategoryZettel,
+	type CategoryImpact,
+	type CategoryZettelInput
+} from '@/lib/sponsoringPreisliste';
 import {
 	buildSponsoringOverviewFooter,
 	buildSponsoringOverviewRows,
@@ -32,6 +39,15 @@ export interface SponsoringOverviewProps {
 	onApply: (sponsoringId: string, target: ZettelTarget, input: ZettelInput) => void;
 	/** „Entfernen" im Zettel der Matrix. */
 	onRemove: (sponsoringId: string, target: ZettelTarget) => void;
+	/** Reichweite je Kategorie-Id über alle Sponsorings — der Zettel beziffert sie. */
+	categoryImpacts: Record<string, CategoryImpact>;
+	/**
+	 * „Übernehmen" im Zettel der Preisliste. `null` heißt **anlegen** — der Kopf
+	 * schreibt die Kategorie, an der er hängt, „+ KATEGORIE" eine neue (#149).
+	 */
+	onCategoryApply: (category: SponsoringCategory | null, input: CategoryZettelInput) => void;
+	/** „Kategorie löschen" — die bezifferte Rückfrage hat der Zettel schon gestellt. */
+	onCategoryDelete: (category: SponsoringCategory) => void;
 }
 
 /**
@@ -56,8 +72,15 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	onExportPdf,
 	onDelete,
 	onApply,
-	onRemove
+	onRemove,
+	categoryImpacts,
+	onCategoryApply,
+	onCategoryDelete
 }) => {
+	/* Der Anlege-Zettel hängt an „+ KATEGORIE"; die Zettel an den Spaltenköpfen
+	verwaltet die Matrix. Zwei Orte, ein Zettel — die Preisliste hat keinen
+	eigenen Dialog mehr (ADR 0009). */
+	const [creating, setCreating] = useState(false);
 	/* Vorjahresbeitrag je Sponsoring und Geldsumme des vorigen Fests kommen aus
 	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Solange es
 	den Leseweg nicht gibt, zeigt die Matrix den Leerfall: keine Vorjahr-Unterzeile
@@ -99,6 +122,30 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 						<FileDown className="h-4 w-4 mr-2" />
 						<span>PDF</span>
 					</Button>
+					{/* Derselbe Zettel wie am Spaltenkopf, nur leer — die Preisliste ist
+					der erste Schritt im Bereich, vor den Firmen (CONTEXT.md „Preisliste"). */}
+					<Popover open={creating} onOpenChange={setCreating}>
+						<PopoverTrigger asChild>
+							<Button size="sm" variant="outline" aria-label="Kategorie anlegen">
+								<Plus className="h-4 w-4 mr-2" />
+								<span>Kategorie</span>
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent
+							align="end"
+							sideOffset={2}
+							className="w-auto border-0 bg-transparent p-0 shadow-none"
+							onOpenAutoFocus={(e) => e.preventDefault()}
+						>
+							<PreislisteZettel
+								zettel={buildCategoryZettel(null, { assigned: 0, inheriting: 0 })}
+								onApply={(input) => {
+									onCategoryApply(null, input);
+									setCreating(false);
+								}}
+							/>
+						</PopoverContent>
+					</Popover>
 					<Button onClick={onCreate} size="sm">
 						<Plus className="h-4 w-4 mr-2" />
 						<span>Sponsoring</span>
@@ -175,9 +222,12 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 					footer={footer}
 					totalRowCount={allRows.length}
 					searchTerm={searchTerm}
+					categoryImpacts={categoryImpacts}
 					onDelete={onDelete}
 					onApply={onApply}
 					onRemove={onRemove}
+					onCategoryApply={onCategoryApply}
+					onCategoryDelete={onCategoryDelete}
 				/>
 				{/* Ein Fest ohne Sponsoring ist kein Suchergebnis — es behält diesen
 				Satz auch bei getipptem Begriff. Die Hinweiszeile bei keinem Treffer

@@ -17,8 +17,12 @@ export interface PreislisteZettelProps {
 	zettel: CategoryZettel;
 	/** „Übernehmen" — legt die Kategorie an oder schreibt Name und Standardwert. */
 	onApply: (input: CategoryZettelInput) => void;
-	/** „Kategorie löschen" — erst nach der bezifferten Rückfrage (ADR 0009). */
-	onDelete: () => void;
+	/**
+	 * „Kategorie löschen" — erst nach der bezifferten Rückfrage (ADR 0009).
+	 * Entfällt beim Anlegen: dort gibt es nichts zu löschen, und dann zeigt der
+	 * Zettel den Knopf auch nicht.
+	 */
+	onDelete?: () => void;
 }
 
 /**
@@ -89,7 +93,7 @@ const PreislisteZettel: React.FC<PreislisteZettelProps> = ({ zettel, onApply, on
 			unter einem Strich, nicht neben „Übernehmen" (#149). Die Rückfrage nennt
 			die Zuweisungen, die die Cascade mitreißt — ohne Zahl wäre das eine
 			unbezifferte Katastrophe (ADR 0009). */}
-			{zettel.deleteMessage && (
+			{zettel.deleteMessage && onDelete && (
 				<div className="mt-2 border-t border-linie pt-2">
 					<button
 						type="button"
