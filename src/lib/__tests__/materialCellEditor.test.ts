@@ -194,3 +194,28 @@ describe('createCellEditor — Speicherfehler (#216)', () => {
 		expect(editor.getState().editing).toEqual({ id: 'wein', column: 'consumed' });
 	});
 });
+
+describe('createCellEditor — der Blur der verlassenen Zelle (#216)', () => {
+	it('überhört ihn, statt die eben aufgegangene Zelle wieder zuzumachen', async () => {
+		const editor = createCellEditor({ onSave: vi.fn().mockResolvedValue(undefined) });
+
+		editor.open(ROWS[0], 'consumed');
+		editor.type('8');
+		await editor.commit('down', ROWS);
+		// Das Feld der alten Zelle geht aus dem Bild und meldet dabei seinen Blur.
+		await editor.commit(null, ROWS, { id: 'bier', column: 'consumed' });
+
+		expect(editor.getState().editing).toEqual({ id: 'wein', column: 'consumed' });
+	});
+
+	it('nimmt ihn an, solange er die offene Zelle meint', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined);
+		const editor = createCellEditor({ onSave });
+
+		editor.open(ROWS[0], 'consumed');
+		editor.type('8');
+		await editor.commit(null, ROWS, { id: 'bier', column: 'consumed' });
+
+		expect(onSave).toHaveBeenCalledWith('bier', { actual_quantity: 8 });
+	});
+});

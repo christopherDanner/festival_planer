@@ -45,8 +45,12 @@ export interface CellEditor {
 	/**
 	 * Speichert die offene Zelle und geht weiter. `move` ist die Taste, die das
 	 * Verlassen ausgelöst hat; ohne sie (Klick daneben) schließt die Zelle.
+	 *
+	 * `from` ist die Zelle, die der Aufrufer zu verlassen glaubt. Das Feld meldet
+	 * beim Ausblenden noch einen Blur — ohne diese Angabe machte er die Zelle
+	 * wieder zu, die die Taste eben aufgeschlagen hat.
 	 */
-	commit: (move: CellMove | null, rows: CellRow[]) => Promise<void>;
+	commit: (move: CellMove | null, rows: CellRow[], from?: CellRef) => Promise<void>;
 	/** Esc — verwirft **nur** diese Zelle und stellt den gespeicherten Wert her. */
 	cancel: () => void;
 	getState: () => CellEditorSnapshot;
@@ -124,8 +128,9 @@ export function createCellEditor(opts: CreateCellEditorOpts): CellEditor {
 			value = next;
 			notify();
 		},
-		async commit(move, rows) {
+		async commit(move, rows, from) {
 			if (!editing || !origin || saving) return;
+			if (from && (from.id !== editing.id || from.column !== editing.column)) return;
 			const cell = editing;
 			const row = origin;
 			const typed = value;

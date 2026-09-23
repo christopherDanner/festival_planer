@@ -21,6 +21,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { FestivalMaterialWithStation } from '@/lib/materialService';
 import { isFullPayload, type MaterialSaveData } from '@/lib/materialDialogForm';
 import { useRowEditor } from '@/hooks/useRowEditor';
+import { useCellEditor } from '@/hooks/useCellEditor';
 import type { ViewChange } from '@/lib/materialRowEditor';
 import {
 	groupMaterials,
@@ -104,6 +105,17 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 		onSave: (id, updates) => actions.updateMaterial.mutate({ id, updates })
 	});
 	const allRowsOpen = visible.length > 0 && visible.every((m) => snapshot.draftsById[m.id]);
+
+	// Zellbearbeitung der Mengen (#216, ADR 0013): der Klick in Bestellt oder
+	// Verbraucht macht *diese* Zelle zum Feld, sie speichert beim Verlassen.
+	// `mutateAsync`, weil ein Fehlschlag die Zelle offen lassen muss — `mutate`
+	// verschluckt ihn und die getippte Zahl wäre still weg. Der Sichtwechsel
+	// braucht keine eigene Rückfrage: er löst erst den Blur aus, und der
+	// speichert.
+	const cell = useCellEditor({
+		onSave: (id, update) =>
+			actions.updateMaterial.mutateAsync({ id, updates: update, silent: true })
+	});
 
 	// Achse, Reiter, Chip und Suche nehmen offene Eingaben aus dem Bild — mit
 	// ungespeicherten Änderungen wird erst gefragt. *Welche* Rückfrage greift,
@@ -276,6 +288,19 @@ const MaterialListView: React.FC<MaterialListViewProps> = ({ festivalId, festiva
 									onDraftChange: editor.edit,
 									onSaveRow: editor.save,
 									onCancelRow: editor.cancel
+								}}
+								cellEdit={{
+									editing: cell.snapshot.editing,
+									value: cell.snapshot.value,
+									saving: cell.snapshot.saving,
+									failed: cell.snapshot.failed,
+									savedIds: cell.snapshot.savedIds,
+									onOpen: (m, column) => cell.editor.open(m, column),
+									onType: cell.editor.type,
+									// Der Weg der Tastatur läuft über die *sichtbaren* Zeilen des
+									// Kastens — Suche und Kategorie-Chip bestimmen ihn mit.
+									onCommit: (move, from) => void cell.editor.commit(move, visible, from),
+									onCancel: cell.editor.cancel
 								}}
 							/>
 							{/* Die Fußleiste zählt den Kasten, nicht das Fest — offen ist, was

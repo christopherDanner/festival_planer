@@ -8,6 +8,13 @@ import { fromBaseQuantity, toBaseQuantity } from './materialQuantity';
 bleiben vorerst beim Zeilenmodus (Übergang aus #216). */
 export type QuantityColumn = 'ordered' | 'consumed';
 
+/** Ob eine Spalte der Positionstabelle in der Zelle getippt wird. Sie steht
+hier und nicht bei den Zellen, damit „welche Spalten sind Mengen" genau einmal
+festgeschrieben ist. */
+export function isQuantityColumn(column: string): column is QuantityColumn {
+	return column === 'ordered' || column === 'consumed';
+}
+
 /** Mengen samt Gebinde — mehr braucht eine Mengenzelle nicht. */
 export interface CellQuantities {
 	ordered_quantity: number;
