@@ -33,10 +33,20 @@ export const useMaterialListActions = (festivalId: string) => {
 	});
 
 	const updateMaterialMutation = useMutation({
-		mutationFn: ({ id, updates }: { id: string; updates: Partial<FestivalMaterial> }) =>
-			updateMaterial(id, updates),
-		onSuccess: () => {
+		mutationFn: ({
+			id,
+			updates
+		}: {
+			id: string;
+			updates: Partial<FestivalMaterial>;
+			/** Ohne Erfolgsmeldung — die Zellbearbeitung quittiert mit dem grünen
+			Blitz (#216). Ein Rechnungsabgleich über 76 Positionen ergäbe sonst 76
+			Meldungen, und keine davon sagt mehr als der Blitz. */
+			silent?: boolean;
+		}) => updateMaterial(id, updates),
+		onSuccess: (_data, variables) => {
 			invalidateAll();
+			if (variables.silent) return;
 			toast({ title: 'Erfolg', description: 'Material wurde aktualisiert.' });
 		},
 		onError: () => {

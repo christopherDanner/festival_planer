@@ -19,6 +19,13 @@ import {
 } from '@/lib/materialQuantity';
 import { deltaCell, taxCell, type DeltaTone } from '@/lib/materialRow';
 import {
+	previewCell,
+	storedQuantity,
+	type CellMove,
+	type CellRef,
+	type QuantityColumn
+} from '@/lib/materialCellEdit';
+import {
 	draftPreview,
 	taxOptions,
 	type RowDraft,
@@ -40,8 +47,9 @@ export type ColumnKey =
 	| 'station'
 	| 'supplier'
 	| 'packaging'
-	| 'ordered'
-	| 'consumed'
+	// Die zwei Mengenspalten kommen aus `materialCellEdit` — sie sind dort das
+	// Vokabular der Zellbearbeitung (#216) und dürfen nicht zweimal dastehen.
+	| QuantityColumn
 	| 'delta'
 	| 'tax'
 	| 'net'
@@ -64,6 +72,29 @@ export interface RowEditControls {
 	onDraftChange: (id: string, field: RowDraftField, value: string) => void;
 	onSaveRow: (id: string) => void;
 	onCancelRow: (id: string) => void;
+}
+
+/**
+ * Die Zellbearbeitung der Mengen, wie die Tabelle sie braucht (#216, ADR 0013).
+ * Den Zustand hält der `materialCellEditor` — die Tabelle malt ihn und meldet,
+ * was geklickt und getippt wurde. `onCommit` bekommt die Taste, die das
+ * Verlassen ausgelöst hat; welche Zelle das trifft, weiß der Store.
+ */
+export interface CellEditControls {
+	/** Die offene Zelle — höchstens eine im ganzen Kasten. */
+	editing: CellRef | null;
+	value: string;
+	/** Das Speichern läuft; das Feld nimmt solange keine Zeichen an. */
+	saving: boolean;
+	/** Das letzte Speichern ist gescheitert — roter Rand, Wert bleibt stehen. */
+	failed: boolean;
+	/** Eben gespeicherte Zeilen — der kurze grüne Blitz. */
+	savedIds: string[];
+	onOpen: (material: FestivalMaterialWithStation, column: QuantityColumn) => void;
+	onType: (value: string) => void;
+	/** `from` ist die Zelle, die der Aufrufer zu verlassen glaubt (siehe Store). */
+	onCommit: (move: CellMove | null, from: CellRef) => void;
+	onCancel: () => void;
 }
 
 /** Die drei Handgriffe des ⋮-Menüs; sie reisen immer zusammen. */
@@ -104,20 +135,30 @@ const PriceGap = () => (
 	</span>
 );
 
+/** Die Gebinde-Umrechnung unter einer Menge: „→ 4 × Fass". Sie steht unter der
+gelesenen Zelle, unter dem Feld der offenen Zeile und unter dem der offenen
+Zelle — eine Zeile, ein Rezept (ADR 0003 §2). */
+const PackagingLine: React.FC<{
+	stored: number | null;
+	material: FestivalMaterialWithStation;
+}> = ({ stored, material }) => {
+	const hint = formatRequiredPackaging(stored, material);
+	return hint ? (
+		<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
+	) : null;
+};
+
 /** Menge in Basiseinheiten samt Einheit, darunter die Gebinde-Umrechnung. */
 const QuantityCell: React.FC<{ stored: number | null; material: FestivalMaterialWithStation }> = ({
 	stored,
 	material
 }) => {
 	if (stored == null) return <MissingValue />;
-	const hint = formatRequiredPackaging(stored, material);
 	return (
 		<>
 			<span className="font-medium">{formatQuantity(toBaseQuantity(stored, material) ?? 0)}</span>{' '}
 			<span className="text-[10.5px] text-tinte-soft">{material.unit}</span>
-			{hint && (
-				<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
-			)}
+			<PackagingLine stored={stored} material={material} />
 		</>
 	);
 };
@@ -129,12 +170,16 @@ const ROW_BUTTON = cn(
 	FOCUS_INK
 );
 
-/** Eingabefeld einer offenen Zeile: rechtsbündig, tabellarische Ziffern, im
-Fokus die 2px-Tinte-Outline mit Versatz. */
-const ROW_INPUT = cn(
-	'h-7 w-full border-2 border-tinte bg-white px-1.5 text-right text-[13px] font-bold tabular-nums text-tinte',
-	'focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-tinte'
+/** Eingabefeld in der Tabelle: rechtsbündig, tabellarische Ziffern, im Fokus
+die 2px-Outline mit Versatz. Die Rahmenfarbe kommt vom Aufrufer — die rote
+Zelle eines gescheiterten Speicherns (#216) ist dasselbe Feld in anderem Ton. */
+const TABLE_INPUT = cn(
+	'h-7 w-full border-2 bg-white px-1.5 text-right text-[13px] font-bold tabular-nums text-tinte',
+	'focus:outline focus:outline-2 focus:outline-offset-2'
 );
+
+/** Das Feld der offenen Zeile (#115) — immer Tinte. */
+const ROW_INPUT = cn(TABLE_INPUT, 'border-tinte focus:outline-tinte');
 
 /**
  * Der Inhalt einer **lesenden** Zelle — je Spalte an einer Stelle, damit Kopf,
@@ -233,6 +278,131 @@ export const ReadingCell: React.FC<{
 			);
 	}
 };
+
+/** Die lesende Mengenzelle ist ein Knopf: sie *führt* jetzt irgendwohin. Er
+nimmt die Zelle samt ihrem Innenabstand ein (negative Ränder), damit „Klick in
+die Zelle" auch am Rand trifft, und bleibt mit 40 px hoch genug (DESIGN-VISION
+§6). Die gelbe Tönung ist derselbe Hinweis wie am Zettel des Sponsorings: hier
+lässt sich etwas eintragen. */
+const QUANTITY_BUTTON = cn(
+	'-mx-2.5 block h-[40px] w-[calc(100%+1.25rem)] px-2.5 text-right leading-tight hover:bg-gelb/40',
+	FOCUS_INK
+);
+
+/** Die Beschriftung der Mengenspalten — Kopf und Vorlesehilfe nennen sie
+gleich. */
+const QUANTITY_LABEL: Record<QuantityColumn, string> = {
+	ordered: 'Bestellt',
+	consumed: 'Verbraucht'
+};
+
+/**
+ * Eine Mengenzelle in **Zellbearbeitung** (#216, ADR 0013): lesend ein Knopf,
+ * angeklickt ein Eingabefeld an genau dieser Stelle. Getippt wird in der
+ * Basiseinheit, gespeichert beim Verlassen — welche Taste wohin führt, weiß der
+ * `materialCellEditor`.
+ *
+ * Gescheitertes Speichern lässt das Feld stehen: roter Rand, getippter Wert,
+ * und an der Stelle der Gebinde-Umrechnung die Meldung. Der Platz ist derselbe,
+ * damit die Zeile dabei nicht wächst.
+ */
+export const QuantityEditCell: React.FC<{
+	column: QuantityColumn;
+	material: FestivalMaterialWithStation;
+	cellEdit: CellEditControls;
+}> = ({ column, material: m, cellEdit }) => {
+	const label = `${QUANTITY_LABEL[column]} von ${m.name}`;
+	const open = cellEdit.editing?.id === m.id && cellEdit.editing.column === column;
+	const field = React.useRef<HTMLInputElement>(null);
+	const failed = open && cellEdit.failed;
+
+	// Der Fehlschlag kommt typisch aus dem Blur — der Fokus ist dann woanders,
+	// und „Enter versucht es erneut" braucht ihn hier.
+	React.useEffect(() => {
+		if (failed) field.current?.focus();
+	}, [failed]);
+
+	if (!open) {
+		return (
+			<button
+				type="button"
+				aria-label={label}
+				onClick={() => cellEdit.onOpen(m, column)}
+				className={QUANTITY_BUTTON}
+			>
+				<QuantityCell stored={storedQuantity(column, m)} material={m} />
+			</button>
+		);
+	}
+
+	const preview = previewCell(column, cellEdit.value, m);
+	const cell: CellRef = { id: m.id, column };
+
+	return (
+		<>
+			<input
+				// `text`, nicht `number`: ein Zahlenfeld verwirft das Dezimalkomma
+				// still — die Zelle zeigte weiter „2,5" und speicherte „nicht
+				// erfasst". `inputMode` holt am Handy trotzdem die Zifferntastatur.
+				type="text"
+				inputMode="decimal"
+				ref={field}
+				value={cellEdit.value}
+				// Während das Speichern läuft, nimmt das Feld keine Zeichen an — sonst
+				// ginge das Getippte mit dem Sprung in die nächste Zelle verloren.
+				readOnly={cellEdit.saving}
+				autoFocus
+				aria-label={label}
+				aria-invalid={failed || undefined}
+				placeholder="–"
+				onChange={(e) => cellEdit.onType(e.target.value)}
+				onKeyDown={(e) => onCellKey(e, cellEdit, cell)}
+				onBlur={() => cellEdit.onCommit(null, cell)}
+				className={cn(
+					TABLE_INPUT,
+					failed ? 'border-rot focus:outline-rot' : 'border-tinte focus:outline-tinte'
+				)}
+			/>
+			{failed ? (
+				<span
+					role="alert"
+					className="block truncate text-[10px] font-bold leading-tight text-rot"
+				>
+					Nicht gespeichert — Enter
+				</span>
+			) : (
+				<PackagingLine stored={storedQuantity(column, preview)} material={m} />
+			)}
+		</>
+	);
+};
+
+/**
+ * Die Tastatur des Rechnungsabgleichs (#216): Enter speichert und geht in
+ * dieselbe Spalte der nächsten Zeile (Shift+Enter hoch), Tab läuft quer durch
+ * die Mengenzellen (Shift+Tab zurück), Esc verwirft **nur** diese Zelle.
+ *
+ * Tab bekommt hier ein `preventDefault`, anders als im Zeilenmodus: der Weg
+ * führt in die nächste *Mengen*zelle, nicht zum nächsten Knopf im Dokument.
+ */
+function onCellKey(
+	event: React.KeyboardEvent<HTMLInputElement>,
+	cellEdit: CellEditControls,
+	cell: CellRef
+) {
+	if (event.key === 'Enter') {
+		event.preventDefault();
+		cellEdit.onCommit(event.shiftKey ? 'up' : 'down', cell);
+	}
+	if (event.key === 'Tab') {
+		event.preventDefault();
+		cellEdit.onCommit(event.shiftKey ? 'back' : 'forward', cell);
+	}
+	if (event.key === 'Escape') {
+		event.preventDefault();
+		cellEdit.onCancel();
+	}
+}
 
 /**
  * Der Inhalt einer Zelle **in Bearbeitung** (#115). Tippbar sind genau fünf:
@@ -356,7 +526,8 @@ function onRowKey(event: React.KeyboardEvent<HTMLElement>, id: string, rowEdit: 
 	}
 }
 
-/** Die Gebinde-Umrechnung unter dem Eingabefeld — sie rechnet beim Tippen mit. */
+/** Die Gebinde-Umrechnung unter dem Eingabefeld der offenen Zeile — sie rechnet
+beim Tippen mit und sieht aus wie überall (`PackagingLine`). */
 const PackagingHint: React.FC<{
 	draft: RowDraft;
 	material: FestivalMaterialWithStation;
@@ -364,8 +535,5 @@ const PackagingHint: React.FC<{
 }> = ({ draft, material, which }) => {
 	const preview = draftPreview(draft, material);
 	const stored = which === 'ordered' ? preview.ordered_quantity : preview.actual_quantity;
-	const hint = formatRequiredPackaging(stored, material);
-	return hint ? (
-		<span className="block text-[10px] leading-tight text-tinte-soft">{`→ ${hint}`}</span>
-	) : null;
+	return <PackagingLine stored={stored} material={material} />;
 };

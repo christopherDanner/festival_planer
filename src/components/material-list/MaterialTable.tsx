@@ -16,12 +16,14 @@ import {
 	PAPER_TABLE_HEAD_CELL
 } from '@/components/toolkit/PaperTable';
 import {
-	DeltaText,
 	EditingCell,
+	QuantityEditCell,
 	ReadingCell,
+	type CellEditControls,
 	type ColumnKey,
 	type RowEditControls
 } from './MaterialTableCells';
+import { isQuantityColumn } from '@/lib/materialCellEdit';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -38,6 +40,7 @@ interface MaterialTableProps {
 	onDelete: (id: string) => void;
 	onCopy: (material: FestivalMaterialWithStation) => void;
 	rowEdit: RowEditControls;
+	cellEdit: CellEditControls;
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,7 +128,7 @@ const FOOT_CELL = PAPER_TABLE_FOOT_CELL;
  * Gerechnet wird in `materialCosts` (ADR 0006), umgerechnet in
  * `materialQuantity`, gelesen in `materialRow` — die Tabelle malt nur.
  */
-const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, rowEdit }) => {
+const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = true, onEdit, onDelete, onCopy, rowEdit, cellEdit }) => {
 	const totalCost = sumTotals(materials);
 	const hasCosts = materials.some((m) => m.unit_price != null);
 	const cols = columns(showStation);
@@ -168,7 +171,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 				<tbody>
 					{materials.map((m) => {
 						const draft = rowEdit.draftsById[m.id];
-						const flash = rowEdit.savedIds.includes(m.id);
+						// Zeilenmodus und Zellbearbeitung blitzen an derselben Stelle grün:
+						// gespeichert ist gespeichert, egal welcher Weg es war.
+						const flash = rowEdit.savedIds.includes(m.id) || cellEdit.savedIds.includes(m.id);
 						return (
 							<tr
 								key={m.id}
@@ -196,6 +201,10 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ materials, showStation = 
 												autoFocus={rowEdit.focusId === m.id}
 												rowEdit={rowEdit}
 											/>
+										) : isQuantityColumn(col.key) ? (
+											// Mengen werden in der Zelle getippt (#216) — solange die
+											// Zeile nicht ohnehin im Zeilenmodus offen steht.
+											<QuantityEditCell column={col.key} material={m} cellEdit={cellEdit} />
 										) : (
 											<ReadingCell
 												column={col.key}
