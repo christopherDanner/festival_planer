@@ -73,14 +73,15 @@ Ein einzelnes Material, das pro Fest geführt wird (`festival_materials`). Wesen
 
 Eine Position ist einer Station zugeordnet (oder keiner). Stations-Mapping zwischen zwei Festen läuft per Stationsname.
 
-## Zeilenmodus
+## Zellbearbeitung
 
-Die Art, wie Mengen und Preise einer Material-Position in der Arbeitsliste erfasst werden: **✎ macht genau eine Zeile zu Eingabefeldern**, alles andere bleibt lesend. Tippbar sind fünf Felder — Bestellt, Verbraucht, MwSt, Netto, Brutto; Material, Lieferant, Gebinde, Δ und Gesamt bleiben Text. Die Stammdaten einer Position gehören dagegen dem Dialog hinter **⋮**.
+Die Art, wie Mengen und Preise einer Material-Position in der Arbeitsliste erfasst werden: **ein Klick in die Zelle macht genau diese Zelle zum Eingabefeld**, direkt in der Tabelle, ohne Zettel. Tippbar sind fünf Zellen — Bestellt, Verbraucht, MwSt, Netto, Brutto; Material, Lieferant, Gebinde, Δ und Gesamt bleiben Text. Die Stammdaten einer Position gehören dagegen dem Dialog hinter **⋮**.
 
-- **Entwurf** — was in den Feldern einer offenen Zeile steht, als Text, so wie getippt. Er merkt sich seinen Ausgangsstand; *geändert* misst sich daran, nicht an der nachgeladenen Liste.
-- **Quelle des Preises** — die zuletzt getippte Preisseite, netto oder brutto. Sie entscheidet beim Speichern über `price_is_net` und bleibt Quelle, wenn sich der Steuersatz ändert; die andere Seite rechnet dann neu. Damit steht das `price_is_net` aus ADR 0006 nicht mehr als Rätsel in der Oberfläche: man sieht beide Zahlen und wie sie zusammenhängen. Ein **unberührtes** Preisfeld schreibt den gespeicherten Preis zurück, nicht seine auf Cent gezeigte Anzeige.
-- **Sammel-Fußleiste** — zählt die offenen und die geänderten Zeilen des Kastens und speichert oder verwirft sie auf einen Griff. Deckt den Rechnungs-Fall: eine Lieferantenrechnung, viele Zeilen, ein Durchgang.
-- **Sichtwechsel** — jeder Griff, der offene Zeilen aus dem Bild nähme: Achse, Reiter, Kategorie, Suche, der Sprung in die Übernahme, das Zuklappen aller Zeilen. Mit geänderten Zeilen kommt die **Rückfrage** — Speichern / Verwerfen / Zurück —, nie ein stilles Verwerfen.
+Jede Zelle **speichert sofort**, wenn man sie verlässt; Esc verwirft. Es gibt keine offenen Zeilen, keine gesammelte Speicherung und darum keine Rückfrage beim Wechsel der Ansicht. Löst den früheren **Zeilenmodus** (✎ öffnet eine ganze Zeile, Sammel-Speichern) ab — Anlass war der Rechnungsabgleich nach dem Fest: eine Zahl je Zeile, und der Zeilenmodus ließ durch fünf Felder springen, um sie zu erreichen.
+
+- **Quelle des Preises** — die zuletzt getippte Preisseite, netto oder brutto. Sie entscheidet beim Speichern über `price_is_net` und bleibt Quelle, wenn sich der Steuersatz ändert; die andere Seite rechnet dann neu. Damit steht das `price_is_net` aus ADR 0006 nicht mehr als Rätsel in der Oberfläche: man sieht beide Zahlen und wie sie zusammenhängen.
+- **Eingabe-Einheit** — Mengen tippt man in der Basiseinheit (Flaschen, kg …). Steht die Rechnung in Gebinden, schaltet man die Mengenspalte auf **Gebinde** um und tippt Kisten — auch angebrochene (2,5); Positionen ohne Gebinde bleiben in der Basiseinheit. Umgeschaltet wird die Spalte, nicht die einzelne Zelle: eine Rechnung ist durchgehend in einer Einheit.
+- **Rechnungsabgleich** — nach dem Fest die Lieferantenrechnungen durchgehen und je Position die *Verbraucht-Menge* eintragen. Die Menge auf der Rechnung *ist* die Verbraucht-Menge (Rückgaben sind dort schon abgezogen).
 
 ## Bestellwert & Verbrauchswert
 
