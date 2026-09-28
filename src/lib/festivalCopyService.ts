@@ -2,7 +2,7 @@ import {
 	getStations, getStationShifts, getStationHelpers, getShiftAssignments,
 	createStationsBulk, createStationShiftsBulk, assignHelperToStation, assignHelperToStationShift
 } from '@/lib/shiftService';
-import { getHelpers, createHelpersBulk, updateHelperPreferences } from '@/lib/helperService';
+import { getHelpers, createHelpersBulk, updateHelper } from '@/lib/helperService';
 import { getMaterials, createMaterialsBulk } from '@/lib/materialService';
 import { shiftFestivalDate } from '@/lib/shiftDates';
 
@@ -123,12 +123,10 @@ export async function copyFestivalData(
 			// Eine frische Helfer-Zeile trägt ohnehin zwei leere Arrays — ein
 			// Update, das nichts setzt, wäre eine Abfrage ohne Wirkung.
 			if (stationPreferences.length === 0 && shiftPreferences.length === 0) continue;
-			await updateHelperPreferences(
-				targetFestivalId,
-				helperIdMap[helper.id],
-				stationPreferences,
-				shiftPreferences
-			);
+			await updateHelper(targetFestivalId, helperIdMap[helper.id], {
+				station_preferences: stationPreferences,
+				shift_preferences: shiftPreferences
+			});
 		}
 
 		// Step 5: Copy assignments if requested

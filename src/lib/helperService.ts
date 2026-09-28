@@ -32,9 +32,11 @@ Namen schreiben. */
 export const helperName = (helper: Pick<Helper, 'first_name' | 'last_name'>): string =>
 	`${helper.last_name} ${helper.first_name}`.trim();
 
-/** Die Felder, die die Helferliste beim Anlegen und Bearbeiten schreibt. */
+/** Die Felder, die die Helferliste beim Anlegen und Bearbeiten schreibt.
+Die Wünsche stehen mit dabei, weil sie seit ADR 0005 auf derselben Zeile liegen
+und seit #107 auf demselben Blatt: ein Helfer-Dialog, ein Update. */
 export type HelperInput = Pick<Helper, 'first_name' | 'last_name'> &
-	Partial<Pick<Helper, 'phone' | 'email' | 'notes'>>;
+	Partial<Pick<Helper, 'phone' | 'email' | 'notes' | 'station_preferences' | 'shift_preferences'>>;
 
 /** Die Helfer eines Fests. */
 export const getHelpers = async (festivalId: string): Promise<Helper[]> => {
@@ -123,33 +125,8 @@ export const deleteHelper = async (festivalId: string, helperId: string): Promis
 };
 
 /**
- * Beide Wunsch-Arrays in einem Zug. Weil der Helfer ohnehin pro Fest lebt,
- * braucht das kein Upsert auf eine zweite Tabelle mehr, sondern genau ein
- * Update auf seine Zeile.
- */
-export const updateHelperPreferences = async (
-	festivalId: string,
-	helperId: string,
-	stationPreferences: string[],
-	shiftPreferences: string[]
-): Promise<void> => {
-	const { error } = await supabase
-		.from('festival_helpers')
-		.update({
-			station_preferences: stationPreferences,
-			shift_preferences: shiftPreferences
-		})
-		.eq('id', helperId)
-		.eq('festival_id', festivalId);
-
-	if (error) {
-		throw new Error(error.message);
-	}
-};
-
-/**
- * Die Wünsche von den Helfer-Zeilen in die zwei Maps, die Helferliste,
- * Wunsch-Dialog und Auto-Zuteilung schon lesen.
+ * Die Wünsche von den Helfer-Zeilen in die zwei Maps, die Helferliste und
+ * Auto-Zuteilung schon lesen.
  */
 export const derivePreferenceMaps = (
 	helpers: Helper[]

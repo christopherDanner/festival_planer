@@ -49,8 +49,10 @@ export const useShiftPlanningData = (festivalId: string) => {
 
 	const helpers = helpersQuery.data || [];
 	// Die Wünsche stehen auf der Helfer-Zeile; eine eigene Abfrage dafür gibt es
-	// nicht mehr (festival_member_preferences ist weg, ADR 0005).
-	const { stationPreferences, shiftPreferences } = derivePreferenceMaps(helpers);
+	// nicht mehr (festival_member_preferences ist weg, ADR 0005). Als Map braucht
+	// sie nur noch die Auto-Zuteilung — das Helfer-Blatt (#107) liest sie direkt
+	// von dem Helfer, den es gerade bearbeitet.
+	const { stationPreferences } = derivePreferenceMaps(helpers);
 
 	return {
 		stations: stationsQuery.data || [],
@@ -59,7 +61,6 @@ export const useShiftPlanningData = (festivalId: string) => {
 		stationHelpers: stationHelpersQuery.data || [],
 		helpers,
 		stationPreferences,
-		shiftPreferences,
 		isLoading,
 		refetchAll
 	};
