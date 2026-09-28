@@ -39,7 +39,9 @@ const SponsoringHinweisstreifen: React.FC<SponsoringHinweisstreifenProps> = ({
 			'flex flex-wrap items-center gap-x-3 gap-y-2 border-2.5 border-tinte bg-gelb px-3 py-2.5 text-[12.5px] leading-snug text-tinte',
 			className
 		)}>
-		<p className="min-w-0 flex-1">
+		{/* Mindestbreite, damit der Satz am Handy nicht auf eine Spalte neben dem
+		Knopf zusammengequetscht wird — enger als 15rem rutscht der Knopf unter ihn. */}
+		<p className="min-w-[15rem] flex-1">
 			<b className="font-extrabold">{lead}</b> {text}
 		</p>
 		<Button size="sm" variant="outline" onClick={onAction} className="tracking-[.04em]">
