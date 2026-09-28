@@ -183,14 +183,14 @@ describe('ScheduleEntryDialog — eine Aufgabe in drei Klicks', () => {
 			<ScheduleEntryDialog
 				open
 				onOpenChange={() => {}}
-				prefill={{ ...NEU, schedule_phase_id: 'p1' }}
+				entry={scheduleTask({ id: 't1', schedule_day_id: 'do', schedule_phase_id: 'p1' })}
+				prefill={NEU}
 				days={TAGE}
 				helpers={HELFER}
 				onSave={onSave}
 			/>
 		);
 
-		await tippe('#entry-title', 'Zelt stellen');
 		await waehle('fr');
 		await klick(speichern());
 

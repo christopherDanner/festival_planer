@@ -50,7 +50,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 		setForm(entry ? entryFormFrom(entry) : emptyEntryForm(prefill));
 		// Auf die Felder des Prefills hören, nicht auf das Objekt — ein Literal
 		// wäre bei jedem Rendern neu und würde das Formular leerräumen.
-	}, [entry, open, prefill.type, prefill.schedule_day_id, prefill.schedule_phase_id]);
+	}, [entry, open, prefill.type, prefill.schedule_day_id]);
 
 	const handleSave = () => {
 		if (!canSaveEntry(form)) return;
@@ -71,7 +71,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 				<ScheduleEntryZettel
 					mode={entry ? 'edit' : 'create'}
 					form={form}
-					onChange={setForm}
+					onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
 					days={days}
 					helpers={helpers}
 					onCancel={() => onOpenChange(false)}

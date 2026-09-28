@@ -59,11 +59,11 @@ export interface EntryPayloadContext {
 }
 
 /** Was der Griff schon weiß, bevor der Dialog aufgeht: „+ AUFGABE" der
-Werkzeugleiste bringt die Art mit, das ⋮ eines Tages zusätzlich den Tag. */
+Werkzeugleiste bringt die Art mit, das ⋮ eines Tages zusätzlich den Tag. Die
+Phase bringt keiner mit — sie ist der optionale Feinschnitt (ADR 0007). */
 export interface EntryPrefill {
 	type: EntryType;
 	schedule_day_id: string;
-	schedule_phase_id?: string | null;
 }
 
 /** Die Datenbank führt Zeiten als „08:00:00"; das `<input type="time">` kennt
@@ -75,7 +75,7 @@ export function emptyEntryForm(prefill: EntryPrefill): ScheduleEntryForm {
 		title: '',
 		type: prefill.type,
 		schedule_day_id: prefill.schedule_day_id,
-		schedule_phase_id: prefill.schedule_phase_id || '',
+		schedule_phase_id: '',
 		start_time: '',
 		end_time: '',
 		responsible_helper_id: '',
@@ -97,13 +97,18 @@ export function entryFormFrom(entry: ScheduleEntry): ScheduleEntryForm {
 }
 
 /**
- * Den Tag wechseln. Die Phase gehört ihrem Tag (ADR 0007): zieht der Eintrag
- * auf einen anderen, lässt er sie zurück, statt unter einem fremden
- * Zwischentitel zu hängen.
+ * Was ein Tageswechsel am Formular ändert. Die Phase gehört ihrem Tag
+ * (ADR 0007): zieht der Eintrag auf einen anderen, lässt er sie zurück, statt
+ * unter einem fremden Zwischentitel zu hängen.
+ *
+ * Gibt einen Flicken zurück wie jedes andere Feld des Zettels — nur betrifft
+ * dieser zwei auf einmal.
  */
-export function changeDay(form: ScheduleEntryForm, scheduleDayId: string): ScheduleEntryForm {
+export function changeDay(
+	form: ScheduleEntryForm,
+	scheduleDayId: string
+): Partial<ScheduleEntryForm> {
 	return {
-		...form,
 		schedule_day_id: scheduleDayId,
 		schedule_phase_id: scheduleDayId === form.schedule_day_id ? form.schedule_phase_id : ''
 	};

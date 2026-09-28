@@ -142,9 +142,13 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 						className="min-w-0 flex-1 gap-2.5 px-3 py-[9px] font-display text-[15px] font-semibold uppercase tracking-[.04em] text-gruen"
 					>
 						{day.title}
-						<span className={cn(COUNTER, day.open > 0 ? 'text-rot' : 'text-gruen')}>
-							{day.open > 0 ? `${day.open} offen` : 'fertig'}
-						</span>
+						{/* Ein Tag ohne Zeile sagt weder „offen" noch „fertig" — er steht
+						seit #124 nur da, damit man ihn verwalten kann. */}
+						{day.total > 0 && (
+							<span className={cn(COUNTER, day.open > 0 ? 'text-rot' : 'text-gruen')}>
+								{day.open > 0 ? `${day.open} offen` : 'fertig'}
+							</span>
+						)}
 					</SectionHeading>
 					<DayHeadingMenu
 						title={day.title}
@@ -201,7 +205,7 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 
 		{/* Gezählt werden die gezeichneten Zeilen, nicht die Tage: seit #124
 		stehen ungefiltert auch Tage ohne Aufgabe im Papier. */}
-		{worklist.days.every((day) => day.groups.every((group) => group.tasks.length === 0)) && (
+		{worklist.shown === 0 && (
 			<p className="px-3 py-4 text-[13px] text-tinte-soft">
 				{worklist.counts.all === 0
 					? 'Noch keine Aufgabe in diesem Fest.'

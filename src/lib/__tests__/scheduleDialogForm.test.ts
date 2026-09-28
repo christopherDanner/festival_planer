@@ -50,10 +50,6 @@ describe('emptyEntryForm — das leere Blatt', () => {
 		expect(form.schedule_day_id).toBe('d7');
 	});
 
-	it('nimmt eine vorgetragene Phase mit — der Griff am Phasen-Zwischentitel', () => {
-		expect(emptyEntryForm({ ...HEUTE, schedule_phase_id: 'p1' }).schedule_phase_id).toBe('p1');
-	});
-
 	it('lässt Titel, Zeiten, Verantwortlichen und Beschreibung leer', () => {
 		const form = emptyEntryForm(HEUTE);
 
@@ -110,7 +106,7 @@ describe('changeDay — die Phase gehört ihrem Tag', () => {
 	const form = { ...emptyEntryForm(HEUTE), schedule_phase_id: 'p1' };
 
 	it('lässt die Phase zurück, wenn der Eintrag auf einen anderen Tag zieht', () => {
-		expect(changeDay(form, 'd2')).toMatchObject({
+		expect(changeDay(form, 'd2')).toEqual({
 			schedule_day_id: 'd2',
 			schedule_phase_id: ''
 		});

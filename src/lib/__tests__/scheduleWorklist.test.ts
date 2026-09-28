@@ -101,6 +101,22 @@ describe('buildWorklist — Gliederung Tag → Phase', () => {
 		expect(worklist.days).toHaveLength(1);
 	});
 
+	it('zählt die gezeigten Zeilen — die Länge der Tagesliste sagt das nicht mehr', () => {
+		const worklist = buildWorklist({
+			days: [
+				day({ id: 'leer', date: '2026-07-23' }),
+				day({ id: 'voll', date: '2026-07-24', entries: [task({ id: 'a' }), task({ id: 'b' })] })
+			]
+		});
+
+		expect(worklist.shown).toBe(2);
+		expect(worklist.days.map((d) => d.total)).toEqual([0, 2]);
+	});
+
+	it('meldet den Leerzustand über `shown`, auch wenn Tage dastehen', () => {
+		expect(buildWorklist({ days: [day(), day({ id: 'd2', date: '2026-07-26' })] }).shown).toBe(0);
+	});
+
 	it('schreibt Tage in der Reihenfolge der Abfrage', () => {
 		const worklist = buildWorklist({
 			days: [

@@ -43,7 +43,9 @@ export type EntryDayOption = Pick<ScheduleDay, 'id' | 'date' | 'label'> & {
 export interface ScheduleEntryZettelProps {
 	mode: 'create' | 'edit';
 	form: ScheduleEntryForm;
-	onChange: (form: ScheduleEntryForm) => void;
+	/** Gesteuert wie `StationZettel` und `MaterialZettel`: der Zettel meldet den
+	 * Flicken, der Rahmen hält den Zustand. */
+	onChange: (patch: Partial<ScheduleEntryForm>) => void;
 	/** Alle Ablauf-Tage des Fests — auch die ohne Eintrag. */
 	days: EntryDayOption[];
 	/** Die Verantwortlichen sind die Helfer dieses Fests (ADR 0005). */
@@ -79,7 +81,6 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 	onSave,
 	TitleTag = 'h2'
 }) => {
-	const patch = (teil: Partial<ScheduleEntryForm>) => onChange({ ...form, ...teil });
 	const phasen = phasesOfDay(days, form.schedule_day_id);
 	const problem = timeProblem(form);
 	const verantwortlicher = helpers.find((h) => h.id === form.responsible_helper_id);
@@ -109,7 +110,7 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 						id="entry-title"
 						className={FOCUS_INK}
 						value={form.title}
-						onChange={(e) => patch({ title: e.target.value })}
+						onChange={(e) => onChange({ title: e.target.value })}
 						placeholder="z.B. Fassanstich, Zelt-Anlieferung"
 					/>
 				</PaperSheetField>
@@ -125,7 +126,7 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 						aria-label="Art"
 						className="w-max"
 						value={form.type}
-						onValueChange={(type) => patch({ type })}
+						onValueChange={(type) => onChange({ type })}
 						options={[
 							{ value: 'task', label: 'Aufgabe' },
 							{ value: 'program', label: 'Programmpunkt' }
@@ -164,7 +165,7 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 					<Select
 						value={form.schedule_phase_id || OHNE_PHASE}
 						onValueChange={(value) =>
-							patch({ schedule_phase_id: value === OHNE_PHASE ? '' : value })
+							onChange({ schedule_phase_id: value === OHNE_PHASE ? '' : value })
 						}>
 						<SelectTrigger id="entry-phase" className={FOCUS_INK}>
 							<SelectValue placeholder="Ohne Phase" />
@@ -186,7 +187,7 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 						type="time"
 						className={FOCUS_INK}
 						value={form.start_time}
-						onChange={(e) => patch({ start_time: e.target.value })}
+						onChange={(e) => onChange({ start_time: e.target.value })}
 					/>
 				</PaperSheetField>
 
@@ -196,7 +197,7 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 						type="time"
 						className={FOCUS_INK}
 						value={form.end_time}
-						onChange={(e) => patch({ end_time: e.target.value })}
+						onChange={(e) => onChange({ end_time: e.target.value })}
 					/>
 				</PaperSheetField>
 
@@ -205,7 +206,7 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 						<Select
 							value={form.responsible_helper_id || KEIN_VERANTWORTLICHER}
 							onValueChange={(value) =>
-								patch({
+								onChange({
 									responsible_helper_id: value === KEIN_VERANTWORTLICHER ? '' : value
 								})
 							}>
@@ -232,7 +233,7 @@ const ScheduleEntryZettel: React.FC<ScheduleEntryZettelProps> = ({
 						rows={2}
 						className={FOCUS_INK}
 						value={form.description}
-						onChange={(e) => patch({ description: e.target.value })}
+						onChange={(e) => onChange({ description: e.target.value })}
 						placeholder="Erscheint als leise Zeile unter dem Titel"
 					/>
 				</PaperSheetField>

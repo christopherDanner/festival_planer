@@ -51,6 +51,10 @@ export interface WorklistDay {
 	title: string;
 	/** „4 offen" am Zwischentitel — über die **gezeigten** Zeilen. */
 	open: number;
+	/** Wie viele Zeilen der Tag überhaupt zeigt. Bei `0` bleibt der
+	Zwischentitel stumm: „fertig" wäre an einem Tag ohne Aufgabe eine Auskunft
+	über nichts. */
+	total: number;
 	groups: WorklistPhaseGroup[];
 }
 
@@ -74,6 +78,12 @@ export interface Worklist {
 	 * sagt nichts.
 	 */
 	days: WorklistDay[];
+	/**
+	 * Wie viele Zeilen insgesamt am Papier stehen. Seit #124 beantwortet die
+	 * Länge von {@link Worklist.days} das nicht mehr — ein Tag ohne Aufgabe steht
+	 * ungefiltert trotzdem da. `0` heißt: hier ist der Leerzustand.
+	 */
+	shown: number;
 	/**
 	 * Die Zahlen in den drei Segmenten. Sie zählen **ungefiltert**, also den
 	 * Gesamtbestand des Fests: „Offen (9)" ist das Versprechen, was ein Druck auf
@@ -223,29 +233,33 @@ export function buildWorklist({
 	stehen bleiben (siehe {@link Worklist.days}). */
 	const filtert = filter !== 'all' || responsibleId !== null;
 
-	return {
-		days: days
-			.map((day) => {
-				const groups = groupEntriesByPhase({ ...day, entries: day.entries.filter(shows) })
-					.filter((group) => !filtert || group.entries.length > 0)
-					.map((group) => {
-						const tasks = group.entries.map(toTask);
-						return {
-							phase: group.phase,
-							done: tasks.filter((task) => task.done).length,
-							total: tasks.length,
-							tasks
-						};
-					});
+	const shownDays = days
+		.map((day) => {
+			const groups = groupEntriesByPhase({ ...day, entries: day.entries.filter(shows) })
+				.filter((group) => !filtert || group.entries.length > 0)
+				.map((group) => {
+					const tasks = group.entries.map(toTask);
+					return {
+						phase: group.phase,
+						done: tasks.filter((task) => task.done).length,
+						total: tasks.length,
+						tasks
+					};
+				});
 
-				return {
-					day,
-					title: scheduleDayTitle(day),
-					open: groups.reduce((sum, group) => sum + (group.total - group.done), 0),
-					groups
-				};
-			})
-			.filter((day) => !filtert || day.groups.length > 0),
+			return {
+				day,
+				title: scheduleDayTitle(day),
+				open: groups.reduce((sum, group) => sum + (group.total - group.done), 0),
+				total: groups.reduce((sum, group) => sum + group.total, 0),
+				groups
+			};
+		})
+		.filter((day) => !filtert || day.groups.length > 0);
+
+	return {
+		days: shownDays,
+		shown: shownDays.reduce((sum, day) => sum + day.total, 0),
 		counts: { all: all.length, open, done: all.length - open },
 		responsibles: responsiblesOf(all),
 		footer: footerOf(days, festivalStart, festivalEnd)

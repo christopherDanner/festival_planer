@@ -166,6 +166,13 @@ describe('TaskWorklist — Gliederung Tag → Phase', () => {
 		expect(html).toContain('Menü des Tages Montag 27. Juli · Nachbereitung');
 	});
 
+	it('lässt den Zähler an einem Tag ohne Zeile weg — „fertig" wäre dort eine Auskunft über nichts', () => {
+		const html = render({ days: [day({ id: 'leer', date: '2026-07-27' })] });
+
+		// Ohne Zeile ist `open` 0 — ohne die Regel stünde hier das grüne „fertig".
+		expect(html).not.toContain('fertig');
+	});
+
 	it('zeigt ungefiltert auch die leere Phase — sonst verschwände sie beim Anlegen', () => {
 		const html = render({
 			days: [day({ date: '2026-07-23', phases: [phase({ id: 'p9', name: 'Abendprogramm' })] })]

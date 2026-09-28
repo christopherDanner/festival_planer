@@ -115,6 +115,12 @@ export default function ScheduleView({
 	benutzte, sonst der erste des Fests. */
 	const defaultDayId = lastDayId ?? days[0]?.id ?? '';
 
+	/** Die Aufschrift eines Tages, wie sie im Zwischentitel steht. */
+	const dayTitleOf = (scheduleDayId: string) => {
+		const day = days.find((d) => d.id === scheduleDayId);
+		return day ? scheduleDayTitle(day) : undefined;
+	};
+
 	/** Alle drei Dialoge schließen über denselben Griff — offen ist immer nur
 	einer. */
 	const closeDialog = (open: boolean) => {
@@ -320,11 +326,7 @@ export default function ScheduleView({
 				onOpenChange={closeDialog}
 				phase={dialogState.type === 'phase' ? dialogState.phase : null}
 				dayTitle={
-					dialogState.type === 'phase'
-						? days
-								.filter((day) => day.id === dialogState.scheduleDayId)
-								.map(scheduleDayTitle)[0]
-						: undefined
+					dialogState.type === 'phase' ? dayTitleOf(dialogState.scheduleDayId) : undefined
 				}
 				onSave={handleSavePhase}
 			/>
