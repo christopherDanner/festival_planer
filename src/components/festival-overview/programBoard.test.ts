@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scheduleDay as day, scheduleEntry as entry } from '@/lib/__tests__/scheduleFactories';
+import { buildProgramSheet } from '@/lib/scheduleProgramSheet';
 import {
 	formatProgramTime,
 	programDayTitle,
@@ -73,6 +74,28 @@ describe('getProgramByDay', () => {
 
 	it('leere Eingabe → leeres Array', () => {
 		expect(getProgramByDay([])).toEqual([]);
+	});
+
+	/** Fertig-wenn aus #123: „Das Festplakat zeigt dieselben Punkte in derselben
+	Reihenfolge." Zwei Auswahl-Regeln nebeneinander wären zwei Wahrheiten — das
+	Plakat liest darum denselben Zettel. */
+	it('zeigt dieselben Punkte in derselben Reihenfolge wie der Programmzettel', () => {
+		const days = [
+			day({
+				id: 'd1',
+				entries: [
+					entry({ id: 'c', type: 'program', start_time: '11:00:00' }),
+					entry({ id: 'a', type: 'program', start_time: '19:30:00' }),
+					entry({ id: 'b', type: 'program', start_time: null }),
+					entry({ id: 't', type: 'task', title: 'Zeltabbau' })
+				]
+			}),
+			day({ id: 'leer', date: '2026-07-26' })
+		];
+
+		expect(getProgramByDay(days).flatMap((d) => d.rows.map((r) => r.id))).toEqual(
+			buildProgramSheet(days).days.flatMap((d) => d.rows.map((r) => r.entry.id))
+		);
 	});
 });
 

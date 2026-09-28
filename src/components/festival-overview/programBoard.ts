@@ -1,8 +1,14 @@
 /** Programm-Aufbereitung für das Festplakat (Dashboard-Mitte, DESIGN-VISION §5).
 Reine Logik, ohne React — die Programmpunkte aus dem Ablauf werden nach Tag
 gruppiert (Vorschau/Aushang). Gereiht sind sie schon: seit ADR 0007 sortiert der
-Service nach Startzeit, hier wird die Reihenfolge nur noch übernommen. */
+Service nach Startzeit, hier wird die Reihenfolge nur noch übernommen.
 
+Welche Punkte das sind, entscheidet seit #123 der Programmzettel selbst
+(`buildProgramSheet`) — das Plakat ist seine Vorschau und muss dieselben Zeilen
+in derselben Reihenfolge zeigen. Eigen bleibt ihm nur die kürzere Aufschrift des
+Tages: auf dem Plakat steht eine Spalte, kein Papier. */
+
+import { buildProgramSheet, programTime } from '@/lib/scheduleProgramSheet';
 import type { ScheduleDayWithEntries } from '@/lib/scheduleService';
 
 export interface ProgramRow {
@@ -21,10 +27,10 @@ export interface ProgramDay {
 
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat('de-AT', { weekday: 'long' });
 
-/** „18:00:00" → „18:00"; null → "". */
+/** „18:00:00" → „18:00"; null → "" — eine leere Zelle statt eines Vermerks,
+das Plakat hat für „ohne Zeit" keine Breite. Gekürzt wird wie auf dem Zettel. */
 export function formatProgramTime(time: string | null): string {
-	if (!time) return '';
-	return time.slice(0, 5);
+	return programTime(time) ?? '';
 }
 
 /** Zwischentitel eines Tages: Label bevorzugt, sonst langer Wochentag. */
@@ -36,22 +42,11 @@ export function programDayTitle(date: string, label: string | null): string {
 
 /** Tage mit Programmpunkten, in der Reihenfolge, die der Service geliefert hat. */
 export function getProgramByDay(days: ScheduleDayWithEntries[]): ProgramDay[] {
-	const result: ProgramDay[] = [];
-
-	for (const day of days) {
-		const programEntries = (day.entries ?? []).filter((entry) => entry.type === 'program');
-		if (programEntries.length === 0) continue;
-
-		const rows: ProgramRow[] = programEntries.map((entry) => ({
-			id: entry.id,
-			time: formatProgramTime(entry.start_time),
-			title: entry.title
-		}));
-
-		result.push({ dayId: day.id, title: programDayTitle(day.date, day.label), rows });
-	}
-
-	return result;
+	return buildProgramSheet(days).days.map(({ day, rows }) => ({
+		dayId: day.id,
+		title: programDayTitle(day.date, day.label),
+		rows: rows.map(({ entry, time }) => ({ id: entry.id, time: time ?? '', title: entry.title }))
+	}));
 }
 
 /** Gesamtzahl der Programmpunkte über alle Tage (Fußzeile des Plakats). */
