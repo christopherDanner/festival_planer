@@ -13,8 +13,30 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@/components/ui/select';
-import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
+import type {
+	ScheduleDayWithEntries,
+	ScheduleEntryWithHelper,
+	SchedulePhase
+} from '@/lib/scheduleService';
+import type { PhaseDirection } from '@/lib/schedulePhaseOrder';
 import type { TaskFilter, Worklist, WorklistTask } from '@/lib/scheduleWorklist';
+import { DayHeadingMenu, PhaseHeadingMenu } from './ScheduleHeadingMenus';
+
+/** Die Griffe des ⋮ am Tages-Zwischentitel (#124), gebündelt statt als vier
+einzelne Props — sie gehören zusammen und gehen gemeinsam durch. */
+export interface DayActions {
+	onEdit: (day: ScheduleDayWithEntries) => void;
+	onAddPhase: (day: ScheduleDayWithEntries) => void;
+	onAddTask: (day: ScheduleDayWithEntries) => void;
+	onDelete: (day: ScheduleDayWithEntries) => void;
+}
+
+/** Die Griffe des ⋮ am Phasen-Zwischentitel (#124). */
+export interface PhaseActions {
+	onRename: (phase: SchedulePhase) => void;
+	onMove: (phase: SchedulePhase, direction: PhaseDirection) => void;
+	onDelete: (phase: SchedulePhase) => void;
+}
 
 export interface TaskWorklistProps {
 	worklist: Worklist;
@@ -26,6 +48,12 @@ export interface TaskWorklistProps {
 	onToggleTask: (entry: ScheduleEntryWithHelper) => void;
 	onEditTask: (entry: ScheduleEntryWithHelper) => void;
 	onDeleteTask: (entry: ScheduleEntryWithHelper) => void;
+	dayActions: DayActions;
+	phaseActions: PhaseActions;
+	/** Der einzige Griff, der zu keinem Zwischentitel gehört: ein Tag, den es
+	 * noch nicht gibt. Er steht leise am Fuß — die Festtage entstehen von
+	 * selbst, hier kommt nur der Aufbautag dazu (CONTEXT.md, *Ablauf-Tag*). */
+	onAddDay: () => void;
 }
 
 /** Aufschrift eines Zählers: klein, fett, Versalien, Ziffern in fester Breite. */
@@ -52,7 +80,10 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 	onResponsibleChange,
 	onToggleTask,
 	onEditTask,
-	onDeleteTask
+	onDeleteTask,
+	dayActions,
+	phaseActions,
+	onAddDay
 }) => (
 	<section className="border-2.5 border-tinte bg-white">
 		<div className="flex flex-wrap items-center gap-2.5 border-b-2 border-tinte bg-papier-getoent px-3 py-2.5">
@@ -97,36 +128,62 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 
 		{worklist.days.map((day, index) => (
 			<React.Fragment key={day.day.id}>
-				<SectionHeading
-					as="h4"
+				{/* Zwischentitel und ⋮ in einer Zeile: die Punktraster-Linie der
+				`SectionHeading` füllt den Platz dazwischen. */}
+				<div
 					className={cn(
-						'gap-2.5 bg-fusszeile px-3 py-[9px] font-display text-[15px] font-semibold uppercase tracking-[.04em] text-gruen',
+						'flex items-center bg-fusszeile pr-1',
 						// Der Kopf des Papiers bringt seine eigene Kante mit.
 						index > 0 && 'border-t-2 border-tinte'
 					)}
 				>
-					{day.title}
-					<span className={cn(COUNTER, day.open > 0 ? 'text-rot' : 'text-gruen')}>
-						{day.open > 0 ? `${day.open} offen` : 'fertig'}
-					</span>
-				</SectionHeading>
+					<SectionHeading
+						as="h4"
+						className="min-w-0 flex-1 gap-2.5 px-3 py-[9px] font-display text-[15px] font-semibold uppercase tracking-[.04em] text-gruen"
+					>
+						{day.title}
+						<span className={cn(COUNTER, day.open > 0 ? 'text-rot' : 'text-gruen')}>
+							{day.open > 0 ? `${day.open} offen` : 'fertig'}
+						</span>
+					</SectionHeading>
+					<DayHeadingMenu
+						title={day.title}
+						actions={{
+							onEdit: () => dayActions.onEdit(day.day),
+							onAddPhase: () => dayActions.onAddPhase(day.day),
+							onAddTask: () => dayActions.onAddTask(day.day),
+							onDelete: () => dayActions.onDelete(day.day)
+						}}
+					/>
+				</div>
 
 				{day.groups.map((group) => (
 					<React.Fragment key={group.phase?.id ?? 'ohne-phase'}>
 						{/* Einträge ohne Phase stehen direkt unter dem Tag — ohne
-						Ersatztitel (ADR 0007). */}
+						Ersatztitel (ADR 0007) und ohne ⋮: es gibt nichts zu verwalten. */}
 						{group.phase && (
-							<h5 className="flex items-baseline gap-2.5 border-b border-linie px-3 pb-1 pt-[7px] text-[10.5px] font-extrabold uppercase tracking-[.07em] text-tinte-soft">
-								{group.phase.name}
-								<span
-									className={cn(
-										'font-bold tabular-nums',
-										group.done < group.total && 'text-rot'
-									)}
-								>
-									{group.done}/{group.total}
-								</span>
-							</h5>
+							<div className="flex items-center border-b border-linie pr-1">
+								<h5 className="flex min-w-0 flex-1 items-baseline gap-2.5 px-3 pb-1 pt-[7px] text-[10.5px] font-extrabold uppercase tracking-[.07em] text-tinte-soft">
+									{group.phase.name}
+									<span
+										className={cn(
+											'font-bold tabular-nums',
+											group.done < group.total && 'text-rot'
+										)}
+									>
+										{group.done}/{group.total}
+									</span>
+								</h5>
+								<PhaseHeadingMenu
+									phase={group.phase}
+									phases={day.day.phases}
+									actions={{
+										onRename: () => phaseActions.onRename(group.phase),
+										onMove: (direction) => phaseActions.onMove(group.phase, direction),
+										onDelete: () => phaseActions.onDelete(group.phase)
+									}}
+								/>
+							</div>
 						)}
 						{group.tasks.map((task) => (
 							<TaskRow
@@ -142,7 +199,9 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 			</React.Fragment>
 		))}
 
-		{worklist.days.length === 0 && (
+		{/* Gezählt werden die gezeichneten Zeilen, nicht die Tage: seit #124
+		stehen ungefiltert auch Tage ohne Aufgabe im Papier. */}
+		{worklist.days.every((day) => day.groups.every((group) => group.tasks.length === 0)) && (
 			<p className="px-3 py-4 text-[13px] text-tinte-soft">
 				{worklist.counts.all === 0
 					? 'Noch keine Aufgabe in diesem Fest.'
@@ -150,7 +209,7 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 			</p>
 		)}
 
-		<div className="flex flex-wrap gap-4 border-t-2 border-tinte px-3 py-2.5 text-xs text-tinte-soft">
+		<div className="flex flex-wrap items-center gap-4 border-t-2 border-tinte px-3 py-2.5 text-xs text-tinte-soft">
 			<span>
 				<b className="font-bold text-rot">{worklist.footer.openBefore} offen</b> vor dem Fest
 			</span>
@@ -158,6 +217,18 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 			<span>
 				{worklist.counts.done} von {worklist.counts.all} erledigt
 			</span>
+			<button
+				type="button"
+				onClick={onAddDay}
+				className={cn(
+					'ml-auto px-1 max-[899px]:min-h-10',
+					COUNTER,
+					'text-tinte-soft hover:text-tinte',
+					'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte'
+				)}
+			>
+				+ Tag
+			</button>
 		</div>
 	</section>
 );

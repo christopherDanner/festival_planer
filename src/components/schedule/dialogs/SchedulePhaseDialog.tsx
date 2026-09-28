@@ -1,81 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useEffect, useState } from 'react';
+
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+	FOCUS_INK,
+	PaperSheet,
+	PaperSheetField,
+	PaperSheetFields
+} from '@/components/toolkit/PaperSheet';
+import {
+	canSavePhase,
+	emptyPhaseForm,
+	phaseFormFrom,
+	type SchedulePhaseForm
+} from '@/lib/scheduleDialogForm';
+import type { SchedulePhase } from '@/lib/scheduleService';
 
-interface SchedulePhaseDialogProps {
+export interface SchedulePhaseDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	phase?: { id: string; name: string } | null;
-	scheduleDayId: string;
-	festivalId: string;
-	existingPhasesCount: number;
-	onSave: (data: { schedule_day_id: string; festival_id: string; name: string; sort_order: number }) => void;
+	phase?: Pick<SchedulePhase, 'name'> | null;
+	/** Der Tag, dem die Phase gehört — als Aufschrift, nicht als Wahl: eine
+	 * Phase wechselt ihren Tag nicht (ADR 0007). */
+	dayTitle?: string;
+	onSave: (form: SchedulePhaseForm) => void;
 }
 
+/**
+ * Phasen-Dialog (#124): **nur ein Name**. Die Phase gehört ihrem Tag und
+ * behält ihre manuelle Reihenfolge — sie trägt keine Uhrzeit (ADR 0007);
+ * verschoben wird sie im ⋮ am Zwischentitel, nicht hier.
+ *
+ * Ein Feld trägt keinen eigenen Zettel — dieselbe Linie wie beim Tag-Dialog.
+ */
 const SchedulePhaseDialog: React.FC<SchedulePhaseDialogProps> = ({
 	open,
 	onOpenChange,
 	phase,
-	scheduleDayId,
-	festivalId,
-	existingPhasesCount,
+	dayTitle,
 	onSave
 }) => {
-	const [form, setForm] = useState({
-		name: ''
-	});
+	const [form, setForm] = useState<SchedulePhaseForm>(emptyPhaseForm);
 
 	useEffect(() => {
-		if (phase) {
-			setForm({
-				name: phase.name
-			});
-		} else {
-			setForm({
-				name: ''
-			});
-		}
+		setForm(phase ? phaseFormFrom(phase) : emptyPhaseForm());
 	}, [phase, open]);
 
 	const handleSave = () => {
-		if (!form.name) return;
-		onSave({
-			schedule_day_id: scheduleDayId,
-			festival_id: festivalId,
-			name: form.name,
-			sort_order: existingPhasesCount
-		});
+		if (!canSavePhase(form)) return;
+		onSave(form);
 		onOpenChange(false);
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-				<DialogHeader>
-					<DialogTitle>{phase ? 'Phase bearbeiten' : 'Phase hinzufügen'}</DialogTitle>
-				</DialogHeader>
-				<div className="space-y-4">
-					<div>
-						<Label htmlFor="phase-name">Name *</Label>
-						<Input
-							id="phase-name"
-							value={form.name}
-							onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-							placeholder="z.B. Aufbau, Abendprogramm"
-						/>
-					</div>
-
-					<div className="flex justify-end gap-2">
-						<Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
-							Abbrechen
-						</Button>
-						<Button onClick={handleSave} disabled={!form.name} size="sm">
-							{phase ? 'Aktualisieren' : 'Hinzufügen'}
-						</Button>
-					</div>
-				</div>
+			<DialogContent
+				hideClose
+				aria-describedby={undefined}
+				className="max-w-[520px] border-0 bg-transparent p-0 shadow-none sm:p-0">
+				<PaperSheet
+					title={phase ? 'Phase umbenennen' : 'Neue Phase'}
+					TitleTag={DialogTitle}
+					onClose={() => onOpenChange(false)}
+					footer={
+						<>
+							<Button variant="outline" className={FOCUS_INK} onClick={() => onOpenChange(false)}>
+								Abbrechen
+							</Button>
+							<Button
+								data-zettel="speichern"
+								className={FOCUS_INK}
+								onClick={handleSave}
+								disabled={!canSavePhase(form)}>
+								{phase ? 'Speichern' : 'Anlegen'}
+							</Button>
+						</>
+					}>
+					<PaperSheetFields>
+						<PaperSheetField
+							wide
+							label="Name"
+							htmlFor="phase-name"
+							hint={dayTitle ? `Block am ${dayTitle} — nur in der Werkliste sichtbar.` : undefined}>
+							<Input
+								id="phase-name"
+								className={FOCUS_INK}
+								value={form.name}
+								onChange={(e) => setForm({ name: e.target.value })}
+								placeholder="z.B. Anlieferung, Frühschoppen, Abendprogramm"
+							/>
+						</PaperSheetField>
+					</PaperSheetFields>
+				</PaperSheet>
 			</DialogContent>
 		</Dialog>
 	);

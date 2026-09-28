@@ -34,7 +34,8 @@ export interface WorklistTask {
 }
 
 /** Ein Block unter einem Tag; `phase === null` heißt „direkt unter dem Tag"
-und trägt darum keinen Zwischentitel. */
+und trägt darum keinen Zwischentitel. Eine benannte Phase steht ungefiltert
+auch leer da — sie trägt ihr ⋮ (#124). */
 export interface WorklistPhaseGroup {
 	phase: SchedulePhase | null;
 	/** „1/3" am Zwischentitel — über die **gezeigten** Zeilen. */
@@ -62,7 +63,16 @@ export interface WorklistResponsible {
 
 /** Die Werkliste, wie sie am Bildschirm steht. */
 export interface Worklist {
-	/** Nur Tage mit gezeigten Aufgaben — ein leerer Zwischentitel sagt nichts (#122). */
+	/**
+	 * **Ungefiltert jeder Ablauf-Tag**, auch der ohne Aufgabe: seit #124 hängt am
+	 * Zwischentitel das ⋮, das den Tag bearbeitet, löscht und ihm Phase oder
+	 * Aufgabe gibt — ein Tag, der erst mit seiner ersten Zeile erscheint, wäre
+	 * nicht zu verwalten, und eine eben angelegte Phase verschwände sofort wieder.
+	 *
+	 * **Gefiltert fällt weg, was keine Zeile hat** (#122): dort ist der
+	 * Zwischentitel eine Antwort auf die Frage des Filters, und eine leere Antwort
+	 * sagt nichts.
+	 */
 	days: WorklistDay[];
 	/**
 	 * Die Zahlen in den drei Segmenten. Sie zählen **ungefiltert**, also den
@@ -209,14 +219,15 @@ export function buildWorklist({
 		isTask(entry) &&
 		matchesFilter(entry, filter) &&
 		(responsibleId === null || entry.responsible_helper_id === responsibleId);
+	/** Ob überhaupt etwas ausgesiebt wird — daran hängt, ob leere Zwischentitel
+	stehen bleiben (siehe {@link Worklist.days}). */
+	const filtert = filter !== 'all' || responsibleId !== null;
 
 	return {
 		days: days
 			.map((day) => {
 				const groups = groupEntriesByPhase({ ...day, entries: day.entries.filter(shows) })
-					// Ein Zwischentitel ohne Zeile sagt nichts — anders als in der
-					// Gruppierung selbst, die leere Phasen benennbar hält.
-					.filter((group) => group.entries.length > 0)
+					.filter((group) => !filtert || group.entries.length > 0)
 					.map((group) => {
 						const tasks = group.entries.map(toTask);
 						return {
@@ -234,7 +245,7 @@ export function buildWorklist({
 					groups
 				};
 			})
-			.filter((day) => day.groups.length > 0),
+			.filter((day) => !filtert || day.groups.length > 0),
 		counts: { all: all.length, open, done: all.length - open },
 		responsibles: responsiblesOf(all),
 		footer: footerOf(days, festivalStart, festivalEnd)

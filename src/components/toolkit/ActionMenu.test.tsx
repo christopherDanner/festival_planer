@@ -130,6 +130,52 @@ describe('ActionMenu — die zwei Einträge', () => {
 	});
 });
 
+describe('ActionMenu — die Einträge des Aufrufers dazwischen', () => {
+	/* Der Tages-Zwischentitel des Ablaufplans (#124) trägt vier Griffe, der
+	   Phasen-Zwischentitel ebenfalls. Bearbeiten steht weiter oben und das rote
+	   Löschen weiter unten — dazwischen liegt, was der Aufrufer mitbringt. */
+
+	it('stellt sie zwischen Bearbeiten und Löschen', async () => {
+		await mount({
+			items: [
+				{ label: 'Phase hinzufügen', onSelect: () => {} },
+				{ label: 'Aufgabe hinzufügen', onSelect: () => {} }
+			]
+		});
+		await oeffneMenue();
+		const text = document.body.textContent ?? '';
+
+		expect(text.indexOf('Station bearbeiten …')).toBeLessThan(text.indexOf('Phase hinzufügen'));
+		expect(text.indexOf('Aufgabe hinzufügen')).toBeLessThan(text.indexOf('Station löschen'));
+	});
+
+	it('führt den Griff unmittelbar aus — nur das Löschen fragt zurück', async () => {
+		const onSelect = vi.fn();
+		await mount({ items: [{ label: 'Phase hinzufügen', onSelect }] });
+		await oeffneMenue();
+		await klick(eintrag('Phase hinzufügen'));
+
+		expect(onSelect).toHaveBeenCalledTimes(1);
+	});
+
+	it('sperrt einen Griff, der nichts bewirken kann', async () => {
+		const onSelect = vi.fn();
+		await mount({ items: [{ label: 'Nach oben', onSelect, disabled: true }] });
+		await oeffneMenue();
+		await klick(eintrag('Nach oben'));
+
+		expect(onSelect).not.toHaveBeenCalled();
+		expect(eintrag('Nach oben')?.getAttribute('data-disabled')).not.toBeNull();
+	});
+
+	it('kommt ohne sie aus — zwei Einträge bleiben der Regelfall', async () => {
+		await mount();
+		await oeffneMenue();
+
+		expect(document.querySelectorAll('[role="menuitem"]')).toHaveLength(2);
+	});
+});
+
 describe('ActionMenu — die Rückfrage vor dem Löschen', () => {
 	it('löscht nicht sofort, sondern fragt und benennt die Tragweite', async () => {
 		const onDelete = vi.fn();

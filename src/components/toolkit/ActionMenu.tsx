@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, type LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import {
@@ -20,11 +20,28 @@ import {
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
+/**
+ * Ein weiterer Griff des Aufrufers zwischen Bearbeiten und Löschen — „Phase
+ * hinzufügen", „nach oben" (#124). Er wird **unmittelbar** ausgeführt; die
+ * Rückfrage gehört allein dem Löschen.
+ */
+export interface ActionMenuItem {
+	label: string;
+	icon?: LucideIcon;
+	onSelect: () => void;
+	/** Grau statt versteckt, wo der Griff gerade nichts bewirken kann — ein
+	 * verschwindender Eintrag ließe das Menü unter der Hand springen. */
+	disabled?: boolean;
+}
+
 export interface ActionMenuProps {
 	/** Aufschrift des ⋮ für Screenreader: „Menü der Schicht 11–15". */
 	menuLabel: string;
 	editLabel: string;
 	deleteLabel: string;
+	/** Zusätzliche Griffe zwischen Bearbeiten und Löschen; ohne sie bleibt es
+	 * beim Paar. */
+	items?: ActionMenuItem[];
 	/** Überschrift der Rückfrage; üblich derselbe Wortlaut wie `deleteLabel`. */
 	confirmTitle: ReactNode;
 	/** Was das Löschen mitreißt — ein Satz, der die Tragweite benennt. */
@@ -58,6 +75,7 @@ export function ActionMenu({
 	menuLabel,
 	editLabel,
 	deleteLabel,
+	items = [],
 	confirmTitle,
 	confirmMessage,
 	onEdit,
@@ -91,6 +109,18 @@ export function ActionMenu({
 						<Pencil className="h-4 w-4" />
 						{editLabel}
 					</DropdownMenuItem>
+					{items.map(({ label, icon: Icon, onSelect, disabled }) => (
+						<DropdownMenuItem
+							key={label}
+							className="gap-2"
+							disabled={disabled}
+							// `onSelect` statt `onClick`: nur der Radix-Griff prüft das
+							// `disabled` mit — `onClick` liefe auch am grauen Eintrag.
+							onSelect={onSelect}>
+							{Icon && <Icon className="h-4 w-4" />}
+							{label}
+						</DropdownMenuItem>
+					))}
 					<DropdownMenuItem className="gap-2 text-rot" onClick={() => setConfirmOpen(true)}>
 						<Trash2 className="h-4 w-4" />
 						{deleteLabel}
