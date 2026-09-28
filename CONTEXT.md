@@ -152,7 +152,7 @@ Vorgang, den *Ablaufplan* eines vergangenen Fests (Quellfest) in ein neues Fest 
 
 Drei Regeln unterscheiden sie vom bloßen Duplizieren:
 
-- **Datums-Versatz wie bei den Schichten** — jeder Tag rückt um denselben Abstand zum Fest-Start weiter, der Aufbau-Donnerstag fällt also wieder auf einen Donnerstag. Der Schritt zeigt vorher je Tag alten und neuen Termin.
+- **Datums-Versatz wie bei den Schichten** — jeder Tag rückt um denselben Abstand zum Fest-Start weiter, der Aufbau-Donnerstag fällt also wieder auf einen Donnerstag, solange beide Feste am selben Wochentag starten. Tun sie das nicht, rückt der Wochentag mit: Ablauf-Tage und Schichten desselben Fests dürfen nicht auseinanderlaufen. Der Schritt zeigt vorher je Tag alten und neuen Termin samt Wochentag.
 - **Aufgaben kommen offen herein** — der Haken des Vorjahrs ist wertlos.
 - **Verantwortliche nur mit übernommenen Helfern** — ein *Helfer* gehört dem Fest (ADR 0005); ohne die kopierte *Helferliste* gibt es im Zielfest keine Zeile, auf die ein Verantwortlicher zeigen könnte, und das Feld bleibt leer.
 

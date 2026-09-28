@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { scheduleDay, scheduleEntry, schedulePhase, scheduleTask } from './scheduleFactories';
+
 /**
  * Ablaufplan-Übernahme im Kopierwerk (#127).
  *
@@ -18,87 +20,69 @@ const SOURCE_START = '2026-07-24';
 /** Fest 2027: Fr 23.07. – So 25.07. Der Donnerstag davor ist der 22.07. */
 const TARGET_START = '2027-07-23';
 
-const stamps = { created_at: '', updated_at: '' };
+const imQuellfest = { festival_id: 'quelle', schedule_day_id: 'd-aufbau' };
 
 /** Aufbau-Donnerstag: von Hand angelegt, zwei Phasen, zwei Aufgaben. */
-const AUFBAU_TAG = {
+const AUFBAU_TAG = scheduleDay({
 	id: 'd-aufbau',
 	festival_id: 'quelle',
 	date: '2026-07-23',
 	label: 'Aufbau',
 	is_auto_generated: false,
 	sort_order: 0,
-	...stamps,
 	phases: [
-		{ id: 'ph-anlieferung', schedule_day_id: 'd-aufbau', festival_id: 'quelle', name: 'Anlieferung', sort_order: 0, ...stamps },
-		{ id: 'ph-abend', schedule_day_id: 'd-aufbau', festival_id: 'quelle', name: 'Abendrunde', sort_order: 1, ...stamps }
+		schedulePhase({ ...imQuellfest, id: 'ph-anlieferung', name: 'Anlieferung', sort_order: 0 }),
+		schedulePhase({ ...imQuellfest, id: 'ph-abend', name: 'Abendrunde', sort_order: 1 })
 	],
 	entries: [
-		{
+		scheduleTask({
+			...imQuellfest,
 			id: 'e-abnahme',
-			schedule_day_id: 'd-aufbau',
 			schedule_phase_id: 'ph-anlieferung',
-			festival_id: 'quelle',
 			title: 'Feuerwehr-Abnahme',
-			type: 'task' as const,
 			start_time: '09:00:00',
-			end_time: null,
 			responsible_helper_id: 'h-alt-1',
 			// Der Haken des Vorjahrs ist wertlos — er darf nicht mitkommen.
-			status: 'done' as const,
-			description: 'Mit dem Kommandanten abstimmen',
-			...stamps
-		},
-		{
+			status: 'done',
+			description: 'Mit dem Kommandanten abstimmen'
+		}),
+		scheduleTask({
+			...imQuellfest,
 			id: 'e-leergut',
-			schedule_day_id: 'd-aufbau',
-			schedule_phase_id: null,
-			festival_id: 'quelle',
 			title: 'Leergut-Rückgabe',
-			type: 'task' as const,
-			start_time: null,
-			end_time: null,
-			responsible_helper_id: null,
-			status: 'done' as const,
-			description: null,
-			...stamps
-		}
+			status: 'done'
+		})
 	]
-};
+});
 
-/** Festsamstag: automatisch erzeugt, ohne Phasen, ein Programmpunkt. */
-const FEST_SAMSTAG = {
+/** Festsamstag: automatisch erzeugt, ohne Phasen, ein Programmpunkt. Ein
+Programmpunkt trägt keinen Status (ADR 0007). */
+const FEST_SAMSTAG = scheduleDay({
 	id: 'd-samstag',
 	festival_id: 'quelle',
 	date: '2026-07-25',
 	label: 'Samstag',
 	is_auto_generated: true,
 	sort_order: 1,
-	...stamps,
-	phases: [],
 	entries: [
-		{
+		scheduleEntry({
 			id: 'e-fassanstich',
-			schedule_day_id: 'd-samstag',
-			schedule_phase_id: null,
 			festival_id: 'quelle',
+			schedule_day_id: 'd-samstag',
 			title: 'Fassanstich',
-			type: 'program' as const,
+			type: 'program',
 			start_time: '11:00:00',
-			end_time: '11:30:00',
-			responsible_helper_id: null,
-			// Ein Programmpunkt trägt keinen Status (ADR 0007).
-			status: null,
-			description: null,
-			...stamps
-		}
+			end_time: '11:30:00'
+		})
 	]
-};
+});
 
 type Row = Record<string, unknown>;
 
 const mocks = vi.hoisted(() => ({
 	readFestivalIds: [] as string[],
+	/** Der Ablaufplan des Quellfests; `beforeEach` setzt ihn auf die zwei Tage. */
+	sourceDays: [] as Row[],
 	days: [] as Row[],
 	phases: [] as Row[],
 	entries: [] as Row[]
@@ -115,7 +99,7 @@ const created = (rows: Row[], prefix: string) =>
 vi.mock('../scheduleService', () => ({
 	getScheduleDays: async (festivalId: string) => {
 		mocks.readFestivalIds.push(festivalId);
-		return [AUFBAU_TAG, FEST_SAMSTAG];
+		return mocks.sourceDays;
 	},
 	createScheduleDaysBulk: async (rows: Row[]) => {
 		mocks.days = rows;
@@ -176,6 +160,7 @@ const tagId = (date: string) => `d-neu-${mocks.days.length - 1 - neuerTag(date)}
 
 beforeEach(() => {
 	mocks.readFestivalIds = [];
+	mocks.sourceDays = [AUFBAU_TAG, FEST_SAMSTAG] as unknown as Row[];
 	mocks.days = [];
 	mocks.phases = [];
 	mocks.entries = [];
@@ -266,6 +251,56 @@ describe('„Ablaufplan übernehmen"', () => {
 			end_time: null,
 			description: 'Mit dem Kommandanten abstimmen'
 		});
+	});
+});
+
+describe('Zuordnung ohne eindeutigen Schlüssel', () => {
+	// Nur der Tag trägt einen Schlüssel, den die Datenbank eindeutig hält
+	// (UNIQUE auf dem Datum). Zwei Phasen desselben Tages *könnten* gleich heißen
+	// und gleich gereiht sein — dann darf die Kopie sie nicht zu einer verschmelzen
+	// und ihre Einträge zusammenziehen.
+	it('gibt zwei ununterscheidbaren Phasen trotzdem je eine eigene neue Phase', async () => {
+		const zwilling = (id: string) =>
+			schedulePhase({ ...imQuellfest, id, name: 'Anlieferung', sort_order: 0 });
+		mocks.sourceDays = [
+			scheduleDay({
+				id: 'd-aufbau',
+				festival_id: 'quelle',
+				date: '2026-07-23',
+				phases: [zwilling('ph-a'), zwilling('ph-b')],
+				entries: [
+					scheduleTask({ ...imQuellfest, id: 'e-a', schedule_phase_id: 'ph-a', title: 'A' }),
+					scheduleTask({ ...imQuellfest, id: 'e-b', schedule_phase_id: 'ph-b', title: 'B' })
+				]
+			})
+		] as unknown as Row[];
+
+		await copyFestivalData('quelle', 'ziel', options());
+
+		const phasen = mocks.entries.map((e) => e.schedule_phase_id);
+		expect(phasen.every(Boolean)).toBe(true);
+		expect(new Set(phasen).size).toBe(2);
+	});
+});
+
+describe('Versatz bei abweichendem Start-Wochentag', () => {
+	// `shiftFestivalDate` hält den **Tages**-Abstand zum Fest-Start — dieselbe
+	// Rechnung wie bei den Schichten (#94), und das ist die Bedingung dafür, dass
+	// die Vorschau nicht lügt. Starten Quell- und Zielfest an verschiedenen
+	// Wochentagen, verschiebt sich der Wochentag darum mit; die Vorschau nennt ihn
+	// je Tag, damit man genau das sieht.
+	it('hält den Abstand zum Fest-Start, nicht den Wochentag', async () => {
+		await copyFestivalData(
+			'quelle',
+			'ziel',
+			// Zielfest startet an einem Samstag statt an einem Freitag.
+			options({ targetFestivalStartDate: '2027-07-24' })
+		);
+
+		// Aufbau-Tag: ein Tag vor dem Start — aus Do wird Fr.
+		expect(mocks.days[0]).toMatchObject({ date: '2027-07-23' });
+		// Festsamstag: ein Tag nach dem Start — aus Sa wird So.
+		expect(mocks.days[1]).toMatchObject({ date: '2027-07-25' });
 	});
 });
 

@@ -4,6 +4,20 @@ import { Button } from '@/components/ui/button';
 import CopySwitch from './CopySwitch';
 import type { SchedulePreviewRow } from './scheduleChoice';
 
+/** Was der eine Schalter holt — gilt in beiden Fällen, darum steht es einmal. */
+const WAS_MITKOMMT = 'Tage, Phasen und Einträge — Aufgaben kommen offen herein.';
+
+/**
+ * Der zweite Satz am Schalter: was aus den Verantwortlichen wird. Er hängt an
+ * „Helfer übernehmen" aus Schritt 2, weil ein Helfer dem Fest gehört (ADR 0005)
+ * — ohne kopierte Liste gibt es im Zielfest keine Zeile, auf die er zeigen
+ * könnte. Das Ticket verlangt den Hinweis ausdrücklich am Schalter.
+ */
+const responsibleHint = (copyHelpers: boolean): string =>
+	copyHelpers
+		? 'Die Verantwortlichen wandern auf die übernommenen Helfer mit.'
+		: 'Die Verantwortlichen bleiben leer — dafür müssten in Schritt 2 die Helfer mitkommen.';
+
 export interface ScheduleStepProps {
 	rows: SchedulePreviewRow[];
 	/** Der eine Schalter des Schritts — Tage, Phasen und Einträge zusammen. */
@@ -42,9 +56,13 @@ export default function ScheduleStep({
 		<div className="border-2.5 border-tinte bg-white">
 			<div className="flex flex-wrap items-baseline gap-3 border-b-2.5 border-tinte px-4 py-3">
 				<h3 className="text-sm font-bold uppercase tracking-[.08em]">Ablaufplan</h3>
+				{/* Kein Versprechen auf den Wochentag: der Versatz hält den Abstand zum
+				Fest-Start (wie bei den Schichten, #94). Starten Vorlage und neues Fest
+				an verschiedenen Wochentagen, rückt er mit — die Zeilen darunter nennen
+				darum je Tag den neuen Wochentag. */}
 				<span className="text-xs text-tinte-soft">
-					Tage, Phasen und Einträge der Vorlage rücken automatisch auf die neuen Tage — der
-					Aufbau-Donnerstag bleibt ein Donnerstag.
+					Tage, Phasen und Einträge der Vorlage rücken automatisch mit — jeder Tag behält seinen
+					Abstand zum Fest-Start.
 				</span>
 			</div>
 
@@ -58,11 +76,7 @@ export default function ScheduleStep({
 						<CopySwitch
 							id="ablaufplan-uebernehmen"
 							label="Ablaufplan übernehmen"
-							hint={
-								copyHelpers
-									? 'Tage, Phasen und Einträge — Aufgaben kommen offen herein. Die Verantwortlichen wandern auf die übernommenen Helfer mit.'
-									: 'Tage, Phasen und Einträge — Aufgaben kommen offen herein. Die Verantwortlichen bleiben leer — dafür müssten in Schritt 2 die Helfer mitkommen.'
-							}
+							hint={`${WAS_MITKOMMT} ${responsibleHint(copyHelpers)}`}
 							checked={copySchedule}
 							onChange={onCopyScheduleChange}
 						/>
@@ -72,7 +86,6 @@ export default function ScheduleStep({
 						{rows.map((row) => (
 							<li
 								key={row.id}
-								data-tag={row.id}
 								className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-linie px-4 py-2.5 last:border-b-0">
 								{/* Termine tragen die Akzentschrift (DESIGN-VISION §4). */}
 								<span className="w-[118px] font-display text-[13px] font-semibold tabular-nums">

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 export const COPY_CHECKBOX = 'h-[18px] w-[18px]';
 
 /** Beschriftung als Tippziel: am Handy ≥ 40px hoch (DESIGN-VISION §6). */
-export const TIPPZIEL = 'flex items-center max-[899px]:min-h-10';
+export const TAP_TARGET = 'flex items-center max-[899px]:min-h-10';
 
 export interface CopySwitchProps {
 	id: string;
@@ -49,7 +49,7 @@ export default function CopySwitch({
 					onCheckedChange={(value) => onChange(value === true)}
 					className={cn(COPY_CHECKBOX, FOCUS_INK)}
 				/>
-				<Label htmlFor={id} className={cn(TIPPZIEL, 'text-[12.5px] font-bold')}>
+				<Label htmlFor={id} className={cn(TAP_TARGET, 'text-[12.5px] font-bold')}>
 					{label}
 				</Label>
 			</div>

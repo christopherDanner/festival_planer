@@ -42,7 +42,11 @@ describe('Kopfzeile der Werkbank', () => {
 	it('nennt den Schritt und den Merksatz', () => {
 		const html = render();
 		expect(html).toContain('Ablaufplan');
-		expect(html).toContain('rücken automatisch auf die neuen Tage');
+		// Kein Versprechen auf den Wochentag: der Versatz hält den Abstand zum
+		// Fest-Start. Bei abweichendem Start-Wochentag rückt er mit, und die
+		// Tages-Zeilen nennen den neuen Wochentag.
+		expect(html).toContain('jeder Tag behält seinen Abstand zum Fest-Start');
+		expect(html).not.toContain('bleibt ein Donnerstag');
 	});
 });
 

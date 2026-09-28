@@ -44,17 +44,31 @@ const remapIds = (ids: string[] | null | undefined, idMap: Record<string, string
  * Reihenfolge der zurückgegebenen Zeilen nichts zu. Beim Ablaufplan wäre ein
  * Verrutschen still — Einträge landeten am falschen Tag und in der falschen
  * Phase, ohne dass irgendwo ein Fehler stünde.
+ *
+ * Jede getroffene Zeile wird **verbraucht**. Nur der Tag trägt einen Schlüssel,
+ * den die Datenbank eindeutig hält (UNIQUE auf dem Datum); zwei Phasen desselben
+ * Tages *könnten* gleich heißen und gleich gereiht sein. Ohne Verbrauch zeigten
+ * beide Quell-Phasen auf dieselbe neue Zeile und zögen ihre Einträge zusammen —
+ * so bekommt jede ihre eigene, und welche welche ist, ist bei zwei
+ * ununterscheidbaren Phasen ohnehin keine Frage mit Antwort.
  */
-function remapById<S extends { id: string }, N extends { id: string }>(
+function remapByKey<S extends { id: string }, N extends { id: string }>(
 	sources: readonly S[],
 	created: readonly N[],
 	sourceKey: (row: S) => string,
 	createdKey: (row: N) => string
 ): Record<string, string> {
-	const byKey = new Map(created.map(row => [createdKey(row), row.id]));
+	const byKey = new Map<string, string[]>();
+	for (const row of created) {
+		const key = createdKey(row);
+		const queue = byKey.get(key);
+		if (queue) queue.push(row.id);
+		else byKey.set(key, [row.id]);
+	}
+
 	const idMap: Record<string, string> = {};
 	for (const source of sources) {
-		const id = byKey.get(sourceKey(source));
+		const id = byKey.get(sourceKey(source))?.shift();
 		if (id) idMap[source.id] = id;
 	}
 	return idMap;
@@ -230,9 +244,12 @@ export async function copyFestivalData(
 	if (options.copySchedule) {
 		const sourceDays = await getScheduleDays(sourceFestivalId);
 
-		// Dieselbe Versatz-Funktion wie bei den Schichten (#94) — der
-		// Aufbau-Donnerstag fällt wieder auf einen Donnerstag, und die Vorschau
-		// in Schritt 4 nennt genau dieses Datum.
+		// Dieselbe Versatz-Funktion wie bei den Schichten (#94): jeder Tag behält
+		// seinen Abstand zum Fest-Start, der Aufbau-Donnerstag fällt also wieder
+		// auf einen Donnerstag, solange beide Feste am selben Wochentag starten.
+		// Tun sie das nicht, rückt der Wochentag mit — das ist gewollt, weil sonst
+		// Ablauf-Tage und Schichten desselben Fests auseinanderliefen. Die Vorschau
+		// in Schritt 4 nennt genau dieses Datum samt Wochentag.
 		const newDate = (date: string) =>
 			shiftFestivalDate(options.sourceFestivalStartDate, date, options.targetFestivalStartDate);
 
@@ -250,7 +267,7 @@ export async function copyFestivalData(
 		);
 		// Das Datum ist der fachliche Schlüssel des Tages — `schedule_days` trägt
 		// darauf ohnehin ein UNIQUE(festival_id, date).
-		const dayIdMap = remapById(
+		const dayIdMap = remapByKey(
 			sourceDays,
 			createdDays,
 			day => newDate(day.date),
@@ -270,7 +287,7 @@ export async function copyFestivalData(
 		// benennen sie eindeutig genug, um sie wiederzuerkennen.
 		const phaseKey = (dayId: string, sortOrder: number, name: string) =>
 			`${dayId}\u0000${sortOrder}\u0000${name}`;
-		const phaseIdMap = remapById(
+		const phaseIdMap = remapByKey(
 			sourcePhases,
 			createdPhases,
 			phase => phaseKey(dayIdMap[phase.schedule_day_id], phase.sort_order, phase.name),

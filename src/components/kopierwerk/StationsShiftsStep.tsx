@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-import CopySwitch, { COPY_CHECKBOX as CHECKBOX, TIPPZIEL } from './CopySwitch';
+import CopySwitch, { COPY_CHECKBOX, TAP_TARGET } from './CopySwitch';
 import { checkboxState } from './selection';
 import { type StationPreviewRow } from './stationChoice';
 
@@ -76,9 +76,9 @@ export default function StationsShiftsStep({
 							variant="gruen"
 							checked={allState}
 							onCheckedChange={onToggleAllStations}
-							className={cn(CHECKBOX, FOCUS_INK)}
+							className={cn(COPY_CHECKBOX, FOCUS_INK)}
 						/>
-						<Label htmlFor="alle-stationen" className={cn(TIPPZIEL, 'text-[13px] font-bold')}>
+						<Label htmlFor="alle-stationen" className={cn(TAP_TARGET, 'text-[13px] font-bold')}>
 							Alle Stationen
 						</Label>
 					</div>
@@ -95,12 +95,12 @@ export default function StationsShiftsStep({
 											variant="gruen"
 											checked={selectedStationIds.has(row.id)}
 											onCheckedChange={() => onToggleStation(row.id)}
-											className={cn(CHECKBOX, FOCUS_INK)}
+											className={cn(COPY_CHECKBOX, FOCUS_INK)}
 										/>
 										{/* Stationsnamen tragen die Akzentschrift (DESIGN-VISION §4). */}
 										<Label
 											htmlFor={`station-${row.id}`}
-											className={cn(TIPPZIEL, 'font-display text-[15px] font-semibold')}>
+											className={cn(TAP_TARGET, 'font-display text-[15px] font-semibold')}>
 											{row.name}
 										</Label>
 										<span className="text-[11.5px] text-tinte-soft">{row.meta}</span>
