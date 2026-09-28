@@ -44,7 +44,7 @@ describe('buildWorklist — Gliederung Tag → Phase', () => {
 		expect(worklist.days[0].groups[0].tasks.map((t) => t.entry.id)).toEqual(['t1']);
 	});
 
-	it('lässt Tage ohne Aufgaben weg', () => {
+	it('zeigt ungefiltert jeden Tag — auch den ohne Aufgabe (#124)', () => {
 		const worklist = buildWorklist({
 			days: [
 				day({ id: 'leer', date: '2026-07-23' }),
@@ -53,20 +53,25 @@ describe('buildWorklist — Gliederung Tag → Phase', () => {
 			]
 		});
 
-		expect(worklist.days.map((d) => d.day.id)).toEqual(['voll']);
+		expect(worklist.days.map((d) => d.day.id)).toEqual(['leer', 'voll', 'nur-programm']);
+		expect(worklist.days[0].groups).toEqual([]);
 	});
 
-	it('lässt leere Phasen weg — ein Zwischentitel ohne Zeile sagt nichts', () => {
+	it('zeigt ungefiltert auch die leere Phase — sie trägt ihr ⋮ (#124)', () => {
 		const worklist = buildWorklist({
 			days: [
 				day({
-					phases: [phase({ id: 'p1' }), phase({ id: 'p2', name: 'Abbau', sort_order: 1 })],
+					phases: [
+						phase({ id: 'p1', name: 'Anlieferung' }),
+						phase({ id: 'p2', name: 'Abbau', sort_order: 1 })
+					],
 					entries: [task({ schedule_phase_id: 'p2' })]
 				})
 			]
 		});
 
-		expect(worklist.days[0].groups.map((g) => g.phase?.name)).toEqual(['Abbau']);
+		expect(worklist.days[0].groups.map((g) => g.phase?.name)).toEqual(['Anlieferung', 'Abbau']);
+		expect(worklist.days[0].groups[0].total).toBe(0);
 	});
 
 	it('behält die Reihenfolge des Tages — die Uhrzeit reiht im Service (ADR 0007)', () => {
@@ -87,6 +92,29 @@ describe('buildWorklist — Gliederung Tag → Phase', () => {
 			'spät',
 			'ohne'
 		]);
+	});
+
+	it('nimmt einen Tag ohne Aufgaben aus der Fußzeile heraus, nicht aus der Liste', () => {
+		const worklist = buildWorklist({ days: [day({ id: 'leer', date: '2026-07-23' })] });
+
+		expect(worklist.counts).toEqual({ all: 0, open: 0, done: 0 });
+		expect(worklist.days).toHaveLength(1);
+	});
+
+	it('zählt die gezeigten Zeilen — die Länge der Tagesliste sagt das nicht mehr', () => {
+		const worklist = buildWorklist({
+			days: [
+				day({ id: 'leer', date: '2026-07-23' }),
+				day({ id: 'voll', date: '2026-07-24', entries: [task({ id: 'a' }), task({ id: 'b' })] })
+			]
+		});
+
+		expect(worklist.shown).toBe(2);
+		expect(worklist.days.map((d) => d.total)).toEqual([0, 2]);
+	});
+
+	it('meldet den Leerzustand über `shown`, auch wenn Tage dastehen', () => {
+		expect(buildWorklist({ days: [day(), day({ id: 'd2', date: '2026-07-26' })] }).shown).toBe(0);
 	});
 
 	it('schreibt Tage in der Reihenfolge der Abfrage', () => {
@@ -291,6 +319,18 @@ describe('buildWorklist — Filter Verantwortlicher', () => {
 		});
 
 		expect(worklist.days[0].groups[0].tasks.map((t) => t.entry.id)).toEqual(['offen']);
+	});
+
+	it('lässt Tage ohne Treffer fallen — gefiltert sagt ein leerer Zwischentitel nichts', () => {
+		const worklist = buildWorklist({
+			days: [
+				day({ id: 'leer', date: '2026-07-23' }),
+				day({ id: 'do', date: '2026-07-24', entries: [task({ ...wer('h1', 'Franz', 'Hochauer') })] })
+			],
+			responsibleId: 'h1'
+		});
+
+		expect(worklist.days.map((d) => d.day.id)).toEqual(['do']);
 	});
 
 	it('zählt in den Segmenten weiter den Gesamtbestand des Fests', () => {

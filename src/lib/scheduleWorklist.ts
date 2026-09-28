@@ -34,7 +34,8 @@ export interface WorklistTask {
 }
 
 /** Ein Block unter einem Tag; `phase === null` heißt „direkt unter dem Tag"
-und trägt darum keinen Zwischentitel. */
+und trägt darum keinen Zwischentitel. Eine benannte Phase steht ungefiltert
+auch leer da — sie trägt ihr ⋮ (#124). */
 export interface WorklistPhaseGroup {
 	phase: SchedulePhase | null;
 	/** „1/3" am Zwischentitel — über die **gezeigten** Zeilen. */
@@ -50,6 +51,10 @@ export interface WorklistDay {
 	title: string;
 	/** „4 offen" am Zwischentitel — über die **gezeigten** Zeilen. */
 	open: number;
+	/** Wie viele Zeilen der Tag überhaupt zeigt. Bei `0` bleibt der
+	Zwischentitel stumm: „fertig" wäre an einem Tag ohne Aufgabe eine Auskunft
+	über nichts. */
+	total: number;
 	groups: WorklistPhaseGroup[];
 }
 
@@ -62,8 +67,23 @@ export interface WorklistResponsible {
 
 /** Die Werkliste, wie sie am Bildschirm steht. */
 export interface Worklist {
-	/** Nur Tage mit gezeigten Aufgaben — ein leerer Zwischentitel sagt nichts (#122). */
+	/**
+	 * **Ungefiltert jeder Ablauf-Tag**, auch der ohne Aufgabe: seit #124 hängt am
+	 * Zwischentitel das ⋮, das den Tag bearbeitet, löscht und ihm Phase oder
+	 * Aufgabe gibt — ein Tag, der erst mit seiner ersten Zeile erscheint, wäre
+	 * nicht zu verwalten, und eine eben angelegte Phase verschwände sofort wieder.
+	 *
+	 * **Gefiltert fällt weg, was keine Zeile hat** (#122): dort ist der
+	 * Zwischentitel eine Antwort auf die Frage des Filters, und eine leere Antwort
+	 * sagt nichts.
+	 */
 	days: WorklistDay[];
+	/**
+	 * Wie viele Zeilen insgesamt am Papier stehen. Seit #124 beantwortet die
+	 * Länge von {@link Worklist.days} das nicht mehr — ein Tag ohne Aufgabe steht
+	 * ungefiltert trotzdem da. `0` heißt: hier ist der Leerzustand.
+	 */
+	shown: number;
 	/**
 	 * Die Zahlen in den drei Segmenten. Sie zählen **ungefiltert**, also den
 	 * Gesamtbestand des Fests: „Offen (9)" ist das Versprechen, was ein Druck auf
@@ -209,32 +229,37 @@ export function buildWorklist({
 		isTask(entry) &&
 		matchesFilter(entry, filter) &&
 		(responsibleId === null || entry.responsible_helper_id === responsibleId);
+	/** Ob überhaupt etwas ausgesiebt wird — daran hängt, ob leere Zwischentitel
+	stehen bleiben (siehe {@link Worklist.days}). */
+	const filtert = filter !== 'all' || responsibleId !== null;
+
+	const shownDays = days
+		.map((day) => {
+			const groups = groupEntriesByPhase({ ...day, entries: day.entries.filter(shows) })
+				.filter((group) => !filtert || group.entries.length > 0)
+				.map((group) => {
+					const tasks = group.entries.map(toTask);
+					return {
+						phase: group.phase,
+						done: tasks.filter((task) => task.done).length,
+						total: tasks.length,
+						tasks
+					};
+				});
+
+			return {
+				day,
+				title: scheduleDayTitle(day),
+				open: groups.reduce((sum, group) => sum + (group.total - group.done), 0),
+				total: groups.reduce((sum, group) => sum + group.total, 0),
+				groups
+			};
+		})
+		.filter((day) => !filtert || day.groups.length > 0);
 
 	return {
-		days: days
-			.map((day) => {
-				const groups = groupEntriesByPhase({ ...day, entries: day.entries.filter(shows) })
-					// Ein Zwischentitel ohne Zeile sagt nichts — anders als in der
-					// Gruppierung selbst, die leere Phasen benennbar hält.
-					.filter((group) => group.entries.length > 0)
-					.map((group) => {
-						const tasks = group.entries.map(toTask);
-						return {
-							phase: group.phase,
-							done: tasks.filter((task) => task.done).length,
-							total: tasks.length,
-							tasks
-						};
-					});
-
-				return {
-					day,
-					title: scheduleDayTitle(day),
-					open: groups.reduce((sum, group) => sum + (group.total - group.done), 0),
-					groups
-				};
-			})
-			.filter((day) => day.groups.length > 0),
+		days: shownDays,
+		shown: shownDays.reduce((sum, day) => sum + day.total, 0),
 		counts: { all: all.length, open, done: all.length - open },
 		responsibles: responsiblesOf(all),
 		footer: footerOf(days, festivalStart, festivalEnd)

@@ -46,6 +46,13 @@ import TaskWorklist from './TaskWorklist';
 
 const noop = () => {};
 
+/** Die Griffe der beiden ⋮-Menüs (#124) — als Spione, wo der Test sie prüft. */
+const stilleGriffe = () => ({
+	dayActions: { onEdit: noop, onAddPhase: noop, onAddTask: noop, onDelete: noop },
+	phaseActions: { onRename: noop, onMove: noop, onDelete: noop },
+	onAddDay: noop
+});
+
 const render = (input: WorklistInput, filter: TaskFilter = 'all') =>
 	renderToStaticMarkup(
 		<TaskWorklist
@@ -57,6 +64,7 @@ const render = (input: WorklistInput, filter: TaskFilter = 'all') =>
 			onToggleTask={noop}
 			onEditTask={noop}
 			onDeleteTask={noop}
+			{...stilleGriffe()}
 		/>
 	);
 
@@ -142,6 +150,45 @@ describe('TaskWorklist — Gliederung Tag → Phase', () => {
 
 		expect(html).toContain('Anlieferung');
 		expect(html).toContain('1/2');
+	});
+
+	it('schreibt jedem Tages-Zwischentitel sein ⋮ dazu (#124)', () => {
+		const html = render({ days: [AUFBAU] });
+
+		expect(html).toContain('Menü des Tages Donnerstag 23. Juli · Aufbau');
+		expect(html).toContain('Menü der Phase Anlieferung');
+	});
+
+	it('zeigt ungefiltert auch den Tag ohne Aufgabe — sonst wäre er nicht zu verwalten', () => {
+		const html = render({ days: [day({ id: 'leer', date: '2026-07-27', label: 'Nachbereitung' })] });
+
+		expect(html).toContain('Montag 27. Juli · Nachbereitung');
+		expect(html).toContain('Menü des Tages Montag 27. Juli · Nachbereitung');
+	});
+
+	it('lässt den Zähler an einem Tag ohne Zeile weg — „fertig" wäre dort eine Auskunft über nichts', () => {
+		const html = render({ days: [day({ id: 'leer', date: '2026-07-27' })] });
+
+		// Ohne Zeile ist `open` 0 — ohne die Regel stünde hier das grüne „fertig".
+		expect(html).not.toContain('fertig');
+	});
+
+	it('zeigt ungefiltert auch die leere Phase — sonst verschwände sie beim Anlegen', () => {
+		const html = render({
+			days: [day({ date: '2026-07-23', phases: [phase({ id: 'p9', name: 'Abendprogramm' })] })]
+		});
+
+		expect(html).toContain('Abendprogramm');
+		expect(html).toContain('Menü der Phase Abendprogramm');
+	});
+
+	it('lässt gefiltert weg, was keine Zeile hat (#122)', () => {
+		const html = render(
+			{ days: [day({ date: '2026-07-23', phases: [phase({ id: 'p9', name: 'Abendprogramm' })] })] },
+			'open'
+		);
+
+		expect(html).not.toContain('Abendprogramm');
 	});
 
 	it('stellt Einträge ohne Phase ohne Ersatztitel direkt unter den Tag', () => {
@@ -236,20 +283,28 @@ describe('TaskWorklist — Bedienung', () => {
 	});
 
 	/** Die Werkliste am lebenden Objekt; die Griffe sind Spione. */
-	const mount = async () => {
+	const mount = async (days = [AUFBAU]) => {
 		const spies = {
 			onFilterChange: vi.fn(),
 			onResponsibleChange: vi.fn(),
 			onToggleTask: vi.fn(),
 			onEditTask: vi.fn(),
-			onDeleteTask: vi.fn()
+			onDeleteTask: vi.fn(),
+			onAddDay: vi.fn(),
+			dayActions: {
+				onEdit: vi.fn(),
+				onAddPhase: vi.fn(),
+				onAddTask: vi.fn(),
+				onDelete: vi.fn()
+			},
+			phaseActions: { onRename: vi.fn(), onMove: vi.fn(), onDelete: vi.fn() }
 		};
 		const host = document.createElement('div');
 		document.body.appendChild(host);
 		await act(async () => {
 			createRoot(host).render(
 				<TaskWorklist
-					worklist={buildWorklist({ days: [AUFBAU] })}
+					worklist={buildWorklist({ days })}
 					filter="all"
 					responsibleId={null}
 					{...spies}
@@ -311,6 +366,181 @@ describe('TaskWorklist — Bedienung', () => {
 
 		await click(eintrag('__all__'));
 		expect(spies.onResponsibleChange).toHaveBeenLastCalledWith(null);
+	});
+
+	it('meldet den Griff „+ Tag" am Fuß', async () => {
+		const { host, spies } = await mount();
+
+		await click([...host.querySelectorAll('button')].find((b) => b.textContent === '+ Tag'));
+
+		expect(spies.onAddDay).toHaveBeenCalledTimes(1);
+	});
+});
+
+/* Die beiden ⋮-Menüs von #124. Was sie *anbieten* und dass Löschen zurückfragt,
+   prüft `ActionMenu.test`; hier zählt, dass sie am richtigen Zwischentitel
+   hängen und den richtigen Tag bzw. die richtige Phase melden. */
+describe('TaskWorklist — die zwei ⋮-Menüs an Tag und Phase', () => {
+	(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+	beforeAll(() => {
+		globalThis.ResizeObserver ??= class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		};
+		Element.prototype.scrollIntoView ??= () => {};
+	});
+
+	afterEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	/** Zwei Phasen an einem Tag — nur so hat „nach oben / nach unten" einen Rand. */
+	const ZWEI_PHASEN = day({
+		id: 'do',
+		date: '2026-07-23',
+		phases: [
+			phase({ id: 'p1', name: 'Anlieferung', sort_order: 0 }),
+			phase({ id: 'p2', name: 'Abbau', sort_order: 1 })
+		],
+		entries: [
+			task({ id: 'a', schedule_phase_id: 'p1' }),
+			task({ id: 'b', schedule_phase_id: 'p2' })
+		]
+	});
+
+	const mountMitPhasen = async () => {
+		const spies = {
+			onFilterChange: vi.fn(),
+			onResponsibleChange: vi.fn(),
+			onToggleTask: vi.fn(),
+			onEditTask: vi.fn(),
+			onDeleteTask: vi.fn(),
+			onAddDay: vi.fn(),
+			dayActions: {
+				onEdit: vi.fn(),
+				onAddPhase: vi.fn(),
+				onAddTask: vi.fn(),
+				onDelete: vi.fn()
+			},
+			phaseActions: { onRename: vi.fn(), onMove: vi.fn(), onDelete: vi.fn() }
+		};
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		await act(async () => {
+			createRoot(host).render(
+				<TaskWorklist
+					worklist={buildWorklist({ days: [ZWEI_PHASEN] })}
+					filter="all"
+					responsibleId={null}
+					{...spies}
+				/>
+			);
+		});
+		return { spies };
+	};
+
+	/** Das Menü mit der Tastatur öffnen — Radix reagiert auf Enter am Auslöser. */
+	const oeffne = async (label: string) => {
+		await act(async () => {
+			document
+				.querySelector(`[aria-label="${label}"]`)
+				?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		});
+	};
+
+	const waehle = async (text: string) => {
+		const item = [...document.querySelectorAll('[role="menuitem"]')].find((el) =>
+			(el.textContent ?? '').includes(text)
+		);
+		await act(async () => {
+			item?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+	};
+
+	const TAG = 'Menü des Tages Donnerstag 23. Juli';
+
+	it('hängt am Tages-Zwischentitel und meldet seinen Tag', async () => {
+		const { spies } = await mountMitPhasen();
+
+		await oeffne(TAG);
+		await waehle('Tag bearbeiten');
+
+		expect(spies.dayActions.onEdit.mock.calls[0][0].id).toBe('do');
+	});
+
+	it('bietet am Tag Phase und Aufgabe an — beide für genau diesen Tag', async () => {
+		const { spies } = await mountMitPhasen();
+
+		await oeffne(TAG);
+		await waehle('Phase hinzufügen');
+		await oeffne(TAG);
+		await waehle('Aufgabe hinzufügen');
+
+		expect(spies.dayActions.onAddPhase.mock.calls[0][0].id).toBe('do');
+		expect(spies.dayActions.onAddTask.mock.calls[0][0].id).toBe('do');
+	});
+
+	it('löscht den Tag erst nach der Rückfrage — und benennt die Kaskade', async () => {
+		const { spies } = await mountMitPhasen();
+
+		await oeffne(TAG);
+		await waehle('Tag löschen');
+		expect(spies.dayActions.onDelete).not.toHaveBeenCalled();
+		expect(document.body.textContent).toContain('Tag und alle Phasen und Einträge wirklich löschen?');
+
+		await act(async () => {
+			[...document.querySelectorAll('[role="alertdialog"] button')]
+				.find((b) => b.textContent?.trim() === 'Löschen')
+				?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+
+		expect(spies.dayActions.onDelete.mock.calls[0][0].id).toBe('do');
+	});
+
+	it('benennt die Phase um und meldet dabei ihre Kennung', async () => {
+		const { spies } = await mountMitPhasen();
+
+		await oeffne('Menü der Phase Abbau');
+		await waehle('Phase umbenennen');
+
+		expect(spies.phaseActions.onRename.mock.calls[0][0].id).toBe('p2');
+	});
+
+	it('schiebt die Phase um einen Platz', async () => {
+		const { spies } = await mountMitPhasen();
+
+		await oeffne('Menü der Phase Abbau');
+		await waehle('Nach oben');
+
+		expect(spies.phaseActions.onMove.mock.calls[0][0].id).toBe('p2');
+		expect(spies.phaseActions.onMove.mock.calls[0][1]).toBe('up');
+	});
+
+	it('sperrt „Nach oben" an der ersten und „Nach unten" an der letzten Phase', async () => {
+		await mountMitPhasen();
+
+		await oeffne('Menü der Phase Anlieferung');
+		const eintrag = (text: string) =>
+			[...document.querySelectorAll('[role="menuitem"]')].find((el) =>
+				(el.textContent ?? '').includes(text)
+			);
+
+		expect(eintrag('Nach oben')?.getAttribute('data-disabled')).not.toBeNull();
+		expect(eintrag('Nach unten')?.getAttribute('data-disabled')).toBeNull();
+	});
+
+	it('nennt die Rückfrage der Phase ihre Kaskade', async () => {
+		const { spies } = await mountMitPhasen();
+
+		await oeffne('Menü der Phase Abbau');
+		await waehle('Phase löschen');
+
+		expect(spies.phaseActions.onDelete).not.toHaveBeenCalled();
+		expect(document.body.textContent).toContain(
+			'Phase und alle zugehörigen Einträge wirklich löschen?'
+		);
 	});
 });
 

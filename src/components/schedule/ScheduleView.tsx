@@ -3,17 +3,39 @@ import { useScheduleData } from './hooks/useScheduleData';
 import { useScheduleActions } from './hooks/useScheduleActions';
 import ScheduleToolbar from './ScheduleToolbar';
 import TaskWorklist from './TaskWorklist';
-import ScheduleEntryDialog, { type ScheduleEntryFormData } from './dialogs/ScheduleEntryDialog';
+import ScheduleDayDialog from './dialogs/ScheduleDayDialog';
+import ScheduleEntryDialog from './dialogs/ScheduleEntryDialog';
+import SchedulePhaseDialog from './dialogs/SchedulePhaseDialog';
 import { exportScheduleToPdf } from '@/lib/scheduleExportService';
-import { buildWorklist, type TaskFilter } from '@/lib/scheduleWorklist';
-import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
+import {
+	dayPayload,
+	dayUpdate,
+	entryPayload,
+	phasePayload,
+	phasesOfDay,
+	phaseUpdate,
+	type EntryPrefill,
+	type EntryType,
+	type ScheduleDayForm,
+	type ScheduleEntryForm,
+	type SchedulePhaseForm
+} from '@/lib/scheduleDialogForm';
+import { movePhase, type PhaseDirection } from '@/lib/schedulePhaseOrder';
+import { buildWorklist, scheduleDayTitle, type TaskFilter } from '@/lib/scheduleWorklist';
+import type {
+	ScheduleDayWithEntries,
+	ScheduleEntryWithHelper,
+	SchedulePhase
+} from '@/lib/scheduleService';
 
 // `type: 'none'` statt `null`: das Projekt kompiliert ohne strictNullChecks,
 // dort trägt `null` keine Unterscheidungskraft und die Fallunterscheidung unten
 // würde still nichts verengen.
 type DialogState =
 	| { type: 'none' }
-	| { type: 'entry'; entry?: ScheduleEntryWithHelper; defaultType: 'task' | 'program' };
+	| { type: 'entry'; entry?: ScheduleEntryWithHelper; prefill: EntryPrefill }
+	| { type: 'day'; day?: ScheduleDayWithEntries }
+	| { type: 'phase'; phase?: SchedulePhase; scheduleDayId: string };
 
 const CLOSED: DialogState = { type: 'none' };
 
@@ -46,6 +68,10 @@ export default function ScheduleView({
 	const [responsibleId, setResponsibleId] = useState<string | null>(null);
 	const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
 	const [initialized, setInitialized] = useState(false);
+	/** Der zuletzt benutzte Tag — er belegt den Dialog vor, wenn der Griff selbst
+	keinen mitbringt („+ AUFGABE" der Werkzeugleiste, #124). Wer eine Aufgabe nach
+	der anderen notiert, bleibt so am selben Tag. */
+	const [lastDayId, setLastDayId] = useState<string | null>(null);
 
 	// Die Festtage entstehen beim ersten Öffnen aus dem Fest-Datum (CONTEXT.md,
 	// *Ablauf-Tag*); jeder weitere Tag wird von Hand angelegt.
@@ -85,24 +111,88 @@ export default function ScheduleView({
 			.filter((day) => day.entries.length > 0);
 	}, [days, worklist]);
 
-	const handleSaveEntry = (data: ScheduleEntryFormData) => {
-		if (dialogState.type === 'entry' && dialogState.entry) {
-			actions.editEntry.mutate({
-				id: dialogState.entry.id,
-				updates: {
-					title: data.title,
-					type: data.type,
-					start_time: data.start_time,
-					end_time: data.end_time,
-					responsible_helper_id: data.responsible_helper_id,
-					status: data.status,
-					description: data.description
-				}
-			});
+	/** Der vorbelegte Tag eines Griffs ohne eigenen Tagesbezug: der zuletzt
+	benutzte, sonst der erste des Fests. */
+	const defaultDayId = lastDayId ?? days[0]?.id ?? '';
+
+	/** Die Aufschrift eines Tages, wie sie im Zwischentitel steht. */
+	const dayTitleOf = (scheduleDayId: string) => {
+		const day = days.find((d) => d.id === scheduleDayId);
+		return day ? scheduleDayTitle(day) : undefined;
+	};
+
+	/** Alle drei Dialoge schließen über denselben Griff — offen ist immer nur
+	einer. */
+	const closeDialog = (open: boolean) => {
+		if (!open) setDialogState(CLOSED);
+	};
+
+	/** Den Eintrag-Dialog öffnen — für einen neuen Eintrag mit dem, was der
+	Griff schon weiß (#124). */
+	const openEntry = (prefill: Partial<EntryPrefill> & { type: EntryType }) =>
+		setDialogState({
+			type: 'entry',
+			prefill: { schedule_day_id: defaultDayId, ...prefill }
+		});
+
+	/**
+	 * Der Dialog gibt sein Formular ab; die Nutzlast baut `entryPayload`.
+	 *
+	 * Beim **Programmpunkt** räumt sie Status und Verantwortlichen auf `null` —
+	 * auch dann, wenn der Eintrag eben noch eine abgehakte Aufgabe war
+	 * (ADR 0007). Darum geht beim Ändern die *ganze* Nutzlast weg und nicht nur
+	 * die sichtbaren Felder: ein `null` muss auch ankommen.
+	 */
+	const handleSaveEntry = (form: ScheduleEntryForm) => {
+		const entry = dialogState.type === 'entry' ? dialogState.entry : null;
+		const payload = entryPayload(form, {
+			festivalId,
+			status: entry?.status ?? null
+		});
+		setLastDayId(form.schedule_day_id);
+
+		if (entry) {
+			actions.editEntry.mutate({ id: entry.id, updates: payload });
 		} else {
 			// Die Uhrzeit reiht (ADR 0007) — beim Anlegen ist nichts einzusortieren.
-			actions.createEntry.mutate(data);
+			actions.createEntry.mutate(payload);
 		}
+	};
+
+	/** Ein neuer Tag hängt sich hinten an; gereiht wird die Liste ohnehin nach
+	Datum (`getScheduleDays`). */
+	const handleSaveDay = (form: ScheduleDayForm) => {
+		const day = dialogState.type === 'day' ? dialogState.day : null;
+		if (day) {
+			actions.editDay.mutate({ id: day.id, updates: dayUpdate(form) });
+		} else {
+			actions.createDay.mutate(dayPayload(form, { festivalId, sortOrder: days.length }));
+		}
+	};
+
+	const handleSavePhase = (form: SchedulePhaseForm) => {
+		if (dialogState.type !== 'phase') return;
+		const { phase, scheduleDayId } = dialogState;
+		if (phase) {
+			actions.editPhase.mutate({ id: phase.id, updates: phaseUpdate(form) });
+		} else {
+			actions.createPhase.mutate(
+				phasePayload(form, {
+					festivalId,
+					scheduleDayId,
+					// Eine neue Phase steht hinten — verschoben wird sie im ⋮.
+					sortOrder: phasesOfDay(days, scheduleDayId).length
+				})
+			);
+		}
+	};
+
+	/** Phasen reiht die Hand, nicht die Uhr (ADR 0007). `movePhase` rechnet die
+	neue Ordnung der ganzen Reihe aus; am Rand gibt es nichts zu schreiben. */
+	const handleMovePhase = (phase: SchedulePhase, direction: PhaseDirection) => {
+		const day = days.find((d) => d.id === phase.schedule_day_id);
+		const order = movePhase(day?.phases ?? [], phase.id, direction);
+		if (order.length > 0) actions.reorderPhases.mutate(order);
 	};
 
 	/** Abhaken wirkt sofort auf alle Zähler: die Mutation lädt den Tag neu, und
@@ -156,8 +246,8 @@ export default function ScheduleView({
 		<div className="space-y-3 sm:space-y-4">
 			<ScheduleToolbar
 				counts={worklist.counts}
-				onAddTask={() => setDialogState({ type: 'entry', defaultType: 'task' })}
-				onAddProgram={() => setDialogState({ type: 'entry', defaultType: 'program' })}
+				onAddTask={() => openEntry({ type: 'task' })}
+				onAddProgram={() => openEntry({ type: 'program' })}
 				onExportProgram={() => handleExport('program')}
 				onExportTasks={() => handleExport('task')}
 			/>
@@ -173,8 +263,27 @@ export default function ScheduleView({
 					responsibleId={responsibleId}
 					onResponsibleChange={setResponsibleId}
 					onToggleTask={handleToggleTask}
-					onEditTask={(entry) => setDialogState({ type: 'entry', entry, defaultType: 'task' })}
+					onEditTask={(entry) =>
+						setDialogState({
+							type: 'entry',
+							entry,
+							prefill: { type: entry.type, schedule_day_id: entry.schedule_day_id }
+						})
+					}
 					onDeleteTask={(entry) => actions.removeEntry.mutate(entry.id)}
+					dayActions={{
+						onEdit: (day) => setDialogState({ type: 'day', day }),
+						onAddPhase: (day) => setDialogState({ type: 'phase', scheduleDayId: day.id }),
+						onAddTask: (day) => openEntry({ type: 'task', schedule_day_id: day.id }),
+						onDelete: (day) => actions.removeDay.mutate(day.id)
+					}}
+					phaseActions={{
+						onRename: (phase) =>
+							setDialogState({ type: 'phase', phase, scheduleDayId: phase.schedule_day_id }),
+						onMove: handleMovePhase,
+						onDelete: (phase) => actions.removePhase.mutate(phase.id)
+					}}
+					onAddDay={() => setDialogState({ type: 'day' })}
 				/>
 
 				{/* Der Platz des zweiten Papiers. Das Papier selbst — grüner
@@ -193,27 +302,33 @@ export default function ScheduleView({
 
 			<ScheduleEntryDialog
 				open={dialogState.type === 'entry'}
-				onOpenChange={(open) => {
-					if (!open) setDialogState(CLOSED);
-				}}
+				onOpenChange={closeDialog}
 				entry={dialogState.type === 'entry' ? dialogState.entry : null}
-				defaultType={dialogState.type === 'entry' ? dialogState.defaultType : 'task'}
+				prefill={
+					dialogState.type === 'entry'
+						? dialogState.prefill
+						: { type: 'task', schedule_day_id: defaultDayId }
+				}
 				days={days}
-				// Der vorbelegte Tag: beim Bearbeiten seiner, beim Anlegen der erste
-				// des Fests. Gewählt wird im Dialog.
-				scheduleDayId={
-					dialogState.type === 'entry' && dialogState.entry
-						? dialogState.entry.schedule_day_id
-						: days[0]?.id ?? ''
-				}
-				schedulePhaseId={
-					dialogState.type === 'entry' && dialogState.entry
-						? dialogState.entry.schedule_phase_id
-						: null
-				}
-				festivalId={festivalId}
 				helpers={helpers}
 				onSave={handleSaveEntry}
+			/>
+
+			<ScheduleDayDialog
+				open={dialogState.type === 'day'}
+				onOpenChange={closeDialog}
+				day={dialogState.type === 'day' ? dialogState.day : null}
+				onSave={handleSaveDay}
+			/>
+
+			<SchedulePhaseDialog
+				open={dialogState.type === 'phase'}
+				onOpenChange={closeDialog}
+				phase={dialogState.type === 'phase' ? dialogState.phase : null}
+				dayTitle={
+					dialogState.type === 'phase' ? dayTitleOf(dialogState.scheduleDayId) : undefined
+				}
+				onSave={handleSavePhase}
 			/>
 		</div>
 	);
