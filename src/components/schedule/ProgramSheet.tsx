@@ -2,6 +2,7 @@ import React from 'react';
 
 import { cn } from '@/lib/utils';
 import { ActionMenu } from '@/components/toolkit/ActionMenu';
+import { FOCUS_INK } from '@/components/toolkit/PaperSheet';
 import { Poster } from '@/components/toolkit/Poster';
 import { SectionHeading } from '@/components/toolkit/SectionHeading';
 import type { ProgramSheet as Sheet, ProgramSheetRow } from '@/lib/scheduleProgramSheet';
@@ -20,10 +21,17 @@ export interface ProgramSheetProps {
 
 /**
  * Leise Griffe: der Aushang bleibt Aushang, ⋮ und „+" treten erst hervor, wenn
- * man sie sucht (#123). Voll sichtbar werden sie bei Hover **und** bei Fokus —
- * mit der Tastatur gäbe es sonst keinen Weg zu ihnen.
+ * man in ihre Nähe kommt (#123).
+ *
+ * Voll sichtbar werden sie, sobald **ihr Block** unter dem Zeiger liegt oder den
+ * Fokus trägt — nicht erst der Griff selbst. Ein tinte-softes ⋮, das erst beim
+ * Darüberfahren hervortritt, müsste man blind treffen. Die Gruppen sind benannt,
+ * damit das Überfahren eines Tagesblocks nicht gleich jedes ⋮ darin aufleuchten
+ * lässt.
  */
-const LEISE = 'text-tinte-soft transition-colors hover:text-tinte focus-visible:text-tinte';
+const LEISE = 'text-tinte-soft transition-colors';
+const LEISE_ZEILE = `${LEISE} group-hover/zeile:text-tinte group-focus-within/zeile:text-tinte`;
+const LEISE_TAG = `${LEISE} group-hover/tag:text-tinte group-focus-within/tag:text-tinte`;
 
 /**
  * Der **Programmzettel**, das rechte Papier des Schreibtischs (#123, Variante C
@@ -62,7 +70,7 @@ const ProgramSheet: React.FC<ProgramSheetProps> = ({
 		</Poster>
 
 		{sheet.days.map((sheetDay) => (
-			<React.Fragment key={sheetDay.day.id}>
+			<div className="group/tag" key={sheetDay.day.id}>
 				<SectionHeading
 					as="h4"
 					className="gap-2.5 px-4 pb-1 pt-2.5 font-display text-[13px] font-semibold uppercase tracking-[.05em] text-gruen">
@@ -80,19 +88,25 @@ const ProgramSheet: React.FC<ProgramSheetProps> = ({
 
 				{/* Der tagesbezogene Griff: er legt ohne Umweg über die Tagesauswahl
 				für genau diesen Tag an. Der Knopf der Werkzeugleiste bleibt der Weg
-				für einen Tag, der noch gar kein Programm hat (#122). */}
+				für einen Tag, der noch gar kein Programm hat (#122).
+
+				Die Aufschrift nennt den Tag: dreimal „+ PROGRAMMPUNKT" untereinander
+				sagt einem Screenreader nicht, welcher davon wohin legt. */}
 				<button
 					type="button"
-					data-tag-anlegen={sheetDay.day.id}
+					aria-label={`Programmpunkt am ${sheetDay.title} hinzufügen`}
 					onClick={() => onAddProgram(sheetDay.day.id)}
 					className={cn(
 						'mb-1 w-full px-4 py-1.5 text-left text-[11px] font-extrabold uppercase tracking-[.06em]',
-						LEISE,
-						'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tinte'
+						// Am Handy 40px hoch (DESIGN-VISION §6); am Desktop bleibt der
+						// Griff so flach, wie ein Aushang ihn verträgt.
+						'max-[899px]:min-h-10',
+						LEISE_TAG,
+						FOCUS_INK
 					)}>
 					+ Programmpunkt
 				</button>
-			</React.Fragment>
+			</div>
 		))}
 
 		{sheet.days.length === 0 && (
@@ -133,11 +147,14 @@ function ProgramRow({
 	const { entry, time } = row;
 
 	return (
-		<div className="flex items-baseline gap-3 px-4 text-[13px]">
+		<div className="group/zeile flex items-baseline gap-3 px-4 text-[13px]">
 			<button
 				type="button"
 				onClick={onEdit}
-				className="flex min-w-0 flex-1 items-baseline gap-3 py-1.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte">
+				className={cn(
+					'flex min-w-0 flex-1 items-baseline gap-3 py-1.5 text-left max-[899px]:min-h-10',
+					FOCUS_INK
+				)}>
 				<span className="w-[52px] shrink-0 font-display text-sm font-semibold tabular-nums">
 					{time}
 				</span>
@@ -159,7 +176,9 @@ function ProgramRow({
 				confirmMessage={`„${entry.title}" wird vom Programmzettel entfernt.`}
 				onEdit={onEdit}
 				onDelete={onDelete}
-				className={cn('h-8 w-8 shrink-0 self-center', LEISE)}
+				// 40px hoch wie in der Werkliste nebenan (DESIGN-VISION §6); schmaler
+				// darf es sein, der Zettel führt keine zweite Spalte daneben.
+				className={cn('h-10 w-8 shrink-0 self-center', LEISE_ZEILE)}
 			/>
 		</div>
 	);

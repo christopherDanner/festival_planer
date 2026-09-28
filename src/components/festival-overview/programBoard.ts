@@ -27,8 +27,13 @@ export interface ProgramDay {
 
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat('de-AT', { weekday: 'long' });
 
-/** „18:00:00" → „18:00"; null → "" — eine leere Zelle statt eines Vermerks,
-das Plakat hat für „ohne Zeit" keine Breite. Gekürzt wird wie auf dem Zettel. */
+/**
+ * „18:00:00" → „18:00"; null → "".
+ *
+ * Gekürzt wird wie auf dem Zettel (`programTime`); eigen ist dem Plakat nur die
+ * **leere Zelle** statt eines Vermerks — der Zettel hält „ohne Zeit" als `null`
+ * offen, hier ist eine Spalte, in der nichts stehen kann.
+ */
 export function formatProgramTime(time: string | null): string {
 	return programTime(time) ?? '';
 }
@@ -45,7 +50,11 @@ export function getProgramByDay(days: ScheduleDayWithEntries[]): ProgramDay[] {
 	return buildProgramSheet(days).days.map(({ day, rows }) => ({
 		dayId: day.id,
 		title: programDayTitle(day.date, day.label),
-		rows: rows.map(({ entry, time }) => ({ id: entry.id, time: time ?? '', title: entry.title }))
+		rows: rows.map(({ entry }) => ({
+			id: entry.id,
+			time: formatProgramTime(entry.start_time),
+			title: entry.title
+		}))
 	}));
 }
 

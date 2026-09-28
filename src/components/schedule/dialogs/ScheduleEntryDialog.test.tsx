@@ -121,6 +121,18 @@ describe('ScheduleEntryDialog — der tagesbezogene Griff', () => {
 		expect(document.querySelector('#entry-day')).toBeNull();
 	});
 
+	it('nennt ihn trotzdem — wo der Eintrag landet, darf nicht geraten werden', async () => {
+		await mount({ dayLocked: true });
+
+		expect(document.body.textContent).toContain('Samstag 25. Juli');
+	});
+
+	it('lässt wählen, wenn der mitgebrachte Tag gar nicht im Fest steht', async () => {
+		await mount({ dayLocked: true, scheduleDayId: 'weg' });
+
+		expect(document.querySelector('#entry-day')).not.toBeNull();
+	});
+
 	it('legt dann für genau diesen Tag an', async () => {
 		const { onSave } = await mount({ dayLocked: true });
 

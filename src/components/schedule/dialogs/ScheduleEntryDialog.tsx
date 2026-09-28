@@ -105,6 +105,11 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 		}
 	}, [entry, open, defaultType, scheduleDayId]);
 
+	/** Der mitgebrachte Tag, wenn der Griff ihn kennt — und er unter den Tagen des
+	Fests auch wirklich steht. Fehlt er, bleibt das Auswahlfeld stehen: lieber
+	wählen lassen als einen Eintrag ins Leere legen. */
+	const lockedDay = dayLocked ? days.find((day) => day.id === form.schedule_day_id) : undefined;
+
 	const handleSave = () => {
 		if (!form.title || !form.schedule_day_id) return;
 		if (form.start_time && form.end_time && form.start_time >= form.end_time) return;
@@ -151,9 +156,15 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 					{/* Der Tag ist die Pflichtebene (ADR 0007) und seit #122 hier zu
 					wählen: mit dem Akkordeon ist der tagesbezogene „+"-Griff entfallen.
 					Zur Wahl stehen auch Tage ohne Eintrag, die in der Werkliste gar
-					nicht erscheinen. Wo der Griff den Tag mitbringt (#123), entfällt
-					das Feld. */}
-					{!dayLocked && (
+					nicht erscheinen. Wo der Griff den Tag mitbringt (#123), steht er
+					nur noch da — zu wählen gibt es nichts, aber wo der Eintrag landet,
+					muss der Zettel trotzdem sagen. */}
+					{dayLocked && lockedDay ? (
+						<p className="text-sm">
+							<span className="font-bold">Tag: </span>
+							{scheduleDayTitle(lockedDay)}
+						</p>
+					) : (
 						<div>
 							<Label htmlFor="entry-day">Tag *</Label>
 							<Select

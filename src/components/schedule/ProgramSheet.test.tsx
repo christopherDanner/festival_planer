@@ -126,6 +126,17 @@ describe('ProgramSheet — was der Zettel zeigt', () => {
 		expect(render()).toContain('min-[900px]:sticky');
 	});
 
+	/** „⋮ und „+" bleiben leise …, erst bei Hover/Fokus voll sichtbar" (#123) —
+	und zwar sobald ihr Block dran ist, nicht erst der Griff selbst. */
+	it('hält die Griffe leise, bis ihr Block dran ist', () => {
+		const html = render();
+
+		expect(html).toContain('group-hover/zeile:text-tinte');
+		expect(html).toContain('group-focus-within/zeile:text-tinte');
+		expect(html).toContain('group-hover/tag:text-tinte');
+		expect(html).toContain('group-focus-within/tag:text-tinte');
+	});
+
 	it('sagt es, solange das Fest noch kein Programm hat', () => {
 		const html = render([day()]);
 
@@ -219,7 +230,7 @@ describe('ProgramSheet — Bedienung', () => {
 	it('legt je Tag einen Punkt für genau diesen Tag an', async () => {
 		const { host, spies } = await mount();
 
-		await click(host.querySelector('[data-tag-anlegen="fr"]'));
+		await click(host.querySelector('[aria-label="Programmpunkt am Freitag 24. Juli hinzufügen"]'));
 
 		expect(spies.onAddProgram).toHaveBeenCalledWith('fr');
 	});
