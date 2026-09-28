@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getStations, getStationShifts, getShiftAssignments, getStationHelpers } from '@/lib/shiftService';
-import { getHelpers, derivePreferenceMaps } from '@/lib/helperService';
+import { getHelpers, deriveStationPreferences } from '@/lib/helperService';
 
 export const useShiftPlanningData = (festivalId: string) => {
 	const queryClient = useQueryClient();
@@ -52,7 +52,7 @@ export const useShiftPlanningData = (festivalId: string) => {
 	// nicht mehr (festival_member_preferences ist weg, ADR 0005). Als Map braucht
 	// sie nur noch die Auto-Zuteilung — das Helfer-Blatt (#107) liest sie direkt
 	// von dem Helfer, den es gerade bearbeitet.
-	const { stationPreferences } = derivePreferenceMaps(helpers);
+	const stationPreferences = deriveStationPreferences(helpers);
 
 	return {
 		stations: stationsQuery.data || [],

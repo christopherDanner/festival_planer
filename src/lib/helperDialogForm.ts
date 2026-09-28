@@ -9,7 +9,7 @@ zweite Tabelle mehr. Zwei Formulare dafür wären ab hier reiner Ballast. */
 
 import { formatFestDateRange } from '@/lib/festDates';
 import { shiftTimeLabel } from '@/lib/shiftBoard';
-import type { Helper } from '@/lib/helperService';
+import type { Helper, HelperInput } from '@/lib/helperService';
 import type { Station, StationShift } from '@/lib/shiftService';
 
 /** Die beiden Wunsch-Arrays für sich — das, woran die Marken drehen. */
@@ -26,15 +26,12 @@ export interface HelperForm extends HelperWishes {
 	notes: string;
 }
 
-/** Was das Blatt abgibt. `is_active` und `user_id` gibt es nicht — beide sind
-mit ADR 0005 aus dem Schema verschwunden. */
-export interface HelperPayload extends HelperWishes {
-	first_name: string;
-	last_name: string;
-	email: string;
-	phone: string;
-	notes: string;
-}
+/**
+ * Was das Blatt abgibt: genau das, was die Helfer-Zeile schreibt — kein eigener
+ * Typ daneben. `is_active` und `user_id` sind mit ADR 0005 aus dem Schema
+ * verschwunden, das Blatt kennt sie darum gar nicht.
+ */
+export type HelperPayload = Required<HelperInput>;
 
 /** Stationen und Schichten des Fests — woran die Wunsch-Marken hängen. */
 export interface WishSource {
@@ -100,12 +97,15 @@ export function canSaveHelper(form: HelperForm): boolean {
 	return form.first_name.trim() !== '' && form.last_name.trim() !== '';
 }
 
+/** Getrimmt werden nur die beiden Namen — sie tragen die Marke in der
+Helferliste, und `canSaveHelper` misst sie ohnehin getrimmt. Email, Telefon und
+Notizen bleiben, wie sie getippt wurden (wie `stationPayload` mit dem Ort). */
 export function helperPayload(form: HelperForm): HelperPayload {
 	return {
 		first_name: form.first_name.trim(),
 		last_name: form.last_name.trim(),
-		email: form.email.trim(),
-		phone: form.phone.trim(),
+		email: form.email,
+		phone: form.phone,
 		notes: form.notes,
 		station_preferences: form.station_preferences,
 		shift_preferences: form.shift_preferences
@@ -129,12 +129,12 @@ export function toggleStationWish(
 		};
 	}
 
-	const ihre = new Set(
+	const schichtenDerStation = new Set(
 		stationShifts.filter((s) => s.station_id === stationId).map((s) => s.id)
 	);
 	return {
 		station_preferences: wishes.station_preferences.filter((id) => id !== stationId),
-		shift_preferences: wishes.shift_preferences.filter((id) => !ihre.has(id))
+		shift_preferences: wishes.shift_preferences.filter((id) => !schichtenDerStation.has(id))
 	};
 }
 
@@ -156,9 +156,9 @@ export function toggleShiftWish(
 	}
 
 	const stationId = stationShifts.find((s) => s.id === shiftId)?.station_id;
-	const braucht = stationId && !wishes.station_preferences.includes(stationId);
+	const stationFehlt = stationId && !wishes.station_preferences.includes(stationId);
 	return {
-		station_preferences: braucht
+		station_preferences: stationFehlt
 			? [...wishes.station_preferences, stationId]
 			: wishes.station_preferences,
 		shift_preferences: [...wishes.shift_preferences, shiftId]

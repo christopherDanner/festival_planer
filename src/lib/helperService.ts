@@ -125,21 +125,21 @@ export const deleteHelper = async (festivalId: string, helperId: string): Promis
 };
 
 /**
- * Die Wünsche von den Helfer-Zeilen in die zwei Maps, die Helferliste und
- * Auto-Zuteilung schon lesen.
+ * Die Wunsch-Stationen der Helfer-Zeilen als Map je Helfer — die Form, in der
+ * die **Auto-Zuteilung** sie liest.
+ *
+ * Nur die Stationen: die Wunsch-Schichten liest niemand als Map. Die Helferliste
+ * gruppiert über die Helfer-Zeile selbst, und das Helfer-Blatt (#107) liest die
+ * Wünsche direkt von dem Helfer, den es gerade bearbeitet.
  */
-export const derivePreferenceMaps = (
-	helpers: Helper[]
-): { stationPreferences: Record<string, string[]>; shiftPreferences: Record<string, string[]> } => {
+export const deriveStationPreferences = (helpers: Helper[]): Record<string, string[]> => {
 	const stationPreferences: Record<string, string[]> = {};
-	const shiftPreferences: Record<string, string[]> = {};
 
 	for (const helper of helpers) {
 		stationPreferences[helper.id] = helper.station_preferences || [];
-		shiftPreferences[helper.id] = helper.shift_preferences || [];
 	}
 
-	return { stationPreferences, shiftPreferences };
+	return stationPreferences;
 };
 
 /**

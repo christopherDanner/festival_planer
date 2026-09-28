@@ -124,16 +124,6 @@ describe('canSaveHelper', () => {
 describe('helperPayload', () => {
 	it('gibt Stammdaten und beide Wunsch-Arrays in einem Zug ab', () => {
 		const form = {
-			first_name: ' Franz ',
-			last_name: ' Hochauer ',
-			email: ' franz@example.at ',
-			phone: '0660 1234567',
-			notes: 'kann nur Samstag',
-			station_preferences: ['s1'],
-			shift_preferences: ['sh1']
-		};
-
-		expect(helperPayload(form)).toEqual({
 			first_name: 'Franz',
 			last_name: 'Hochauer',
 			email: 'franz@example.at',
@@ -141,7 +131,24 @@ describe('helperPayload', () => {
 			notes: 'kann nur Samstag',
 			station_preferences: ['s1'],
 			shift_preferences: ['sh1']
+		};
+
+		expect(helperPayload(form)).toEqual(form);
+	});
+
+	// Getrimmt werden nur die beiden Namen — sie tragen die Marke der
+	// Helferliste. Der Rest bleibt, wie er getippt wurde (wie `stationPayload`).
+	it('trimmt die Namen, nicht die freien Felder', () => {
+		const payload = helperPayload({
+			...emptyHelperForm(),
+			first_name: ' Franz ',
+			last_name: ' Hochauer ',
+			notes: '  kann nur Samstag  '
 		});
+
+		expect(payload.first_name).toBe('Franz');
+		expect(payload.last_name).toBe('Hochauer');
+		expect(payload.notes).toBe('  kann nur Samstag  ');
 	});
 
 	// Die Zeile gibt es nicht mehr (ADR 0005) — ein Blatt, das sie mitschickte,

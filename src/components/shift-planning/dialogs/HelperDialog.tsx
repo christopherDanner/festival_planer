@@ -17,7 +17,12 @@ export interface HelperDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	helper?: Helper | null;
-	/** Stationen und Schichten des Fests — woran die Wunsch-Marken hängen. */
+	/**
+	 * Die **vollständigen** Listen des Fests — daran hängen nicht nur die
+	 * Wunsch-Marken, sondern auch das Sieb gegen Karteileichen: was hier fehlt,
+	 * gilt als gelöscht und verschwindet aus den Wünschen (ADR 0005). Der Dialog
+	 * gehört darum hinter das Laden, nicht daneben.
+	 */
 	stations: Station[];
 	stationShifts: StationShift[];
 	onSave: (data: HelperPayload) => void;

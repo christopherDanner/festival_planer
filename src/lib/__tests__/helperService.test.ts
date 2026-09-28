@@ -76,7 +76,7 @@ import {
 	createHelpersBulk,
 	updateHelper,
 	deleteHelper,
-	derivePreferenceMaps,
+	deriveStationPreferences,
 	removeHelperMessage,
 	type Helper
 } from '../helperService';
@@ -272,28 +272,22 @@ describe('deleteHelper', () => {
 	});
 });
 
-describe('derivePreferenceMaps', () => {
-	it('legt die Wünsche der Helfer-Zeilen als Maps je Helfer aus', () => {
+describe('deriveStationPreferences', () => {
+	it('legt die Wunsch-Stationen der Helfer-Zeilen als Map je Helfer aus', () => {
 		const helpers = [
 			makeHelper({ id: 'h1', station_preferences: ['st-1'], shift_preferences: ['sh-1'] }),
 			makeHelper({ id: 'h2', station_preferences: [], shift_preferences: [] })
 		];
 
-		expect(derivePreferenceMaps(helpers)).toEqual({
-			stationPreferences: { h1: ['st-1'], h2: [] },
-			shiftPreferences: { h1: ['sh-1'], h2: [] }
-		});
+		expect(deriveStationPreferences(helpers)).toEqual({ h1: ['st-1'], h2: [] });
 	});
 
 	it('verträgt fehlende Arrays, ohne über undefined zu stolpern', () => {
 		const helpers = [
-			{ ...makeHelper({ id: 'h3' }), station_preferences: undefined, shift_preferences: undefined }
+			{ ...makeHelper({ id: 'h3' }), station_preferences: undefined }
 		] as unknown as Helper[];
 
-		expect(derivePreferenceMaps(helpers)).toEqual({
-			stationPreferences: { h3: [] },
-			shiftPreferences: { h3: [] }
-		});
+		expect(deriveStationPreferences(helpers)).toEqual({ h3: [] });
 	});
 });
 

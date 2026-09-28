@@ -1,8 +1,8 @@
 import React, { type ElementType } from 'react';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { NameChip } from '@/components/toolkit/NameChip';
 import { SectionHeading } from '@/components/toolkit/SectionHeading';
@@ -38,9 +38,6 @@ export interface HelperZettelProps {
 	TitleTag?: ElementType;
 }
 
-const FOCUS_RING =
-	'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte';
-
 /**
  * Der Helfer-Zettel (#107) — dasselbe Papier wie Station- und Schicht-Zettel
  * (`PaperSheet`), aber **ein** Blatt für beides: oben die Stammdaten, darunter
@@ -65,7 +62,7 @@ const HelperZettel: React.FC<HelperZettelProps> = ({
 	TitleTag = 'h2'
 }) => {
 	const board = buildWishBoard(form, source);
-	const mitSchichten = board.filter((station) => station.shifts.length > 0);
+	const stationenMitSchichten = board.filter((station) => station.shifts.length > 0);
 
 	return (
 		<PaperSheet
@@ -168,17 +165,17 @@ const HelperZettel: React.FC<HelperZettelProps> = ({
 							</div>
 						</PaperSheetField>
 
-						{mitSchichten.length > 0 && (
+						{stationenMitSchichten.length > 0 && (
 							<PaperSheetField
 								wide
 								label="Wunsch-Schichten"
 								hint="Eine gewählte Schicht wünscht ihre Station gleich mit.">
 								<div role="group" aria-label="Wunsch-Schichten" className="grid gap-2.5">
-									{mitSchichten.map((station) => (
+									{stationenMitSchichten.map((station) => (
 										<div key={station.id} className="grid gap-1.5">
-											<span className="text-[10.5px] font-extrabold uppercase leading-none tracking-[.06em] text-tinte-soft">
-												{station.name}
-											</span>
+											{/* Zu welcher Station die Marken darunter gehören — „Frühschoppen"
+											gibt es an der Ausschank wie am Grill. */}
+											<Label variant="kleinlabel">{station.name}</Label>
 											<div className="flex flex-wrap gap-[5px]">
 												{station.shifts.map((shift) => (
 													<ShiftMark
@@ -203,14 +200,15 @@ const HelperZettel: React.FC<HelperZettelProps> = ({
 };
 
 /** Eine Wunsch-Station als Namens-Marke. Gewählt ist sie gelb — dieselbe Farbe,
-mit der die Helferliste ihre Auswahl markiert. */
+mit der die Helferliste ihre Auswahl markiert (`selectedTone`). */
 function StationMark({ station, onToggle }: { station: WishStation; onToggle: () => void }) {
 	return (
 		<NameChip
 			data-wish-station={station.id}
 			onSelect={onToggle}
 			selected={station.selected}
-			className={cn(station.selected ? 'bg-gelb text-tinte' : 'hover:bg-papier-getoent')}>
+			selectedTone="gelb"
+			className="hover:bg-papier-getoent">
 			{station.name}
 		</NameChip>
 	);
@@ -225,12 +223,12 @@ function ShiftMark({ shift, onToggle }: { shift: WishShift; onToggle: () => void
 			data-wish-shift={shift.id}
 			aria-pressed={shift.selected}
 			onClick={onToggle}
-			className={FOCUS_RING}>
+			className={FOCUS_INK}>
 			<ValueTag
-				tone="ink"
+				tone={shift.selected ? 'gelb' : 'ink'}
 				value={shift.time}
 				// Tippziel ≥ 40px am Handy (DESIGN-VISION §6).
-				className={cn('items-center max-[899px]:min-h-10', shift.selected && 'bg-gelb')}>
+				className="items-center max-[899px]:min-h-10">
 				{shift.label}
 			</ValueTag>
 		</button>
