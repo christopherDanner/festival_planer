@@ -1,5 +1,6 @@
 import { getFestival, type Festival } from '@/lib/festivalService';
 import { getMaterials, type FestivalMaterialWithStation } from '@/lib/materialService';
+import { getScheduleDays, type ScheduleDayWithEntries } from '@/lib/scheduleService';
 import { getStationShifts, getStations, type Station, type StationShift } from '@/lib/shiftService';
 
 /**
@@ -12,6 +13,8 @@ export interface LoadedTemplate {
 	stations: Station[];
 	shifts: StationShift[];
 	materials: FestivalMaterialWithStation[];
+	/** Ablauf-Tage samt Phasen und Einträgen — die Vorschau von Schritt 4 (#127). */
+	scheduleDays: ScheduleDayWithEntries[];
 }
 
 /**
@@ -22,14 +25,15 @@ export interface LoadedTemplate {
  * ins Leere und das Fest entstünde still ohne Kopie.
  */
 export async function loadTemplate(templateId: string): Promise<LoadedTemplate> {
-	const [festival, stations, shifts, materials] = await Promise.all([
+	const [festival, stations, shifts, materials, scheduleDays] = await Promise.all([
 		getFestival(templateId),
 		getStations(templateId),
 		getStationShifts(templateId),
-		getMaterials(templateId)
+		getMaterials(templateId),
+		getScheduleDays(templateId)
 	]);
 
 	if (!festival) throw new Error('Vorlage nicht gefunden');
 
-	return { festival, stations, shifts, materials };
+	return { festival, stations, shifts, materials, scheduleDays };
 }

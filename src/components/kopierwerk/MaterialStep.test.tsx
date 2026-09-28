@@ -46,11 +46,10 @@ const render = (over: Partial<MaterialStepProps> = {}) => {
 			selectedStationIds={new Set(['s-ausschank', 's-grill'])}
 			selectedMaterialIds={new Set(materials.map((m) => m.id))}
 			quantitySource="ordered"
-			saving={false}
 			onQuantitySourceChange={() => {}}
 			onSelectionChange={() => {}}
 			onBack={() => {}}
-			onSubmit={() => {}}
+			onNext={() => {}}
 			{...over}
 			materials={materials}
 		/>
@@ -186,16 +185,14 @@ describe('MaterialStep — Warnung „ohne Station"', () => {
 });
 
 describe('MaterialStep — Leerzustand und Fußzeile', () => {
-	it('führt zurück zu den Stationen und legt das Fest an', () => {
+	// Der Ablaufplan ist seit #127 Schritt 4 — angelegt wird das Fest dort, nicht
+	// mehr hier.
+	it('führt zurück zu den Stationen und weiter zum Ablaufplan', () => {
 		const html = render();
 
 		expect(html).toContain('← Stationen &amp; Schichten');
-		expect(html).toContain('FEST ANLEGEN');
-	});
-
-	it('sperrt den Knopf, während das Fest entsteht', () => {
-		expect(render({ saving: true })).toContain('disabled=""');
-		expect(render()).not.toContain('disabled=""');
+		expect(html).toContain('WEITER: ABLAUFPLAN →');
+		expect(html).not.toContain('FEST ANLEGEN');
 	});
 
 	it('bleibt ohne Material überspringbar', () => {
@@ -203,7 +200,7 @@ describe('MaterialStep — Leerzustand und Fußzeile', () => {
 
 		expect(html).toContain('border-dashed');
 		expect(html).toContain('KEIN MATERIAL');
-		expect(html).toContain('FEST ANLEGEN');
+		expect(html).toContain('WEITER: ABLAUFPLAN →');
 		expect(html).not.toContain('disabled=""');
 	});
 

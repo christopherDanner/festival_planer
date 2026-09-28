@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
 	getStations: vi.fn(),
 	getStationShifts: vi.fn(),
 	getMaterials: vi.fn(),
+	getScheduleDays: vi.fn(),
 	getUserFestivals: vi.fn()
 }));
 
@@ -17,6 +18,7 @@ vi.mock('@/lib/shiftService', () => ({
 	getStationShifts: mocks.getStationShifts
 }));
 vi.mock('@/lib/materialService', () => ({ getMaterials: mocks.getMaterials }));
+vi.mock('@/lib/scheduleService', () => ({ getScheduleDays: mocks.getScheduleDays }));
 
 import { loadTemplate } from './loadTemplate';
 
@@ -28,6 +30,7 @@ describe('loadTemplate', () => {
 		mocks.getStations.mockResolvedValue([{ id: 's1' }]);
 		mocks.getStationShifts.mockResolvedValue([{ id: 'sh1' }, { id: 'sh2' }]);
 		mocks.getMaterials.mockResolvedValue([{ id: 'm1' }]);
+		mocks.getScheduleDays.mockResolvedValue([{ id: 'd1' }, { id: 'd2' }, { id: 'd3' }]);
 	});
 
 	// Das Quellfest trägt das Startdatum, mit dem `copyFestivalData` die Termine
@@ -42,6 +45,15 @@ describe('loadTemplate', () => {
 		expect(template.stations).toHaveLength(1);
 		expect(template.shifts).toHaveLength(2);
 		expect(template.materials).toHaveLength(1);
+	});
+
+	// Schritt 4 stellt je Ablauf-Tag alten und neuen Termin gegenüber (#127) —
+	// dafür muss der Ablaufplan der Vorlage mit der Vorlage geladen sein.
+	it('bringt den Ablaufplan der Vorlage mit', async () => {
+		const template = await loadTemplate('fest-2026');
+
+		expect(mocks.getScheduleDays).toHaveBeenCalledWith('fest-2026');
+		expect(template.scheduleDays).toHaveLength(3);
 	});
 
 	it('verweigert eine Vorlage, die es nicht (mehr) gibt', async () => {

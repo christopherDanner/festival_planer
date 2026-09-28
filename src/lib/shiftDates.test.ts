@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { copiedShiftDateLabel, formatShiftRange, shiftFestivalDate } from './shiftDates';
+import {
+	copiedShiftDateLabel,
+	formatDayLabel,
+	formatShiftRange,
+	shiftFestivalDate
+} from './shiftDates';
 
 /** Nur die Termin-Felder — mehr braucht dieses Modul nicht. */
 const shift = (over: Partial<Parameters<typeof formatShiftRange>[0]> = {}) => ({
@@ -34,6 +39,18 @@ describe('shiftFestivalDate', () => {
 	// Samstag ist dort der 24.07.
 	it('hält den Abstand zum Fest-Start und damit den Wochentag', () => {
 		expect(shiftFestivalDate('2026-07-24', '2026-07-25', '2027-07-23')).toBe('2027-07-24');
+	});
+});
+
+describe('formatDayLabel', () => {
+	// Die Tages-Zeilen von Schritt 4 nennen alten und neuen Termin in derselben
+	// Form, in der Schritt 2 den Schicht-Termin nennt — es ist dieselbe Vorschau.
+	it('nennt Wochentag und volles Datum: „Sa 25.07.2026"', () => {
+		expect(formatDayLabel('2026-07-25')).toBe('Sa 25.07.2026');
+	});
+
+	it('füllt Tag und Monat zweistellig auf', () => {
+		expect(formatDayLabel('2027-01-03')).toBe('So 03.01.2027');
 	});
 });
 

@@ -59,6 +59,14 @@ vi.mock('../shiftService', () => ({
 
 vi.mock('../helperService', () => ({ getHelpers: async () => [], createHelpersBulk: async () => [] }));
 vi.mock('../materialService', () => ({ getMaterials: async () => [], createMaterialsBulk: async () => [] }));
+// Der Ablaufplan hat seine eigene Suite (`festivalCopySchedule.test.ts`) — hier
+// steht er nur still, damit die Schicht-Termine allein vor der Linse sind.
+vi.mock('../scheduleService', () => ({
+	getScheduleDays: async () => [],
+	createScheduleDaysBulk: async () => [],
+	createSchedulePhasesBulk: async () => [],
+	createScheduleEntriesBulk: async () => []
+}));
 
 import { copyFestivalData } from '../festivalCopyService';
 import { copiedShiftDateLabel } from '../shiftDates';
@@ -68,6 +76,7 @@ const copy = async () => {
 		stationIds: ['st-1'],
 		copyHelpers: false,
 		copyAssignments: false,
+		copySchedule: false,
 		materialIds: [],
 		materialQuantitySource: 'ordered',
 		sourceFestivalStartDate: SOURCE_START,

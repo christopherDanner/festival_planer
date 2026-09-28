@@ -27,12 +27,10 @@ export interface MaterialStepProps {
 	selectedStationIds: ReadonlySet<string>;
 	selectedMaterialIds: ReadonlySet<string>;
 	quantitySource: QuantitySource;
-	/** Das Fest wird gerade angelegt. */
-	saving: boolean;
 	onQuantitySourceChange: (source: QuantitySource) => void;
 	onSelectionChange: (ids: Set<string>) => void;
 	onBack: () => void;
-	onSubmit: () => void;
+	onNext: () => void;
 }
 
 /**
@@ -49,11 +47,10 @@ export default function MaterialStep({
 	selectedStationIds,
 	selectedMaterialIds,
 	quantitySource,
-	saving,
 	onQuantitySourceChange,
 	onSelectionChange,
 	onBack,
-	onSubmit
+	onNext
 }: MaterialStepProps) {
 	const loss = stationLoss(materials, selectedStationIds, selectedMaterialIds);
 	const sections = materialChipSections(materials);
@@ -158,8 +155,8 @@ export default function MaterialStep({
 				<Button variant="outline" onClick={onBack} className="h-10 px-4 text-[12.5px]">
 					← Stationen &amp; Schichten
 				</Button>
-				<Button onClick={onSubmit} disabled={saving} className="h-10 px-4 text-[12.5px]">
-					{saving ? 'LEGE FEST AN …' : 'FEST ANLEGEN'}
+				<Button onClick={onNext} className="h-10 px-4 text-[12.5px]">
+					WEITER: ABLAUFPLAN →
 				</Button>
 			</div>
 		</div>

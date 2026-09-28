@@ -28,7 +28,7 @@ describe('Kopierwerk-Route', () => {
 		expect(html).not.toContain('Stationen &amp; Schichten');
 	});
 
-	it('öffnet mit `?vorlage=` die drei Schritte und führt weiter', () => {
+	it('öffnet mit `?vorlage=` die vier Schritte und führt weiter', () => {
 		const html = render('/festivals/neu?vorlage=fest-2026');
 		expect(html).toContain('Stationen &amp; Schichten');
 		expect(html).toContain('WEITER: STATIONEN →');
@@ -41,5 +41,15 @@ describe('Kopierwerk-Route', () => {
 
 		expect(stampCard('/festivals/neu?vorlage=fest-2026')).toContain('>Material<');
 		expect(stampCard()).not.toContain('Material');
+	});
+
+	// Der Ablaufplan ist Schritt 4 (#127); Sponsoring rückt damit auf Schritt 5.
+	it('führt den Ablaufplan als vierten Schritt der Stempelkarte', () => {
+		const stampCard = (path?: string) => render(path).split('<aside')[1].split('</aside>')[0];
+
+		const card = stampCard('/festivals/neu?vorlage=fest-2026');
+		expect(card).toContain('>Ablaufplan<');
+		expect(card).toContain('>4<');
+		expect(stampCard()).not.toContain('Ablaufplan');
 	});
 });

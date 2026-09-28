@@ -6,7 +6,10 @@ import TaskWorklist from './TaskWorklist';
 import ScheduleEntryDialog, { type ScheduleEntryFormData } from './dialogs/ScheduleEntryDialog';
 import { exportScheduleToPdf } from '@/lib/scheduleExportService';
 import { buildWorklist, type TaskFilter } from '@/lib/scheduleWorklist';
-import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
+import {
+	shouldInitializeScheduleDays,
+	type ScheduleEntryWithHelper
+} from '@/lib/scheduleService';
 
 // `type: 'none'` statt `null`: das Projekt kompiliert ohne strictNullChecks,
 // dort trägt `null` keine Unterscheidungskraft und die Fallunterscheidung unten
@@ -48,9 +51,11 @@ export default function ScheduleView({
 	const [initialized, setInitialized] = useState(false);
 
 	// Die Festtage entstehen beim ersten Öffnen aus dem Fest-Datum (CONTEXT.md,
-	// *Ablauf-Tag*); jeder weitere Tag wird von Hand angelegt.
+	// *Ablauf-Tag*); jeder weitere Tag wird von Hand angelegt. Wann das greift,
+	// entscheidet `shouldInitializeScheduleDays` — ein aus einer Vorlage
+	// übernommener Ablaufplan bringt seine Tage schon mit (#127).
 	useEffect(() => {
-		if (!initialized && !isLoading && days.length === 0 && festivalStartDate) {
+		if (!initialized && shouldInitializeScheduleDays({ days, isLoading, festivalStartDate })) {
 			actions.initDays.mutate(
 				{ startDate: festivalStartDate, endDate: festivalEndDate },
 				{ onSuccess: () => setInitialized(true) }

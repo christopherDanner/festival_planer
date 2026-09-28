@@ -3,6 +3,7 @@ import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
 import type { FestivalData } from '@/lib/festivalService';
 
 import type { QuantitySource } from './materialChoice';
+import { plural } from './plural';
 
 /**
  * Was Schritt 1 des Kopierwerks sammelt, bevor das Fest existiert (#93).
@@ -29,9 +30,13 @@ export interface TemplateScope {
 	stations: number;
 	shifts: number;
 	materials: number;
+	/** Ablauf-Tage der Vorlage — Festtage samt Aufbau und Nachbereitung. */
+	scheduleDays: number;
+	/** Aufgaben und Programmpunkte zusammen; die Karte zählt Zeilen, nicht Arten. */
+	scheduleEntries: number;
 }
 
-export type KopierwerkStepKey = 'basics' | 'stations' | 'materials';
+export type KopierwerkStepKey = 'basics' | 'stations' | 'materials' | 'schedule';
 
 /** Erledigt (✓, grün), aktiv (gelb hinterlegt), offen (grau). */
 export type KopierwerkStepState = 'done' | 'active' | 'open';
@@ -58,11 +63,9 @@ export interface KopierwerkProgress {
 	festivalName?: string;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 /**
  * Die Schritte des Kopierwerks als Liste (Spec #64): Sponsoring kommt später
- * als Schritt 4 dazu, sobald die Kopier-Semantik aus #63 steht — dann ist das
+ * als Schritt 5 dazu, sobald die Kopier-Semantik aus #63 steht — dann ist das
  * ein Eintrag mehr hier, kein Layout-Umbau in der Stempelkarte.
  */
 const STEP_BLUEPRINT: {
@@ -95,6 +98,15 @@ const STEP_BLUEPRINT: {
 		shortTitle: 'Material',
 		needsTemplate: true,
 		subtitle: ({ scope }) => scope && `${plural(scope.materials, 'Position', 'Positionen')} · Mengenquelle`
+	},
+	{
+		key: 'schedule',
+		title: 'Ablaufplan',
+		shortTitle: 'Ablaufplan',
+		needsTemplate: true,
+		subtitle: ({ scope }) =>
+			scope &&
+			`${plural(scope.scheduleDays, 'Tag', 'Tage')} · ${plural(scope.scheduleEntries, 'Eintrag', 'Einträge')}`
 	}
 ];
 
@@ -159,8 +171,9 @@ export function stampCardHeading(
 	return { title: draft.name.trim() || 'Neues Fest', sub: parts.join(' · ') };
 }
 
-/** Was die Schritte 2 und 3 zusammengetragen haben. Beide Auswahlen sind
-Mengen — auf dem Bildschirm ist es dieselbe Art von Häkchen. */
+/** Was die Schritte 2 bis 4 zusammengetragen haben. Stationen und Positionen
+sind Mengen — auf dem Bildschirm ist es dieselbe Art von Häkchen; Helfer und
+Ablaufplan sind je ein Schalter für das Ganze. */
 export interface CopySelection {
 	stationIds: ReadonlySet<string>;
 	/** Die ganze Helferliste der Vorlage ins neue Fest (ADR 0005, #100). */
@@ -168,13 +181,15 @@ export interface CopySelection {
 	copyAssignments: boolean;
 	materialIds: ReadonlySet<string>;
 	quantitySource: QuantitySource;
+	/** Tage, Phasen und Einträge des Ablaufplans, versetzt (#127). */
+	copySchedule: boolean;
 }
 
 /**
- * Der Auftrag an `copyFestivalData`: die Auswahl beider Schritte plus die
- * beiden Fest-Startdaten, aus denen der Termin-Versatz der Schichten kommt.
- * Sie stehen hier zusammen, damit Vorlage und neues Fest nicht an einer
- * Aufrufstelle vertauscht werden können.
+ * Der Auftrag an `copyFestivalData`: die Auswahl aller Kopier-Schritte plus die
+ * beiden Fest-Startdaten, aus denen der Termin-Versatz von Schichten und
+ * Ablauf-Tagen kommt. Sie stehen hier zusammen, damit Vorlage und neues Fest
+ * nicht an einer Aufrufstelle vertauscht werden können.
  */
 export function copyFestivalOptions(
 	template: { start_date: string },
@@ -185,6 +200,7 @@ export function copyFestivalOptions(
 		stationIds: [...selection.stationIds],
 		copyHelpers: selection.copyHelpers,
 		copyAssignments: selection.copyAssignments,
+		copySchedule: selection.copySchedule,
 		materialIds: [...selection.materialIds],
 		materialQuantitySource: selection.quantitySource,
 		sourceFestivalStartDate: template.start_date,

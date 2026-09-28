@@ -4,6 +4,12 @@ import {
 } from '@/lib/shiftService';
 import { getHelpers, createHelpersBulk, updateHelperPreferences } from '@/lib/helperService';
 import { getMaterials, createMaterialsBulk } from '@/lib/materialService';
+import {
+	getScheduleDays,
+	createScheduleDaysBulk,
+	createSchedulePhasesBulk,
+	createScheduleEntriesBulk
+} from '@/lib/scheduleService';
 import { shiftFestivalDate } from '@/lib/shiftDates';
 
 export interface CopyFestivalOptions {
@@ -16,6 +22,12 @@ export interface CopyFestivalOptions {
 	copyHelpers: boolean;
 	/** Setzt `copyHelpers` voraus — ohne Helfer hängt keine Zuteilung an etwas. */
 	copyAssignments: boolean;
+	/**
+	 * Tage, Phasen und Einträge des Ablaufplans mit Datums-Versatz ins Zielfest
+	 * (#127). Ein Schalter für den ganzen Plan — der Wert liegt in der
+	 * Vollständigkeit der Liste, ausgemistet wird danach im Bereich.
+	 */
+	copySchedule: boolean;
 	materialIds: string[];
 	materialQuantitySource: 'ordered' | 'actual';
 	sourceFestivalStartDate: string;
@@ -25,6 +37,28 @@ export interface CopyFestivalOptions {
 /** IDs auf ihre Entsprechung im Zielfest; was dort nicht existiert, fällt weg. */
 const remapIds = (ids: string[] | null | undefined, idMap: Record<string, string>): string[] =>
 	(ids || []).map(id => idMap[id]).filter(Boolean);
+
+/**
+ * Quell-Zeile → ihre neue Zeile im Zielfest, zugeordnet über einen **fachlichen
+ * Schlüssel** statt über die Reihenfolge: `INSERT … RETURNING` sagt über die
+ * Reihenfolge der zurückgegebenen Zeilen nichts zu. Beim Ablaufplan wäre ein
+ * Verrutschen still — Einträge landeten am falschen Tag und in der falschen
+ * Phase, ohne dass irgendwo ein Fehler stünde.
+ */
+function remapById<S extends { id: string }, N extends { id: string }>(
+	sources: readonly S[],
+	created: readonly N[],
+	sourceKey: (row: S) => string,
+	createdKey: (row: N) => string
+): Record<string, string> {
+	const byKey = new Map(created.map(row => [createdKey(row), row.id]));
+	const idMap: Record<string, string> = {};
+	for (const source of sources) {
+		const id = byKey.get(sourceKey(source));
+		if (id) idMap[source.id] = id;
+	}
+	return idMap;
+}
 
 export async function copyFestivalData(
 	sourceFestivalId: string,
@@ -187,5 +221,86 @@ export async function copyFestivalData(
 		}));
 
 		await createMaterialsBulk(materialsToInsert);
+	}
+
+	// Step 7: Copy the schedule — Tage, dann Phasen, dann Einträge (#127). Der
+	// Ablaufplan trägt das Jahresgedächtnis des Fests: „Feuerwehr-Abnahme,
+	// Fassanstich, Leergut-Rückgabe" sind jedes Jahr dieselben Zeilen. Er steht
+	// zuletzt, weil er auf den Helfern aufsetzt und sonst auf nichts.
+	if (options.copySchedule) {
+		const sourceDays = await getScheduleDays(sourceFestivalId);
+
+		// Dieselbe Versatz-Funktion wie bei den Schichten (#94) — der
+		// Aufbau-Donnerstag fällt wieder auf einen Donnerstag, und die Vorschau
+		// in Schritt 4 nennt genau dieses Datum.
+		const newDate = (date: string) =>
+			shiftFestivalDate(options.sourceFestivalStartDate, date, options.targetFestivalStartDate);
+
+		const createdDays = await createScheduleDaysBulk(
+			sourceDays.map(day => ({
+				festival_id: targetFestivalId,
+				date: newDate(day.date),
+				label: day.label,
+				// Der gelesene Wert ist der einzige wahre: ein von Hand angelegter
+				// Aufbau-Tag war auch im Quellfest keiner, den die Tages-Erzeugung
+				// gemacht hat.
+				is_auto_generated: day.is_auto_generated,
+				sort_order: day.sort_order
+			}))
+		);
+		// Das Datum ist der fachliche Schlüssel des Tages — `schedule_days` trägt
+		// darauf ohnehin ein UNIQUE(festival_id, date).
+		const dayIdMap = remapById(
+			sourceDays,
+			createdDays,
+			day => newDate(day.date),
+			day => day.date
+		);
+
+		const sourcePhases = sourceDays.flatMap(day => day.phases);
+		const createdPhases = await createSchedulePhasesBulk(
+			sourcePhases.map(phase => ({
+				festival_id: targetFestivalId,
+				schedule_day_id: dayIdMap[phase.schedule_day_id],
+				name: phase.name,
+				sort_order: phase.sort_order
+			}))
+		);
+		// Eine Phase trägt keinen eigenen Schlüssel; Tag, Platz und Name zusammen
+		// benennen sie eindeutig genug, um sie wiederzuerkennen.
+		const phaseKey = (dayId: string, sortOrder: number, name: string) =>
+			`${dayId}\u0000${sortOrder}\u0000${name}`;
+		const phaseIdMap = remapById(
+			sourcePhases,
+			createdPhases,
+			phase => phaseKey(dayIdMap[phase.schedule_day_id], phase.sort_order, phase.name),
+			phase => phaseKey(phase.schedule_day_id, phase.sort_order, phase.name)
+		);
+
+		await createScheduleEntriesBulk(
+			sourceDays
+				.flatMap(day => day.entries)
+				.map(entry => ({
+					festival_id: targetFestivalId,
+					schedule_day_id: dayIdMap[entry.schedule_day_id],
+					// Ein Eintrag ohne Phase bleibt ohne (ADR 0007).
+					schedule_phase_id: entry.schedule_phase_id
+						? phaseIdMap[entry.schedule_phase_id] ?? null
+						: null,
+					title: entry.title,
+					type: entry.type,
+					start_time: entry.start_time,
+					end_time: entry.end_time,
+					// Der Verantwortliche hängt an „Helfer übernehmen": ein Helfer
+					// gehört dem Fest (ADR 0005), ohne kopierte Liste gibt es im
+					// Zielfest keine Zeile, auf die er zeigen könnte.
+					responsible_helper_id:
+						(entry.responsible_helper_id && helperIdMap[entry.responsible_helper_id]) || null,
+					// Der Haken des Vorjahrs ist wertlos — jede Aufgabe kommt offen
+					// herein, ein Programmpunkt trägt gar keinen Status (ADR 0007).
+					status: entry.type === 'task' ? ('open' as const) : null,
+					description: entry.description
+				}))
+		);
 	}
 }
