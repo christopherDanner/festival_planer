@@ -1,27 +1,24 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Building2, FileDown, Import, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SponsoringAnleitung from '@/components/sponsoring/SponsoringAnleitung';
 import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
+import SponsoringHinweisstreifen from '@/components/sponsoring/SponsoringHinweisstreifen';
 import SponsoringMatrix from '@/components/sponsoring/SponsoringMatrix';
 import SponsoringSearch from '@/components/sponsoring/SponsoringSearch';
-import PreislisteZettel from '@/components/sponsoring/PreislisteZettel';
-import ZettelPopover from '@/components/sponsoring/ZettelPopover';
+import KategorieAnlegenKnopf from '@/components/sponsoring/KategorieAnlegenKnopf';
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
 import type { ZettelInput, ZettelTarget } from '@/lib/sponsoringZettel';
-import {
-	buildCategoryZettel,
-	NO_CATEGORY_IMPACT,
-	type CategoryImpact,
-	type CategoryZettelInput
-} from '@/lib/sponsoringPreisliste';
+import type { CategoryImpact, CategoryZettelInput } from '@/lib/sponsoringPreisliste';
+import { sponsoringLeerzustand } from '@/lib/sponsoringLeerzustand';
 import {
 	buildSponsoringOverviewFooter,
 	buildSponsoringOverviewRows,
 	festivalInKindTotal,
 	festivalSponsoringTotal,
 	filterSponsoringOverviewRows,
-	sponsoringFooterLabel,
-	sponsoringNoMatchNotice
+	sponsoringEmptyNotice,
+	sponsoringFooterLabel
 } from '@/lib/sponsoringTotals';
 import { formatEuro } from '@/lib/money';
 
@@ -52,6 +49,30 @@ export interface SponsoringOverviewProps {
 }
 
 /**
+ * Was die zwei halb gefüllten Leerzustände sagen (#152). Beide lassen die
+ * Tabelle stehen — die eine Achse ist ja richtig gefüllt — und tragen einen
+ * Griff auf den bestehenden Übernahme-Dialog.
+ *
+ * `ueberDerTabelle` ist kein Layout-Geschmack: der Streifen aus L3 benennt die
+ * **Ursache** („es fehlt die Preisliste"), und eine Ursache steht vor dem, was
+ * sie anrichtet. Der aus L2 ist der **nächste Schritt** und hängt hinten an.
+ */
+const HINWEISE = {
+	ohnePreisliste: {
+		lead: 'Es fehlt die Preisliste.',
+		text: 'Ohne Kategorien lässt sich keiner dieser Firmen etwas zuweisen.',
+		actionLabel: 'KATEGORIEN ÜBERNEHMEN',
+		ueberDerTabelle: true
+	},
+	ohneFirmen: {
+		lead: 'Preisliste steht.',
+		text: 'Jetzt die Firmen dazu — einzeln oder aus einem früheren Fest.',
+		actionLabel: 'SPONSOREN ÜBERNEHMEN',
+		ueberDerTabelle: false
+	}
+} as const;
+
+/**
  * Die Sponsoring-Übersicht als Ganzes: Werkzeugleiste mit Suche, Bereichskopf
  * und darunter die Paket-Matrix (Desktop) bzw. die Karten-Liste (Handy).
  * Ohne Datenzugriff, damit die Aufteilung aus ADR 0006 prüfbar bleibt:
@@ -78,10 +99,6 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	onCategoryApply,
 	onCategoryDelete
 }) => {
-	/* Der Anlege-Zettel hängt an „+ KATEGORIE"; die Zettel an den Spaltenköpfen
-	verwaltet die Matrix. Zwei Orte, ein Zettel — die Preisliste hat keinen
-	eigenen Dialog mehr (ADR 0009). */
-	const [creating, setCreating] = useState(false);
 	/* Vorjahresbeitrag je Sponsoring und Geldsumme des vorigen Fests kommen aus
 	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Solange es
 	den Leseweg nicht gibt, zeigt die Matrix den Leerfall: keine Vorjahr-Unterzeile
@@ -90,6 +107,29 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	const rows = filterSponsoringOverviewRows(allRows, searchTerm);
 	const footer = buildSponsoringOverviewFooter(rows, categories);
 	const total = festivalSponsoringTotal(sponsorings);
+
+	/* Welche der drei leeren Formen gerade gilt (#152). Die Matrix hat zwei
+	Achsen; fehlt eine, steht ein Hinweisstreifen daneben, fehlen beide, steht an
+	ihrer Stelle die Anleitung. */
+	const leerzustand = sponsoringLeerzustand(categories.length, sponsorings.length);
+	const emptyNotice = sponsoringEmptyNotice(allRows.length, searchTerm);
+
+	const hinweis = leerzustand && leerzustand !== 'nichts' ? HINWEISE[leerzustand] : null;
+
+	/**
+	 * Der Streifen, einmal je Bereichshälfte. `weld` ist die Kante, an der er an
+	 * der Tabelle klebt — am Handy klebt er an nichts und rahmt sich rundum.
+	 */
+	const streifen = (weld?: string) =>
+		hinweis && (
+			<SponsoringHinweisstreifen
+				lead={hinweis.lead}
+				text={hinweis.text}
+				actionLabel={hinweis.actionLabel}
+				onAction={onTransfer}
+				className={weld}
+			/>
+		);
 
 	return (
 		<div className="space-y-4">
@@ -124,28 +164,18 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 						<span>PDF</span>
 					</Button>
 					{/* Derselbe Zettel wie am Spaltenkopf, nur leer — die Preisliste ist
-					der erste Schritt im Bereich, vor den Firmen (CONTEXT.md „Preisliste"). */}
-					<ZettelPopover
-						open={creating}
-						onOpenChange={setCreating}
+					der erste Schritt im Bereich, vor den Firmen (CONTEXT.md „Preisliste").
+					Denselben Weg trägt die Anleitung des Leerzustands L1 (#152). */}
+					<KategorieAnlegenKnopf
 						align="end"
+						onCategoryApply={(input) => onCategoryApply(null, input)}
 						trigger={
 							<Button size="sm" variant="outline" aria-label="Kategorie anlegen">
 								<Plus className="h-4 w-4 mr-2" />
 								<span>Kategorie</span>
 							</Button>
 						}
-					>
-						{/* Ohne Löschen: eine Kategorie, die es noch nicht gibt, kann man
-						nicht löschen — der Zettel zeigt den Knopf dann gar nicht. */}
-						<PreislisteZettel
-							zettel={buildCategoryZettel(null, NO_CATEGORY_IMPACT)}
-							onApply={(input) => {
-								onCategoryApply(null, input);
-								setCreating(false);
-							}}
-						/>
-					</ZettelPopover>
+					/>
 					<Button onClick={onCreate} size="sm">
 						<Plus className="h-4 w-4 mr-2" />
 						<span>Sponsoring</span>
@@ -156,92 +186,106 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 			<SponsoringHeadline
 				total={total}
 				sponsorCount={sponsorings.length}
+				categoryCount={categories.length}
 				inKindTotal={festivalInKindTotal(sponsorings)}
 				previousFestivalTotal={null}
 			/>
 
-			{/* Mobile: Karten-Liste. Bedient wird sie noch nicht — die Karten-Form
-			des Zettels ist ein eigener Slice (ADR 0009). Das betrifft seit #149 auch
-			die Preisliste: ohne Spaltenköpfe lässt sich am Handy nur anlegen
-			(„+ KATEGORIE" steht in der Werkzeugleiste), nicht umbenennen, ändern
-			oder löschen. Die abgelöste zweite Tabelle konnte das — bewusst in
-			Kauf genommen, weil der Bereich genau eine Tabelle haben soll. */}
-			<div className="md:hidden space-y-2">
-				{allRows.length === 0 ? (
-					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
-						Noch keine Sponsorings erfasst
-					</div>
-				) : rows.length === 0 ? (
-					<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
-						{sponsoringNoMatchNotice(searchTerm)}
-					</div>
-				) : (
-					<>
-						{rows.map((row) => (
-							<div key={row.sponsoringId} className="border bg-card p-3">
-								<div className="flex items-start justify-between gap-2">
-									<div className="flex-1 min-w-0">
-										<div className="font-medium truncate">{row.companyName}</div>
-										<div className="text-sm font-semibold mt-0.5">{formatEuro(row.total)}</div>
-									</div>
-									<Button
-										size="icon"
-										variant="ghost"
-										className="h-8 w-8 shrink-0 text-destructive/70 hover:text-destructive"
-										aria-label={`Sponsoring von ${row.companyName} entfernen`}
-										onClick={() => onDelete(row.sponsoringId)}>
-										<Trash2 className="h-4 w-4" />
-									</Button>
+			{/* L1 — weder Preisliste noch Firmen: an die Stelle der Tabelle tritt die
+			Anleitung, für beide Breiten dieselbe (#152). Ohne Kategorie-Spalten wäre
+			die Tabelle ohnehin keine Paket-Matrix mehr. */}
+			{leerzustand === 'nichts' ? (
+				<SponsoringAnleitung
+					onCategoryApply={(input) => onCategoryApply(null, input)}
+					onTransfer={onTransfer}
+				/>
+			) : (
+				<>
+					{/* Mobile: Karten-Liste. Bedient wird sie noch nicht — die Karten-Form
+					des Zettels ist ein eigener Slice (ADR 0009). Das betrifft seit #149 auch
+					die Preisliste: ohne Spaltenköpfe lässt sich am Handy nur anlegen
+					(„+ KATEGORIE" steht in der Werkzeugleiste), nicht umbenennen, ändern
+					oder löschen. Die abgelöste zweite Tabelle konnte das — bewusst in
+					Kauf genommen, weil der Bereich genau eine Tabelle haben soll.
+
+					Die Leerzustände gelten hier genauso, nur in Kartenform (#152); der
+					Streifen rahmt sich dabei rundum, weil er an keiner Tabelle klebt. */}
+					<div className="md:hidden space-y-2">
+						{hinweis?.ueberDerTabelle && streifen()}
+						{rows.length === 0 ? (
+							emptyNotice && (
+								<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
+									{emptyNotice}
 								</div>
-								{(row.positions.length > 0 || row.freeAmount != null) && (
-									<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1.5">
-										{row.positions.map((p, i) => (
-											<span key={i}>
-												{p.label} ({formatEuro(p.value)})
-											</span>
-										))}
-										{row.freeAmount != null && (
-											<span>Freibetrag ({formatEuro(row.freeAmount)})</span>
+							)
+						) : (
+							<>
+								{rows.map((row) => (
+									<div key={row.sponsoringId} className="border bg-card p-3">
+										<div className="flex items-start justify-between gap-2">
+											<div className="flex-1 min-w-0">
+												<div className="font-medium truncate">{row.companyName}</div>
+												<div className="text-sm font-semibold mt-0.5">
+													{formatEuro(row.total)}
+												</div>
+											</div>
+											<Button
+												size="icon"
+												variant="ghost"
+												className="h-8 w-8 shrink-0 text-destructive/70 hover:text-destructive"
+												aria-label={`Sponsoring von ${row.companyName} entfernen`}
+												onClick={() => onDelete(row.sponsoringId)}>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										</div>
+										{(row.positions.length > 0 || row.freeAmount != null) && (
+											<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1.5">
+												{row.positions.map((p, i) => (
+													<span key={i}>
+														{p.label} ({formatEuro(p.value)})
+													</span>
+												))}
+												{row.freeAmount != null && (
+													<span>Freibetrag ({formatEuro(row.freeAmount)})</span>
+												)}
+											</div>
 										)}
 									</div>
-								)}
-							</div>
-						))}
-						{/* Derselbe Fuß, dieselbe Regel: sichtbare Zeilen, beschriftet. */}
-						<div className="border bg-card p-3 flex items-center justify-between gap-2">
-							<span className="font-semibold text-sm">
-								{sponsoringFooterLabel('Gesamtsumme', rows.length, allRows.length)}
-							</span>
-							<span className="font-semibold">{formatEuro(footer.total)}</span>
-						</div>
-					</>
-				)}
-			</div>
+								))}
+								{/* Derselbe Fuß, dieselbe Regel: sichtbare Zeilen, beschriftet. */}
+								<div className="border bg-card p-3 flex items-center justify-between gap-2">
+									<span className="font-semibold text-sm">
+										{sponsoringFooterLabel('Gesamtsumme', rows.length, allRows.length)}
+									</span>
+									<span className="font-semibold">{formatEuro(footer.total)}</span>
+								</div>
+							</>
+						)}
+						{hinweis && !hinweis.ueberDerTabelle && streifen()}
+					</div>
 
-			{/* Desktop: Paket-Matrix */}
-			<div className="hidden md:block">
-				<SponsoringMatrix
-					categories={categories}
-					rows={rows}
-					footer={footer}
-					totalRowCount={allRows.length}
-					searchTerm={searchTerm}
-					categoryImpacts={categoryImpacts}
-					onDelete={onDelete}
-					onApply={onApply}
-					onRemove={onRemove}
-					onCategoryApply={onCategoryApply}
-					onCategoryDelete={onCategoryDelete}
-				/>
-				{/* Ein Fest ohne Sponsoring ist kein Suchergebnis — es behält diesen
-				Satz auch bei getipptem Begriff. Die Hinweiszeile bei keinem Treffer
-				steht in der Matrix selbst. */}
-				{allRows.length === 0 && (
-					<p className="border bg-card py-8 text-center text-sm text-muted-foreground">
-						Noch keine Sponsorings erfasst
-					</p>
-				)}
-			</div>
+					{/* Desktop: Paket-Matrix. Der Streifen verschweißt sich mit ihrem
+					Rahmen — er ist ein Streifen *an* der Tabelle, kein zweiter Kasten
+					daneben; die Kante zwischen beiden zieht die Tabelle. */}
+					<div className="hidden md:block">
+						{hinweis?.ueberDerTabelle && streifen('border-b-0')}
+						<SponsoringMatrix
+							categories={categories}
+							rows={rows}
+							footer={footer}
+							totalRowCount={allRows.length}
+							searchTerm={searchTerm}
+							categoryImpacts={categoryImpacts}
+							onDelete={onDelete}
+							onApply={onApply}
+							onRemove={onRemove}
+							onCategoryApply={onCategoryApply}
+							onCategoryDelete={onCategoryDelete}
+						/>
+						{hinweis && !hinweis.ueberDerTabelle && streifen('border-t-0')}
+					</div>
+				</>
+			)}
 		</div>
 	);
 };

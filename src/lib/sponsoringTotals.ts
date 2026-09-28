@@ -164,12 +164,24 @@ export function sponsoringFooterLabel(base: string, shown: number, total: number
 	return `${base} · ${shown} von ${total} Firmen`;
 }
 
-/**
- * Hinweiszeile, wenn kein Firmenname zur Suche passt. Steht einmal hier, weil
- * Matrix (Desktop) und Karten-Liste (Handy) denselben Satz zeigen müssen.
- */
-export function sponsoringNoMatchNotice(searchTerm: string): string {
+/** Hinweiszeile, wenn kein Firmenname zur Suche passt. */
+function sponsoringNoMatchNotice(searchTerm: string): string {
 	return `Keine Firma passt zu „${searchTerm.trim()}"`;
+}
+
+/**
+ * Was an der Stelle der Zeilen steht, solange keine übrig ist — oder `null`, wo
+ * es nichts zu erklären gibt. Matrix (Desktop) und Karten-Liste (Handy) fragen
+ * dieselbe Regel, sonst stünde am leeren Fest je nach Breite ein anderer Satz.
+ *
+ * Ein Fest **ohne jede Firma** ist kein Suchergebnis: es behält seinen eigenen
+ * Satz auch bei getipptem Begriff. Im Leerzustand L2 trägt den nächsten Schritt
+ * ohnehin der Hinweisstreifen (#152), nicht diese Zeile.
+ */
+export function sponsoringEmptyNotice(totalRowCount: number, searchTerm: string): string | null {
+	if (totalRowCount === 0) return 'Noch keine Sponsorings erfasst';
+	if (searchTerm.trim() === '') return null;
+	return sponsoringNoMatchNotice(searchTerm);
 }
 
 /** Der Tabellenfuß der Sponsoring-Matrix: eine Summe je Spalte. */

@@ -25,8 +25,8 @@ import {
 } from '@/lib/sponsoringPreisliste';
 import type { SponsoringCategory } from '@/lib/sponsorService';
 import {
+	sponsoringEmptyNotice,
 	sponsoringFooterLabel,
-	sponsoringNoMatchNotice,
 	type SponsoringOverviewFooter,
 	type SponsoringOverviewRow
 } from '@/lib/sponsoringTotals';
@@ -165,6 +165,8 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	/* Höchstens ein Zettel ist offen: der Klick auf eine andere Zelle schließt
 	den alten, ohne zu speichern (ADR 0009). */
 	const [openCell, setOpenCell] = useState<string | null>(null);
+
+	const emptyNotice = sponsoringEmptyNotice(totalRowCount, searchTerm);
 
 	/** Die Requisiten einer wertetragenden Zelle — überall dieselbe Verdrahtung. */
 	const cell = (row: SponsoringOverviewRow, target: ZettelTarget) => {
@@ -367,17 +369,17 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 						</tr>
 					))}
 
-					{/* Kein Treffer: eine Hinweiszeile statt einer leeren Tabelle — die
-					Kategorie-Spalten bleiben dabei vollständig stehen (#151). Ein Fest
-					ohne Sponsoring (`totalRowCount === 0`) ist kein Suchergebnis und
-					behält seinen eigenen Satz. */}
-					{rows.length === 0 && totalRowCount > 0 && searchTerm.trim() !== '' && (
+					{/* Ohne Zeile eine Hinweiszeile statt einer leeren Tabelle — die
+					Kategorie-Spalten bleiben dabei vollständig stehen (#151). Welcher Satz
+					das ist, entscheidet `sponsoringEmptyNotice`: der Leerzustand L2 sagt
+					„noch keine Firma", die gefilterte Leere nennt den Suchbegriff. */}
+					{rows.length === 0 && emptyNotice && (
 						<tr className="border-b border-linie">
 							<td
 								colSpan={categories.length + 5}
 								className="px-2.5 py-8 text-center text-tinte-soft"
 							>
-								{sponsoringNoMatchNotice(searchTerm)}
+								{emptyNotice}
 							</td>
 						</tr>
 					)}

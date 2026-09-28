@@ -5,6 +5,7 @@ import {
 	festivalInKindTotal,
 	festivalSponsoringTotal,
 	filterSponsoringOverviewRows,
+	sponsoringEmptyNotice,
 	sponsoringFooterLabel,
 	sponsoringInKindValue,
 	sponsoringTotal
@@ -323,5 +324,23 @@ describe('sponsoringFooterLabel', () => {
 
 	it('beschriftet auch den Fuß der Karten-Liste nach derselben Regel', () => {
 		expect(sponsoringFooterLabel('Gesamtsumme', 1, 14)).toBe('Gesamtsumme · 1 von 14 Firmen');
+	});
+});
+
+describe('sponsoringEmptyNotice', () => {
+	it('nennt am Fest ohne Firma den eigenen Satz', () => {
+		expect(sponsoringEmptyNotice(0, '')).toBe('Noch keine Sponsorings erfasst');
+	});
+
+	it('behält ihn auch bei getipptem Begriff — ein leeres Fest ist kein Suchergebnis', () => {
+		expect(sponsoringEmptyNotice(0, 'bau')).toBe('Noch keine Sponsorings erfasst');
+	});
+
+	it('nennt bei keinem Treffer den Suchbegriff', () => {
+		expect(sponsoringEmptyNotice(14, 'gibtsnicht')).toBe('Keine Firma passt zu „gibtsnicht"');
+	});
+
+	it('schweigt, wo es nichts zu erklären gibt', () => {
+		expect(sponsoringEmptyNotice(14, '')).toBeNull();
 	});
 });
