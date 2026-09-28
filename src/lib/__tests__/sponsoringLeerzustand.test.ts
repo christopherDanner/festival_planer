@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { sponsoringLeerzustand, sponsoringStandLabel } from '../sponsoringLeerzustand';
+import {
+	sponsoringHinweis,
+	sponsoringLeerzustand,
+	sponsoringStandLabel
+} from '../sponsoringLeerzustand';
 
 describe('sponsoringLeerzustand — zwei Achsen, drei leere Formen', () => {
 	it('nennt das neue Fest ohne Kopierwerk „nichts" (L1)', () => {
@@ -40,5 +44,30 @@ describe('sponsoringStandLabel — erst was steht, dann was fehlt', () => {
 		expect(sponsoringStandLabel(1, 0)).toBe('1 Kategorie · noch keine Firma');
 		expect(sponsoringStandLabel(0, 1)).toBe('1 Sponsor · keine Kategorien');
 		expect(sponsoringStandLabel(1, 1)).toBe('1 Sponsor');
+	});
+});
+
+describe('sponsoringHinweis — der Streifen an der Tabelle', () => {
+	it('hängt bei übernommener Preisliste als nächster Schritt unter die Tabelle', () => {
+		expect(sponsoringHinweis('ohneFirmen')).toEqual({
+			lead: 'Preisliste steht.',
+			text: 'Jetzt die Firmen dazu — einzeln oder aus einem früheren Fest.',
+			actionLabel: 'SPONSOREN ÜBERNEHMEN',
+			aboveTable: false
+		});
+	});
+
+	it('stellt die Ursache über die Zeilen, die sie betrifft', () => {
+		expect(sponsoringHinweis('ohnePreisliste')).toEqual({
+			lead: 'Es fehlt die Preisliste.',
+			text: 'Ohne Kategorien lässt sich keiner dieser Firmen etwas zuweisen.',
+			actionLabel: 'KATEGORIEN ÜBERNEHMEN',
+			aboveTable: true
+		});
+	});
+
+	it('schweigt, wo es keinen Streifen gibt — L1 trägt die Anleitung, der volle Zustand nichts', () => {
+		expect(sponsoringHinweis('nichts')).toBeNull();
+		expect(sponsoringHinweis(null)).toBeNull();
 	});
 });

@@ -10,7 +10,7 @@ import KategorieAnlegenKnopf from '@/components/sponsoring/KategorieAnlegenKnopf
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
 import type { ZettelInput, ZettelTarget } from '@/lib/sponsoringZettel';
 import type { CategoryImpact, CategoryZettelInput } from '@/lib/sponsoringPreisliste';
-import { sponsoringLeerzustand } from '@/lib/sponsoringLeerzustand';
+import { sponsoringHinweis, sponsoringLeerzustand } from '@/lib/sponsoringLeerzustand';
 import {
 	buildSponsoringOverviewFooter,
 	buildSponsoringOverviewRows,
@@ -47,30 +47,6 @@ export interface SponsoringOverviewProps {
 	/** „Kategorie löschen" — die bezifferte Rückfrage hat der Zettel schon gestellt. */
 	onCategoryDelete: (category: SponsoringCategory) => void;
 }
-
-/**
- * Was die zwei halb gefüllten Leerzustände sagen (#152). Beide lassen die
- * Tabelle stehen — die eine Achse ist ja richtig gefüllt — und tragen einen
- * Griff auf den bestehenden Übernahme-Dialog.
- *
- * `ueberDerTabelle` ist kein Layout-Geschmack: der Streifen aus L3 benennt die
- * **Ursache** („es fehlt die Preisliste"), und eine Ursache steht vor dem, was
- * sie anrichtet. Der aus L2 ist der **nächste Schritt** und hängt hinten an.
- */
-const HINWEISE = {
-	ohnePreisliste: {
-		lead: 'Es fehlt die Preisliste.',
-		text: 'Ohne Kategorien lässt sich keiner dieser Firmen etwas zuweisen.',
-		actionLabel: 'KATEGORIEN ÜBERNEHMEN',
-		ueberDerTabelle: true
-	},
-	ohneFirmen: {
-		lead: 'Preisliste steht.',
-		text: 'Jetzt die Firmen dazu — einzeln oder aus einem früheren Fest.',
-		actionLabel: 'SPONSOREN ÜBERNEHMEN',
-		ueberDerTabelle: false
-	}
-} as const;
 
 /**
  * Die Sponsoring-Übersicht als Ganzes: Werkzeugleiste mit Suche, Bereichskopf
@@ -114,14 +90,17 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	const leerzustand = sponsoringLeerzustand(categories.length, sponsorings.length);
 	const emptyNotice = sponsoringEmptyNotice(allRows.length, searchTerm);
 
-	const hinweis = leerzustand && leerzustand !== 'nichts' ? HINWEISE[leerzustand] : null;
+	const hinweis = sponsoringHinweis(leerzustand);
 
-	/**
-	 * Der Streifen, einmal je Bereichshälfte. `weld` ist die Kante, an der er an
-	 * der Tabelle klebt — am Handy klebt er an nichts und rahmt sich rundum.
+	/*
+	 * Der Streifen steht an genau einer der beiden Kanten der Tabelle, und beide
+	 * Hälften des Bereichs rufen ihn an beiden ab — welche der vier Stellen ihn
+	 * zeigt, entscheidet allein `aboveTable`. `weld` ist die Kante, die er der
+	 * Tabelle überlässt; am Handy klebt er an nichts und rahmt sich rundum
+	 * (ADR 0003 §2: Layout gehört dem Aufrufer).
 	 */
-	const streifen = (weld?: string) =>
-		hinweis && (
+	const streifenAn = (kante: 'above' | 'below', weld?: string) =>
+		hinweis && hinweis.aboveTable === (kante === 'above') ? (
 			<SponsoringHinweisstreifen
 				lead={hinweis.lead}
 				text={hinweis.text}
@@ -129,7 +108,7 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 				onAction={onTransfer}
 				className={weld}
 			/>
-		);
+		) : null;
 
 	return (
 		<div className="space-y-4">
@@ -211,7 +190,7 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 					Die Leerzustände gelten hier genauso, nur in Kartenform (#152); der
 					Streifen rahmt sich dabei rundum, weil er an keiner Tabelle klebt. */}
 					<div className="md:hidden space-y-2">
-						{hinweis?.ueberDerTabelle && streifen()}
+						{streifenAn('above')}
 						{rows.length === 0 ? (
 							emptyNotice && (
 								<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
@@ -261,14 +240,14 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 								</div>
 							</>
 						)}
-						{hinweis && !hinweis.ueberDerTabelle && streifen()}
+						{streifenAn('below')}
 					</div>
 
 					{/* Desktop: Paket-Matrix. Der Streifen verschweißt sich mit ihrem
 					Rahmen — er ist ein Streifen *an* der Tabelle, kein zweiter Kasten
 					daneben; die Kante zwischen beiden zieht die Tabelle. */}
 					<div className="hidden md:block">
-						{hinweis?.ueberDerTabelle && streifen('border-b-0')}
+						{streifenAn('above', 'border-b-0')}
 						<SponsoringMatrix
 							categories={categories}
 							rows={rows}
@@ -282,7 +261,7 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 							onCategoryApply={onCategoryApply}
 							onCategoryDelete={onCategoryDelete}
 						/>
-						{hinweis && !hinweis.ueberDerTabelle && streifen('border-t-0')}
+						{streifenAn('below', 'border-t-0')}
 					</div>
 				</>
 			)}

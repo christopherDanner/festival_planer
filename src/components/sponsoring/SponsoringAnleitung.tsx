@@ -31,10 +31,12 @@ const SponsoringAnleitung: React.FC<SponsoringAnleitungProps> = ({
 }) => (
 	<div className="border-2.5 border-tinte bg-white p-4">
 		{/* Handschrift statt Illustration: Stempel und Anleitungstext, kein
-		Bildmaterial (ADR 0003). Der gestrichelte Rahmen ist dasselbe Rezept wie im
-		Leerzustand des Sponsorenbestands. */}
+		Bildmaterial (ADR 0003). Gestrichelter Rahmen und roter Stempel-Ton sind das
+		Leerzustands-Rezept aus DESIGN-VISION §4, dasselbe wie im Leerzustand des
+		Sponsorenbestands. Statt des einen Satzes stehen hier zwei Wege samt der
+		Auskunft, welcher wann lohnt — so verlangt es #152. */}
 		<div className="border-2 border-dashed border-linie px-4 py-10 text-center">
-			<Stamp tone="ink" size="lg">
+			<Stamp tone="red" size="lg">
 				NICHTS ERFASST
 			</Stamp>
 
@@ -61,11 +63,14 @@ const SponsoringAnleitung: React.FC<SponsoringAnleitungProps> = ({
 			</div>
 
 			{/* Welcher Weg wann lohnt — ohne den Satz sehen zwei gleichrangige Knöpfe
-			wie eine Entscheidung aus, die man nicht treffen kann. */}
+			wie eine Entscheidung aus, die man nicht treffen kann. Beschrieben ist,
+			was der Übernahme-Dialog wirklich tut: er geht über die Firmen und legt
+			deren Kategorien im Zielfest an (ADR 0008), er holt nicht die Preisliste
+			für sich. */}
 			<p className="mx-auto mt-5 max-w-lg border-t border-dashed border-linie pt-3 text-xs leading-relaxed text-tinte-soft">
-				Beide Wege führen zum Ziel: <b className="text-tinte">Übernehmen</b> holt die Preisliste
-				eines vergangenen Fests mit ihren Werten — meist schneller, weil die Werte stehen.{' '}
-				<b className="text-tinte">Neu anlegen</b> lohnt beim ersten Fest überhaupt.
+				Beide Wege führen zum Ziel: <b className="text-tinte">Übernehmen</b> holt die Firmen eines
+				vergangenen Fests samt ihren Kategorien und Werten — meist schneller, weil die Werte
+				stehen. <b className="text-tinte">Neu anlegen</b> lohnt beim ersten Fest überhaupt.
 			</p>
 		</div>
 	</div>
