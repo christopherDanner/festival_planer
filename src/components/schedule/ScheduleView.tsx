@@ -3,8 +3,10 @@ import { useScheduleData } from './hooks/useScheduleData';
 import { useScheduleActions } from './hooks/useScheduleActions';
 import ScheduleToolbar from './ScheduleToolbar';
 import TaskWorklist from './TaskWorklist';
+import ProgramSheet from './ProgramSheet';
 import ScheduleEntryDialog, { type ScheduleEntryFormData } from './dialogs/ScheduleEntryDialog';
 import { exportScheduleToPdf } from '@/lib/scheduleExportService';
+import { buildProgramSheet } from '@/lib/scheduleProgramSheet';
 import { buildWorklist, type TaskFilter } from '@/lib/scheduleWorklist';
 import {
 	shouldInitializeScheduleDays,
@@ -16,7 +18,17 @@ import {
 // würde still nichts verengen.
 type DialogState =
 	| { type: 'none' }
-	| { type: 'entry'; entry?: ScheduleEntryWithHelper; defaultType: 'task' | 'program' };
+	| {
+			type: 'entry';
+			entry?: ScheduleEntryWithHelper;
+			defaultType: 'task' | 'program';
+			/**
+			 * Der Tag, den der Griff schon kannte: „+ PROGRAMMPUNKT" am Tagesblock des
+			 * Zettels legt für genau diesen an (#123). Ohne ihn — von der
+			 * Werkzeugleiste aus — wählt man den Tag im Dialog.
+			 */
+			dayId?: string;
+	  };
 
 const CLOSED: DialogState = { type: 'none' };
 
@@ -76,6 +88,9 @@ export default function ScheduleView({
 			}),
 		[days, filter, responsibleId, festivalStartDate, festivalEndDate]
 	);
+
+	/** Der Programmzettel kennt keinen Filter — ein Aushang zeigt das ganze Fest. */
+	const programSheet = useMemo(() => buildProgramSheet(days), [days]);
 
 	/** Die Tage der Werkliste in der Form der Abfrage — die Zeilen, die gerade
 	am Bildschirm stehen, für den Druck der Aufgabenliste. */
@@ -182,18 +197,17 @@ export default function ScheduleView({
 					onDeleteTask={(entry) => actions.removeEntry.mutate(entry.id)}
 				/>
 
-				{/* Der Platz des zweiten Papiers. Das Papier selbst — grüner
-				Halftone-Kopf, Zeilen, ⋮ und „+ PROGRAMMPUNKT" je Tag — ist #123;
-				hier steht nur, wem der Platz gehört. */}
-				<aside className="border-2.5 border-dashed border-linie bg-white px-4 py-4">
-					<h3 className="font-display text-[15px] font-semibold uppercase tracking-[.03em] text-tinte-soft">
-						Programmzettel
-					</h3>
-					<p className="mt-1.5 text-[13px] text-tinte-soft">
-						Das zweite Papier des Ablaufplans entsteht hier. Angelegt wird ein Programmpunkt
-						vorerst über „+ PROGRAMMPUNKT" in der Werkzeugleiste.
-					</p>
-				</aside>
+				<ProgramSheet
+					sheet={programSheet}
+					festivalName={festivalName}
+					onAddProgram={(dayId) =>
+						setDialogState({ type: 'entry', defaultType: 'program', dayId })
+					}
+					onEditProgram={(entry) =>
+						setDialogState({ type: 'entry', entry, defaultType: 'program' })
+					}
+					onDeleteProgram={(entry) => actions.removeEntry.mutate(entry.id)}
+				/>
 			</div>
 
 			<ScheduleEntryDialog
@@ -204,12 +218,17 @@ export default function ScheduleView({
 				entry={dialogState.type === 'entry' ? dialogState.entry : null}
 				defaultType={dialogState.type === 'entry' ? dialogState.defaultType : 'task'}
 				days={days}
-				// Der vorbelegte Tag: beim Bearbeiten seiner, beim Anlegen der erste
-				// des Fests. Gewählt wird im Dialog.
+				// Der vorbelegte Tag: beim Bearbeiten seiner, beim tagesbezogenen
+				// Anlegen der des Tagesblocks, sonst der erste des Fests.
 				scheduleDayId={
-					dialogState.type === 'entry' && dialogState.entry
-						? dialogState.entry.schedule_day_id
-						: days[0]?.id ?? ''
+					dialogState.type === 'entry'
+						? dialogState.entry?.schedule_day_id ?? dialogState.dayId ?? days[0]?.id ?? ''
+						: ''
+				}
+				// Nur der tagesbezogene Griff kennt den Tag schon; beim Bearbeiten
+				// bleibt er wählbar, damit ein Eintrag den Tag wechseln kann (#122).
+				dayLocked={
+					dialogState.type === 'entry' && !dialogState.entry && !!dialogState.dayId
 				}
 				schedulePhaseId={
 					dialogState.type === 'entry' && dialogState.entry
