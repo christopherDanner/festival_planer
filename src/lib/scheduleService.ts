@@ -57,6 +57,11 @@ export interface ScheduleDayWithEntries extends ScheduleDay {
 	entries: ScheduleEntryWithHelper[];
 }
 
+/** Eine neue Zeile — die Datenbank vergibt ID und Zeitstempel. */
+export type ScheduleDayInput = Omit<ScheduleDay, 'id' | 'created_at' | 'updated_at'>;
+export type SchedulePhaseInput = Omit<SchedulePhase, 'id' | 'created_at' | 'updated_at'>;
+export type ScheduleEntryInput = Omit<ScheduleEntry, 'id' | 'created_at' | 'updated_at'>;
+
 // --- Schedule Days ---
 
 export const getScheduleDays = async (festivalId: string): Promise<ScheduleDayWithEntries[]> => {
@@ -76,6 +81,27 @@ export const getScheduleDays = async (festivalId: string): Promise<ScheduleDayWi
 };
 
 const GERMAN_WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+/**
+ * Darf die automatische Tages-Erzeugung laufen? Nur, wenn das Fest noch **keinen**
+ * Ablauf-Tag hat (#127).
+ *
+ * Seit der *Ablaufplan-Übernahme* bringt ein aus der Vorlage angelegtes Fest
+ * seine Tage schon mit — versetzt, mitsamt Label. Liefe die Erzeugung darüber,
+ * stünde neben dem übernommenen Aufbau-Donnerstag ein zweiter, leerer Festtag.
+ *
+ * Die Regel steht hier und nicht in der Ansicht, weil sie zu
+ * {@link initializeScheduleDays} gehört: sie sagt, wann der Weg überhaupt
+ * gegangen wird.
+ */
+export const shouldInitializeScheduleDays = (plan: {
+	/** Der geladene Ablaufplan des Fests. */
+	days: readonly unknown[];
+	/** Solange die Abfrage läuft, ist „keine Tage" keine Auskunft. */
+	isLoading: boolean;
+	/** Ohne Fest-Datum gibt es nichts zu erzeugen. */
+	festivalStartDate?: string | null;
+}): boolean => !plan.isLoading && plan.days.length === 0 && Boolean(plan.festivalStartDate);
 
 export const initializeScheduleDays = async (
 	festivalId: string,
@@ -113,9 +139,35 @@ export const initializeScheduleDays = async (
 	return data || [];
 };
 
-export const createScheduleDay = async (
-	data: Omit<ScheduleDay, 'id' | 'created_at' | 'updated_at'>
-): Promise<ScheduleDay> => {
+/**
+ * Eine ganze Liste in einem Zug anlegen — der Schreibweg der
+ * *Ablaufplan-Übernahme* (#127). Zeile für Zeile wären es so viele Abfragen wie
+ * Ablauf-Einträge; Stationen, Schichten und Material gehen längst gebündelt.
+ *
+ * Eine leere Liste fragt gar nicht erst: ein Tag ohne Phasen und ein Fest ohne
+ * Einträge sind der Normalfall.
+ */
+const createBulk = async <T>(table: string, rows: readonly unknown[]): Promise<T[]> => {
+	if (rows.length === 0) return [];
+
+	const { data, error } = await (supabase as any).from(table).insert(rows).select();
+
+	if (error) throw error;
+	return data || [];
+};
+
+export const createScheduleDaysBulk = (days: readonly ScheduleDayInput[]): Promise<ScheduleDay[]> =>
+	createBulk<ScheduleDay>('schedule_days', days);
+
+export const createSchedulePhasesBulk = (
+	phases: readonly SchedulePhaseInput[]
+): Promise<SchedulePhase[]> => createBulk<SchedulePhase>('schedule_phases', phases);
+
+export const createScheduleEntriesBulk = (
+	entries: readonly ScheduleEntryInput[]
+): Promise<ScheduleEntry[]> => createBulk<ScheduleEntry>('schedule_entries', entries);
+
+export const createScheduleDay = async (data: ScheduleDayInput): Promise<ScheduleDay> => {
 	const { data: result, error } = await (supabase as any)
 		.from('schedule_days')
 		.insert(data)
@@ -152,9 +204,7 @@ export const deleteScheduleDay = async (id: string): Promise<void> => {
 
 // --- Schedule Phases ---
 
-export const createSchedulePhase = async (
-	data: Omit<SchedulePhase, 'id' | 'created_at' | 'updated_at'>
-): Promise<SchedulePhase> => {
+export const createSchedulePhase = async (data: SchedulePhaseInput): Promise<SchedulePhase> => {
 	const { data: result, error } = await (supabase as any)
 		.from('schedule_phases')
 		.insert(data)
@@ -191,9 +241,7 @@ export const deleteSchedulePhase = async (id: string): Promise<void> => {
 
 // --- Schedule Entries ---
 
-export const createScheduleEntry = async (
-	data: Omit<ScheduleEntry, 'id' | 'created_at' | 'updated_at'>
-): Promise<ScheduleEntry> => {
+export const createScheduleEntry = async (data: ScheduleEntryInput): Promise<ScheduleEntry> => {
 	const { data: result, error } = await (supabase as any)
 		.from('schedule_entries')
 		.insert(data)

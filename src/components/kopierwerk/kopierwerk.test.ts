@@ -65,7 +65,13 @@ describe('Kopierwerk-Entwurf', () => {
 });
 
 describe('Stempelkarte — Schritt-Liste', () => {
-	const scope = { stations: 4, shifts: 11, materials: 86 };
+	const scope = {
+		stations: 4,
+		shifts: 11,
+		materials: 86,
+		scheduleDays: 4,
+		scheduleEntries: 17
+	};
 
 	it('zeigt ohne Vorlage nur Schritt 1', () => {
 		const steps = kopierwerkSteps({ current: 'basics', hasTemplate: false });
@@ -73,16 +79,22 @@ describe('Stempelkarte — Schritt-Liste', () => {
 		expect(steps[0].state).toBe('active');
 	});
 
-	it('zeigt mit Vorlage die drei Schritte in ihrer Reihenfolge', () => {
+	// Der Ablaufplan ist Schritt 4 (#127); Sponsoring rückt damit auf Schritt 5.
+	it('zeigt mit Vorlage die vier Schritte in ihrer Reihenfolge', () => {
 		const steps = kopierwerkSteps({ current: 'basics', hasTemplate: true, scope });
-		expect(steps.map((s) => s.key)).toEqual(['basics', 'stations', 'materials']);
-		expect(steps.map((s) => s.number)).toEqual([1, 2, 3]);
-		expect(steps.map((s) => s.title)).toEqual(['Name & Datum', 'Stationen & Schichten', 'Material']);
+		expect(steps.map((s) => s.key)).toEqual(['basics', 'stations', 'materials', 'schedule']);
+		expect(steps.map((s) => s.number)).toEqual([1, 2, 3, 4]);
+		expect(steps.map((s) => s.title)).toEqual([
+			'Name & Datum',
+			'Stationen & Schichten',
+			'Material',
+			'Ablaufplan'
+		]);
 	});
 
 	it('stempelt erledigt / aktiv / offen entlang des aktuellen Schritts', () => {
 		const steps = kopierwerkSteps({ current: 'stations', hasTemplate: true, scope });
-		expect(steps.map((s) => s.state)).toEqual(['done', 'active', 'open']);
+		expect(steps.map((s) => s.state)).toEqual(['done', 'active', 'open', 'open']);
 	});
 
 	it('beziffert die Schritte in ihrer Untertitel-Zeile', () => {
@@ -95,7 +107,8 @@ describe('Stempelkarte — Schritt-Liste', () => {
 		expect(steps.map((s) => s.subtitle)).toEqual([
 			'Musikfest Steinbach 2027',
 			'4 Stationen · 11 Schichten',
-			'86 Positionen · Mengenquelle'
+			'86 Positionen · Mengenquelle',
+			'4 Tage · 17 Einträge'
 		]);
 	});
 
@@ -103,20 +116,26 @@ describe('Stempelkarte — Schritt-Liste', () => {
 		const steps = kopierwerkSteps({
 			current: 'basics',
 			hasTemplate: true,
-			scope: { stations: 1, shifts: 1, materials: 1 }
+			scope: { stations: 1, shifts: 1, materials: 1, scheduleDays: 1, scheduleEntries: 1 }
 		});
 		expect(steps[1].subtitle).toBe('1 Station · 1 Schicht');
 		expect(steps[2].subtitle).toBe('1 Position · Mengenquelle');
+		expect(steps[3].subtitle).toBe('1 Tag · 1 Eintrag');
 	});
 
 	it('lässt die Untertitel weg, solange die Vorlage noch lädt', () => {
 		const steps = kopierwerkSteps({ current: 'basics', hasTemplate: true });
-		expect(steps.map((s) => s.subtitle)).toEqual([undefined, undefined, undefined]);
+		expect(steps.map((s) => s.subtitle)).toEqual([undefined, undefined, undefined, undefined]);
 	});
 
 	it('trägt eine Kurzform für die waagrechte Schritt-Leiste', () => {
 		const steps = kopierwerkSteps({ current: 'basics', hasTemplate: true, scope });
-		expect(steps.map((s) => s.shortTitle)).toEqual(['Name & Datum', 'Stationen', 'Material']);
+		expect(steps.map((s) => s.shortTitle)).toEqual([
+			'Name & Datum',
+			'Stationen',
+			'Material',
+			'Ablaufplan'
+		]);
 	});
 
 	// Fällt die Vorlage weg, während Schritt 2 offen ist, bleibt nur Schritt 1 —
@@ -158,16 +177,17 @@ describe('Fußzeile von Schritt 1', () => {
 	});
 });
 
-describe('Kopier-Auftrag aus den Schritten 2 und 3', () => {
+describe('Kopier-Auftrag aus den Schritten 2 bis 4', () => {
 	const selection = {
 		stationIds: new Set(['s-ausschank', 's-grill']),
 		copyHelpers: true,
 		copyAssignments: true,
 		materialIds: new Set(['m-bier', 'm-kohle']),
-		quantitySource: 'actual' as const
+		quantitySource: 'actual' as const,
+		copySchedule: true
 	};
 
-	it('trägt Stationen, Material und Mengenquelle zusammen', () => {
+	it('trägt Stationen, Material, Mengenquelle und den Ablaufplan zusammen', () => {
 		expect(
 			copyFestivalOptions(
 				{ start_date: '2026-07-24' },
@@ -178,12 +198,23 @@ describe('Kopier-Auftrag aus den Schritten 2 und 3', () => {
 			stationIds: ['s-ausschank', 's-grill'],
 			copyHelpers: true,
 			copyAssignments: true,
+			copySchedule: true,
 			materialIds: ['m-bier', 'm-kohle'],
 			materialQuantitySource: 'actual',
 			// Der Versatz rechnet vom Start der Vorlage auf den Start des neuen
-			// Fests — vertauscht schöbe er die Schichten um ein Jahr zurück.
+			// Fests — vertauscht schöbe er Schichten und Ablauf-Tage um ein Jahr
+			// zurück.
 			sourceFestivalStartDate: '2026-07-24',
 			targetFestivalStartDate: '2027-07-23'
 		});
+	});
+
+	it('reicht den abgeschalteten Ablaufplan genauso durch', () => {
+		expect(
+			copyFestivalOptions({ start_date: '2026-07-24' }, draft({ startDate: '2027-07-23' }), {
+				...selection,
+				copySchedule: false
+			}).copySchedule
+		).toBe(false);
 	});
 });

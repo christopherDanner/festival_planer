@@ -1,6 +1,8 @@
 import { copiedShiftDateLabel, formatShiftRange } from '@/lib/shiftDates';
 import type { Station, StationShift } from '@/lib/shiftService';
 
+import { plural } from './plural';
+
 /**
  * Schritt 2 des Kopierwerks (#94) als reine Logik: welche Zeilen die Werkbank
  * zeigt.
@@ -80,8 +82,6 @@ export interface StationPreviewInput {
 	/** Start des geplanten Fests. */
 	targetStartDate: string;
 }
-
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * Die Zeilen der Werkbank. Die Reihenfolge von Stationen und Schichten kommt

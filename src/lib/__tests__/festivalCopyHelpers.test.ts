@@ -149,12 +149,22 @@ vi.mock('../materialService', () => ({
 	createMaterialsBulk: async () => []
 }));
 
+// Der Ablaufplan hat seine eigene Suite (`festivalCopySchedule.test.ts`), samt
+// der Umschlüsselung seiner Verantwortlichen.
+vi.mock('../scheduleService', () => ({
+	getScheduleDays: async () => [],
+	createScheduleDaysBulk: async () => [],
+	createSchedulePhasesBulk: async () => [],
+	createScheduleEntriesBulk: async () => []
+}));
+
 import { copyFestivalData, type CopyFestivalOptions } from '../festivalCopyService';
 
 const options = (over: Partial<CopyFestivalOptions> = {}): CopyFestivalOptions => ({
 	stationIds: ['st-alt'],
 	copyHelpers: false,
 	copyAssignments: false,
+	copySchedule: false,
 	materialIds: [],
 	materialQuantitySource: 'ordered',
 	sourceFestivalStartDate: '2026-07-01',
