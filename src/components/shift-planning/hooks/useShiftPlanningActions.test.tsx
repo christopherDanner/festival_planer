@@ -8,7 +8,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
    der Auto-Zuteilung mit dem Zwischenspeicher. Geprüft wird hier nur, was #108
    verlangt: dass der eingeschränkte Lauf seine Station **mitgibt** und dass
    nach Zuteilen wie Löschen **alle Zähler neu rechnen** — die Ampel-Reiter, das
-   KPI-Maßband und der Fokus-Kasten lesen alle aus diesen Abfragen. */
+   KPI-Maßband und der Fokus-Kasten lesen alle aus diesen Abfragen.
+
+   #104 hängt denselben Anspruch an die **einzelne** Zuteilung: „Alle Zähler
+   rechnen nach jeder Zuteilung sofort neu." Dieselbe Seam, dieselbe Messung. */
 
 const toast = vi.hoisted(() => vi.fn());
 
@@ -24,10 +27,26 @@ vi.mock('@/lib/automaticAssignmentService', () => ({
 	clearAssignments: vi.fn(async () => true)
 }));
 
+// Die einzelne Zuteilung (#104) geht durch diese vier Griffe; was sie in der
+// Datenbank tun, prüft `shiftService` selbst.
+vi.mock('@/lib/shiftService', () => ({
+	createStation: vi.fn(async () => null),
+	updateStation: vi.fn(async () => null),
+	deleteStation: vi.fn(async () => true),
+	createStationShift: vi.fn(async () => null),
+	updateStationShift: vi.fn(async () => null),
+	deleteStationShift: vi.fn(async () => true),
+	assignHelperToStationShift: vi.fn(async () => null),
+	removeHelperFromStationShift: vi.fn(async () => true),
+	assignHelperToStation: vi.fn(async () => null),
+	removeHelperFromStation: vi.fn(async () => true)
+}));
+
 // Die übrigen Dienste hängt der Hook nur ein; berührt werden sie hier nicht.
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
 
 import { clearAssignments, performAutomaticAssignment } from '@/lib/automaticAssignmentService';
+import { assignHelperToStationShift } from '@/lib/shiftService';
 import { useShiftPlanningActions } from './useShiftPlanningActions';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -143,6 +162,45 @@ describe('useShiftPlanningActions — die Zähler rechnen sofort neu', () => {
 
 		await act(async () => {
 			await actions.clearAssignments.mutateAsync({});
+		});
+
+		expect(invalidated).toEqual(QUERY_KEYS.map((key) => `${key}:fest-7`));
+	});
+});
+
+describe('useShiftPlanningActions — nach jeder einzelnen Zuteilung (#104)', () => {
+	it('nach dem Eintragen auf einen Schicht-Platz', async () => {
+		await act(async () => {
+			await actions.assignHelper.mutateAsync({
+				stationShiftId: 'sh-1',
+				helperId: 'h-1',
+				position: 2
+			});
+		});
+
+		expect(assignHelperToStationShift).toHaveBeenCalledWith('fest-7', 'sh-1', 'h-1', 2);
+		expect(invalidated).toEqual(QUERY_KEYS.map((key) => `${key}:fest-7`));
+	});
+
+	it('nach dem Eintragen in die Stationsmitglieder', async () => {
+		await act(async () => {
+			await actions.assignHelperToStation.mutateAsync({ stationId: 'st-1', helperId: 'h-1' });
+		});
+
+		expect(invalidated).toEqual(QUERY_KEYS.map((key) => `${key}:fest-7`));
+	});
+
+	it('nach dem × am belegten Platz', async () => {
+		await act(async () => {
+			await actions.removeHelper.mutateAsync({ stationShiftId: 'sh-1', helperId: 'h-1' });
+		});
+
+		expect(invalidated).toEqual(QUERY_KEYS.map((key) => `${key}:fest-7`));
+	});
+
+	it('nach dem × an der Marke der Stationsmitglieder-Fußzeile', async () => {
+		await act(async () => {
+			await actions.removeHelperFromStation.mutateAsync({ stationId: 'st-1', helperId: 'h-1' });
 		});
 
 		expect(invalidated).toEqual(QUERY_KEYS.map((key) => `${key}:fest-7`));

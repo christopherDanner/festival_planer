@@ -12,7 +12,7 @@ import {
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import type { HelperFilter, Roster, RosterChip } from '@/lib/helperRoster';
-import type { Helper } from '@/lib/helperService';
+import { helperName, type Helper } from '@/lib/helperService';
 
 export interface HelperRosterProps {
 	roster: Roster;
@@ -22,8 +22,11 @@ export interface HelperRosterProps {
 	onSearchChange: (value: string) => void;
 	filter: HelperFilter;
 	onFilterChange: (filter: HelperFilter) => void;
-	selectedHelperId: string | null;
+	/** Die gewählte Marke (#104) — sie steht gelb da und nennt sich im Hinweis. */
+	selected: Helper | null;
 	onSelectHelper: (helper: Helper) => void;
+	/** „Abbrechen" — der zweite Weg zurück neben dem zweiten Antippen der Marke. */
+	onCancelSelection: () => void;
 	onDragStart: (helper: Helper) => void;
 	onDragEnd: () => void;
 	onAddHelper: () => void;
@@ -55,8 +58,9 @@ const HelperRoster: React.FC<HelperRosterProps> = ({
 	onSearchChange,
 	filter,
 	onFilterChange,
-	selectedHelperId,
+	selected,
 	onSelectHelper,
+	onCancelSelection,
 	onDragStart,
 	onDragEnd,
 	onAddHelper,
@@ -92,6 +96,27 @@ const HelperRoster: React.FC<HelperRosterProps> = ({
 			/>
 		</div>
 
+		{/* Der Auswahl-Hinweis: er sagt, was die gelbe Marke bedeutet, und trägt
+		den zweiten Weg zurück. Ohne ihn wäre das zweite Antippen derselben Marke
+		die einzige Rücknahme — und die findet niemand von selbst. Als
+		`aria-live`-Bereich ist er zugleich die Ansage für alle, die das Gelb nicht
+		sehen (Research #54: kein `aria-grabbed`, das ist seit ARIA 1.1 überholt). */}
+		<div aria-live="polite" className="shrink-0 px-3">
+			{selected && (
+				<p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-1.5 border-tinte bg-gelb px-2 py-1.5 text-[11.5px] font-semibold">
+					<b className="font-bold">{helperName(selected)}</b>
+					<span>— freien Platz wählen</span>
+					<button
+						type="button"
+						onClick={onCancelSelection}
+						className="ml-auto text-[11px] font-bold uppercase tracking-[.04em] underline underline-offset-2 max-[899px]:min-h-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
+					>
+						Abbrechen
+					</button>
+				</p>
+			)}
+		</div>
+
 		<div className="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto px-3 py-1.5">
 			{roster.groups.map((group) => (
 				<React.Fragment key={group.id}>
@@ -105,7 +130,7 @@ const HelperRoster: React.FC<HelperRosterProps> = ({
 							<HelperMark
 								key={chip.helper.id}
 								chip={chip}
-								selected={chip.helper.id === selectedHelperId}
+								selected={chip.helper.id === selected?.id}
 								onSelect={() => onSelectHelper(chip.helper)}
 								onDragStart={() => onDragStart(chip.helper)}
 								onDragEnd={onDragEnd}
@@ -142,10 +167,13 @@ const HelperRoster: React.FC<HelperRosterProps> = ({
 /**
  * Eine Marke: Stanzloch-Punkt, Name, Zähler-Plakette, ⋮ — Variante C aus #68.
  *
- * Der Name ist ein **button** (WCAG 2.1.1): das Zuteilen per Tastatur hängt in
- * #104 daran. Das ⋮ steht daneben statt darin — ein Knopf im Knopf wäre kein
- * gültiges HTML — und ist **dauerhaft sichtbar**, weil es am Touchgerät sonst
- * unauffindbar ist (Auflage zu Variante C).
+ * Der Name ist ein **button** und zugleich `draggable`: **beides an jedem
+ * Gerät** (#104). Die Wege schlossen sich früher aus — Desktop nur Ziehen,
+ * Handy nur Antippen; damit deckt die Marke jetzt ohne Extra-Code Tastatur
+ * (WCAG 2.1.1) und Einzelzeiger (WCAG 2.5.7) ab. Das ⋮ steht daneben statt
+ * darin — ein Knopf im Knopf wäre kein gültiges HTML — und ist **dauerhaft
+ * sichtbar**, weil es am Touchgerät sonst unauffindbar ist (Auflage zu
+ * Variante C).
  */
 function HelperMark({
 	chip,
@@ -171,7 +199,14 @@ function HelperMark({
 			<button
 				type="button"
 				draggable
-				onDragStart={onDragStart}
+				aria-pressed={selected}
+				onDragStart={(e) => {
+					// Firefox startet ohne Nutzlast gar keinen Zug; welche Marke hängt,
+					// weiß der Store — die Kennung steht hier nur, damit es losgeht
+					// (Research #54).
+					e.dataTransfer.setData('text/plain', chip.helper.id);
+					onDragStart();
+				}}
 				onDragEnd={onDragEnd}
 				onClick={onSelect}
 				className="-my-1 cursor-grab py-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"

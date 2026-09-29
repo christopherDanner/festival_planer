@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import StationFocusBox from './StationFocusBox';
+import StationFocusBox, { type AssignHandles } from './StationFocusBox';
 import { buildStationBoard } from '@/lib/shiftBoard';
 import type {
 	Station,
@@ -75,25 +75,34 @@ function member(over: Partial<StationHelperWithDetails> = {}): StationHelperWith
 	};
 }
 
+/** Der Zuteil-Zustand im Ruhezustand: nichts gewählt, nichts überfahren,
+nichts abgelehnt. Die Tests, die ihn brauchen, setzen einzelne Felder um. */
+const ruhe: AssignHandles = {
+	armed: false,
+	overKey: null,
+	rejected: null,
+	onDragOver: () => false,
+	onDragLeave: noop,
+	onAssign: noop
+};
+
 const render = (
 	s: Station,
 	shifts: StationShift[],
 	assignments: ShiftAssignmentWithHelper[] = [],
-	members: StationHelperWithDetails[] = []
+	members: StationHelperWithDetails[] = [],
+	assign: AssignHandles = ruhe
 ) =>
 	renderToStaticMarkup(
 		<StationFocusBox
 			board={buildStationBoard(s, shifts, assignments, members)}
+			assign={assign}
 			onAutoFill={noop}
 			onEditStation={noop}
 			onDeleteStation={noop}
 			onAddShift={noop}
 			onEditShift={noop}
 			onDeleteShift={noop}
-			onAssignToShift={noop}
-			onAssignToStation={noop}
-			onDropOnShift={noop}
-			onDropOnStation={noop}
 			onRemoveFromShift={noop}
 			onRemoveFromStation={noop}
 		/>
@@ -184,16 +193,13 @@ describe('StationFocusBox — die Rückfragen kennen den Kasten', () => {
 						[assignment()],
 						[member()]
 					)}
+					assign={ruhe}
 					onAutoFill={noop}
 					onEditStation={noop}
 					onDeleteStation={noop}
 					onAddShift={noop}
 					onEditShift={noop}
 					onDeleteShift={noop}
-					onAssignToShift={noop}
-					onAssignToStation={noop}
-					onDropOnShift={noop}
-					onDropOnStation={noop}
 					onRemoveFromShift={noop}
 					onRemoveFromStation={noop}
 					{...props}
@@ -321,7 +327,7 @@ describe('StationFocusBox — Station mit Schichten', () => {
 		const markup = html();
 
 		expect(markup).toContain('Hochauer Franz');
-		expect(markup).toContain('+ HELFER HIERHER ZIEHEN');
+		expect(markup).toContain('+ HELFER HIER EINTRAGEN');
 		expect(markup).toContain('minmax(150px,1fr)');
 	});
 
@@ -351,7 +357,7 @@ describe('StationFocusBox — Station mit Schichten', () => {
 
 		expect(markup).toContain('1 Plätze offen');
 		expect(markup).not.toContain('voll besetzt');
-		expect(markup).toContain('+ HELFER HIERHER ZIEHEN');
+		expect(markup).toContain('+ HELFER HIER EINTRAGEN');
 	});
 
 	it('bietet am Fuß das Anlegen einer Schicht an', () => {
@@ -375,7 +381,7 @@ describe('StationFocusBox — Station ohne Schichten', () => {
 		const markup = html();
 
 		expect(markup).toContain('Aigner Roman');
-		expect(markup.split('+ HELFER HIERHER ZIEHEN').length - 1).toBe(2);
+		expect(markup.split('+ HELFER HIER EINTRAGEN').length - 1).toBe(2);
 	});
 
 	it('trägt denselben Status wie eine Schicht-Zeile', () => {
@@ -388,5 +394,175 @@ describe('StationFocusBox — Station ohne Schichten', () => {
 
 	it('erklärt am Knopf, was eine Schicht hier bewirkt', () => {
 		expect(html()).toContain('Station in Zeitfenster aufteilen');
+	});
+});
+
+// --- Zuteilen (#104) ---------------------------------------------------------
+
+/* Seam dieses Blocks (aus den Abnahmekriterien von #104 abgeleitet): der
+   Fokus-Kasten zeichnet den Zuteil-Zustand und meldet **ein** Ziel je Zeile
+   zurück. Ob ein Versuch angenommen wird, entscheidet er nicht — das tut
+   `shiftAssignment`; hier steht nur, was man sieht und was man greifen kann. */
+
+describe('StationFocusBox — der scharfe Zustand', () => {
+	const s = station();
+	const shifts = [shift({ id: 'sh1', required_people: 2 })];
+
+	it('lässt freie Plätze im Ruhezustand gestrichelt-rot', () => {
+		const markup = render(s, shifts);
+
+		expect(markup).toMatch(/border-dashed[^>]*border-rot/);
+		expect(markup).not.toContain('border-tinte bg-[oklch(0.97_0.03_92)]');
+	});
+
+	it('macht alle freien Plätze scharf, sobald eine Marke gewählt ist', () => {
+		const markup = render(s, shifts, [], [], { ...ruhe, armed: true });
+
+		// Gelber Innenschein, Rahmen von gestrichelt-rot auf durchgezogen-Tinte.
+		expect(markup.match(/border-solid border-tinte/g)).toHaveLength(2);
+		expect(markup).toContain('shadow-[inset_0_0_0_2px_oklch(var(--gelb))]');
+	});
+
+	it('hebt beim Ziehen nur die überfahrene Zeile hervor', () => {
+		const zwei = [
+			shift({ id: 'sh1', required_people: 1, start_time: '11:00' }),
+			shift({ id: 'sh2', required_people: 1, start_time: '15:00' })
+		];
+		const markup = render(s, zwei, [], [], { ...ruhe, overKey: 'sh2' });
+
+		expect(markup.match(/border-solid border-tinte/g)).toHaveLength(1);
+	});
+
+	it('nennt den freien Platz nicht mehr nach einer einzigen Geste', () => {
+		// „ZIEHEN" wäre nur der halbe Weg — angetippt wird er genauso (#104).
+		const markup = render(s, shifts);
+
+		expect(markup).toContain('+ HELFER HIER EINTRAGEN');
+		expect(markup).not.toContain('ZIEHEN');
+	});
+});
+
+describe('StationFocusBox — Ablehnung als Rot-Puls', () => {
+	const s = station();
+	const shifts = [shift({ id: 'sh1', required_people: 2 })];
+
+	it('lässt die abgelehnte Zeile rot pulsen statt zu toasten', () => {
+		const markup = render(s, shifts, [], [], {
+			...ruhe,
+			rejected: { rowKey: 'sh1', reason: 'full', kind: 'shift', nonce: 1 }
+		});
+
+		expect(markup).toContain('animate-puls-rot');
+	});
+
+	it('sagt den Grund an, damit der Puls nicht nur fürs Auge ist', () => {
+		const markup = render(s, shifts, [], [], {
+			...ruhe,
+			rejected: { rowKey: 'sh1', reason: 'duplicate', kind: 'shift', nonce: 1 }
+		});
+
+		expect(markup).toMatch(/role="status"[^>]*class="sr-only"/);
+		expect(markup).toContain('Dieser Helfer steht schon in dieser Schicht.');
+	});
+
+	it('pulst nur an der Zeile, die abgelehnt hat', () => {
+		const markup = render(s, shifts, [], [], {
+			...ruhe,
+			rejected: { rowKey: 'sh-woanders', reason: 'duplicate', kind: 'shift', nonce: 1 }
+		});
+
+		expect(markup).not.toContain('animate-puls-rot');
+	});
+
+	it('pulst auch an der Fußzeile der Stationsmitglieder', () => {
+		const markup = render(s, shifts, [], [member()], {
+			...ruhe,
+			rejected: { rowKey: 'station:s1', reason: 'duplicate', kind: 'station', nonce: 1 }
+		});
+
+		expect(markup).toContain('animate-puls-rot');
+		expect(markup).toContain('Dieser Helfer steht schon in dieser Station.');
+	});
+});
+
+describe('StationFocusBox — beide Wege führen zum selben Griff', () => {
+	const mountBox = async (assign: AssignHandles) => {
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		await act(async () => {
+			root.render(
+				<StationFocusBox
+					board={buildStationBoard(station(), [shift({ id: 'sh1', required_people: 1 })], [], [])}
+					assign={assign}
+					onAutoFill={noop}
+					onEditStation={noop}
+					onDeleteStation={noop}
+					onAddShift={noop}
+					onEditShift={noop}
+					onDeleteShift={noop}
+					onRemoveFromShift={noop}
+					onRemoveFromStation={noop}
+				/>
+			);
+		});
+		// Abbauen **und** abhängen: sonst stehen die Wurzeln der Vortests noch im
+		// Dokument und `querySelector` griffe in die falsche.
+		return () => {
+			act(() => root.unmount());
+			host.remove();
+		};
+	};
+
+	const zeile = () => document.querySelector('.relative.border-b')!;
+
+	it('meldet beim Antippen eines freien Platzes das Ziel der Zeile', async () => {
+		const onAssign = vi.fn();
+		const unmount = await mountBox({ ...ruhe, armed: true, onAssign });
+
+		await act(async () => {
+			document
+				.querySelector('button.border-1\\.5')
+				?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+
+		expect(onAssign).toHaveBeenCalledWith({ kind: 'shift', shiftId: 'sh1' });
+		unmount();
+	});
+
+	it('meldet beim Fallenlassen dasselbe Ziel — ein Griff für beide Wege', async () => {
+		const onAssign = vi.fn();
+		const unmount = await mountBox({ ...ruhe, onAssign });
+
+		await act(async () => {
+			zeile().dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+		});
+
+		expect(onAssign).toHaveBeenCalledWith({ kind: 'shift', shiftId: 'sh1' });
+		unmount();
+	});
+
+	it('hält den Cursor beim Überfahren nur auf, wenn das Ziel annimmt', async () => {
+		const unmount = await mountBox({ ...ruhe, onDragOver: () => true });
+
+		const angenommen = new Event('dragover', { bubbles: true, cancelable: true });
+		await act(async () => {
+			zeile().dispatchEvent(angenommen);
+		});
+
+		expect(angenommen.defaultPrevented).toBe(true);
+		unmount();
+	});
+
+	it('lässt den Cursor „geht nicht" sagen, wo nichts angenommen wird', async () => {
+		const unmount = await mountBox({ ...ruhe, onDragOver: () => false });
+
+		const abgelehnt = new Event('dragover', { bubbles: true, cancelable: true });
+		await act(async () => {
+			zeile().dispatchEvent(abgelehnt);
+		});
+
+		expect(abgelehnt.defaultPrevented).toBe(false);
+		unmount();
 	});
 });

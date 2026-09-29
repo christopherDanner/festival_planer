@@ -54,7 +54,7 @@ interface RenderOptions {
 	focusStationName?: string | null;
 	search?: string;
 	filter?: HelperFilter;
-	selectedHelperId?: string | null;
+	selected?: Helper | null;
 }
 
 const render = ({
@@ -65,7 +65,7 @@ const render = ({
 	focusStationName = 'Ausschank',
 	search = '',
 	filter = 'all',
-	selectedHelperId = null
+	selected = null
 }: RenderOptions = {}) =>
 	renderToStaticMarkup(
 		<HelperRoster
@@ -82,8 +82,9 @@ const render = ({
 			onSearchChange={noop}
 			filter={filter}
 			onFilterChange={noop}
-			selectedHelperId={selectedHelperId}
+			selected={selected}
 			onSelectHelper={noop}
+			onCancelSelection={noop}
 			onDragStart={noop}
 			onDragEnd={noop}
 			onAddHelper={noop}
@@ -253,11 +254,50 @@ describe('HelperRoster — die Marke', () => {
 	});
 
 	it('hebt die ausgewählte Marke gelb mit Versatz-Schatten hervor', () => {
-		const html = render({ selectedHelperId: 'h1' });
+		const html = render({ selected: helper() });
 
 		expect(html).toContain('bg-gelb');
 		expect(html).toContain('shadow-versatz');
 		expect(render()).not.toContain('shadow-versatz');
+	});
+});
+
+// --- Zuteilen: beides überall (#104) -----------------------------------------
+
+/* Seam dieses Blocks (aus den Abnahmekriterien von #104 abgeleitet): die Marke
+   ist an **jedem** Gerät ziehbar und antippbar, und die Auswahl lässt sich ohne
+   Maus wieder aufheben. Ob eine Zuteilung durchgeht, entscheidet die Liste
+   nicht — sie reicht nur die Marke weiter. */
+
+describe('HelperRoster — die Marke kann beides, an jedem Gerät', () => {
+	it('ist zugleich ziehbar und ein Knopf — kein Gerät bekommt nur den halben Weg', () => {
+		expect(render()).toMatch(/<button[^>]*draggable="true"[^>]*>Hochauer Franz<\/button>/);
+	});
+
+	it('sagt an, dass sie gewählt ist — der gelbe Grund allein genügt nicht', () => {
+		expect(render({ selected: helper() })).toMatch(/aria-pressed="true"[^>]*>Hochauer Franz/);
+		expect(render()).toMatch(/aria-pressed="false"[^>]*>Hochauer Franz/);
+	});
+});
+
+describe('HelperRoster — der Auswahl-Hinweis', () => {
+	it('bleibt weg, solange keine Marke gewählt ist', () => {
+		expect(render()).not.toContain('Abbrechen');
+	});
+
+	it('nennt die gewählte Marke und sagt, was jetzt zu tun ist', () => {
+		const html = render({ selected: helper() });
+
+		expect(html).toContain('Hochauer Franz');
+		expect(html).toContain('freien Platz wählen');
+	});
+
+	it('spricht die Auswahl aus, statt sie nur gelb zu färben', () => {
+		expect(render({ selected: helper() })).toMatch(/aria-live="polite"/);
+	});
+
+	it('bietet „Abbrechen" an — der zweite Weg zurück neben der Marke selbst', () => {
+		expect(render({ selected: helper() })).toMatch(/<button[^>]*>Abbrechen<\/button>/);
 	});
 });
 
