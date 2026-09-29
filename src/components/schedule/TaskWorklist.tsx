@@ -14,7 +14,13 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
-import type { TaskFilter, Worklist, WorklistTask } from '@/lib/scheduleWorklist';
+import {
+	worklistDayNote,
+	worklistEmptyText,
+	type TaskFilter,
+	type Worklist,
+	type WorklistTask
+} from '@/lib/scheduleWorklist';
 
 export interface TaskWorklistProps {
 	worklist: Worklist;
@@ -107,7 +113,7 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 				>
 					{day.title}
 					<span className={cn(COUNTER, day.open > 0 ? 'text-rot' : 'text-gruen')}>
-						{day.open > 0 ? `${day.open} offen` : 'fertig'}
+						{worklistDayNote(day)}
 					</span>
 				</SectionHeading>
 
@@ -143,11 +149,7 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 		))}
 
 		{worklist.days.length === 0 && (
-			<p className="px-3 py-4 text-[13px] text-tinte-soft">
-				{worklist.counts.all === 0
-					? 'Noch keine Aufgabe in diesem Fest.'
-					: 'Keine Aufgabe passt zu Filter und Verantwortlichem.'}
-			</p>
+			<p className="px-3 py-4 text-[13px] text-tinte-soft">{worklistEmptyText(worklist)}</p>
 		)}
 
 		<div className="flex flex-wrap gap-4 border-t-2 border-tinte px-3 py-2.5 text-xs text-tinte-soft">

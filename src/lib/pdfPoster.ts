@@ -198,19 +198,26 @@ export function drawPosterHead(doc: jsPDF, options: PosterHeadOptions): number {
 	doc.text(title.toUpperCase(), x + 6, y + (subtitle ? height / 2 + 1 : height / 2 + 3));
 	letterSpace(doc, 0);
 
+	// Untertitel links, Randnotiz rechts — beide auf derselben Grundlinie.
+	const captionY = y + height - 6;
+	let subtitleWidth = 0;
+
+	doc.setFont(POSTER_FONT.body, 'bold');
+	doc.setFontSize(9);
+
 	if (subtitle) {
-		doc.setFont(POSTER_FONT.body, 'bold');
-		doc.setFontSize(9);
 		letterSpace(doc, 0.35);
-		doc.text(subtitle.toUpperCase(), x + 6, y + height - 6);
+		subtitleWidth = spacedTextWidth(doc, subtitle.toUpperCase(), 0.35);
+		doc.text(subtitle.toUpperCase(), x + 6, captionY);
 		letterSpace(doc, 0);
 	}
 
 	if (note) {
-		doc.setFont(POSTER_FONT.body, 'bold');
-		doc.setFontSize(9);
 		ink(doc, POSTER_COLOR.gelb);
-		doc.text(note, x + width - 6, y + height - 6, { align: 'right' });
+		// Die Notiz ist nicht immer ein Datum: die Aufgabenliste schreibt ihren
+		// Filter hinein (#126), und ein langer Name liefe sonst in den Untertitel.
+		const room = width - 12 - (subtitle ? subtitleWidth + 4 : 0);
+		doc.text(truncateToWidth(doc, note, room), x + width - 6, captionY, { align: 'right' });
 	}
 
 	doc.setFont(POSTER_FONT.body, 'normal');
@@ -363,22 +370,32 @@ export interface PosterSectionHeadingOptions {
 	label: string;
 	/** Rechte Beisatz-Zeile, z. B. eine Zählung. */
 	note?: string;
+	/**
+	 * Welche der beiden Zwischentitel-Sorten der Handschrift das ist:
+	 *
+	 * - `'section'` (Standard) — Public Sans 700 in Tinte, etwa der Stationskopf.
+	 * - `'day'` — der Tages-Zwischentitel: Oswald in Grün, wie ihn Werkliste und
+	 *   Programmzettel am Bildschirm tragen (DESIGN-VISION §4).
+	 */
+	variant?: 'section' | 'day';
 }
 
 /**
- * Sektionsüberschrift: Public Sans 700 in Versalien mit Sperrung, dahinter die
- * Punktraster-Linie (DESIGN-VISION §4).
+ * Sektionsüberschrift: Versalien mit Sperrung, dahinter die Punktraster-Linie
+ * (DESIGN-VISION §4).
  *
  * @returns y-Kante unter der Zeile.
  */
 export function drawSectionHeading(doc: jsPDF, options: PosterSectionHeadingOptions): number {
-	const { x, y, width, label, note } = options;
+	const { x, y, width, label, note, variant = 'section' } = options;
+	const day = variant === 'day';
 	const text = label.toUpperCase();
 
-	doc.setFont(POSTER_FONT.body, 'bold');
-	doc.setFontSize(10.5);
+	// Die Akzentschrift ist nur in einem Schnitt eingebettet (Oswald 600).
+	doc.setFont(day ? POSTER_FONT.accent : POSTER_FONT.body, day ? 'normal' : 'bold');
+	doc.setFontSize(day ? 12 : 10.5);
 	letterSpace(doc, HEADING_LETTER_SPACE);
-	ink(doc, POSTER_COLOR.tinte);
+	ink(doc, day ? POSTER_COLOR.gruen : POSTER_COLOR.tinte);
 	const textWidth = spacedTextWidth(doc, text, HEADING_LETTER_SPACE);
 	doc.text(text, x, y);
 	letterSpace(doc, 0);
@@ -392,16 +409,52 @@ export function drawSectionHeading(doc: jsPDF, options: PosterSectionHeadingOpti
 		ruleEnd = x + width - doc.getTextWidth(note) - 2;
 	}
 
-	// Punktraster-Linie im 8px-Raster (2.1mm) auf Grundlinienhöhe.
+	// Punktraster-Linie im 8px-Raster (2.1mm), auf halber Versalhöhe der
+	// Aufschrift — die größere Akzentschrift zieht sie mit nach oben.
 	fill(doc, POSTER_COLOR.linie);
 	for (let dx = x + textWidth + 2; dx < ruleEnd; dx += 2.1) {
-		doc.circle(dx, y - 1, 0.29, 'F');
+		doc.circle(dx, y - (day ? 1.4 : 1), 0.29, 'F');
 	}
 
 	doc.setFont(POSTER_FONT.body, 'normal');
 	doc.setFontSize(9);
 	ink(doc, POSTER_COLOR.tinte);
-	return y + 4;
+	return y + (day ? 5 : 4);
+}
+
+export interface PosterCheckboxOptions {
+	/** Linke Kante. */
+	x: number;
+	/** Obere Kante. */
+	y: number;
+	/** Kantenlänge in mm; der 17px-Kasten der Werkliste sind rund 4.5mm. */
+	size: number;
+	done: boolean;
+}
+
+/**
+ * Das Kästchen der Aufgaben-Werkliste auf Papier: offen ein harter
+ * Tinte-Rahmen, erledigt grün gefüllt mit weißem Haken — wie in `TaskWorklist`.
+ *
+ * Der Haken sind zwei Striche und keine Glyphe — ✓ steht nicht im Latin-Subset
+ * der eingebetteten Schriften (ADR 0012).
+ */
+export function drawCheckbox(doc: jsPDF, options: PosterCheckboxOptions): void {
+	const { x, y, size, done } = options;
+
+	if (done) {
+		fill(doc, POSTER_COLOR.gruen);
+		doc.rect(x, y, size, size, 'F');
+	}
+
+	stroke(doc, done ? POSTER_COLOR.gruen : POSTER_COLOR.tinte, POSTER_LINE.card);
+	doc.rect(x, y, size, size, 'S');
+
+	if (!done) return;
+
+	stroke(doc, POSTER_COLOR.weiss, POSTER_LINE.card);
+	doc.line(x + size * 0.24, y + size * 0.52, x + size * 0.43, y + size * 0.72);
+	doc.line(x + size * 0.43, y + size * 0.72, x + size * 0.77, y + size * 0.28);
 }
 
 export interface PosterTableThemeOptions {

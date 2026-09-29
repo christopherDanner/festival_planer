@@ -6,7 +6,7 @@ import {
 	schedulePhase as phase,
 	scheduleTask as task
 } from './scheduleFactories';
-import { buildWorklist } from '../scheduleWorklist';
+import { buildWorklist, worklistDayNote } from '../scheduleWorklist';
 
 /**
  * Seam dieses Tests (Fertig-wenn aus #122): `buildWorklist` beantwortet, was in
@@ -358,6 +358,57 @@ describe('buildWorklist — die Fußzeile', () => {
 		const worklist = buildWorklist({ days: fuenfTage });
 
 		expect(worklist.footer).toEqual({ openBefore: 0, openAfter: 0 });
+	});
+});
+
+describe('buildWorklist — die Aufschrift des Filters', () => {
+	/** Ein Fest mit einer Aufgabe, die ein Verantwortlicher trägt. */
+	const einTag = [
+		day({
+			entries: [
+				task({
+					responsible_helper_id: 'h1',
+					responsible_helper: { id: 'h1', first_name: 'Franz', last_name: 'Hochauer' }
+				})
+			]
+		})
+	];
+
+	it('nennt unter „Alle" das ganze Papier', () => {
+		expect(buildWorklist({ days: einTag }).caption).toBe('Alle Aufgaben');
+	});
+
+	it('nennt den Status-Filter beim Namen', () => {
+		expect(buildWorklist({ days: einTag, filter: 'open' }).caption).toBe('Offen');
+		expect(buildWorklist({ days: einTag, filter: 'done' }).caption).toBe('Erledigt');
+	});
+
+	it('hängt den gewählten Verantwortlichen an', () => {
+		expect(buildWorklist({ days: einTag, filter: 'open', responsibleId: 'h1' }).caption).toBe(
+			'Offen · Verantwortlich: Hochauer Franz'
+		);
+	});
+
+	it('nennt den Verantwortlichen auch ohne Status-Filter', () => {
+		expect(buildWorklist({ days: einTag, responsibleId: 'h1' }).caption).toBe(
+			'Alle Aufgaben · Verantwortlich: Hochauer Franz'
+		);
+	});
+
+	it('schweigt über einen Verantwortlichen, den das Fest nicht mehr kennt', () => {
+		expect(buildWorklist({ days: einTag, responsibleId: 'weg' }).caption).toBe('Alle Aufgaben');
+	});
+});
+
+describe('worklistDayNote — der Zähler am Tages-Zwischentitel', () => {
+	const tag = (open: number) => ({ open }) as Parameters<typeof worklistDayNote>[0];
+
+	it('nennt die offenen Aufgaben des Tages', () => {
+		expect(worklistDayNote(tag(4))).toBe('4 offen');
+	});
+
+	it('sagt „fertig", wo nichts mehr offen ist', () => {
+		expect(worklistDayNote(tag(0))).toBe('fertig');
 	});
 });
 
