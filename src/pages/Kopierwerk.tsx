@@ -72,12 +72,11 @@ export default function Kopierwerk() {
 	});
 	const [materialIds, setMaterialIds] = useState<ReadonlySet<string>>(new Set());
 	const [quantitySource, setQuantitySource] = useState<QuantitySource>('ordered');
-	// Die zwei Sponsoring-Schalter starten verschieden, und zwar genau entlang
-	// von ADR 0008: die *Preisliste* ist unsere eigene Entscheidung und darf
-	// vorausgewählt sein — ein Fest ohne sie kann keinem Sponsor etwas zuweisen.
-	// Die Firmen dagegen hat noch niemand gefragt; sie ungefragt ins neue Fest
-	// zu legen wäre dieselbe stille Behauptung, gegen die der Entscheid steht.
-	const [copySponsoringCategories, setCopySponsoringCategories] = useState(true);
+	// Die zwei Sponsoring-Schalter starten aus, wie jeder Übernahme-Schalter des
+	// Kopierwerks: vorausgewählt sind allein die Mengen der Schritte 2 und 3,
+	// deren Häkchen man abwählt. Ein „alles mitnehmen" wäre hier auch das
+	// falsche Versprechen — was die Firmen betrifft, hat noch niemand gefragt.
+	const [copySponsoringCategories, setCopySponsoringCategories] = useState(false);
 	const [copySponsorings, setCopySponsorings] = useState(false);
 	// Gewählt wird in Schritt 2 auf Stations-Ebene, das Aufklappen ist reine
 	// Vorschau (#64) — darum neben der Auswahl eine eigene Menge.

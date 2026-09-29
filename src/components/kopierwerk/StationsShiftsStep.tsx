@@ -4,12 +4,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-import { CopySwitch, TIPPZIEL } from './CopySwitch';
+import { CopySwitch } from './CopySwitch';
+import { CHECKBOX, TIPPZIEL } from './marks';
 import { checkboxState } from './selection';
 import { type StationPreviewRow } from './stationChoice';
-
-/** Maß der Werkzeug-Checkbox (Prototyp `.cbx`); grün gefüllt über die Variante. */
-const CHECKBOX = 'h-[18px] w-[18px]';
 
 export interface StationsShiftsStepProps {
 	rows: StationPreviewRow[];

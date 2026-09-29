@@ -3,11 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-/** Maß der Werkzeug-Checkbox (Prototyp `.cbx`); grün gefüllt über die Variante. */
-const CHECKBOX = 'h-[18px] w-[18px]';
-
-/** Beschriftung als Tippziel: am Handy ≥ 40px hoch (DESIGN-VISION §6). */
-export const TIPPZIEL = 'flex items-center max-[899px]:min-h-10';
+import { CHECKBOX, TIPPZIEL } from './marks';
 
 export interface CopySwitchProps {
 	id: string;

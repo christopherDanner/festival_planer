@@ -64,10 +64,10 @@ export default function SponsoringStep({
 						<CopySwitch
 							id="kategorien-uebernehmen"
 							label="Sponsoring-Kategorien übernehmen"
-							// „Alle" ist die Ansage gegen den Einzel-Dialog, der nur anlegt,
-							// was eine gewählte Firma genommen hatte: was voriges Jahr niemand
-							// gekauft hat, bietet der Verein heuer trotzdem an.
-							hint={`${allLabel(categoryCount)} der Preisliste mit ihren Werten — auch die, die voriges Jahr niemand genommen hat.`}
+							// „Die ganze" ist die Ansage gegen den Einzel-Dialog, der nur
+							// anlegt, was eine gewählte Firma genommen hatte: was voriges Jahr
+							// niemand gekauft hat, bietet der Verein heuer trotzdem an.
+							hint={`Die ganze Preisliste: ${countLabel(categoryCount, 'Kategorie', 'Kategorien')} — auch die, die voriges Jahr niemand genommen hat.`}
 							checked={copySponsoringCategories}
 							onChange={onCopyCategoriesChange}
 						/>
@@ -97,10 +97,6 @@ export default function SponsoringStep({
 	);
 }
 
-/** „Alle 6 Kategorien" / „Die 1 Kategorie" — vollzählig, auch im Singular. */
-const allLabel = (count: number): string =>
-	count === 1 ? 'Die 1 Kategorie' : `Alle ${count} Kategorien`;
-
 /** Leerzustand wie beim Material: der Schritt bleibt überspringbar, das Fest
 entsteht auch ohne Sponsoring. */
 function EmptySponsoring() {
@@ -111,8 +107,8 @@ function EmptySponsoring() {
 					KEIN SPONSORING
 				</Stamp>
 				<p className="mx-auto mt-4 max-w-[46ch] text-[12.5px] leading-snug text-tinte-soft">
-					Die Vorlage führt weder Preisliste noch Firmen — hier gibt es nichts zu übernehmen. Die
-					Preisliste des neuen Fests legst du danach im Fest an, sie steht vor den Firmen.
+					Die Vorlage führt weder Preisliste noch Firmen — hier gibt es nichts zu übernehmen. Das
+					Sponsoring des neuen Fests legst du danach im Fest an.
 				</p>
 			</div>
 		</div>

@@ -36,12 +36,12 @@ describe('„Sponsoring-Kategorien übernehmen"', () => {
 		const html = render();
 
 		expect(html).toContain('Sponsoring-Kategorien übernehmen');
-		expect(html).toContain('Alle 6 Kategorien');
+		expect(html).toContain('Die ganze Preisliste: 6 Kategorien');
 		expect(html).toContain('mit ihren Werten');
 	});
 
 	it('beugt die Zahl bei einer einzigen Kategorie', () => {
-		expect(render({ categoryCount: 1 })).toContain('Die 1 Kategorie');
+		expect(render({ categoryCount: 1 })).toContain('Die ganze Preisliste: 1 Kategorie —');
 	});
 
 	// Ein Schalter, der nichts zu holen hätte, ist kein Angebot.

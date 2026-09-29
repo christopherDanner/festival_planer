@@ -1,6 +1,7 @@
 import { festYear, formatFestDateRange } from '@/lib/festDates';
 import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
 import type { FestivalData } from '@/lib/festivalService';
+import { countLabel } from '@/lib/plural';
 
 import type { QuantitySource } from './materialChoice';
 
@@ -62,8 +63,6 @@ export interface KopierwerkProgress {
 	festivalName?: string;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 /**
  * Die Schritte des Kopierwerks als Liste (Spec #64). Die Nummer im Eintrag
  * zählt die Liste ab, sie steht nirgends fest: das Sponsoring ist hier der
@@ -93,14 +92,15 @@ const STEP_BLUEPRINT: {
 		needsTemplate: true,
 		subtitle: ({ scope }) =>
 			scope &&
-			`${plural(scope.stations, 'Station', 'Stationen')} · ${plural(scope.shifts, 'Schicht', 'Schichten')}`
+			`${countLabel(scope.stations, 'Station', 'Stationen')} · ${countLabel(scope.shifts, 'Schicht', 'Schichten')}`
 	},
 	{
 		key: 'materials',
 		title: 'Material',
 		shortTitle: 'Material',
 		needsTemplate: true,
-		subtitle: ({ scope }) => scope && `${plural(scope.materials, 'Position', 'Positionen')} · Mengenquelle`
+		subtitle: ({ scope }) =>
+			scope && `${countLabel(scope.materials, 'Position', 'Positionen')} · Mengenquelle`
 	},
 	{
 		key: 'sponsoring',
@@ -111,7 +111,7 @@ const STEP_BLUEPRINT: {
 		// mitkommt, entscheidet der Schritt; beziffert wird, was zur Wahl steht.
 		subtitle: ({ scope }) =>
 			scope &&
-			`${plural(scope.sponsoringCategories, 'Kategorie', 'Kategorien')} · ${plural(scope.sponsors, 'Firma', 'Firmen')}`
+			`${countLabel(scope.sponsoringCategories, 'Kategorie', 'Kategorien')} · ${countLabel(scope.sponsors, 'Firma', 'Firmen')}`
 	}
 ];
 
