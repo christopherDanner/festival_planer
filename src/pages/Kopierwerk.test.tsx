@@ -28,7 +28,7 @@ describe('Kopierwerk-Route', () => {
 		expect(html).not.toContain('Stationen &amp; Schichten');
 	});
 
-	it('öffnet mit `?vorlage=` die drei Schritte und führt weiter', () => {
+	it('öffnet mit `?vorlage=` die Kopier-Schritte und führt weiter', () => {
 		const html = render('/festivals/neu?vorlage=fest-2026');
 		expect(html).toContain('Stationen &amp; Schichten');
 		expect(html).toContain('WEITER: STATIONEN →');
@@ -41,5 +41,14 @@ describe('Kopierwerk-Route', () => {
 
 		expect(stampCard('/festivals/neu?vorlage=fest-2026')).toContain('>Material<');
 		expect(stampCard()).not.toContain('Material');
+	});
+
+	// Der Sponsoring-Schritt ist die letzte Station der Karte (#146, ADR 0008).
+	// Ohne Vorlage gibt es nichts zu übernehmen und darum auch keine Station.
+	it('führt Sponsoring als letzte Station der Stempelkarte', () => {
+		const stampCard = (path?: string) => render(path).split('<aside')[1].split('</aside>')[0];
+
+		expect(stampCard('/festivals/neu?vorlage=fest-2026')).toContain('>Sponsoring<');
+		expect(stampCard()).not.toContain('Sponsoring');
 	});
 });

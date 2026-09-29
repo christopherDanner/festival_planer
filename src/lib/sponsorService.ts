@@ -122,6 +122,29 @@ export const createCategory = async (
 	return data.id;
 };
 
+/**
+ * Die *Preisliste* eines Quellfests in einem Zug ins Zielfest (#146) — geschlossen
+ * statt Zeile für Zeile, wie die Bulk-Wege für Helfer, Stationen und Material.
+ *
+ * Gibt **keine** Ids zurück, und das ist der Punkt: das Kopierwerk übernimmt die
+ * Sponsoren als nackte Verknüpfung ohne Zuweisungen (ADR 0008), es gibt also
+ * nichts, was auf die neuen Kategorien zeigen müsste. Eine Id-Karte anzulegen,
+ * die niemand liest, behauptete das Gegenteil. Der Einzel-Dialog braucht sie
+ * sehr wohl — er geht darum weiter über `createCategory`, Kategorie für Kategorie.
+ */
+export const createCategoriesBulk = async (
+	festivalId: string,
+	categories: Pick<SponsoringCategory, 'name' | 'value'>[]
+): Promise<void> => {
+	if (categories.length === 0) return;
+
+	const { error } = await supabase
+		.from('sponsoring_categories')
+		.insert(categories.map((c) => ({ festival_id: festivalId, name: c.name, value: c.value })));
+
+	if (error) throw new Error(error.message);
+};
+
 // Update a sponsoring category.
 export const updateCategory = async (
 	categoryId: string,
@@ -225,6 +248,56 @@ export const getSponsorings = async (festivalId: string): Promise<SponsoringWith
 
 	if (error) throw new Error(error.message);
 	return (data as unknown as SponsoringWithDetails[]) || [];
+};
+
+/**
+ * Nur die Firmen eines Fests, ohne Beträge und ohne Stammsatz — der schmale
+ * Leseweg für die Massen-Übernahme (#146) und für die Zählzeile, die sie im
+ * Kopierwerk beziffert. `getSponsorings` zöge Sponsor und Zuweisungen mit, und
+ * genau die braucht hier niemand: übernommen wird die nackte Verknüpfung.
+ */
+export const getSponsoringSponsorIds = async (festivalId: string): Promise<string[]> => {
+	const { data, error } = await supabase
+		.from('sponsorings')
+		.select('sponsor_id')
+		.eq('festival_id', festivalId);
+
+	if (error) throw new Error(error.message);
+	return (data ?? []).map((row) => row.sponsor_id);
+};
+
+/**
+ * Die Firmen eines Quellfests als **nackte Verknüpfung** im Zielfest (ADR 0008,
+ * #146): je Firma ein `sponsorings`-Datensatz mit `sponsor_id` und dem
+ * Quellfest — **ohne** Kategorie-Zuweisungen, **ohne** Freibetrag, **ohne**
+ * Sachleistung und ohne Notizen. Die Geld-Gesamtsumme des neuen Fests startet
+ * damit bei € 0.
+ *
+ * Das ist der Massenvorgang. Der Einzel-Dialog (`SponsorUebernahmeDialog`) darf
+ * Werte mitnehmen, weil dort ein Mensch pro Firma entscheidet — die Semantik der
+ * zwei Wege divergiert bewusst und soll nicht „vereinheitlicht" werden.
+ *
+ * Der Sponsor selbst wird nur verknüpft, nie kopiert: er ist globale
+ * Stammdaten (ADR 0011).
+ */
+export const createBareSponsorings = async (
+	festivalId: string,
+	sponsorIds: string[],
+	sourceFestivalId: string
+): Promise<void> => {
+	if (sponsorIds.length === 0) return;
+
+	const { error } = await supabase.from('sponsorings').insert(
+		sponsorIds.map((sponsorId) => ({
+			festival_id: festivalId,
+			sponsor_id: sponsorId,
+			// Ohne den Zeiger hätte das übernommene Sponsoring keinen
+			// *Vorjahresbeitrag* — und der ist die Verhandlungsbasis beim Anruf.
+			copied_from_festival_id: sourceFestivalId
+		}))
+	);
+
+	if (error) throw new Error(error.message);
 };
 
 // Create a sponsoring linking a global sponsor to a festival.

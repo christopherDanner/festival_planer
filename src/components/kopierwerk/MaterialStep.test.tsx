@@ -46,11 +46,10 @@ const render = (over: Partial<MaterialStepProps> = {}) => {
 			selectedStationIds={new Set(['s-ausschank', 's-grill'])}
 			selectedMaterialIds={new Set(materials.map((m) => m.id))}
 			quantitySource="ordered"
-			saving={false}
 			onQuantitySourceChange={() => {}}
 			onSelectionChange={() => {}}
 			onBack={() => {}}
-			onSubmit={() => {}}
+			onNext={() => {}}
 			{...over}
 			materials={materials}
 		/>
@@ -186,16 +185,13 @@ describe('MaterialStep — Warnung „ohne Station"', () => {
 });
 
 describe('MaterialStep — Leerzustand und Fußzeile', () => {
-	it('führt zurück zu den Stationen und legt das Fest an', () => {
+	// Angelegt wird seit #146 im Sponsoring-Schritt, der hinter diesem liegt.
+	it('führt zurück zu den Stationen und weiter zum Sponsoring', () => {
 		const html = render();
 
 		expect(html).toContain('← Stationen &amp; Schichten');
-		expect(html).toContain('FEST ANLEGEN');
-	});
-
-	it('sperrt den Knopf, während das Fest entsteht', () => {
-		expect(render({ saving: true })).toContain('disabled=""');
-		expect(render()).not.toContain('disabled=""');
+		expect(html).toContain('WEITER: SPONSORING →');
+		expect(html).not.toContain('FEST ANLEGEN');
 	});
 
 	it('bleibt ohne Material überspringbar', () => {
@@ -203,7 +199,7 @@ describe('MaterialStep — Leerzustand und Fußzeile', () => {
 
 		expect(html).toContain('border-dashed');
 		expect(html).toContain('KEIN MATERIAL');
-		expect(html).toContain('FEST ANLEGEN');
+		expect(html).toContain('WEITER: SPONSORING →');
 		expect(html).not.toContain('disabled=""');
 	});
 

@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import FestivalBasicsStep from '@/components/kopierwerk/FestivalBasicsStep';
 import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
 import MaterialStep from '@/components/kopierwerk/MaterialStep';
+import SponsoringStep from '@/components/kopierwerk/SponsoringStep';
 import StampCard from '@/components/kopierwerk/StampCard';
 import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
 import {
@@ -71,6 +72,13 @@ export default function Kopierwerk() {
 	});
 	const [materialIds, setMaterialIds] = useState<ReadonlySet<string>>(new Set());
 	const [quantitySource, setQuantitySource] = useState<QuantitySource>('ordered');
+	// Die zwei Sponsoring-Schalter starten verschieden, und zwar genau entlang
+	// von ADR 0008: die *Preisliste* ist unsere eigene Entscheidung und darf
+	// vorausgewählt sein — ein Fest ohne sie kann keinem Sponsor etwas zuweisen.
+	// Die Firmen dagegen hat noch niemand gefragt; sie ungefragt ins neue Fest
+	// zu legen wäre dieselbe stille Behauptung, gegen die der Entscheid steht.
+	const [copySponsoringCategories, setCopySponsoringCategories] = useState(true);
+	const [copySponsorings, setCopySponsorings] = useState(false);
 	// Gewählt wird in Schritt 2 auf Stations-Ebene, das Aufklappen ist reine
 	// Vorschau (#64) — darum neben der Auswahl eine eigene Menge.
 	const [expandedStationIds, setExpandedStationIds] = useState<ReadonlySet<string>>(new Set());
@@ -131,7 +139,9 @@ export default function Kopierwerk() {
 			? {
 					stations: template.stations.length,
 					shifts: template.shifts.length,
-					materials: template.materials.length
+					materials: template.materials.length,
+					sponsoringCategories: template.sponsoringCategories.length,
+					sponsors: template.sponsorIds.length
 				}
 			: undefined,
 		festivalName: draft.name.trim() || undefined
@@ -167,7 +177,9 @@ export default function Kopierwerk() {
 							stationIds,
 							...copySwitches,
 							materialIds,
-							quantitySource
+							quantitySource,
+							copySponsoringCategories,
+							copySponsorings
 						})
 					);
 				}
@@ -190,7 +202,18 @@ export default function Kopierwerk() {
 				setSaving(false);
 			}
 		},
-		[copySwitches, draft, materialIds, navigate, quantitySource, stationIds, template, toast]
+		[
+			copySponsoringCategories,
+			copySponsorings,
+			copySwitches,
+			draft,
+			materialIds,
+			navigate,
+			quantitySource,
+			stationIds,
+			template,
+			toast
+		]
 	);
 
 	const submitBasics = () => {
@@ -256,10 +279,23 @@ export default function Kopierwerk() {
 				selectedStationIds={stationIds}
 				selectedMaterialIds={materialIds}
 				quantitySource={quantitySource}
-				saving={saving}
 				onQuantitySourceChange={setQuantitySource}
 				onSelectionChange={setMaterialIds}
 				onBack={() => setStep('stations')}
+				onNext={() => setStep('sponsoring')}
+			/>
+		);
+	} else if (currentStep === 'sponsoring' && template) {
+		workbench = (
+			<SponsoringStep
+				categoryCount={template.sponsoringCategories.length}
+				sponsorCount={template.sponsorIds.length}
+				copySponsoringCategories={copySponsoringCategories}
+				copySponsorings={copySponsorings}
+				saving={saving}
+				onCopyCategoriesChange={setCopySponsoringCategories}
+				onCopySponsoringsChange={setCopySponsorings}
+				onBack={() => setStep('materials')}
 				onSubmit={() => void createNewFestival(true)}
 			/>
 		);
