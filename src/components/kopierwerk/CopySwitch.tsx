@@ -3,11 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-/** Maß der Werkzeug-Checkbox (Prototyp `.cbx`); grün gefüllt über die Variante. */
-export const COPY_CHECKBOX = 'h-[18px] w-[18px]';
-
-/** Beschriftung als Tippziel: am Handy ≥ 40px hoch (DESIGN-VISION §6). */
-export const TAP_TARGET = 'flex items-center max-[899px]:min-h-10';
+import { COPY_CHECKBOX, TAP_TARGET } from './measures';
 
 export interface CopySwitchProps {
 	id: string;
@@ -20,9 +16,11 @@ export interface CopySwitchProps {
 }
 
 /**
- * Ein Übernahme-Schalter einer Kopier-Werkbank (Prototyp `.row` mit `.cbx`):
- * „Helfer übernehmen" und „Zuteilungen übernehmen" in Schritt 2, „Ablaufplan
- * übernehmen" in Schritt 4 (#127). Ein Rezept für alle — ein zweites wäre der
+ * Ein Übernahme-Schalter einer Kopier-Werkbank (Prototyp `.row` mit `.cbx`): ein
+ * An/Aus über *alles* eines Bereichs, im Unterschied zu den Häkchen-Mengen der
+ * Stationen und Positionen. „Helfer übernehmen" und „Zuteilungen übernehmen" in
+ * Schritt 2, „Ablaufplan übernehmen" in Schritt 4 (#127), Preisliste und
+ * Sponsoren in Schritt 5 (#146). Ein Rezept für alle — ein zweites wäre der
  * Verstoß gegen ADR 0003 §2.
  *
  * Ausgegraut bleibt die Zeile lesbar — der Hinweis daneben sagt dann, was fehlt,

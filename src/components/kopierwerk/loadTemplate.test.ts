@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
 	getStationShifts: vi.fn(),
 	getMaterials: vi.fn(),
 	getScheduleDays: vi.fn(),
-	getUserFestivals: vi.fn()
+	getUserFestivals: vi.fn(),
+	getCategories: vi.fn(),
+	getSponsoringSponsorIds: vi.fn()
 }));
 
 vi.mock('@/lib/festivalService', () => ({
@@ -19,6 +21,10 @@ vi.mock('@/lib/shiftService', () => ({
 }));
 vi.mock('@/lib/materialService', () => ({ getMaterials: mocks.getMaterials }));
 vi.mock('@/lib/scheduleService', () => ({ getScheduleDays: mocks.getScheduleDays }));
+vi.mock('@/lib/sponsorService', () => ({
+	getCategories: mocks.getCategories,
+	getSponsoringSponsorIds: mocks.getSponsoringSponsorIds
+}));
 
 import { loadTemplate } from './loadTemplate';
 
@@ -31,6 +37,8 @@ describe('loadTemplate', () => {
 		mocks.getStationShifts.mockResolvedValue([{ id: 'sh1' }, { id: 'sh2' }]);
 		mocks.getMaterials.mockResolvedValue([{ id: 'm1' }]);
 		mocks.getScheduleDays.mockResolvedValue([{ id: 'd1' }, { id: 'd2' }, { id: 'd3' }]);
+		mocks.getCategories.mockResolvedValue([{ id: 'kat-1' }, { id: 'kat-2' }]);
+		mocks.getSponsoringSponsorIds.mockResolvedValue(['firma-1']);
 	});
 
 	// Das Quellfest trägt das Startdatum, mit dem `copyFestivalData` die Termine
@@ -54,6 +62,21 @@ describe('loadTemplate', () => {
 
 		expect(mocks.getScheduleDays).toHaveBeenCalledWith('fest-2026');
 		expect(template.scheduleDays).toHaveLength(3);
+	});
+
+	// Schritt 5 „Sponsoring übernehmen" beziffert beide Schalter, bevor er sie
+	// anbietet — die *Preisliste* und die Firmen der Vorlage. Die Firmen kommen
+	// nur als Ids: übernommen wird die nackte Verknüpfung (ADR 0008), der
+	// Stammsatz der Firma wird nie kopiert.
+	it('holt Preisliste und Firmen der Vorlage mit', async () => {
+		const template = await loadTemplate('fest-2026');
+
+		expect(mocks.getCategories).toHaveBeenCalledWith('fest-2026');
+		expect(mocks.getSponsoringSponsorIds).toHaveBeenCalledWith('fest-2026');
+		// Beide Schalter werden nur beziffert — Schritt 5 zeigt keine Zeile
+		// einzeln, und kopiert wird im Kopier-Service, nicht von hier aus.
+		expect(template.sponsoringCategoryCount).toBe(2);
+		expect(template.sponsorCount).toBe(1);
 	});
 
 	it('verweigert eine Vorlage, die es nicht (mehr) gibt', async () => {

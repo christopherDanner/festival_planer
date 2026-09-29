@@ -10,6 +10,12 @@ import {
 	createSchedulePhasesBulk,
 	createScheduleEntriesBulk
 } from '@/lib/scheduleService';
+import {
+	createBareSponsorings,
+	createCategoriesBulk,
+	getCategories,
+	getSponsoringSponsorIds
+} from '@/lib/sponsorService';
 import { shiftFestivalDate } from '@/lib/shiftDates';
 
 export interface CopyFestivalOptions {
@@ -30,6 +36,18 @@ export interface CopyFestivalOptions {
 	copySchedule: boolean;
 	materialIds: string[];
 	materialQuantitySource: 'ordered' | 'actual';
+	/**
+	 * Die *Preisliste* des Quellfests vollständig mit Werten — auch Kategorien,
+	 * die voriges Jahr niemand gekauft hat (ADR 0008).
+	 */
+	copySponsoringCategories: boolean;
+	/**
+	 * Die Firmen des Quellfests als **nackte Verknüpfung** ohne Beträge. Hängt
+	 * **nicht** an `copySponsoringCategories`: ohne Zuweisungen braucht eine
+	 * Verknüpfung keine Kategorie, und die Preisliste ist auch ohne Firmen
+	 * nützlich.
+	 */
+	copySponsorings: boolean;
 	sourceFestivalStartDate: string;
 	targetFestivalStartDate: string;
 }
@@ -238,7 +256,7 @@ export async function copyFestivalData(
 	// Step 7: Copy the schedule — Tage, dann Phasen, dann Einträge (#127). Der
 	// Ablaufplan trägt das Jahresgedächtnis des Fests: „Feuerwehr-Abnahme,
 	// Fassanstich, Leergut-Rückgabe" sind jedes Jahr dieselben Zeilen. Er steht
-	// zuletzt, weil er auf den Helfern aufsetzt und sonst auf nichts.
+	// hinter den Helfern, weil er auf sie aufsetzt und sonst auf nichts.
 	if (options.copySchedule) {
 		const sourceDays = await getScheduleDays(sourceFestivalId);
 
@@ -317,5 +335,27 @@ export async function copyFestivalData(
 					description: entry.description
 				}))
 		);
+	}
+
+	// Step 8: Sponsoring (ADR 0008, #146). Zwei unabhängige Schalter, weil
+	// „Werte werden kopiert, wo sie unsere Entscheidung sind, nicht wo sie das
+	// Versprechen eines anderen wären": die Preisliste ist, was der Verein heuer
+	// anbietet — sie kommt vollständig mit Werten. Ein Sponsoring dagegen trägt
+	// bewusst keinen Status, „erfasst" heißt also „zugesagt"; kopierte
+	// Vorjahresbeträge zeigten am Tag der Fest-Anlage eingeworbenes Geld, bei dem
+	// noch keine Firma gefragt wurde.
+	if (options.copySponsoringCategories) {
+		const categories = await getCategories(sourceFestivalId);
+		// Die **ganze** Preisliste, nicht nur die zugewiesenen Kategorien: was
+		// voriges Jahr niemand gekauft hat, bietet der Verein heuer trotzdem an.
+		await createCategoriesBulk(
+			targetFestivalId,
+			categories.map((category) => ({ name: category.name, value: category.value }))
+		);
+	}
+
+	if (options.copySponsorings) {
+		const sponsorIds = await getSponsoringSponsorIds(sourceFestivalId);
+		await createBareSponsorings(targetFestivalId, sponsorIds, sourceFestivalId);
 	}
 }

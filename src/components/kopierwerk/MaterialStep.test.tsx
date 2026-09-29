@@ -185,8 +185,8 @@ describe('MaterialStep — Warnung „ohne Station"', () => {
 });
 
 describe('MaterialStep — Leerzustand und Fußzeile', () => {
-	// Der Ablaufplan ist seit #127 Schritt 4 — angelegt wird das Fest dort, nicht
-	// mehr hier.
+	// Der Ablaufplan ist seit #127 Schritt 4 — angelegt wird das Fest seit #146
+	// im Sponsoring-Schritt dahinter, nicht mehr hier.
 	it('führt zurück zu den Stationen und weiter zum Ablaufplan', () => {
 		const html = render();
 

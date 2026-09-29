@@ -140,6 +140,15 @@ vi.mock('../materialService', () => ({
 	createMaterialsBulk: async () => []
 }));
 
+// Das Sponsoring hat seine eigene Suite (`festivalCopySponsoring`); hier steht
+// es nur still, damit der Kopier-Service nicht am echten Supabase-Client hängt.
+vi.mock('../sponsorService', () => ({
+	getCategories: async () => [],
+	getSponsoringSponsorIds: async () => [],
+	createCategoriesBulk: async () => {},
+	createBareSponsorings: async () => {}
+}));
+
 import { copyFestivalData, type CopyFestivalOptions } from '../festivalCopyService';
 
 const options = (over: Partial<CopyFestivalOptions> = {}): CopyFestivalOptions => ({
@@ -149,6 +158,8 @@ const options = (over: Partial<CopyFestivalOptions> = {}): CopyFestivalOptions =
 	copySchedule: true,
 	materialIds: [],
 	materialQuantitySource: 'ordered',
+	copySponsoringCategories: false,
+	copySponsorings: false,
 	sourceFestivalStartDate: SOURCE_START,
 	targetFestivalStartDate: TARGET_START,
 	...over

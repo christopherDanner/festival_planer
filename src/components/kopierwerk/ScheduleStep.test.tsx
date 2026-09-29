@@ -26,10 +26,9 @@ const render = (over: Partial<ScheduleStepProps> = {}) =>
 			rows={[aufbau, samstag]}
 			copySchedule
 			copyHelpers={false}
-			saving={false}
 			onCopyScheduleChange={() => {}}
 			onBack={() => {}}
-			onSubmit={() => {}}
+			onNext={() => {}}
 			{...over}
 		/>
 	);
@@ -116,10 +115,10 @@ describe('„Ablaufplan übernehmen"', () => {
 });
 
 describe('Vorlage ohne Ablaufplan', () => {
-	it('sagt es und lässt den Schritt trotzdem anlegen', () => {
+	it('sagt es und lässt den Schritt trotzdem weiterführen', () => {
 		const html = render({ rows: [] });
 		expect(html).toContain('KEIN ABLAUFPLAN');
-		expect(html).toContain('FEST ANLEGEN');
+		expect(html).toContain('WEITER: SPONSORING →');
 	});
 
 	// Ohne Tage gibt es nichts zu übernehmen — ein Schalter wäre ohne Wirkung.
@@ -129,16 +128,13 @@ describe('Vorlage ohne Ablaufplan', () => {
 });
 
 describe('Fußzeile', () => {
-	// „FEST ANLEGEN" wandert aus Schritt 3 hierher — der Ablaufplan ist der
-	// letzte Kopier-Schritt.
-	it('führt zurück zum Material und legt das Fest an', () => {
+	// Angelegt wird seit #146 im Sponsoring-Schritt dahinter; der Ablaufplan
+	// führt weiter.
+	it('führt zurück zum Material und weiter zum Sponsoring', () => {
 		const html = render();
 		expect(html).toContain('← Material');
-		expect(html).toContain('FEST ANLEGEN');
-	});
-
-	it('sagt an, dass das Fest gerade entsteht', () => {
-		expect(render({ saving: true })).toContain('LEGE FEST AN …');
+		expect(html).toContain('WEITER: SPONSORING →');
+		expect(html).not.toContain('FEST ANLEGEN');
 	});
 });
 

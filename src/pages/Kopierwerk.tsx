@@ -5,6 +5,7 @@ import FestivalBasicsStep from '@/components/kopierwerk/FestivalBasicsStep';
 import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
 import MaterialStep from '@/components/kopierwerk/MaterialStep';
 import ScheduleStep from '@/components/kopierwerk/ScheduleStep';
+import SponsoringStep from '@/components/kopierwerk/SponsoringStep';
 import StampCard from '@/components/kopierwerk/StampCard';
 import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
 import { schedulePreviewRows, scheduleScope } from '@/components/kopierwerk/scheduleChoice';
@@ -39,7 +40,7 @@ import { createFestival, getUserFestivals, type Festival } from '@/lib/festivalS
  * Browser-Zurück führt auf die Wand.
  *
  * Links (bzw. unter 900px oben) die Stempelkarte, rechts die Werkbank des
- * aktuellen Schritts. Die Auswahl der Schritte 2 bis 4 liegt hier und nicht in
+ * aktuellen Schritts. Die Auswahl der Schritte 2 bis 5 liegt hier und nicht in
  * den Werkbänken: Schritt 3 braucht die gewählten Stationen für die Warnung
  * „ohne Station" (#95), Schritt 4 den Helfer-Schalter aus Schritt 2 (#127), und
  * ein Rücksprung darf keine Auswahl vergessen.
@@ -79,6 +80,13 @@ export default function Kopierwerk() {
 	// Fests (#127). Schritt 4 zeigt vorher jeden Tag — es kommt nichts ungesehen
 	// mit.
 	const [copySchedule, setCopySchedule] = useState(true);
+	// Die zwei Sponsoring-Schalter starten verschieden, und genau das ist der
+	// Entscheid aus ADR 0008 (#146): die *Preisliste* ist unsere eigene
+	// Entscheidung und „echtes Jahresgedächtnis" — sie kommt voreingestellt mit,
+	// wie der Ablaufplan. Die *Firmen* hat noch niemand gefragt; sie ungefragt
+	// hereinzulegen wäre die stille Behauptung, gegen die der ADR steht.
+	const [copySponsoringCategories, setCopySponsoringCategories] = useState(true);
+	const [copySponsorings, setCopySponsorings] = useState(false);
 	// Gewählt wird in Schritt 2 auf Stations-Ebene, das Aufklappen ist reine
 	// Vorschau (#64) — darum neben der Auswahl eine eigene Menge.
 	const [expandedStationIds, setExpandedStationIds] = useState<ReadonlySet<string>>(new Set());
@@ -140,7 +148,9 @@ export default function Kopierwerk() {
 					stations: template.stations.length,
 					shifts: template.shifts.length,
 					materials: template.materials.length,
-					...scheduleScope(template.scheduleDays)
+					...scheduleScope(template.scheduleDays),
+					sponsoringCategories: template.sponsoringCategoryCount,
+					sponsors: template.sponsorCount
 				}
 			: undefined,
 		festivalName: draft.name.trim() || undefined
@@ -177,7 +187,9 @@ export default function Kopierwerk() {
 							...copySwitches,
 							materialIds,
 							quantitySource,
-							copySchedule
+							copySchedule,
+							copySponsoringCategories,
+							copySponsorings
 						})
 					);
 				}
@@ -202,6 +214,8 @@ export default function Kopierwerk() {
 		},
 		[
 			copySchedule,
+			copySponsoringCategories,
+			copySponsorings,
 			copySwitches,
 			draft,
 			materialIds,
@@ -302,9 +316,22 @@ export default function Kopierwerk() {
 				// Der Verantwortliche eines Ablauf-Eintrags hängt an „Helfer
 				// übernehmen" aus Schritt 2 (ADR 0005) — der Schalter sagt es hier.
 				copyHelpers={copySwitches.copyHelpers}
-				saving={saving}
 				onCopyScheduleChange={setCopySchedule}
 				onBack={() => setStep('materials')}
+				onNext={() => setStep('sponsoring')}
+			/>
+		);
+	} else if (currentStep === 'sponsoring' && template) {
+		workbench = (
+			<SponsoringStep
+				categoryCount={template.sponsoringCategoryCount}
+				sponsorCount={template.sponsorCount}
+				copySponsoringCategories={copySponsoringCategories}
+				copySponsorings={copySponsorings}
+				saving={saving}
+				onCopyCategoriesChange={setCopySponsoringCategories}
+				onCopySponsoringsChange={setCopySponsorings}
+				onBack={() => setStep('schedule')}
 				onSubmit={() => void createNewFestival(true)}
 			/>
 		);

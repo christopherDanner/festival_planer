@@ -1,7 +1,7 @@
-import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
 
 import CopySwitch from './CopySwitch';
+import EmptyStep from './EmptyStep';
 import type { SchedulePreviewRow } from './scheduleChoice';
 
 /** Was der eine Schalter holt — gilt in beiden Fällen, darum steht es einmal. */
@@ -24,11 +24,9 @@ export interface ScheduleStepProps {
 	copySchedule: boolean;
 	/** Was Schritt 2 an Helfern mitnimmt — daraus der Hinweis zu den Verantwortlichen. */
 	copyHelpers: boolean;
-	/** Das Fest wird gerade angelegt. */
-	saving: boolean;
 	onCopyScheduleChange: (value: boolean) => void;
 	onBack: () => void;
-	onSubmit: () => void;
+	onNext: () => void;
 }
 
 /**
@@ -39,18 +37,14 @@ export interface ScheduleStepProps {
  * Liste, ausgemistet wird danach im Bereich. Die Zeilen klappen darum auch
  * nicht auf wie in Schritt 2: dort ist die Station wählbar und ihre Schichten
  * zeigen ihre Termine erst drinnen, hier steht der Termin schon in der Zeile.
- *
- * Der Schritt ist der letzte des Kopierwerks, darum trägt seine Fußzeile
- * „FEST ANLEGEN".
  */
 export default function ScheduleStep({
 	rows,
 	copySchedule,
 	copyHelpers,
-	saving,
 	onCopyScheduleChange,
 	onBack,
-	onSubmit
+	onNext
 }: ScheduleStepProps) {
 	return (
 		<div className="border-2.5 border-tinte bg-white">
@@ -106,8 +100,8 @@ export default function ScheduleStep({
 				<Button variant="outline" onClick={onBack} className="h-10 px-4 text-[12.5px]">
 					← Material
 				</Button>
-				<Button onClick={onSubmit} disabled={saving} className="h-10 px-4 text-[12.5px]">
-					{saving ? 'LEGE FEST AN …' : 'FEST ANLEGEN'}
+				<Button onClick={onNext} className="h-10 px-4 text-[12.5px]">
+					WEITER: SPONSORING →
 				</Button>
 			</div>
 		</div>
@@ -118,16 +112,9 @@ export default function ScheduleStep({
 es hier nichts zu übernehmen — das Fest entsteht trotzdem. */
 function EmptySchedule() {
 	return (
-		<div className="px-4 py-8">
-			<div className="flex flex-col items-center border-2.5 border-dashed border-tinte-soft px-5 py-7 text-center">
-				<Stamp tone="red" size="lg" tilt="right">
-					KEIN ABLAUFPLAN
-				</Stamp>
-				<p className="mx-auto mt-4 max-w-[46ch] text-[12.5px] leading-snug text-tinte-soft">
-					Die Vorlage führt keine Ablauf-Tage — hier gibt es nichts zu übernehmen. Die Festtage des
-					neuen Fests entstehen beim ersten Öffnen des Ablaufplans.
-				</p>
-			</div>
-		</div>
+		<EmptyStep stamp="KEIN ABLAUFPLAN">
+			Die Vorlage führt keine Ablauf-Tage — hier gibt es nichts zu übernehmen. Die Festtage des
+			neuen Fests entstehen beim ersten Öffnen des Ablaufplans.
+		</EmptyStep>
 	);
 }

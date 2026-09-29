@@ -28,7 +28,7 @@ describe('Kopierwerk-Route', () => {
 		expect(html).not.toContain('Stationen &amp; Schichten');
 	});
 
-	it('öffnet mit `?vorlage=` die vier Schritte und führt weiter', () => {
+	it('öffnet mit `?vorlage=` die Kopier-Schritte und führt weiter', () => {
 		const html = render('/festivals/neu?vorlage=fest-2026');
 		expect(html).toContain('Stationen &amp; Schichten');
 		expect(html).toContain('WEITER: STATIONEN →');
@@ -43,7 +43,7 @@ describe('Kopierwerk-Route', () => {
 		expect(stampCard()).not.toContain('Material');
 	});
 
-	// Der Ablaufplan ist Schritt 4 (#127); Sponsoring rückt damit auf Schritt 5.
+	// Der Ablaufplan ist Schritt 4 (#127).
 	it('führt den Ablaufplan als vierten Schritt der Stempelkarte', () => {
 		const stampCard = (path?: string) => render(path).split('<aside')[1].split('</aside>')[0];
 
@@ -51,5 +51,17 @@ describe('Kopierwerk-Route', () => {
 		expect(card).toContain('>Ablaufplan<');
 		expect(card).toContain('>4<');
 		expect(stampCard()).not.toContain('Ablaufplan');
+	});
+
+	// Das Sponsoring ist Schritt 5 und die letzte Station der Karte (#146,
+	// ADR 0008). Ohne Vorlage gibt es nichts zu übernehmen, also auch keine
+	// Station.
+	it('führt Sponsoring als fünften und letzten Schritt der Stempelkarte', () => {
+		const stampCard = (path?: string) => render(path).split('<aside')[1].split('</aside>')[0];
+
+		const card = stampCard('/festivals/neu?vorlage=fest-2026');
+		expect(card).toContain('>Sponsoring<');
+		expect(card).toContain('>5<');
+		expect(stampCard()).not.toContain('Sponsoring');
 	});
 });

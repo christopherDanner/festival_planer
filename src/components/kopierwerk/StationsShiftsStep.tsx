@@ -4,7 +4,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-import CopySwitch, { COPY_CHECKBOX, TAP_TARGET } from './CopySwitch';
+import CopySwitch from './CopySwitch';
+import { COPY_CHECKBOX, TAP_TARGET } from './measures';
 import { checkboxState } from './selection';
 import { type StationPreviewRow } from './stationChoice';
 
