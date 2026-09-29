@@ -1,12 +1,9 @@
 import React from 'react';
 
-import HelperRosterBody, { type HelperRosterBodyProps } from './HelperRosterBody';
+import HelperRosterBody, { type HelperListProps } from './HelperRosterBody';
 import { rosterTitle } from '@/lib/helperRoster';
 
-export interface HelperRosterProps extends HelperRosterBodyProps {
-	/** Steht im Kopf; ohne Station im Fokus heißt die Liste schlicht „Helfer". */
-	focusStationName: string | null;
-}
+export type HelperRosterProps = HelperListProps;
 
 /**
  * Die **Helferliste** rechts an der Werkbank (#103, Variante C des Prototyps
@@ -18,15 +15,19 @@ export interface HelperRosterProps extends HelperRosterBodyProps {
  * verschwinden — daher der Anlege-Knopf am Fuß und das Entfernen im ⋮-Menü.
  *
  * Gerechnet und gruppiert wird in `helperRoster`, gezeichnet in
- * `HelperRosterBody`; diese Datei ist nur die **Spalten-Gestalt**. Sie hält sich
- * unter 900px selbst verborgen: dort trägt dieselbe Liste die Schublade
- * (`HelperDrawer`, #105), und eine 264px-Spalte unter dem Fokus-Kasten wäre nur
- * im Weg.
+ * `HelperRosterBody`; diese Datei ist nur die **Spalten-Gestalt**. Unter 900px
+ * trägt dieselbe Liste die Schublade (`HelperDrawer`, #105).
  */
 const HelperRoster: React.FC<HelperRosterProps> = ({ focusStationName, ...body }) => (
 	// Die Spalte klebt oben und **scrollt in sich**: bei 40 Helfern liefe sie
 	// sonst unter den Fensterrand und nähme den Anlege-Knopf mit (DESIGN-VISION
 	// §6 — was scrollt, scrollt im eigenen Rahmen).
+	//
+	// `hidden … min-[900px]:flex` steht hier, obwohl die Ansicht die Spalte unter
+	// 900px schon gar nicht erst einhängt: `useIsMobile` antwortet im ersten
+	// Render immer „Desktop", und ohne die Klasse blitzte die Spalte am Handy ein
+	// Bild lang unter dem Fokus-Kasten auf. Das JS entscheidet, was hängt, das CSS
+	// deckt das erste Bild.
 	<aside className="hidden sticky top-3 max-h-[calc(100vh-1.5rem)] flex-col border-2.5 border-tinte bg-white min-[900px]:flex">
 		<h3 className="shrink-0 border-b-2 border-tinte bg-papier-getoent px-3 py-2.5 text-xs font-extrabold uppercase tracking-[.07em]">
 			{rosterTitle(focusStationName)}

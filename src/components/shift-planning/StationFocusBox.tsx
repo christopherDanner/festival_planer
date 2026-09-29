@@ -11,6 +11,13 @@ import type { StationShift } from '@/lib/shiftService';
 
 export interface StationFocusBoxProps {
 	board: StationBoard;
+	/**
+	 * Ein Helfer ist gewählt — die freien Plätze sind damit **Ziele** und stehen
+	 * scharf (#105). Ohne diese Marke sagt der Auswahl-Streifen *wen*, aber
+	 * nichts sagt *wohin*; und genau das Sichtbarwerden der freien Plätze ist die
+	 * Begründung, mit der der Schnitt die Schublade dem Block vorzieht.
+	 */
+	armed: boolean;
 	/** Öffnet die Auto-Zuteilung eingeschränkt auf diese Station (#108). */
 	onAutoFill: () => void;
 	onEditStation: () => void;
@@ -31,15 +38,12 @@ export interface StationFocusBoxProps {
 /** Kleiner Versalien-Zähler — Tages-Meta und Zeilen-Status tragen ihn. */
 const COUNTER_TEXT = 'text-[11px] font-extrabold uppercase tracking-[.05em] tabular-nums';
 
-/** Tippziel ≥ 40px am Handy (DESIGN-VISION §6). */
-const TOUCH_TARGET = 'max-[899px]:min-h-10 max-[899px]:min-w-10';
-
 /**
- * Ein Platz ist am Handy mindestens 42px hoch (#105). Er ist kein Knopf neben
- * Text, sondern **das Ziel der Zuteilung** — auf ihn zielt der zweite von zwei
- * Antippern, und daneben liegt beim belegten Platz noch das ×.
+ * Tippziel am Handy. DESIGN-VISION §6 verlangt ≥ 40px, #105 für die Plätze
+ * mindestens 42 — **eine** Zahl erfüllt beides, und zwei Maße im selben Kasten
+ * hätten die Regel unlesbar gemacht.
  */
-const SLOT_HEIGHT = 'max-[899px]:min-h-[42px]';
+const TOUCH_TARGET = 'max-[899px]:min-h-[42px] max-[899px]:min-w-[42px]';
 
 /**
  * Fokus-Kasten des Schichtplans (#102): **eine** Station in voller Breite —
@@ -56,9 +60,15 @@ const SLOT_HEIGHT = 'max-[899px]:min-h-[42px]';
  * auf die Zeile, Antippen bei ausgewähltem Helfer, × am belegten Platz —
  * hängen unverändert an den neuen Plätzen, damit der Bereich zwischen #102 und
  * #104 nicht funktionslos ist.
+ *
+ * Steht ein Helfer bereit, stehen die freien Plätze **scharf** (`armed`, #105).
+ * Nicht nur am Handy: die Geste — Marke wählen, Platz antippen — ist an beiden
+ * Breiten dieselbe, und eine Markierung, die am Breakpoint hängt, wäre eine
+ * zweite Regel für ein Verhalten.
  */
 const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 	board,
+	armed,
 	onAutoFill,
 	onEditStation,
 	onDeleteStation,
@@ -112,7 +122,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 								key={slot.position}
 								className={cn(
 									'flex items-center gap-[7px] border-1.5 border-tinte bg-papier px-2.5 py-[7px] text-[12.5px] font-semibold',
-									SLOT_HEIGHT
+									TOUCH_TARGET
 								)}
 							>
 								<span className="font-display text-[11px] font-semibold text-tinte-soft">
@@ -140,7 +150,8 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 						) : (
 							<OpenSlot
 								key={slot.position}
-								className={cn('w-full justify-start gap-[7px]', SLOT_HEIGHT)}
+								armed={armed}
+								className={cn('w-full justify-start gap-[7px]', TOUCH_TARGET)}
 								onClick={() => (shift ? onAssignToShift(shift.id) : onAssignToStation())}
 							>
 								<span className="font-display text-[11px] font-semibold">{slot.position}</span>+
@@ -178,7 +189,10 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 					<button
 						type="button"
 						onClick={onAutoFill}
-						className="bg-gelb px-3 py-1.5 text-[12px] font-bold uppercase tracking-[.02em] text-tinte max-[899px]:min-h-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-papier"
+						className={cn(
+							'bg-gelb px-3 py-1.5 text-[12px] font-bold uppercase tracking-[.02em] text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-papier',
+							TOUCH_TARGET
+						)}
 					>
 						Nur diese Station auto-füllen
 					</button>
@@ -249,7 +263,10 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 					<button
 						type="button"
 						onClick={onAssignToStation}
-						className="px-2 py-1 text-[11px] font-bold text-tinte-soft max-[899px]:min-h-10 hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
+						className={cn(
+							'px-2 py-1 text-[11px] font-bold text-tinte-soft hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte',
+							TOUCH_TARGET
+						)}
 					>
 						+ hinzufügen
 					</button>

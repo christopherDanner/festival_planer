@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
 
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-import HelperRosterBody from './HelperRosterBody';
-import type { HelperRosterProps } from './HelperRoster';
+import HelperRosterBody, { type HelperListProps } from './HelperRosterBody';
 import { rosterTitle } from '@/lib/helperRoster';
 
-export type HelperDrawerProps = HelperRosterProps;
+export type HelperDrawerProps = HelperListProps;
 
 /**
  * Die Helferliste am **Handy** (#105, Variante B des Prototyps
  * `entscheid-schichtplan-mobil.html`): ein eckiger gelber FAB über der
  * Bottom-Tab-Bar, dahinter eine Schublade mit derselben Liste wie am Desktop.
  *
- * **Bewusste Abweichung von DESIGN-VISION §6** („Sidebars werden zu Blöcken"),
- * am Prototyp gemessen: mit Tages-Zwischentiteln trägt eine Station bis zu 13
- * Schicht-Zeilen plus vier Tagesköpfe. Läge die Liste darunter, kostete jede
- * Zuteilung zwei lange Scroll-Wege, und den scharfen Zustand der freien Plätze
- * sähe man erst nach dem Hochscrollen — also genau dann nicht, wenn er hilft.
+ * **Bewusste Abweichung von DESIGN-VISION §6** („Sidebars werden zu Blöcken") —
+ * begründet in ADR 0014, am Prototyp gemessen.
  *
  * Daraus folgt die einzige Regel, die diese Datei über die Optik hinaus trägt:
  * **jeder Griff, der woanders hinführt, schiebt die Schublade zu.** Die Wahl

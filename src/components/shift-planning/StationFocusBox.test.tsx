@@ -79,11 +79,13 @@ const render = (
 	s: Station,
 	shifts: StationShift[],
 	assignments: ShiftAssignmentWithHelper[] = [],
-	members: StationHelperWithDetails[] = []
+	members: StationHelperWithDetails[] = [],
+	armed = false
 ) =>
 	renderToStaticMarkup(
 		<StationFocusBox
 			board={buildStationBoard(s, shifts, assignments, members)}
+			armed={armed}
 			onAutoFill={noop}
 			onEditStation={noop}
 			onDeleteStation={noop}
@@ -184,6 +186,7 @@ describe('StationFocusBox — die Rückfragen kennen den Kasten', () => {
 						[assignment()],
 						[member()]
 					)}
+					armed={false}
 					onAutoFill={noop}
 					onEditStation={noop}
 					onDeleteStation={noop}
@@ -375,10 +378,39 @@ describe('StationFocusBox — das Platz-Raster am Handy', () => {
 	});
 
 	it('gibt jedem Platz mindestens 42px Höhe — belegt wie frei', () => {
-		// Die Schicht hat zwei Plätze: Hochauer sitzt auf dem ersten, der zweite ist
-		// offen. Beide sind Antippziele — der freie nimmt den Helfer auf, der
-		// belegte trägt das ×.
-		expect(markup().split('max-[899px]:min-h-[42px]').length - 1).toBe(2);
+		const html = markup();
+
+		// Der belegte Platz trägt Nummer, Namen und das ×,
+		expect(html).toMatch(/class="flex items-center gap-\[7px\][^"]*max-\[899px\]:min-h-\[42px\]/);
+		// der freie ist der `OpenSlot` im roten gestrichelten Rahmen.
+		expect(html).toMatch(/class="[^"]*border-dashed[^"]*max-\[899px\]:min-h-\[42px\]/);
+	});
+});
+
+// --- Der scharfe Zustand (#105) ----------------------------------------------
+
+describe('StationFocusBox — freie Plätze, wenn jemand bereitsteht', () => {
+	const scharf = (armed: boolean) =>
+		render(station(), [shift({ required_people: 2 })], [assignment()], [], armed);
+
+	it('lässt die freie Lücke ohne Auswahl rot und gestrichelt — es fehlt jemand', () => {
+		const html = scharf(false);
+
+		expect(html).toMatch(/border-dashed[^"]*border-rot/);
+		expect(html).not.toContain('ring-gelb');
+	});
+
+	it('stellt sie scharf, sobald ein Helfer gewählt ist — sonst fehlt das Wohin', () => {
+		const html = scharf(true);
+
+		// Tinte statt Rot, durchgezogen statt gestrichelt, gelber Innenring: aus
+		// „hier fehlt jemand" wird „hier hin" (Prototyp `.armed .bslot.free`).
+		expect(html).toMatch(/class="[^"]*border-solid[^"]*border-tinte[^"]*ring-2 ring-inset ring-gelb/);
+		expect(html).not.toMatch(/border-dashed[^"]*border-rot[^"]*>/);
+	});
+
+	it('rührt den belegten Platz nicht an — dort ist nichts zu treffen', () => {
+		expect(scharf(true)).toMatch(/border-1\.5 border-tinte bg-papier[^"]*">/);
 	});
 });
 

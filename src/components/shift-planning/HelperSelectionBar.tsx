@@ -25,6 +25,9 @@ const HelperSelectionBar: React.FC<HelperSelectionBarProps> = ({ helper, onCance
 	if (!helper) return null;
 
 	return (
+		// `-mx-3` nimmt den Seitenrand des Fest-Rahmens (`FestivalResults`, am Handy
+		// `px-3`) zurück: der Streifen ist eine Kante wie der Mast, keine Karte. Er
+		// muss darum mitwandern, wenn dort je ein anderer Rand steht.
 		<div className="sticky top-0 z-30 -mx-3 flex items-center gap-2 border-b-2.5 border-tinte bg-gelb px-3 py-2.5 text-[12.5px] font-bold">
 			<span className="min-w-0 flex-1">{helperName(helper)} — freien Platz antippen</span>
 			<button

@@ -6,7 +6,8 @@ import ShiftPlanningToolbar from './ShiftPlanningToolbar';
 import StationTabStrip from './StationTabStrip';
 import StationFocusBox from './StationFocusBox';
 import NoStationsNotice from './NoStationsNotice';
-import HelperRoster, { type HelperRosterProps } from './HelperRoster';
+import HelperRoster from './HelperRoster';
+import type { HelperListProps } from './HelperRosterBody';
 import HelperDrawer from './HelperDrawer';
 import HelperSelectionBar from './HelperSelectionBar';
 import StationDialog from './dialogs/StationDialog';
@@ -277,7 +278,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	 * 264px-Spalte am Desktop, die Schublade am Handy (#105). Dass beide
 	 * dieselben Props nehmen, ist die Zusage „Inhalt ist dieselbe Helferliste".
 	 */
-	const rosterHandles: HelperRosterProps = {
+	const rosterHandles: HelperListProps = {
 		roster,
 		focusStationName: focusStation?.name ?? null,
 		search: helperSearch,
@@ -334,6 +335,10 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 							{board && (
 								<StationFocusBox
 									board={board}
+									// Die freien Plätze stehen scharf, sobald jemand bereitsteht
+									// (#105) — sonst sagt der Auswahl-Streifen nur, *wen* man
+									// gewählt hat, und nichts sagt *wohin*.
+									armed={selectedHelper !== null}
 									onAutoFill={() =>
 										setDialogState({ type: 'autoAssign', station: board.station })
 									}

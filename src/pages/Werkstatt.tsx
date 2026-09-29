@@ -205,6 +205,12 @@ const Werkstatt = () => (
 					<OpenSlot>Hier eintragen</OpenSlot>
 				</div>
 			</Probe>
+			<Probe label="Scharf — es steht jemand bereit (#105)">
+				<div className="flex flex-wrap gap-3">
+					<OpenSlot armed>Hier eintragen</OpenSlot>
+					<OpenSlot>Hier eintragen</OpenSlot>
+				</div>
+			</Probe>
 		</Abschnitt>
 
 		<Abschnitt title="NameChip — Namens-Marke">

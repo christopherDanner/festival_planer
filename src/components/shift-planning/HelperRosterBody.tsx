@@ -29,6 +29,17 @@ export interface HelperRosterBodyProps {
 	onRemoveHelper: (helper: Helper) => void;
 }
 
+/**
+ * Was **beide Gestalten** der Helferliste brauchen: der Rumpf plus die
+ * Aufschrift. Der Typ steht hier und nicht bei einer der beiden, damit die
+ * Schublade nicht am Desktop-Kasten hängt — geteilt wird der Rumpf, nicht die
+ * Schwester.
+ */
+export interface HelperListProps extends HelperRosterBodyProps {
+	/** Steht im Kopf; ohne Station im Fokus heißt die Liste schlicht „Helfer". */
+	focusStationName: string | null;
+}
+
 /** Aufschrift einer Gruppe: klein, fett, Versalien. */
 const CAPTION = 'text-[10.5px] font-extrabold uppercase tracking-[.06em]';
 
@@ -45,6 +56,10 @@ const CAPTION = 'text-[10.5px] font-extrabold uppercase tracking-[.06em]';
  * einer klebenden Spalte oder in einer Schublade stehen. Gemeinsam ist beiden,
  * dass **nur die Marken scrollen** — Suche, Schalter und der Anlege-Knopf
  * bleiben stehen, sonst liefe der Weg zurück mit den Marken davon.
+ *
+ * Geprüft wird er durch beide Hüllen: `HelperRoster.test` nimmt ihn als Spalte,
+ * `HelperDrawer.test` als Schublade. Eine dritte Suite für ihn allein prüfte
+ * eine Gestalt, die niemand zu sehen bekommt.
  */
 const HelperRosterBody: React.FC<HelperRosterBodyProps> = ({
 	roster,
