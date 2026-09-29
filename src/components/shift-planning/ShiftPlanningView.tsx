@@ -97,14 +97,13 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	 */
 	const { picker, snapshot: gesture } = useAssignmentPicker({
 		source: () => data,
-		onAssign: (target, helperId, position) => {
+		onAssign: (target, helper, position) => {
 			// Das Gelingen bleibt ein Toast — abgelöst hat der Rot-Puls nur die
 			// **Ablehnung**, die am Ziel steht, weil sie dort ihren Grund hat.
-			const found = data.helpers.find((h) => h.id === helperId);
-			const name = found ? helperName(found) : 'Der Helfer';
+			const name = helperName(helper);
 			if (target.kind === 'station') {
 				actions.assignHelperToStation.mutate(
-					{ stationId: target.stationId, helperId },
+					{ stationId: target.stationId, helperId: helper.id },
 					{
 						onSuccess: () =>
 							toast({ title: 'Erfolg', description: `${name} wurde der Station zugewiesen.` })
@@ -113,7 +112,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				return;
 			}
 			actions.assignHelper.mutate(
-				{ stationShiftId: target.shiftId, helperId, position },
+				{ stationShiftId: target.shiftId, helperId: helper.id, position },
 				{ onSuccess: () => toast({ title: 'Erfolg', description: `${name} wurde zugewiesen.` }) }
 			);
 		}
@@ -179,14 +178,8 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 							{board && (
 								<StationFocusBox
 									board={board}
-									assign={{
-										armed: gesture.armed,
-										overKey: gesture.overKey,
-										rejected: gesture.rejected,
-										onDragOver: picker.dragOver,
-										onDragLeave: picker.dragLeave,
-										onAssign: picker.assign
-									}}
+									gesture={gesture}
+									picker={picker}
 									onAutoFill={() =>
 										setDialogState({ type: 'autoAssign', station: board.station })
 									}

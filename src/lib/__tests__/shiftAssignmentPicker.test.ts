@@ -89,7 +89,7 @@ describe('Ziehen und Antippen führen zum selben Ergebnis', () => {
 		p.pick(MARIA);
 		p.assign(SHIFT);
 
-		expect(onAssign).toHaveBeenCalledWith(SHIFT, 'h2', 2);
+		expect(onAssign).toHaveBeenCalledWith(SHIFT, MARIA, 2);
 	});
 
 	it('trägt die fallengelassene Marke genauso ein', () => {
@@ -98,7 +98,7 @@ describe('Ziehen und Antippen führen zum selben Ergebnis', () => {
 		p.dragStart(MARIA);
 		p.assign(SHIFT);
 
-		expect(onAssign).toHaveBeenCalledWith(SHIFT, 'h2', 2);
+		expect(onAssign).toHaveBeenCalledWith(SHIFT, MARIA, 2);
 	});
 
 	it('lässt die Auswahl nach dem Eintragen los', () => {
@@ -117,7 +117,7 @@ describe('Ziehen und Antippen führen zum selben Ergebnis', () => {
 		p.pick(MARIA);
 		p.assign(STATION);
 
-		expect(onAssign).toHaveBeenCalledWith(STATION, 'h2', null);
+		expect(onAssign).toHaveBeenCalledWith(STATION, MARIA, null);
 	});
 
 	it('tut nichts, solange keine Marke in der Hand ist', () => {
@@ -196,8 +196,9 @@ describe('Drag & Drop — der Cursor sagt die Wahrheit', () => {
 		p.dragOver(SHIFT);
 		p.dragEnd();
 
-		expect(p.getState().dragged).toBeNull();
 		expect(p.getState().overKey).toBeNull();
+		// Nichts hängt mehr am Zeiger: das nächste Überfahren nimmt nichts an.
+		expect(p.dragOver(SHIFT)).toBe(false);
 	});
 
 	it('lässt eine gewählte Marke vom abgebrochenen Ziehen unberührt', () => {
@@ -210,6 +211,27 @@ describe('Drag & Drop — der Cursor sagt die Wahrheit', () => {
 		p.dragEnd();
 
 		expect(p.getState().picked).toEqual(MARIA);
+	});
+
+	it('nimmt dem Kasten den scharfen Zustand, solange etwas am Zeiger hängt', () => {
+		// Sonst wäre jede Zeile scharf und die gezielte Hervorhebung unsichtbar.
+		const { p } = picker();
+
+		p.pick(FRANZ);
+		p.dragStart(MARIA);
+
+		expect(p.getState().armed).toBe(false);
+		expect(p.getState().overKey).toBeNull();
+	});
+
+	it('gibt den scharfen Zustand nach dem Loslassen wieder her', () => {
+		const { p } = picker();
+
+		p.pick(FRANZ);
+		p.dragStart(MARIA);
+		p.dragEnd();
+
+		expect(p.getState().armed).toBe(true);
 	});
 });
 
@@ -228,7 +250,7 @@ describe('Ablehnung — 0,5 s Rot-Puls am Ziel statt Toast', () => {
 		p.assign(SHIFT);
 
 		expect(onAssign).not.toHaveBeenCalled();
-		expect(p.getState().rejected).toMatchObject({ rowKey: 'sh1', reason: 'full', kind: 'shift' });
+		expect(p.getState().rejected).toMatchObject({ key: 'sh1', reason: 'full', kind: 'shift' });
 	});
 
 	it('pulst auch bei der Doppelzuweisung', () => {
@@ -238,7 +260,7 @@ describe('Ablehnung — 0,5 s Rot-Puls am Ziel statt Toast', () => {
 		p.assign(SHIFT);
 
 		expect(onAssign).not.toHaveBeenCalled();
-		expect(p.getState().rejected).toMatchObject({ rowKey: 'sh1', reason: 'duplicate' });
+		expect(p.getState().rejected).toMatchObject({ key: 'sh1', reason: 'duplicate' });
 	});
 
 	it('behält die Marke in der Hand — der nächste Platz soll ohne Suchen gehen', () => {

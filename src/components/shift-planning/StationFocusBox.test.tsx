@@ -3,7 +3,8 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import StationFocusBox, { type AssignHandles } from './StationFocusBox';
+import StationFocusBox, { type TargetHandles } from './StationFocusBox';
+import type { AssignmentPickerSnapshot } from '@/lib/shiftAssignmentPicker';
 import { buildStationBoard } from '@/lib/shiftBoard';
 import type {
 	Station,
@@ -75,15 +76,20 @@ function member(over: Partial<StationHelperWithDetails> = {}): StationHelperWith
 	};
 }
 
-/** Der Zuteil-Zustand im Ruhezustand: nichts gewählt, nichts überfahren,
-nichts abgelehnt. Die Tests, die ihn brauchen, setzen einzelne Felder um. */
-const ruhe: AssignHandles = {
+/** Die Geste im Ruhezustand: nichts gewählt, nichts überfahren, nichts
+abgelehnt. Die Tests, die sie brauchen, setzen einzelne Felder um. */
+const ruhe: AssignmentPickerSnapshot = {
+	picked: null,
 	armed: false,
 	overKey: null,
-	rejected: null,
-	onDragOver: () => false,
-	onDragLeave: noop,
-	onAssign: noop
+	rejected: null
+};
+
+/** Griffe, die nichts tun — der lesende Test greift nicht zu. */
+const stillGreifen: TargetHandles = {
+	dragOver: () => false,
+	dragLeave: noop,
+	assign: noop
 };
 
 const render = (
@@ -91,12 +97,13 @@ const render = (
 	shifts: StationShift[],
 	assignments: ShiftAssignmentWithHelper[] = [],
 	members: StationHelperWithDetails[] = [],
-	assign: AssignHandles = ruhe
+	gesture: AssignmentPickerSnapshot = ruhe
 ) =>
 	renderToStaticMarkup(
 		<StationFocusBox
 			board={buildStationBoard(s, shifts, assignments, members)}
-			assign={assign}
+			gesture={gesture}
+			picker={stillGreifen}
 			onAutoFill={noop}
 			onEditStation={noop}
 			onDeleteStation={noop}
@@ -193,7 +200,8 @@ describe('StationFocusBox — die Rückfragen kennen den Kasten', () => {
 						[assignment()],
 						[member()]
 					)}
-					assign={ruhe}
+					gesture={ruhe}
+					picker={stillGreifen}
 					onAutoFill={noop}
 					onEditStation={noop}
 					onDeleteStation={noop}
@@ -412,7 +420,8 @@ describe('StationFocusBox — der scharfe Zustand', () => {
 		const markup = render(s, shifts);
 
 		expect(markup).toMatch(/border-dashed[^>]*border-rot/);
-		expect(markup).not.toContain('border-tinte bg-[oklch(0.97_0.03_92)]');
+		expect(markup).not.toContain('border-solid');
+		expect(markup).not.toContain('shadow-[inset_0_0_0_2px_oklch(var(--gelb))]');
 	});
 
 	it('macht alle freien Plätze scharf, sobald eine Marke gewählt ist', () => {
@@ -440,6 +449,22 @@ describe('StationFocusBox — der scharfe Zustand', () => {
 		expect(markup).toContain('+ HELFER HIER EINTRAGEN');
 		expect(markup).not.toContain('ZIEHEN');
 	});
+
+	it('macht auch die Mitglieder-Fußzeile scharf — sie ist ein Ziel wie jede Zeile', () => {
+		const ruhig = render(s, shifts, [], [member()]);
+		const scharf = render(s, shifts, [], [member()], { ...ruhe, armed: true });
+
+		expect(ruhig).not.toContain('bg-[oklch(0.97_0.03_92)]');
+		// Zwei freie Plätze plus die Fußzeile — sie nimmt nur den Innenschein,
+		// ihren Rahmen bringt der Kasten mit.
+		expect(scharf.match(/shadow-\[inset_0_0_0_2px_oklch\(var\(--gelb\)\)\]/g)).toHaveLength(3);
+	});
+
+	it('hebt beim Überfahren der Fußzeile nur sie hervor', () => {
+		const markup = render(s, shifts, [], [member()], { ...ruhe, overKey: 'station:s1' });
+
+		expect(markup.match(/shadow-\[inset_0_0_0_2px_oklch\(var\(--gelb\)\)\]/g)).toHaveLength(1);
+	});
 });
 
 describe('StationFocusBox — Ablehnung als Rot-Puls', () => {
@@ -449,7 +474,7 @@ describe('StationFocusBox — Ablehnung als Rot-Puls', () => {
 	it('lässt die abgelehnte Zeile rot pulsen statt zu toasten', () => {
 		const markup = render(s, shifts, [], [], {
 			...ruhe,
-			rejected: { rowKey: 'sh1', reason: 'full', kind: 'shift', nonce: 1 }
+			rejected: { key: 'sh1', reason: 'full', kind: 'shift', nonce: 1 }
 		});
 
 		expect(markup).toContain('animate-puls-rot');
@@ -458,17 +483,23 @@ describe('StationFocusBox — Ablehnung als Rot-Puls', () => {
 	it('sagt den Grund an, damit der Puls nicht nur fürs Auge ist', () => {
 		const markup = render(s, shifts, [], [], {
 			...ruhe,
-			rejected: { rowKey: 'sh1', reason: 'duplicate', kind: 'shift', nonce: 1 }
+			rejected: { key: 'sh1', reason: 'duplicate', kind: 'shift', nonce: 1 }
 		});
 
 		expect(markup).toMatch(/role="status"[^>]*class="sr-only"/);
 		expect(markup).toContain('Dieser Helfer steht schon in dieser Schicht.');
 	});
 
+	it('hält den Ansage-Bereich auch ohne Ablehnung bereit', () => {
+		// Eine Live-Region, die mitsamt ihrem Inhalt entsteht, sagen Screenreader
+		// in der Regel nicht an — sie muss stehen und nur ihren Text wechseln.
+		expect(render(s, shifts)).toMatch(/role="status"[^>]*class="sr-only"/);
+	});
+
 	it('pulst nur an der Zeile, die abgelehnt hat', () => {
 		const markup = render(s, shifts, [], [], {
 			...ruhe,
-			rejected: { rowKey: 'sh-woanders', reason: 'duplicate', kind: 'shift', nonce: 1 }
+			rejected: { key: 'sh-woanders', reason: 'duplicate', kind: 'shift', nonce: 1 }
 		});
 
 		expect(markup).not.toContain('animate-puls-rot');
@@ -477,7 +508,7 @@ describe('StationFocusBox — Ablehnung als Rot-Puls', () => {
 	it('pulst auch an der Fußzeile der Stationsmitglieder', () => {
 		const markup = render(s, shifts, [], [member()], {
 			...ruhe,
-			rejected: { rowKey: 'station:s1', reason: 'duplicate', kind: 'station', nonce: 1 }
+			rejected: { key: 'station:s1', reason: 'duplicate', kind: 'station', nonce: 1 }
 		});
 
 		expect(markup).toContain('animate-puls-rot');
@@ -486,7 +517,7 @@ describe('StationFocusBox — Ablehnung als Rot-Puls', () => {
 });
 
 describe('StationFocusBox — beide Wege führen zum selben Griff', () => {
-	const mountBox = async (assign: AssignHandles) => {
+	const mountBox = async (picker: Partial<TargetHandles>, gesture = ruhe) => {
 		const host = document.createElement('div');
 		document.body.appendChild(host);
 		const root = createRoot(host);
@@ -494,7 +525,8 @@ describe('StationFocusBox — beide Wege führen zum selben Griff', () => {
 			root.render(
 				<StationFocusBox
 					board={buildStationBoard(station(), [shift({ id: 'sh1', required_people: 1 })], [], [])}
-					assign={assign}
+					gesture={gesture}
+					picker={{ ...stillGreifen, ...picker }}
 					onAutoFill={noop}
 					onEditStation={noop}
 					onDeleteStation={noop}
@@ -517,8 +549,8 @@ describe('StationFocusBox — beide Wege führen zum selben Griff', () => {
 	const zeile = () => document.querySelector('.relative.border-b')!;
 
 	it('meldet beim Antippen eines freien Platzes das Ziel der Zeile', async () => {
-		const onAssign = vi.fn();
-		const unmount = await mountBox({ ...ruhe, armed: true, onAssign });
+		const assign = vi.fn();
+		const unmount = await mountBox({ assign }, { ...ruhe, armed: true });
 
 		await act(async () => {
 			document
@@ -526,24 +558,24 @@ describe('StationFocusBox — beide Wege führen zum selben Griff', () => {
 				?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 		});
 
-		expect(onAssign).toHaveBeenCalledWith({ kind: 'shift', shiftId: 'sh1' });
+		expect(assign).toHaveBeenCalledWith({ kind: 'shift', shiftId: 'sh1' });
 		unmount();
 	});
 
 	it('meldet beim Fallenlassen dasselbe Ziel — ein Griff für beide Wege', async () => {
-		const onAssign = vi.fn();
-		const unmount = await mountBox({ ...ruhe, onAssign });
+		const assign = vi.fn();
+		const unmount = await mountBox({ assign });
 
 		await act(async () => {
 			zeile().dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
 		});
 
-		expect(onAssign).toHaveBeenCalledWith({ kind: 'shift', shiftId: 'sh1' });
+		expect(assign).toHaveBeenCalledWith({ kind: 'shift', shiftId: 'sh1' });
 		unmount();
 	});
 
 	it('hält den Cursor beim Überfahren nur auf, wenn das Ziel annimmt', async () => {
-		const unmount = await mountBox({ ...ruhe, onDragOver: () => true });
+		const unmount = await mountBox({ dragOver: () => true });
 
 		const angenommen = new Event('dragover', { bubbles: true, cancelable: true });
 		await act(async () => {
@@ -555,7 +587,7 @@ describe('StationFocusBox — beide Wege führen zum selben Griff', () => {
 	});
 
 	it('lässt den Cursor „geht nicht" sagen, wo nichts angenommen wird', async () => {
-		const unmount = await mountBox({ ...ruhe, onDragOver: () => false });
+		const unmount = await mountBox({ dragOver: () => false });
 
 		const abgelehnt = new Event('dragover', { bubbles: true, cancelable: true });
 		await act(async () => {

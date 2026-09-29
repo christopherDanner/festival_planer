@@ -17,11 +17,16 @@ import {
 } from '@/lib/shiftAssignment';
 import type { Helper } from '@/lib/helperService';
 
-/** Die abgelehnte Zeile samt Grund. `nonce` zählt die Ablehnungen hoch: wird
-dieselbe Zeile zweimal hintereinander abgelehnt, wechselt sonst kein Wert, und
-die Animation spränge nicht noch einmal an. */
+/**
+ * Das abgelehnte Ziel samt Grund. `key` ist sein `targetKey` — dieselbe
+ * Kennung, die die Zeile im Fokus-Kasten trägt.
+ *
+ * `nonce` zählt die Ablehnungen hoch: wird dasselbe Ziel zweimal hintereinander
+ * abgelehnt, wechselte sonst kein Wert, und die Animation spränge nicht noch
+ * einmal an.
+ */
 export interface Rejection {
-	rowKey: string;
+	key: string;
 	reason: RejectReason;
 	kind: AssignTarget['kind'];
 	nonce: number;
@@ -30,26 +35,30 @@ export interface Rejection {
 export interface AssignmentPickerSnapshot {
 	/** Die gewählte Marke — gelb mit Versatz-Schatten. */
 	picked: Helper | null;
-	/** Die Marke am Zeiger. Sie wird nicht gelb: sie hängt sichtbar am Cursor. */
-	dragged: Helper | null;
 	/**
-	 * **Scharf**: eine Marke ist gewählt, also werden *alle* freien Plätze zum
-	 * Ziel. Das ist die eigentliche Orientierungshilfe (Entscheid 8 aus #68) —
-	 * beim Ziehen zeigt stattdessen `overKey` auf das eine Ziel unter dem Zeiger.
+	 * **Scharf**: *alle* freien Plätze werden zum Ziel. Das ist die eigentliche
+	 * Orientierungshilfe (Entscheid 8 aus #68).
+	 *
+	 * Beim Ziehen bleibt der Kasten ruhig, auch wenn noch eine Marke gewählt ist:
+	 * dort zeigt `overKey` auf das eine Ziel unter dem Zeiger, und zwei
+	 * Hervorhebungen gleichzeitig hießen, dass man die gezielte nicht mehr sieht.
 	 */
 	armed: boolean;
-	/** Der Schlüssel der überfahrenen Zeile, die das Gezogene annähme. */
+	/** Der Schlüssel des überfahrenen Ziels, das das Gezogene annähme. */
 	overKey: string | null;
-	/** Die Zeile, die gerade rot pulst — statt eines Toasts (#104). */
+	/** Das Ziel, das gerade rot pulst — statt eines Toasts (#104). */
 	rejected: Rejection | null;
 }
 
 export interface CreateAssignmentPickerOpts {
 	/**
 	 * Schreibt die Zuteilung weg. Wird nur gerufen, wenn `checkAssignment`
-	 * zustimmt; `position` ist `null`, wo es keine Platznummern gibt.
+	 * zustimmt; `position` ist `null`, wo es keine Platznummern gibt. Der Helfer
+	 * kommt ganz und nicht als Kennung: der Store hält ihn ohnehin, und der
+	 * Aufrufer müsste ihn sonst wieder aus der Liste heraussuchen, um seinen
+	 * Namen nennen zu können.
 	 */
-	onAssign: (target: AssignTarget, helperId: string, position: number | null) => void;
+	onAssign: (target: AssignTarget, helper: Helper, position: number | null) => void;
 	/**
 	 * Die Listen, gegen die geprüft wird — als **Geber**, weil der Store über
 	 * Renderzyklen hinweg lebt und zwischen Aufnehmen und Absetzen einer Marke
@@ -145,7 +154,7 @@ export function createAssignmentPicker(opts: CreateAssignmentPickerOpts): Assign
 
 			const verdict = checkAssignment(target, helper.id, opts.source());
 			if (verdict.outcome === 'ok') {
-				opts.onAssign(target, helper.id, verdict.position);
+				opts.onAssign(target, helper, verdict.position);
 				picked = null;
 				rejected = null;
 				notify();
@@ -156,7 +165,7 @@ export function createAssignmentPicker(opts: CreateAssignmentPickerOpts): Assign
 			// gegriffen hat, soll den nächsten Platz antippen können, ohne die Marke
 			// noch einmal zu suchen.
 			rejected = {
-				rowKey: targetKey(target),
+				key: targetKey(target),
 				reason: verdict.reason,
 				kind: target.kind,
 				nonce: ++nonce
@@ -173,7 +182,10 @@ export function createAssignmentPicker(opts: CreateAssignmentPickerOpts): Assign
 		},
 		getState() {
 			if (cached) return cached;
-			cached = { picked, dragged, armed: picked !== null, overKey, rejected };
+			// Die gezogene Marke steht nicht im Stand: gezeichnet wird sie nicht —
+			// sie hängt sichtbar am Cursor —, und ob gezogen wird, beantwortet
+			// `armed` bereits für alle, die es wissen müssen.
+			cached = { picked, armed: dragged === null && picked !== null, overKey, rejected };
 			return cached;
 		},
 		subscribe(listener) {
