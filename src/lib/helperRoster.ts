@@ -64,6 +64,14 @@ export interface HelperRosterInput {
 	filter: HelperFilter;
 }
 
+/**
+ * Die Aufschrift über der Liste. Sie steht am Desktop im Spaltenkopf und am
+ * Handy in der Kopfzeile der Schublade (#105) — dieselbe Liste, dieselbe
+ * Ansage, und darum eine Regel statt zweier.
+ */
+export const rosterTitle = (focusStationName: string | null): string =>
+	focusStationName ? `Helfer für ${focusStationName}` : 'Helfer';
+
 const matchesFilter = (chip: RosterChip, filter: HelperFilter): boolean =>
 	filter === 'all' || (filter === 'assigned') === chip.assigned;
 
