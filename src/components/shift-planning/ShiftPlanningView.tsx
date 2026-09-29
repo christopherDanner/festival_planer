@@ -17,8 +17,9 @@ import { buildStationBoard, buildStationTabs, resolveFocusStationId } from '@/li
 import { autoAssignScope } from '@/lib/autoAssignScope';
 import { buildHelperRoster, type HelperFilter } from '@/lib/helperRoster';
 import { deriveShiftsMetric } from '@/lib/staffing';
-import type { Station, StationShift, ShiftAssignmentWithHelper } from '@/lib/shiftService';
-import { removeHelperMessage, type Helper } from '@/lib/helperService';
+import { useAssignmentPicker } from '@/hooks/useAssignmentPicker';
+import type { Station, StationShift } from '@/lib/shiftService';
+import { helperName, removeHelperMessage, type Helper } from '@/lib/helperService';
 
 /** Welcher Dialog offen ist. Der geschlossene Zustand heißt `'none'` und nicht
 `null`: das Projekt läuft ohne `strictNullChecks`, und dort unterscheidet `null`
@@ -56,8 +57,6 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 	const [focusStationId, setFocusStationId] = useState<string | null>(null);
 	const [helperSearch, setHelperSearch] = useState('');
 	const [helperFilter, setHelperFilter] = useState<HelperFilter>('all');
-	const [draggedHelper, setDraggedHelper] = useState<Helper | null>(null);
-	const [selectedHelper, setSelectedHelper] = useState<Helper | null>(null);
 	const [dialogState, setDialogState] = useState<DialogState>({ type: 'none' });
 	const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
@@ -89,6 +88,36 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		() => autoAssignScope(autoFillStation, data.stationShifts, data.assignments),
 		[autoFillStation, data.stationShifts, data.assignments]
 	);
+	/**
+	 * Das **Zuteilen** (#104): Ziehen und Antippen laufen hier zusammen. Was
+	 * angenommen wird, entscheidet `shiftAssignment` — eine Regel für beide
+	 * Wege; abgelehnt wird am Ziel mit einem Rot-Puls, nicht mit einem Toast.
+	 * Der Store prüft gegen die Listen im Augenblick des Griffs, darum stehen sie
+	 * als Geber und nicht als Wert darin.
+	 */
+	const { picker, snapshot: gesture } = useAssignmentPicker({
+		source: () => data,
+		onAssign: (target, helper, position) => {
+			// Das Gelingen bleibt ein Toast — abgelöst hat der Rot-Puls nur die
+			// **Ablehnung**, die am Ziel steht, weil sie dort ihren Grund hat.
+			const name = helperName(helper);
+			if (target.kind === 'station') {
+				actions.assignHelperToStation.mutate(
+					{ stationId: target.stationId, helperId: helper.id },
+					{
+						onSuccess: () =>
+							toast({ title: 'Erfolg', description: `${name} wurde der Station zugewiesen.` })
+					}
+				);
+				return;
+			}
+			actions.assignHelper.mutate(
+				{ stationShiftId: target.shiftId, helperId: helper.id, position },
+				{ onSuccess: () => toast({ title: 'Erfolg', description: `${name} wurde zugewiesen.` }) }
+			);
+		}
+	});
+
 	// Die Gruppierung hängt an der Fokus-Station: wechselt der Reiter, ordnet
 	// sich die Liste nach der neuen Wunsch-Passung.
 	const roster = useMemo(
@@ -103,146 +132,6 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			}),
 		[data.helpers, data.assignments, data.stationHelpers, activeStationId, helperSearch, helperFilter]
 	);
-
-	/** Noch einmal auf dieselbe Marke heißt „doch nicht" — die gelbe Marke ist
-	die einzige Anzeige der Auswahl, also muss sie sich auch zurücknehmen lassen. */
-	const handleSelectHelper = (helper: Helper) =>
-		setSelectedHelper((current) => (current?.id === helper.id ? null : helper));
-
-	const handleTapAssignToShift = (stationShiftId: string) => {
-		if (!selectedHelper) return;
-		const stationShift = data.stationShifts.find((s) => s.id === stationShiftId);
-		if (!stationShift) return;
-
-		const currentAssignments = getAssignmentsForStationShift(stationShiftId);
-		if (currentAssignments.length >= stationShift.required_people) {
-			toast({ title: 'Hinweis', description: 'Diese Schicht ist bereits vollständig besetzt.', variant: 'destructive' });
-			setSelectedHelper(null);
-			return;
-		}
-		if (currentAssignments.some((a) => a.helper_id === selectedHelper.id)) {
-			toast({ title: 'Hinweis', description: `${selectedHelper.last_name} ${selectedHelper.first_name} ist bereits dieser Schicht zugewiesen.`, variant: 'destructive' });
-			setSelectedHelper(null);
-			return;
-		}
-
-		const helper = selectedHelper;
-		actions.assignHelper.mutate(
-			{ stationShiftId, helperId: helper.id, position: nextFreePosition(currentAssignments) },
-			{ onSuccess: () => toast({ title: 'Erfolg', description: `${helper.last_name} ${helper.first_name} wurde zugewiesen.` }) }
-		);
-		setSelectedHelper(null);
-	};
-
-	const handleTapAssignToStation = (stationId: string) => {
-		if (!selectedHelper) return;
-
-		const currentStationHelpers = data.stationHelpers.filter((sm) => sm.station_id === stationId);
-		if (currentStationHelpers.some((sm) => sm.helper_id === selectedHelper.id)) {
-			toast({ title: 'Hinweis', description: `${selectedHelper.last_name} ${selectedHelper.first_name} ist bereits dieser Station zugewiesen.`, variant: 'destructive' });
-			setSelectedHelper(null);
-			return;
-		}
-
-		const helper = selectedHelper;
-		actions.assignHelperToStation.mutate(
-			{ stationId, helperId: helper.id },
-			{ onSuccess: () => toast({ title: 'Erfolg', description: `${helper.last_name} ${helper.first_name} wurde der Station zugewiesen.` }) }
-		);
-		setSelectedHelper(null);
-	};
-
-	const getAssignmentsForStationShift = (stationShiftId: string): ShiftAssignmentWithHelper[] => {
-		return data.assignments.filter((a) => a.station_shift_id === stationShiftId);
-	};
-
-	/** Kleinste freie Platznummer einer Schicht. */
-	const nextFreePosition = (currentAssignments: ShiftAssignmentWithHelper[]): number => {
-		const usedPositions = currentAssignments.map((a) => a.position).sort((a, b) => a - b);
-		let nextPosition = 1;
-		for (const pos of usedPositions) {
-			if (nextPosition === pos) nextPosition++;
-			else break;
-		}
-		return nextPosition;
-	};
-
-	const handleDrop = async (stationShiftId: string, e: React.DragEvent) => {
-		e.preventDefault();
-		if (!draggedHelper) return;
-
-		const stationShift = data.stationShifts.find((s) => s.id === stationShiftId);
-		if (!stationShift) return;
-
-		const currentAssignments = getAssignmentsForStationShift(stationShiftId);
-		if (currentAssignments.length >= stationShift.required_people) {
-			toast({
-				title: 'Hinweis',
-				description: 'Diese Schicht ist bereits vollständig besetzt.',
-				variant: 'destructive'
-			});
-			setDraggedHelper(null);
-			return;
-		}
-
-		if (currentAssignments.some((a) => a.helper_id === draggedHelper.id)) {
-			toast({
-				title: 'Hinweis',
-				description: `${draggedHelper.last_name} ${draggedHelper.first_name} ist bereits dieser Schicht zugewiesen.`,
-				variant: 'destructive'
-			});
-			setDraggedHelper(null);
-			return;
-		}
-
-		actions.assignHelper.mutate(
-			{ stationShiftId, helperId: draggedHelper.id, position: nextFreePosition(currentAssignments) },
-			{
-				onSuccess: () => {
-					toast({
-						title: 'Erfolg',
-						description: `${draggedHelper.last_name} ${draggedHelper.first_name} wurde zugewiesen.`
-					});
-				}
-			}
-		);
-		setDraggedHelper(null);
-	};
-
-	const handleDropOnStation = async (stationId: string, e: React.DragEvent) => {
-		e.preventDefault();
-		if (!draggedHelper) return;
-
-		const station = data.stations.find((s) => s.id === stationId);
-		if (!station) return;
-
-		const currentStationHelpers = data.stationHelpers.filter(
-			(sm) => sm.station_id === stationId
-		);
-
-		if (currentStationHelpers.some((sm) => sm.helper_id === draggedHelper.id)) {
-			toast({
-				title: 'Hinweis',
-				description: `${draggedHelper.last_name} ${draggedHelper.first_name} ist bereits dieser Station zugewiesen.`,
-				variant: 'destructive'
-			});
-			setDraggedHelper(null);
-			return;
-		}
-
-		actions.assignHelperToStation.mutate(
-			{ stationId, helperId: draggedHelper.id },
-			{
-				onSuccess: () => {
-					toast({
-						title: 'Erfolg',
-						description: `${draggedHelper.last_name} ${draggedHelper.first_name} wurde der Station zugewiesen.`
-					});
-				}
-			}
-		);
-		setDraggedHelper(null);
-	};
 
 	const handleExport = (exportFn: typeof exportToExcel | typeof exportToPdf) => {
 		exportFn({
@@ -289,6 +178,8 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 							{board && (
 								<StationFocusBox
 									board={board}
+									gesture={gesture}
+									picker={picker}
 									onAutoFill={() =>
 										setDialogState({ type: 'autoAssign', station: board.station })
 									}
@@ -309,10 +200,8 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 										})
 									}
 									onDeleteShift={(shiftId) => actions.deleteStationShift.mutate(shiftId)}
-									onAssignToShift={handleTapAssignToShift}
-									onAssignToStation={() => handleTapAssignToStation(board.station.id)}
-									onDropOnShift={handleDrop}
-									onDropOnStation={(e) => handleDropOnStation(board.station.id, e)}
+									// Aus dem Platz bzw. aus der Fußzeile ohne Rückfrage: beides
+									// ist mit einem Griff wieder eingetragen (#104).
 									onRemoveFromShift={(stationShiftId, helperId) =>
 										actions.removeHelper.mutate({ stationShiftId, helperId })
 									}
@@ -335,10 +224,11 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 					onSearchChange={setHelperSearch}
 					filter={helperFilter}
 					onFilterChange={setHelperFilter}
-					selectedHelperId={selectedHelper?.id ?? null}
-					onSelectHelper={handleSelectHelper}
-					onDragStart={setDraggedHelper}
-					onDragEnd={() => setDraggedHelper(null)}
+					selected={gesture.picked}
+					onSelectHelper={picker.pick}
+					onCancelSelection={picker.cancel}
+					onDragStart={picker.dragStart}
+					onDragEnd={picker.dragEnd}
 					onAddHelper={() => setDialogState({ type: 'helper' })}
 					onEditHelper={(helper) => setDialogState({ type: 'helper', helper })}
 					onRemoveHelper={(helper) => {
@@ -348,7 +238,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 							actions.deleteHelper.mutate(helper.id);
 							// Sonst bliebe ein gelöschter Helfer ausgewählt und ließe sich
 							// auf einen freien Platz setzen.
-							setSelectedHelper((current) => (current?.id === helper.id ? null : current));
+							if (gesture.picked?.id === helper.id) picker.cancel();
 						}
 					}}
 				/>

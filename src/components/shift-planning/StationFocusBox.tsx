@@ -3,14 +3,29 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Poster } from '@/components/toolkit/Poster';
 import { NameChip } from '@/components/toolkit/NameChip';
-import { OpenSlot } from '@/components/toolkit/OpenSlot';
+import { ARMED_SURFACE, OpenSlot } from '@/components/toolkit/OpenSlot';
+import { RejectPulse } from '@/components/toolkit/RejectPulse';
 import FocusBoxMenu from './FocusBoxMenu';
+import { rejectText, targetKey, type AssignTarget } from '@/lib/shiftAssignment';
+import type { AssignmentPicker, AssignmentPickerSnapshot } from '@/lib/shiftAssignmentPicker';
 import type { BoardRow, StationBoard } from '@/lib/shiftBoard';
 import { shiftDeletionMessage, stationDeletionMessage } from '@/lib/shiftDeletion';
 import type { StationShift } from '@/lib/shiftService';
 
+/**
+ * Die drei Griffe, die ein Ziel braucht (#104). Als Ausschnitt des Stores und
+ * nicht als eigene Schnittstelle: Ziehen und Antippen sind **ein** Vorgang, und
+ * eine zweite Beschreibung desselben Vorgangs liefe irgendwann auseinander. Der
+ * Ausschnitt hält zugleich fest, was der Kasten *nicht* darf — eine Marke
+ * wählen oder ein Ziehen beginnen tut die Helferliste.
+ */
+export type TargetHandles = Pick<AssignmentPicker, 'dragOver' | 'dragLeave' | 'assign'>;
+
 export interface StationFocusBoxProps {
 	board: StationBoard;
+	/** Wie weit die Zuteil-Geste ist: gewählt, überfahren, abgelehnt. */
+	gesture: AssignmentPickerSnapshot;
+	picker: TargetHandles;
 	/** Öffnet die Auto-Zuteilung eingeschränkt auf diese Station (#108). */
 	onAutoFill: () => void;
 	onEditStation: () => void;
@@ -20,10 +35,6 @@ export interface StationFocusBoxProps {
 	onAddShift: () => void;
 	onEditShift: (shift: StationShift) => void;
 	onDeleteShift: (shiftId: string) => void;
-	onAssignToShift: (stationShiftId: string) => void;
-	onAssignToStation: () => void;
-	onDropOnShift: (stationShiftId: string, e: React.DragEvent) => void;
-	onDropOnStation: (e: React.DragEvent) => void;
 	onRemoveFromShift: (stationShiftId: string, helperId: string) => void;
 	onRemoveFromStation: (helperId: string) => void;
 }
@@ -45,27 +56,68 @@ const TOUCH_TARGET = 'max-[899px]:min-h-10 max-[899px]:min-w-10';
  * gleiche Optik, gleiche Geste, damit die Zählregel des Dashboards auch
  * sichtbar wahr wird.
  *
- * Zuteilen baut dieser Schnitt nicht (#104): die bestehenden Griffe — Ziehen
- * auf die Zeile, Antippen bei ausgewähltem Helfer, × am belegten Platz —
- * hängen unverändert an den neuen Plätzen, damit der Bereich zwischen #102 und
- * #104 nicht funktionslos ist.
+ * **Zuteilen** (#104): jede Zeile ist ein Ziel, das gezogen **und** angetippt
+ * werden kann. Was angenommen wird, entscheidet dieser Kasten nicht — er zeigt
+ * nur, was scharf ist, und meldet das Ziel zurück.
  */
 const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 	board,
+	gesture,
+	picker,
 	onAutoFill,
 	onEditStation,
 	onDeleteStation,
 	onAddShift,
 	onEditShift,
 	onDeleteShift,
-	onAssignToShift,
-	onAssignToStation,
-	onDropOnShift,
-	onDropOnStation,
 	onRemoveFromShift,
 	onRemoveFromStation
 }) => {
 	const { station, place, responsible } = board;
+	const stationTarget: AssignTarget = { kind: 'station', stationId: station.id };
+
+	/**
+	 * Die Griffe eines Ziels. Zeile und Mitglieder-Fußzeile tragen dieselben —
+	 * beide sind ein Ziel, und beide nehmen dasselbe entgegen.
+	 */
+	const dropProps = (target: AssignTarget) => ({
+		onDragOver: (e: React.DragEvent) => {
+			// Nur auf einem Ziel, das wirklich annimmt: `preventDefault` ist das
+			// einzige, woran der Cursor „geht" von „geht nicht" unterscheidet. Ein
+			// abgelehntes Ziel bekommt darum gar kein `drop` — hier sagt der Cursor
+			// die Ablehnung, der Rot-Puls sagt sie dem Antippen.
+			if (picker.dragOver(target)) e.preventDefault();
+		},
+		onDragLeave: (e: React.DragEvent) => {
+			// `dragleave` feuert auch beim Wechsel zwischen den Kindern der Zeile —
+			// ohne diese Prüfung flackerte die Hervorhebung über jedem Platz.
+			if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+			picker.dragLeave(target);
+		},
+		onDrop: (e: React.DragEvent) => {
+			e.preventDefault();
+			picker.assign(target);
+		}
+	});
+
+	/** Ob dieses Ziel gerade rot pulst. */
+	const rejects = (key: string) => gesture.rejected?.key === key;
+
+	/**
+	 * **Scharf**: gewählt macht den ganzen Kasten scharf, Ziehen nur das Ziel
+	 * unterm Zeiger (das unterscheidet schon der Store).
+	 *
+	 * Scharf heißt „hier kann etwas hin", nicht „hier geht es sicher durch": auch
+	 * ein Platz in einer Schicht, in der der gewählte Helfer schon steht, wird
+	 * scharf. Das ist die Spec („alle freien Plätze") — und zugleich der einzige
+	 * Weg, auf dem die Doppelzuweisung überhaupt noch auftreten und rot pulsen
+	 * kann; beim Ziehen fängt sie der Cursor vorher ab.
+	 */
+	const isSharp = (key: string) => gesture.armed || gesture.overKey === key;
+
+	// Die Mitglieder-Fußzeile ist dasselbe Ziel wie die Pseudo-Zeile „GANZES
+	// FEST"; die beiden treten nie gemeinsam auf.
+	const stationKey = targetKey(stationTarget);
 
 	/** Zeile zeichnen — die Schicht-Zeilen und die Pseudo-Zeile sind dasselbe Bild. */
 	const renderRow = (row: BoardRow) => {
@@ -73,10 +125,10 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 		return (
 			<div
 				key={row.id}
-				className="border-b border-linie px-3 py-3 last:border-b-0 min-[900px]:px-[18px]"
-				onDragOver={(e) => e.preventDefault()}
-				onDrop={(e) => (shift ? onDropOnShift(shift.id, e) : onDropOnStation(e))}
+				className="relative border-b border-linie px-3 py-3 last:border-b-0 min-[900px]:px-[18px]"
+				{...dropProps(row.target)}
 			>
+				{rejects(row.id) && <RejectPulse key={gesture.rejected.nonce} />}
 				<div className="mb-2 flex flex-wrap items-baseline gap-2.5">
 					<time className="font-display text-lg font-semibold tracking-[.02em]">{row.time}</time>
 					<span className="text-xs font-semibold text-tinte-soft">{row.subtitle}</span>
@@ -127,11 +179,12 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 						) : (
 							<OpenSlot
 								key={slot.position}
+								armed={isSharp(row.id)}
 								className={cn('w-full justify-start gap-[7px]', TOUCH_TARGET)}
-								onClick={() => (shift ? onAssignToShift(shift.id) : onAssignToStation())}
+								onClick={() => picker.assign(row.target)}
 							>
 								<span className="font-display text-[11px] font-semibold">{slot.position}</span>+
-								HELFER HIERHER ZIEHEN
+								HELFER HIER EINTRAGEN
 							</OpenSlot>
 						)
 					)}
@@ -142,6 +195,14 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 
 	return (
 		<div className="border-2.5 border-tinte bg-white">
+			{/* Der Rot-Puls ist fürs Auge; diesen Satz bekommt, wer ihn nicht sieht.
+			Der Bereich steht **dauerhaft** und bekommt nur seinen Text gewechselt:
+			eine Live-Region, die mitsamt ihrem Inhalt entsteht und nach einer halben
+			Sekunde wieder verschwindet, sagen Screenreader in der Regel nicht an. */}
+			<p role="status" aria-live="polite" className="sr-only">
+				{gesture.rejected ? rejectText(gesture.rejected.reason, gesture.rejected.kind) : ''}
+			</p>
+
 			{/* Der Kasten trägt den Rahmen — der Kopf nur die Trennlinie. */}
 			<Poster className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2 border-0 border-b-2.5 px-3 py-3.5 min-[900px]:px-[18px]">
 				<h3 className="font-display text-2xl font-semibold uppercase tracking-[.02em]">
@@ -217,10 +278,15 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 			{/* Nur mit Schichten: ohne sie sind dieselben Leute schon das Raster. */}
 			{board.hasShifts && (
 				<div
-					className="flex flex-wrap items-center gap-2 border-t-2 border-tinte bg-fusszeile px-3 py-2.5 min-[900px]:px-[18px]"
-					onDragOver={(e) => e.preventDefault()}
-					onDrop={onDropOnStation}
+					className={cn(
+						'relative flex flex-wrap items-center gap-2 border-t-2 border-tinte bg-fusszeile px-3 py-2.5 min-[900px]:px-[18px]',
+						// Die Fußzeile ist ein Ziel wie jede Zeile — sie nimmt vom scharfen
+						// Zustand nur den Innenschein: ihren Rahmen bringt der Kasten mit.
+						isSharp(stationKey) && ARMED_SURFACE
+					)}
+					{...dropProps(stationTarget)}
 				>
+					{rejects(stationKey) && <RejectPulse key={gesture.rejected.nonce} />}
 					<b className="text-[10.5px] font-extrabold uppercase tracking-[.05em] text-tinte-soft">
 						Stationsmitglieder ohne Schicht:
 					</b>
@@ -235,7 +301,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 					))}
 					<button
 						type="button"
-						onClick={onAssignToStation}
+						onClick={() => picker.assign(stationTarget)}
 						className="px-2 py-1 text-[11px] font-bold text-tinte-soft max-[899px]:min-h-10 hover:text-tinte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
 					>
 						+ hinzufügen
