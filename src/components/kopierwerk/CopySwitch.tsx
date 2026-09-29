@@ -3,7 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-import { CHECKBOX, TIPPZIEL } from './marks';
+import { COPY_CHECKBOX, TAP_TARGET } from './measures';
 
 export interface CopySwitchProps {
 	id: string;
@@ -45,9 +45,9 @@ export default function CopySwitch({
 					checked={checked}
 					disabled={disabled}
 					onCheckedChange={(value) => onChange(value === true)}
-					className={cn(CHECKBOX, FOCUS_INK)}
+					className={cn(COPY_CHECKBOX, FOCUS_INK)}
 				/>
-				<Label htmlFor={id} className={cn(TIPPZIEL, 'text-[12.5px] font-bold')}>
+				<Label htmlFor={id} className={cn(TAP_TARGET, 'text-[12.5px] font-bold')}>
 					{label}
 				</Label>
 			</div>

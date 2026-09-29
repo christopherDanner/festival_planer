@@ -142,17 +142,10 @@ describe('„Sponsoren übernehmen"', () => {
 		]);
 	});
 
-	// Der Schreibweg bekommt nur Firmen-Ids und das Quellfest — es gibt keine
-	// Stelle, an der ein Betrag, eine Zuweisung oder eine Notiz mitkäme.
-	it('reicht nichts weiter als Firma und Quellfest', async () => {
-		await copyFestivalData('quelle', 'ziel', options({ copySponsorings: true }));
-
-		expect(Object.keys(mocks.sponsoringWrites[0])).toEqual([
-			'festivalId',
-			'sponsorIds',
-			'sourceFestivalId'
-		]);
-	});
+	// Was der Schreibweg daraus macht — drei Felder je Zeile, kein Betrag —,
+	// steht in `sponsorServiceCopy.test.ts` an der Zeile, die wirklich
+	// abgeschickt wird. Hier hätte sich der Test nur seinen eigenen Mock
+	// angesehen.
 });
 
 describe('die zwei Schalter hängen nicht aneinander', () => {

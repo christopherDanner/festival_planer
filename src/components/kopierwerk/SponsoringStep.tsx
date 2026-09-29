@@ -1,7 +1,7 @@
-import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
 
 import CopySwitch from './CopySwitch';
+import EmptyStep from './EmptyStep';
 import { plural } from './plural';
 
 export interface SponsoringStepProps {
@@ -101,16 +101,9 @@ export default function SponsoringStep({
 entsteht auch ohne Sponsoring. */
 function EmptySponsoring() {
 	return (
-		<div className="px-4 py-8">
-			<div className="flex flex-col items-center border-2.5 border-dashed border-tinte-soft px-5 py-7 text-center">
-				<Stamp tone="red" size="lg" tilt="right">
-					KEIN SPONSORING
-				</Stamp>
-				<p className="mx-auto mt-4 max-w-[46ch] text-[12.5px] leading-snug text-tinte-soft">
-					Die Vorlage führt weder Preisliste noch Firmen — hier gibt es nichts zu übernehmen. Das
-					Sponsoring des neuen Fests legst du danach im Fest an.
-				</p>
-			</div>
-		</div>
+		<EmptyStep stamp="KEIN SPONSORING">
+			Die Vorlage führt weder Preisliste noch Firmen — hier gibt es nichts zu übernehmen. Das
+			Sponsoring des neuen Fests legst du danach im Fest an.
+		</EmptyStep>
 	);
 }

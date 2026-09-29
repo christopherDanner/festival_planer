@@ -80,10 +80,12 @@ export default function Kopierwerk() {
 	// Fests (#127). Schritt 4 zeigt vorher jeden Tag — es kommt nichts ungesehen
 	// mit.
 	const [copySchedule, setCopySchedule] = useState(true);
-	// Die zwei Sponsoring-Schalter starten dagegen aus (#146): die Spec sagt nur
-	// „beide einzeln an/abwählbar", und ein „alles mitnehmen" wäre hier das
-	// falsche Versprechen — was die Firmen betrifft, hat noch niemand gefragt.
-	const [copySponsoringCategories, setCopySponsoringCategories] = useState(false);
+	// Die zwei Sponsoring-Schalter starten verschieden, und genau das ist der
+	// Entscheid aus ADR 0008 (#146): die *Preisliste* ist unsere eigene
+	// Entscheidung und „echtes Jahresgedächtnis" — sie kommt voreingestellt mit,
+	// wie der Ablaufplan. Die *Firmen* hat noch niemand gefragt; sie ungefragt
+	// hereinzulegen wäre die stille Behauptung, gegen die der ADR steht.
+	const [copySponsoringCategories, setCopySponsoringCategories] = useState(true);
 	const [copySponsorings, setCopySponsorings] = useState(false);
 	// Gewählt wird in Schritt 2 auf Stations-Ebene, das Aufklappen ist reine
 	// Vorschau (#64) — darum neben der Auswahl eine eigene Menge.
@@ -147,8 +149,8 @@ export default function Kopierwerk() {
 					shifts: template.shifts.length,
 					materials: template.materials.length,
 					...scheduleScope(template.scheduleDays),
-					sponsoringCategories: template.sponsoringCategories.length,
-					sponsors: template.sponsorIds.length
+					sponsoringCategories: template.sponsoringCategoryCount,
+					sponsors: template.sponsorCount
 				}
 			: undefined,
 		festivalName: draft.name.trim() || undefined
@@ -322,8 +324,8 @@ export default function Kopierwerk() {
 	} else if (currentStep === 'sponsoring' && template) {
 		workbench = (
 			<SponsoringStep
-				categoryCount={template.sponsoringCategories.length}
-				sponsorCount={template.sponsorIds.length}
+				categoryCount={template.sponsoringCategoryCount}
+				sponsorCount={template.sponsorCount}
 				copySponsoringCategories={copySponsoringCategories}
 				copySponsorings={copySponsorings}
 				saving={saving}

@@ -24,20 +24,27 @@ const tagWithId = (html: string, id: string) =>
 	html.match(new RegExp(`<[^>]*id="${id}"[^>]*>`))?.[0] ?? '';
 
 describe('Kopfzeile der Werkbank', () => {
-	it('nennt den Schritt', () => {
-		expect(render()).toContain('Sponsoring');
+	it('nennt den Schritt und die zwei verschiedenen Versprechen', () => {
+		const html = render();
+
+		expect(html).toContain('Sponsoring');
+		// Die Preisliste mit Werten, die Firmen nackt (ADR 0008) — der Unterschied
+		// steht im Satz, bevor die Schalter ihn einzeln wiederholen.
+		expect(html).toContain('mit ihren Werten');
+		expect(html).toContain('als reine Verknüpfung');
 	});
 });
 
 describe('„Sponsoring-Kategorien übernehmen"', () => {
-	// Die Preisliste ist das Jahresgedächtnis des Bereichs — sie kommt
-	// vollständig mit Werten (ADR 0008).
+	// „Die ganze" ist die Ansage gegen den Einzel-Dialog, der nur anlegt, was
+	// eine gewählte Firma genommen hatte: die Kategorie ohne Abnehmer kommt
+	// trotzdem mit (ADR 0008).
 	it('beziffert die Preisliste und verspricht sie ganz', () => {
 		const html = render();
 
 		expect(html).toContain('Sponsoring-Kategorien übernehmen');
 		expect(html).toContain('Die ganze Preisliste: 6 Kategorien');
-		expect(html).toContain('mit ihren Werten');
+		expect(html).toContain('auch die, die voriges Jahr niemand genommen hat');
 	});
 
 	it('beugt die Zahl bei einer einzigen Kategorie', () => {

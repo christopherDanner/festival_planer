@@ -45,6 +45,11 @@ import {
 	createCategoriesBulk,
 	getSponsoringSponsorIds
 } from '../sponsorService';
+import {
+	festivalSponsoringTotal,
+	type AssignedValue,
+	type SponsoringValue
+} from '../sponsoringTotals';
 
 const callsFor = (table: string, op: string): Call[] =>
 	mocks.calls.filter((c) => c.table === table && c.op === op);
@@ -119,6 +124,22 @@ describe('createBareSponsorings', () => {
 		expect(callsFor('sponsoring_category_assignments', 'insert')).toEqual([]);
 	});
 
+	// Das Abnahmekriterium wörtlich: „Geld-Gesamtsumme € 0". Die Geldregel
+	// (`festivalSponsoringTotal`, ADR 0008) rechnet über Freibetrag und
+	// Zuweisungen — die geschriebene Zeile trägt beides nicht, und das ist es,
+	// was die Summe des neuen Fests bei null hält.
+	it('schreibt Zeilen, über die die Geldregel € 0 rechnet', async () => {
+		await createBareSponsorings('fest-2027', ['firma-baeckerei', 'firma-bank'], 'fest-2026');
+
+		const rows = soleCall('sponsorings', 'insert').payload as Record<string, unknown>[];
+		const asValues: SponsoringValue[] = rows.map((row) => ({
+			free_amount: (row.free_amount as number | null) ?? null,
+			assignments: (row.assignments as AssignedValue[]) ?? []
+		}));
+
+		expect(festivalSponsoringTotal(asValues)).toBe(0);
+	});
+
 	it('fragt gar nicht an, wenn die Vorlage keine Firma führt', async () => {
 		await createBareSponsorings('fest-2027', [], 'fest-2026');
 
@@ -140,5 +161,18 @@ describe('getSponsoringSponsorIds', () => {
 		mocks.rows = [];
 
 		expect(await getSponsoringSponsorIds('fest-2026')).toEqual([]);
+	});
+
+	// „Je Sponsor ein `sponsorings`-Datensatz" — und die Tabelle hält das nicht
+	// selbst: ohne UNIQUE auf (festival_id, sponsor_id) kann dieselbe Firma im
+	// Quellfest zweimal stehen. Übernommen wird sie trotzdem einmal.
+	it('nennt jede Firma nur einmal, auch wenn sie zweimal erfasst war', async () => {
+		mocks.rows = [
+			{ sponsor_id: 'firma-baeckerei' },
+			{ sponsor_id: 'firma-bank' },
+			{ sponsor_id: 'firma-baeckerei' }
+		];
+
+		expect(await getSponsoringSponsorIds('fest-2026')).toEqual(['firma-baeckerei', 'firma-bank']);
 	});
 });

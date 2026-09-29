@@ -255,6 +255,12 @@ export const getSponsorings = async (festivalId: string): Promise<SponsoringWith
  * Leseweg für die Massen-Übernahme (#146) und für die Zählzeile, die sie im
  * Kopierwerk beziffert. `getSponsorings` zöge Sponsor und Zuweisungen mit, und
  * genau die braucht hier niemand: übernommen wird die nackte Verknüpfung.
+ *
+ * **Jede Firma genau einmal.** Die Spec sagt „je Sponsor ein `sponsorings`-
+ * Datensatz", und die Tabelle hält das nicht selbst: auf
+ * (`festival_id`, `sponsor_id`) liegt kein UNIQUE. Führte das Quellfest eine
+ * Firma zweimal, stünde sie im neuen Fest zweimal — und der Schalter im
+ * Kopierwerk zählte sie auch zweimal.
  */
 export const getSponsoringSponsorIds = async (festivalId: string): Promise<string[]> => {
 	const { data, error } = await supabase
@@ -263,7 +269,7 @@ export const getSponsoringSponsorIds = async (festivalId: string): Promise<strin
 		.eq('festival_id', festivalId);
 
 	if (error) throw new Error(error.message);
-	return (data ?? []).map((row) => row.sponsor_id);
+	return [...new Set((data ?? []).map((row) => row.sponsor_id))];
 };
 
 /**

@@ -2,10 +2,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { OpenSlot } from '@/components/toolkit/OpenSlot';
 import { SegmentedControl } from '@/components/toolkit/SegmentedControl';
-import { Stamp } from '@/components/toolkit/Stamp';
 import { ValueTag } from '@/components/toolkit/ValueTag';
 import { cn } from '@/lib/utils';
 
+import EmptyStep from './EmptyStep';
 import {
 	QUANTITY_SOURCES,
 	chipState,
@@ -18,6 +18,7 @@ import {
 	type MaterialChip,
 	type QuantitySource
 } from './materialChoice';
+import { COPY_CHECKBOX } from './measures';
 import { checkboxState, toggleAllIds, toggleId } from './selection';
 
 export interface MaterialStepProps {
@@ -164,12 +165,15 @@ export default function MaterialStep({
 }
 
 /**
- * Werkzeug-Checkbox: den 2px-Tinte-Rahmen bringt `ui/checkbox` schon mit,
- * gefüllt wird sie grün wie im Master-Prototyp (`.cbx.on`). Die Standardfüllung
- * wäre Gelb — das ist im Kopierwerk die Farbe des aktiven Schritts.
+ * Werkzeug-Checkbox: den 2px-Tinte-Rahmen bringt `ui/checkbox` schon mit, das
+ * Maß kommt aus `measures.ts` wie bei den Schaltern und den Stationszeilen.
+ * Gefüllt wird sie grün wie im Master-Prototyp (`.cbx.on`) — die Standardfüllung
+ * wäre Gelb, und das ist im Kopierwerk die Farbe des aktiven Schritts.
  */
-const TOOL_CHECKBOX =
-	'h-[18px] w-[18px] data-[state=checked]:border-gruen data-[state=checked]:bg-gruen data-[state=checked]:text-white data-[state=indeterminate]:border-gruen data-[state=indeterminate]:bg-gruen data-[state=indeterminate]:text-white';
+const TOOL_CHECKBOX = cn(
+	COPY_CHECKBOX,
+	'data-[state=checked]:border-gruen data-[state=checked]:bg-gruen data-[state=checked]:text-white data-[state=indeterminate]:border-gruen data-[state=indeterminate]:bg-gruen data-[state=indeterminate]:text-white'
+);
 
 /**
  * Gruppen-Chip als Wertmarke (`ValueTag`, ADR 0003 §4): ganz gewählt ist sie
@@ -205,20 +209,13 @@ function GroupChip({
 	);
 }
 
-/** Leerzustand: gestrichelter Rahmen, roter Stempelton, ein Satz — der Schritt
-bleibt überspringbar, das Fest entsteht auch ohne Material. */
+/** Leerzustand: die Vorlage führt keine Positionen, der Schritt bleibt trotzdem
+überspringbar. */
 function EmptyMaterials() {
 	return (
-		<div className="px-4 py-8">
-			<div className="flex flex-col items-center border-2.5 border-dashed border-tinte-soft px-5 py-7 text-center">
-				<Stamp tone="red" size="lg" tilt="right">
-					KEIN MATERIAL
-				</Stamp>
-				<p className="mx-auto mt-4 max-w-[46ch] text-[12.5px] leading-snug text-tinte-soft">
-					Die Vorlage führt keine Material-Positionen — hier gibt es nichts zu wählen. Die
-					Materialliste des neuen Fests legst du danach im Fest an.
-				</p>
-			</div>
-		</div>
+		<EmptyStep stamp="KEIN MATERIAL">
+			Die Vorlage führt keine Material-Positionen — hier gibt es nichts zu wählen. Die Materialliste
+			des neuen Fests legst du danach im Fest an.
+		</EmptyStep>
 	);
 }

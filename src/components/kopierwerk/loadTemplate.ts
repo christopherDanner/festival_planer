@@ -2,11 +2,7 @@ import { getFestival, type Festival } from '@/lib/festivalService';
 import { getMaterials, type FestivalMaterialWithStation } from '@/lib/materialService';
 import { getScheduleDays, type ScheduleDayWithEntries } from '@/lib/scheduleService';
 import { getStationShifts, getStations, type Station, type StationShift } from '@/lib/shiftService';
-import {
-	getCategories,
-	getSponsoringSponsorIds,
-	type SponsoringCategory
-} from '@/lib/sponsorService';
+import { getCategories, getSponsoringSponsorIds } from '@/lib/sponsorService';
 
 /**
  * Die geladene Vorlage: das Quellfest selbst plus das, was aus ihm kopiert
@@ -20,14 +16,16 @@ export interface LoadedTemplate {
 	materials: FestivalMaterialWithStation[];
 	/** Ablauf-Tage samt Phasen und Einträgen — die Vorschau von Schritt 4 (#127). */
 	scheduleDays: ScheduleDayWithEntries[];
-	/** Die *Preisliste* der Vorlage — sie kommt vollständig mit Werten (ADR 0008). */
-	sponsoringCategories: SponsoringCategory[];
 	/**
-	 * Die Firmen, die bei der Vorlage erfasst waren — nur ihre Ids. Mehr braucht
-	 * der Schritt nicht: er beziffert sie, und kopiert wird die nackte
-	 * Verknüpfung; der Sponsor selbst ist globale Stammdaten (ADR 0011).
+	 * Preisliste und Firmen der Vorlage als **Zahlen** — anders als Stationen,
+	 * Schichten, Positionen und Ablauf-Tage, die der jeweilige Schritt einzeln
+	 * zeigt. Schritt 5 zeigt nichts einzeln: er stellt zwei Schalter hin und
+	 * beziffert sie (#146). Was dann wirklich kopiert wird, liest
+	 * `copyFestivalData` selbst — die nackte Verknüpfung trägt keine Zuweisung,
+	 * es gibt also nichts, was von hier mitwandern müsste.
 	 */
-	sponsorIds: string[];
+	sponsoringCategoryCount: number;
+	sponsorCount: number;
 }
 
 /**
@@ -57,7 +55,7 @@ export async function loadTemplate(templateId: string): Promise<LoadedTemplate> 
 		shifts,
 		materials,
 		scheduleDays,
-		sponsoringCategories,
-		sponsorIds
+		sponsoringCategoryCount: sponsoringCategories.length,
+		sponsorCount: sponsorIds.length
 	};
 }

@@ -1,7 +1,7 @@
-import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
 
 import CopySwitch from './CopySwitch';
+import EmptyStep from './EmptyStep';
 import type { SchedulePreviewRow } from './scheduleChoice';
 
 /** Was der eine Schalter holt — gilt in beiden Fällen, darum steht es einmal. */
@@ -112,16 +112,9 @@ export default function ScheduleStep({
 es hier nichts zu übernehmen — das Fest entsteht trotzdem. */
 function EmptySchedule() {
 	return (
-		<div className="px-4 py-8">
-			<div className="flex flex-col items-center border-2.5 border-dashed border-tinte-soft px-5 py-7 text-center">
-				<Stamp tone="red" size="lg" tilt="right">
-					KEIN ABLAUFPLAN
-				</Stamp>
-				<p className="mx-auto mt-4 max-w-[46ch] text-[12.5px] leading-snug text-tinte-soft">
-					Die Vorlage führt keine Ablauf-Tage — hier gibt es nichts zu übernehmen. Die Festtage des
-					neuen Fests entstehen beim ersten Öffnen des Ablaufplans.
-				</p>
-			</div>
-		</div>
+		<EmptyStep stamp="KEIN ABLAUFPLAN">
+			Die Vorlage führt keine Ablauf-Tage — hier gibt es nichts zu übernehmen. Die Festtage des
+			neuen Fests entstehen beim ersten Öffnen des Ablaufplans.
+		</EmptyStep>
 	);
 }

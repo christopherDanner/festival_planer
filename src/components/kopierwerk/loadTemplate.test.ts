@@ -73,8 +73,10 @@ describe('loadTemplate', () => {
 
 		expect(mocks.getCategories).toHaveBeenCalledWith('fest-2026');
 		expect(mocks.getSponsoringSponsorIds).toHaveBeenCalledWith('fest-2026');
-		expect(template.sponsoringCategories).toHaveLength(2);
-		expect(template.sponsorIds).toEqual(['firma-1']);
+		// Beide Schalter werden nur beziffert — Schritt 5 zeigt keine Zeile
+		// einzeln, und kopiert wird im Kopier-Service, nicht von hier aus.
+		expect(template.sponsoringCategoryCount).toBe(2);
+		expect(template.sponsorCount).toBe(1);
 	});
 
 	it('verweigert eine Vorlage, die es nicht (mehr) gibt', async () => {
