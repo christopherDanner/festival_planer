@@ -7,6 +7,7 @@ const render = (props: Partial<React.ComponentProps<typeof SponsoringHeadline>> 
 		<SponsoringHeadline
 			total={4850}
 			sponsorCount={14}
+			categoryCount={6}
 			inKindTotal={270}
 			previousFestivalTotal={4400}
 			{...props}
@@ -50,5 +51,23 @@ describe('SponsoringHeadline', () => {
 
 	it('schweigt über den Sachwert, wenn keine Sachleistung erfasst ist', () => {
 		expect(render({ inKindTotal: 0 })).not.toContain('Sachwert');
+	});
+
+	/* Der Kopf sagt in jedem Leerzustand zuerst, was schon steht (#152) — die
+	Regel selbst steht in `sponsoringStandLabel`, hier nur, dass er sie trägt. */
+	it('sagt am ganz leeren Fest, dass noch nichts erfasst ist', () => {
+		const html = render({ sponsorCount: 0, categoryCount: 0, inKindTotal: 0 });
+		expect(html).toContain('Noch nichts erfasst');
+		expect(html).not.toContain('0 Sponsoren');
+	});
+
+	it('zählt bei übernommener Preisliste die Kategorien statt der fehlenden Firmen', () => {
+		expect(render({ sponsorCount: 0, categoryCount: 6, inKindTotal: 0 })).toContain(
+			'6 Kategorien · noch keine Firma'
+		);
+	});
+
+	it('nennt bei übernommenen Firmen die fehlende Preisliste', () => {
+		expect(render({ categoryCount: 0 })).toContain('14 Sponsoren · keine Kategorien');
 	});
 });

@@ -169,6 +169,150 @@ describe('SponsoringOverview — ADR 0006: Kennzahl über alle, Fuß über die s
 	});
 });
 
+/* Die Bereichshälften stehen beide im Markup; welche gilt, entscheidet die
+Breite. Für Reihenfolge-Fragen muss der Test darum die richtige greifen. */
+const desktop = (html: string) => html.split('class="hidden md:block"')[1];
+const mobile = (html: string) => html.split('class="md:hidden')[1].split('class="hidden md:block"')[0];
+
+describe('SponsoringOverview — L1: nichts da', () => {
+	const leer = { sponsorings: [], categories: [] };
+
+	it('zeigt die Anleitung statt eines Tabellengerippes', () => {
+		const html = render(leer);
+
+		expect(html).toContain('Zuerst die Preisliste');
+		expect(html).not.toContain('<table');
+		expect(html).not.toContain('Noch keine Sponsorings erfasst');
+	});
+
+	it('bietet beide Wege an', () => {
+		const html = render(leer);
+
+		expect(html).toContain('+ ERSTE KATEGORIE');
+		expect(html).toContain('AUS EINEM FRÜHEREN FEST ÜBERNEHMEN');
+	});
+
+	it('gilt am Handy genauso — die Anleitung hängt an keiner Breite', () => {
+		const html = render(leer);
+
+		expect(html).not.toContain('class="hidden md:block"');
+		expect(html).not.toContain('class="md:hidden');
+	});
+
+	it('sagt im Kopf, dass noch nichts erfasst ist', () => {
+		expect(render(leer)).toContain('Noch nichts erfasst');
+	});
+
+	it('führt „AUS EINEM FRÜHEREN FEST ÜBERNEHMEN" auf den Übernahme-Dialog', async () => {
+		const onTransfer = vi.fn();
+		const view = await mount({ ...leer, onTransfer });
+
+		await view.press('AUS EINEM FRÜHEREN FEST ÜBERNEHMEN');
+
+		expect(onTransfer).toHaveBeenCalledTimes(1);
+	});
+
+	it('öffnet über „+ ERSTE KATEGORIE" denselben Zettel wie „+ KATEGORIE"', async () => {
+		const onCategoryApply = vi.fn();
+		const view = await mount({ ...leer, onCategoryApply });
+
+		await view.press('+ ERSTE KATEGORIE');
+		await act(async () => {
+			typeInto(view.field('Name'), 'Transparent');
+		});
+		await view.press('Übernehmen');
+
+		expect(onCategoryApply).toHaveBeenCalledWith(null, { name: 'Transparent', value: '' });
+	});
+});
+
+describe('SponsoringOverview — L2: Preisliste da, keine Firmen', () => {
+	const ohneFirmen = { sponsorings: [], categories: [plakat, transparent] };
+
+	it('lässt die Tabelle mit ihren Spalten stehen', () => {
+		const html = render(ohneFirmen);
+
+		expect(html).toContain('<table');
+		expect(html).toContain('Plakat');
+		expect(html).toContain('Transparent');
+	});
+
+	it('hängt den Hinweisstreifen unter die Tabelle', () => {
+		const html = desktop(render(ohneFirmen));
+
+		expect(html).toContain('Preisliste steht.');
+		expect(html.indexOf('</table>')).toBeLessThan(html.indexOf('Preisliste steht.'));
+	});
+
+	it('lässt den Σ-Fuß weg, solange es keine Zeile gibt', () => {
+		expect(render(ohneFirmen)).not.toContain('Σ je Kategorie');
+	});
+
+	it('zählt im Kopf die Kategorien statt der fehlenden Firmen', () => {
+		expect(render(ohneFirmen)).toContain('2 Kategorien · noch keine Firma');
+	});
+
+	it('zeigt den Streifen auch am Handy', () => {
+		expect(mobile(render(ohneFirmen))).toContain('Preisliste steht.');
+	});
+
+	it('führt „SPONSOREN ÜBERNEHMEN" auf den Übernahme-Dialog', async () => {
+		const onTransfer = vi.fn();
+		const view = await mount({ ...ohneFirmen, onTransfer });
+
+		await view.press('SPONSOREN ÜBERNEHMEN');
+
+		expect(onTransfer).toHaveBeenCalled();
+	});
+});
+
+describe('SponsoringOverview — L3: Firmen da, keine Preisliste', () => {
+	const ohnePreisliste = { categories: [] };
+
+	it('lässt die Firmen stehen — sie sind richtig angelegt', () => {
+		const html = render(ohnePreisliste);
+
+		expect(html).toContain('Bäckerei Leitner');
+		expect(html).toContain('Raiffeisenbank Scheibbs');
+	});
+
+	it('stellt den Hinweisstreifen über die Tabelle — er benennt die Ursache', () => {
+		const html = desktop(render(ohnePreisliste));
+
+		expect(html).toContain('Es fehlt die Preisliste.');
+		expect(html.indexOf('Es fehlt die Preisliste.')).toBeLessThan(html.indexOf('<table'));
+	});
+
+	it('stellt ihn am Handy genauso über die Karten', () => {
+		const html = mobile(render(ohnePreisliste));
+
+		expect(html.indexOf('Es fehlt die Preisliste.')).toBeLessThan(html.indexOf('Bäckerei Leitner'));
+	});
+
+	it('nennt im Kopf die Sponsoren und die fehlenden Kategorien', () => {
+		expect(render(ohnePreisliste)).toContain('3 Sponsoren · keine Kategorien');
+	});
+
+	it('führt „KATEGORIEN ÜBERNEHMEN" auf den Übernahme-Dialog', async () => {
+		const onTransfer = vi.fn();
+		const view = await mount({ ...ohnePreisliste, onTransfer });
+
+		await view.press('KATEGORIEN ÜBERNEHMEN');
+
+		expect(onTransfer).toHaveBeenCalled();
+	});
+});
+
+describe('SponsoringOverview — voller Zustand', () => {
+	it('zeigt weder Anleitung noch Hinweisstreifen', () => {
+		const html = render();
+
+		expect(html).not.toContain('Zuerst die Preisliste');
+		expect(html).not.toContain('Preisliste steht.');
+		expect(html).not.toContain('Es fehlt die Preisliste.');
+	});
+});
+
 describe('SponsoringOverview — „+ KATEGORIE" legt die Preisliste an', () => {
 	it('trägt den Knopf in der Werkzeugleiste', () => {
 		expect(render()).toContain('aria-label="Kategorie anlegen"');
