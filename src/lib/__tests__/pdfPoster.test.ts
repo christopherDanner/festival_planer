@@ -5,6 +5,7 @@ import {
 	POSTER_COLOR,
 	POSTER_LINE,
 	createPosterDoc,
+	drawCheckbox,
 	drawPosterFooter,
 	drawPosterHead,
 	drawRuler,
@@ -95,6 +96,23 @@ describe('drawPosterHead', () => {
 
 		expect(argsOf(calls, 'setTextColor')).toContainEqual([...POSTER_COLOR.gelb]);
 		expect(argsOf(calls, 'text').some((args) => args[0] === '05.08.2026')).toBe(true);
+	});
+
+	it('kürzt eine lange Randnotiz, statt sie in den Untertitel laufen zu lassen', () => {
+		const doc = createPosterDoc({ orientation: 'portrait' });
+		const calls = recordStrokes(doc);
+
+		drawPosterHead(doc, {
+			title: 'Stadlfest 2026',
+			subtitle: 'Aufgabenliste',
+			note: 'Offen · Verantwortlich: Schwarzenberger-Hinterhuber Maximiliane'
+		});
+
+		const note = argsOf(calls, 'text')
+			.map((args) => String(args[0]))
+			.find((text) => text.startsWith('Offen'));
+		expect(note).toBeDefined();
+		expect(note?.endsWith('…')).toBe(true);
 	});
 });
 
@@ -191,6 +209,53 @@ describe('drawSectionHeading', () => {
 		expect(argsOf(calls, 'setCharSpace').length).toBeGreaterThan(0);
 		expect(of(calls, 'circle').length).toBeGreaterThan(3);
 		expect(bottom).toBeGreaterThan(40);
+	});
+
+	it('setzt den Tages-Zwischentitel in grüner Akzentschrift', () => {
+		const doc = createPosterDoc({ orientation: 'portrait' });
+		const calls = recordStrokes(doc);
+
+		drawSectionHeading(doc, {
+			x: 12,
+			y: 40,
+			width: 100,
+			label: 'Freitag 24. Juli',
+			accent: true,
+			tone: 'gruen'
+		});
+
+		expect(argsOf(calls, 'text')[0][0]).toBe('FREITAG 24. JULI');
+		expect(argsOf(calls, 'setFont')).toContainEqual([POSTER_FONT.accent, 'normal']);
+		expect(argsOf(calls, 'setTextColor')).toContainEqual([...POSTER_COLOR.gruen]);
+		// Das gepunktete Lineal bleibt, es gehört zur Sektionszeile.
+		expect(of(calls, 'circle').length).toBeGreaterThan(3);
+	});
+});
+
+describe('drawCheckbox', () => {
+	it('zeichnet das offene Kästchen als harten Tinte-Rahmen ohne Haken', () => {
+		const doc = createPosterDoc({ orientation: 'portrait' });
+		const calls = recordStrokes(doc);
+
+		drawCheckbox(doc, { x: 12, y: 40, size: 3, done: false });
+
+		expect(argsOf(calls, 'rect')).toContainEqual([12, 40, 3, 3, 'S']);
+		expect(argsOf(calls, 'setDrawColor')).toContainEqual([...POSTER_COLOR.tinte]);
+		// Kein Haken — das ist der ganze Unterschied zur erledigten Aufgabe.
+		expect(of(calls, 'line')).toHaveLength(0);
+	});
+
+	it('füllt das erledigte Kästchen grün und zieht den Haken in Weiß', () => {
+		const doc = createPosterDoc({ orientation: 'portrait' });
+		const calls = recordStrokes(doc);
+
+		drawCheckbox(doc, { x: 12, y: 40, size: 3, done: true });
+
+		expect(argsOf(calls, 'setFillColor')).toContainEqual([...POSTER_COLOR.gruen]);
+		expect(argsOf(calls, 'rect')).toContainEqual([12, 40, 3, 3, 'F']);
+		expect(argsOf(calls, 'setDrawColor')).toContainEqual([...POSTER_COLOR.weiss]);
+		// Der Haken sind zwei Striche — die Glyphe ✓ fehlt im Latin-Subset (ADR 0012).
+		expect(of(calls, 'line')).toHaveLength(2);
 	});
 });
 

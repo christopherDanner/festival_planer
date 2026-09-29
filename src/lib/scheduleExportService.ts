@@ -1,179 +1,337 @@
+/** Die zwei Papiere des Ablaufplans auf Papier (#126).
+Der Bereich hat zwei Publika, also zwei Exporte statt eines Auswahl-Dialogs:
+der **Programmzettel** geht als Aushang ans Publikum, die **Aufgabenliste** ist
+die interne Kopie des Bildschirms. Was darauf steht, entscheiden
+`buildProgramSheet` und `buildWorklist` — dieselben Rechnungen, die auch die
+zwei Papiere am Schreibtisch füllen. Hier wird nur gezeichnet. */
+
 import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { POSTER_FONT } from '@/lib/pdfFonts';
 import {
-  POSTER_COLOR,
-  POSTER_MARGIN,
-  createPosterDoc,
-  drawPosterFooter,
-  drawPosterHead,
-  drawSectionHeading,
-  drawStamp,
-  posterTableEnd,
-  posterTableTheme
+	POSTER_COLOR,
+	POSTER_MARGIN,
+	createPosterDoc,
+	drawCheckbox,
+	drawPosterFooter,
+	drawPosterHead,
+	drawSectionHeading,
+	drawStamp,
+	posterTableEnd,
+	posterTableTheme,
+	setPosterInk
 } from '@/lib/pdfPoster';
-import type { ScheduleDayWithEntries, ScheduleEntryWithHelper } from '@/lib/scheduleService';
-import { groupEntriesByPhase } from '@/lib/scheduleGrouping';
+import type { ProgramSheet, ProgramSheetRow } from '@/lib/scheduleProgramSheet';
+import {
+	worklistDayNote,
+	type Worklist,
+	type WorklistPhaseGroup,
+	type WorklistTask
+} from '@/lib/scheduleWorklist';
 
-export interface ScheduleExportOptions {
-  festivalName: string;
-  days: ScheduleDayWithEntries[];
-  selectedDayIds: Set<string>;
-  selectedPhaseIds: Set<string>;
-  entryTypeFilter: 'all' | 'task' | 'program';
+/** Rand, den die getönte Fußzeile samt Luft unter einem Block braucht. */
+const FOOTER_SPACE = 14;
+
+/** Breite der Zeitspalte in mm — sie steht auf beiden Papieren fest. */
+const TIME_COLUMN = 18;
+
+/** Neue Seite, sobald der angefangene Block nicht mehr sinnvoll drauf passt. */
+function breakIfTight(doc: jsPDF, y: number, needed: number): number {
+	if (y <= doc.internal.pageSize.getHeight() - FOOTER_SPACE - needed) return y;
+	doc.addPage();
+	return POSTER_MARGIN;
+}
+
+/** Die bedruckbare Breite zwischen den Seitenrändern. */
+function contentWidth(doc: jsPDF): number {
+	return doc.internal.pageSize.getWidth() - POSTER_MARGIN * 2;
+}
+
+function sanitizeFilename(name: string): string {
+	return name.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim();
+}
+
+// ── Programmzettel ────────────────────────────────────────────
+
+const PROGRAM_TITLE = 'Programm';
+
+/** Zeilenhöhe von Titel und Beschreibung in mm. */
+const PROGRAM_TITLE_LINE = 4.6;
+const PROGRAM_DESCRIPTION_LINE = 3.6;
+
+export interface ProgramSheetExportOptions {
+	festivalName: string;
+	/** Der Zettel, wie er am Bildschirm steht — ungefiltert, ein Aushang zeigt
+	das ganze Fest (#126). */
+	sheet: ProgramSheet;
 }
 
 /**
- * Wie das Papier heißt: „Ablaufplan", unabhängig vom Filter.
+ * Eine Zeile des Aushangs: Uhrzeit in fester Spalte (Akzentschrift), daneben
+ * der Titel und darunter die Beschreibung leise — wie am Bildschirm.
  *
- * Der Ablaufplan besteht laut CONTEXT.md aus zwei Papieren — der internen
- * Aufgaben-Werkliste und dem Programmzettel zum Aushang. Dieses Papier ist
- * keins von beiden: es zeigt Phasen und Verantwortliche, die der Programmzettel
- * ausdrücklich nicht tragen darf (ADR 0007). Es „Programmzettel" zu nennen, nur
- * weil auf Programmpunkte gefiltert ist, wäre eine falsche Aufschrift. Das
- * Aufspalten in die zwei echten Papiere gehört in den Bereich Ablaufplan (#67).
+ * Keine Frachtbrief-Tabelle: ein Aushang trägt kein Gitter. Umbruch und
+ * Seitenwechsel macht darum diese Zeile selbst.
+ *
+ * @returns y-Kante unter der Zeile.
  */
-const PAPER_TITLE = 'Ablaufplan';
+function drawProgramRow(doc: jsPDF, row: ProgramSheetRow, startY: number): number {
+	const textX = POSTER_MARGIN + TIME_COLUMN;
+	const textWidth = contentWidth(doc) - TIME_COLUMN;
 
-/** Baut den Ablaufplan als Plakat; das Speichern macht {@link exportScheduleToPdf}. */
-export function buildSchedulePdf(options: ScheduleExportOptions): jsPDF {
-  const { festivalName, days, selectedDayIds, selectedPhaseIds, entryTypeFilter } = options;
+	doc.setFont(POSTER_FONT.body, 'bold');
+	doc.setFontSize(10);
+	const titleLines: string[] = doc.splitTextToSize(row.entry.title, textWidth);
 
-  const doc = createPosterDoc({ orientation: 'portrait' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = POSTER_MARGIN;
-  const width = pageWidth - margin * 2;
-  let y = drawPosterHead(doc, {
-    title: festivalName,
-    subtitle: PAPER_TITLE
-  });
+	doc.setFont(POSTER_FONT.body, 'normal');
+	doc.setFontSize(8.5);
+	const descriptionLines: string[] = row.entry.description
+		? doc.splitTextToSize(row.entry.description, textWidth)
+		: [];
 
-  const filteredDays = days.filter(d => selectedDayIds.has(d.id));
+	const height =
+		titleLines.length * PROGRAM_TITLE_LINE + descriptionLines.length * PROGRAM_DESCRIPTION_LINE;
+	let y = breakIfTight(doc, startY, height + 2);
 
-  for (const day of filteredDays) {
-    // Check if we need a new page (leave enough space for at least a header + a few rows)
-    if (y > doc.internal.pageSize.getHeight() - 45) {
-      doc.addPage();
-      y = POSTER_MARGIN;
-    }
+	if (row.time) {
+		// Uhrzeiten sind ein Fall für die Akzentschrift (Vision §4). Ohne Zeit
+		// bleibt die Spalte leer — auf einem Aushang wäre „ohne Zeit" nur Lärm.
+		doc.setFont(POSTER_FONT.accent, 'normal');
+		doc.setFontSize(11);
+		setPosterInk(doc, POSTER_COLOR.tinte);
+		doc.text(row.time, POSTER_MARGIN, y + 3.4);
+	}
 
-    // Day header
-    const formattedDate = new Date(day.date + 'T00:00:00').toLocaleDateString('de-AT', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    });
+	doc.setFont(POSTER_FONT.body, 'bold');
+	doc.setFontSize(10);
+	setPosterInk(doc, POSTER_COLOR.tinte);
+	doc.text(titleLines, textX, y + 3.4);
+	y += titleLines.length * PROGRAM_TITLE_LINE;
 
-    y = drawSectionHeading(doc, {
-      x: margin,
-      y: y + 2,
-      width,
-      label: formattedDate,
-      note: day.label ?? undefined
-    }) + 3;
+	if (descriptionLines.length > 0) {
+		doc.setFont(POSTER_FONT.body, 'normal');
+		doc.setFontSize(8.5);
+		setPosterInk(doc, POSTER_COLOR.tinteSoft);
+		doc.text(descriptionLines, textX, y + 2.4);
+		y += descriptionLines.length * PROGRAM_DESCRIPTION_LINE;
+	}
 
-    // Die Gruppierung Tag → Phase macht die Ansicht, auch auf Papier. Der Block
-    // ohne Phase steht direkt unter dem Tag und lässt sich nicht abwählen — es
-    // gibt kein Häkchen für ihn.
-    const groups = groupEntriesByPhase(day).filter(
-      g => g.phase === null || selectedPhaseIds.has(g.phase.id)
-    );
-
-    for (const group of groups) {
-      // Filter entries by type
-      const entries = group.entries.filter(e => {
-        if (entryTypeFilter === 'all') return true;
-        return e.type === entryTypeFilter;
-      });
-
-      if (entries.length === 0) continue;
-
-      // Check page space
-      if (y > doc.internal.pageSize.getHeight() - 35) {
-        doc.addPage();
-        y = POSTER_MARGIN;
-      }
-
-      if (group.phase) {
-        // Phase header — Akzentschrift, davor der Stempel, wenn alles steht.
-        const done = entries.filter(e => e.status === 'done').length;
-        doc.setFont(POSTER_FONT.accent, 'normal');
-        doc.setFontSize(12);
-        doc.setTextColor(...POSTER_COLOR.tinte);
-        doc.text(group.phase.name.toUpperCase(), margin, y);
-        if (done === entries.length) {
-          // Rechts am Seitenrand angeschlagen — ein langer Phasenname würde den
-          // Stempel sonst über den Rahmen hinausschieben.
-          drawStamp(doc, {
-            x: margin + width,
-            y: y - 3.6,
-            label: 'Erledigt',
-            tone: 'gruen',
-            align: 'right'
-          });
-        }
-        y += 3;
-      }
-
-      // Build table data
-      const head = [['Zeit', 'Typ', 'Eintrag', 'Verantwortlich']];
-      const body = entries.map(entry => {
-        let timeStr = '—';
-        if (entry.start_time) {
-          timeStr = entry.start_time.slice(0, 5);
-          if (entry.end_time) timeStr += ` – ${entry.end_time.slice(0, 5)}`;
-        }
-
-        const typeStr = entry.type === 'task' ? 'Aufgabe' : 'Programm';
-
-        const responsible = entry.responsible_helper
-          ? `${entry.responsible_helper.last_name} ${entry.responsible_helper.first_name}`
-          : '\u2014';
-
-        return [timeStr, typeStr, entry.title, responsible];
-      });
-
-      const theme = posterTableTheme();
-      autoTable(doc, {
-        ...theme,
-        startY: y,
-        head: head,
-        body: body,
-        columnStyles: {
-          // Uhrzeiten sind ein Fall für die Akzentschrift (Vision §4).
-          0: { cellWidth: 28, halign: 'center', font: POSTER_FONT.accent, fontSize: 10 },
-          1: { cellWidth: 24, halign: 'center', fontSize: 7.5 },
-          2: { cellWidth: 'auto' },
-          3: { cellWidth: 38 }
-        },
-        didParseCell: (hookData) => {
-          if (hookData.section !== 'body') return;
-          const entry: ScheduleEntryWithHelper | undefined = entries[hookData.row.index];
-          // Typ als Wertmarke: Aufgabe getönt, Programm in Gelb. Der Ton muss
-          // dunkler sein als die Wechselzeile, sonst verschwindet die Marke.
-          if (hookData.column.index === 1) {
-            hookData.cell.styles.fontStyle = 'bold';
-            hookData.cell.styles.fillColor =
-              hookData.cell.raw === 'Aufgabe'
-                ? [...POSTER_COLOR.papierGetoent]
-                : [...POSTER_COLOR.gelb];
-          }
-          // Erledigtes tritt zurück, statt zu verschwinden.
-          if (entry?.status === 'done') {
-            hookData.cell.styles.textColor = [...POSTER_COLOR.tinteSoft];
-          }
-        }
-      });
-
-      y = posterTableEnd(doc) + 7;
-    }
-
-    y += 3; // Extra space between days
-  }
-
-  drawPosterFooter(doc, `${festivalName} — ${PAPER_TITLE}`);
-  return doc;
+	setPosterInk(doc, POSTER_COLOR.tinte);
+	return y + 1.6;
 }
 
-export function exportScheduleToPdf(options: ScheduleExportOptions): void {
-  const safeName = options.festivalName.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim();
-  buildSchedulePdf(options).save(`${safeName}_Ablaufplan.pdf`);
+/** Baut den Programmzettel als Plakat; das Speichern macht {@link exportProgramSheetToPdf}. */
+export function buildProgramSheetPdf({
+	festivalName,
+	sheet
+}: ProgramSheetExportOptions): jsPDF {
+	const doc = createPosterDoc({ orientation: 'portrait' });
+	let y = drawPosterHead(doc, { title: festivalName, subtitle: PROGRAM_TITLE });
+
+	for (const day of sheet.days) {
+		// Ein Tages-Zwischentitel allein am Seitenfuß hilft niemandem — er nimmt
+		// seine erste Zeile mit.
+		y = breakIfTight(doc, y, 22);
+		y =
+			drawSectionHeading(doc, {
+				x: POSTER_MARGIN,
+				y: y + 2,
+				width: contentWidth(doc),
+				label: day.title,
+				accent: true,
+				tone: 'gruen'
+			}) + 2;
+
+		for (const row of day.rows) {
+			y = drawProgramRow(doc, row, y);
+		}
+
+		y += 4;
+	}
+
+	if (sheet.days.length === 0) {
+		// Der Bildschirm sagt hier, wo der erste Punkt entsteht — auf Papier führt
+		// kein Knopf mehr irgendwohin.
+		doc.setFontSize(9);
+		setPosterInk(doc, POSTER_COLOR.tinteSoft);
+		doc.text('Noch kein Programmpunkt erfasst.', POSTER_MARGIN, y + 3);
+		setPosterInk(doc, POSTER_COLOR.tinte);
+		y += 8;
+	}
+
+	y = breakIfTight(doc, y, 8);
+	drawStamp(doc, {
+		x: POSTER_MARGIN,
+		y: y + 2,
+		label: sheet.count === 1 ? '1 Punkt' : `${sheet.count} Punkte`,
+		tone: 'tinte'
+	});
+
+	drawPosterFooter(doc, `${festivalName} — ${PROGRAM_TITLE}`);
+	return doc;
+}
+
+/** Lädt den Programmzettel als PDF herunter. */
+export function exportProgramSheetToPdf(options: ProgramSheetExportOptions): void {
+	buildProgramSheetPdf(options).save(
+		`${sanitizeFilename(options.festivalName)}_${PROGRAM_TITLE}.pdf`
+	);
+}
+
+// ── Aufgabenliste ─────────────────────────────────────────────
+
+const TASK_TITLE = 'Aufgabenliste';
+
+/** Spaltenbreiten der Aufgaben-Tabelle in mm; der Titel nimmt den Rest. */
+const COL_CHECK = 8;
+const COL_RESPONSIBLE = 38;
+
+/** Kantenlänge des Kästchens in mm (17px der Vision). */
+const CHECKBOX_SIZE = 4.5;
+
+export interface TaskListExportOptions {
+	festivalName: string;
+	/** Die Werkliste, wie sie am Bildschirm steht — samt Filter, Zählern und
+	Fußzeile. „Was du siehst, kommt raus" (#126). */
+	worklist: Worklist;
+}
+
+/** Der leise Zwischentitel einer Phase mit `erledigt/gesamt`, wie am Bildschirm. */
+function drawPhaseHeading(doc: jsPDF, group: WorklistPhaseGroup, y: number): number {
+	const width = contentWidth(doc);
+
+	doc.setFont(POSTER_FONT.body, 'bold');
+	doc.setFontSize(8);
+	setPosterInk(doc, POSTER_COLOR.tinteSoft);
+	doc.text(group.phase!.name.toUpperCase(), POSTER_MARGIN, y + 3);
+	doc.text(`${group.done}/${group.total}`, POSTER_MARGIN + width, y + 3, { align: 'right' });
+
+	setPosterInk(doc, POSTER_COLOR.tinte);
+	return y + 5;
+}
+
+/**
+ * Die Aufgaben eines Blocks als Frachtbrief-Tabelle: Kästchen, Uhrzeit, Titel,
+ * Verantwortlicher — die vier Spalten der Werkliste.
+ *
+ * @returns y-Kante unter der Tabelle.
+ */
+function drawTaskRows(doc: jsPDF, tasks: WorklistTask[], startY: number): number {
+	const theme = posterTableTheme();
+	autoTable(doc, {
+		...theme,
+		startY,
+		margin: { left: POSTER_MARGIN, right: POSTER_MARGIN, top: POSTER_MARGIN, bottom: FOOTER_SPACE },
+		head: [['', 'Zeit', 'Aufgabe', 'Verantwortlich']],
+		body: tasks.map((task) => [
+			'',
+			task.time ?? 'ohne Zeit',
+			task.entry.title,
+			task.responsible ?? '—'
+		]),
+		columnStyles: {
+			0: { cellWidth: COL_CHECK },
+			// Uhrzeiten sind ein Fall für die Akzentschrift (Vision §4).
+			1: { cellWidth: TIME_COLUMN, halign: 'center', font: POSTER_FONT.accent, fontSize: 10 },
+			2: { cellWidth: 'auto' },
+			3: { cellWidth: COL_RESPONSIBLE }
+		},
+		didParseCell: (hookData) => {
+			if (hookData.section !== 'body') return;
+			const task = tasks[hookData.row.index];
+			// Erledigtes tritt zurück, statt zu verschwinden — wie die
+			// durchgestrichene Zeile am Bildschirm.
+			if (task?.done) hookData.cell.styles.textColor = [...POSTER_COLOR.tinteSoft];
+			// Eine Aufgabe ohne Zeit steht am Ende ihrer Gruppe und sagt es leise.
+			if (hookData.column.index === 1 && !task?.time) {
+				hookData.cell.styles.font = POSTER_FONT.body;
+				hookData.cell.styles.fontSize = 7;
+			}
+		},
+		didDrawCell: (hookData) => {
+			if (hookData.section !== 'body' || hookData.column.index !== 0) return;
+			const task = tasks[hookData.row.index];
+			if (!task) return;
+			drawCheckbox(doc, {
+				x: hookData.cell.x + (hookData.cell.width - CHECKBOX_SIZE) / 2,
+				y: hookData.cell.y + 1.2,
+				size: CHECKBOX_SIZE,
+				done: task.done
+			});
+		}
+	});
+	return posterTableEnd(doc) + 4;
+}
+
+/** Baut die Aufgabenliste als Plakat; das Speichern macht {@link exportTaskListToPdf}. */
+export function buildTaskListPdf({ festivalName, worklist }: TaskListExportOptions): jsPDF {
+	const doc = createPosterDoc({ orientation: 'portrait' });
+	let y = drawPosterHead(doc, {
+		title: festivalName,
+		subtitle: TASK_TITLE,
+		// Der Kopf sagt, wonach gefiltert war — sonst behauptet das Blatt, es sei
+		// der ganze Ablaufplan (#126).
+		note: worklist.caption
+	});
+
+	for (const day of worklist.days) {
+		y = breakIfTight(doc, y, 30);
+		y =
+			drawSectionHeading(doc, {
+				x: POSTER_MARGIN,
+				y: y + 2,
+				width: contentWidth(doc),
+				label: day.title,
+				note: worklistDayNote(day),
+				accent: true,
+				tone: 'gruen'
+			}) + 2;
+
+		for (const group of day.groups) {
+			// Aufgaben ohne Phase stehen direkt unter dem Tag, ohne Ersatztitel
+			// (ADR 0007).
+			if (group.phase) {
+				y = breakIfTight(doc, y, 20);
+				y = drawPhaseHeading(doc, group, y);
+			}
+			y = drawTaskRows(doc, group.tasks, y);
+		}
+
+		y += 3;
+	}
+
+	if (worklist.days.length === 0) {
+		doc.setFontSize(9);
+		setPosterInk(doc, POSTER_COLOR.tinteSoft);
+		doc.text(
+			worklist.counts.all === 0
+				? 'Noch keine Aufgabe erfasst.'
+				: 'Keine Aufgabe passt zu diesem Filter.',
+			POSTER_MARGIN,
+			y + 3
+		);
+		setPosterInk(doc, POSTER_COLOR.tinte);
+		y += 8;
+	}
+
+	// Dieselben drei Zahlen wie am Fuß der Werkliste — sie zählen den
+	// Gesamtbestand des Fests, nicht die gedruckten Zeilen.
+	y = breakIfTight(doc, y, 6);
+	doc.setFont(POSTER_FONT.body, 'bold');
+	doc.setFontSize(8.5);
+	setPosterInk(doc, POSTER_COLOR.tinteSoft);
+	doc.text(
+		`${worklist.footer.openBefore} offen vor dem Fest · ${worklist.footer.openAfter} in der Nachbereitung · ${worklist.counts.done} von ${worklist.counts.all} erledigt`,
+		POSTER_MARGIN,
+		y + 3
+	);
+	setPosterInk(doc, POSTER_COLOR.tinte);
+
+	drawPosterFooter(doc, `${festivalName} — ${TASK_TITLE}`);
+	return doc;
+}
+
+/** Lädt die Aufgabenliste als PDF herunter. */
+export function exportTaskListToPdf(options: TaskListExportOptions): void {
+	buildTaskListPdf(options).save(`${sanitizeFilename(options.festivalName)}_${TASK_TITLE}.pdf`);
 }

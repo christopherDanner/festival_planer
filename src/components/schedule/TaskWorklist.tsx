@@ -14,7 +14,7 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import type { ScheduleEntryWithHelper } from '@/lib/scheduleService';
-import type { TaskFilter, Worklist, WorklistTask } from '@/lib/scheduleWorklist';
+import { worklistDayNote, type TaskFilter, type Worklist, type WorklistTask } from '@/lib/scheduleWorklist';
 
 export interface TaskWorklistProps {
 	worklist: Worklist;
@@ -107,7 +107,7 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 				>
 					{day.title}
 					<span className={cn(COUNTER, day.open > 0 ? 'text-rot' : 'text-gruen')}>
-						{day.open > 0 ? `${day.open} offen` : 'fertig'}
+						{worklistDayNote(day)}
 					</span>
 				</SectionHeading>
 

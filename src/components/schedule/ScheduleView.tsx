@@ -5,7 +5,7 @@ import ScheduleToolbar from './ScheduleToolbar';
 import TaskWorklist from './TaskWorklist';
 import ProgramSheet from './ProgramSheet';
 import ScheduleEntryDialog, { type ScheduleEntryFormData } from './dialogs/ScheduleEntryDialog';
-import { exportScheduleToPdf } from '@/lib/scheduleExportService';
+import { exportProgramSheetToPdf, exportTaskListToPdf } from '@/lib/scheduleExportService';
 import { buildProgramSheet } from '@/lib/scheduleProgramSheet';
 import { buildWorklist, type TaskFilter } from '@/lib/scheduleWorklist';
 import {
@@ -92,19 +92,6 @@ export default function ScheduleView({
 	/** Der Programmzettel kennt keinen Filter — ein Aushang zeigt das ganze Fest. */
 	const programSheet = useMemo(() => buildProgramSheet(days), [days]);
 
-	/** Die Tage der Werkliste in der Form der Abfrage — die Zeilen, die gerade
-	am Bildschirm stehen, für den Druck der Aufgabenliste. */
-	const shownDays = useMemo(() => {
-		const shown = new Set(
-			worklist.days.flatMap((day) =>
-				day.groups.flatMap((group) => group.tasks.map((task) => task.entry.id))
-			)
-		);
-		return days
-			.map((day) => ({ ...day, entries: day.entries.filter((entry) => shown.has(entry.id)) }))
-			.filter((day) => day.entries.length > 0);
-	}, [days, worklist]);
-
 	const handleSaveEntry = (data: ScheduleEntryFormData) => {
 		if (dialogState.type === 'entry' && dialogState.entry) {
 			actions.editEntry.mutate({
@@ -137,21 +124,12 @@ export default function ScheduleView({
 	/**
 	 * Gedruckt wird ohne Auswahl-Dialog — „was du siehst, kommt raus" (#126).
 	 *
-	 * Der **Programmzettel** zeigt das ganze Fest: ein Aushang kennt keinen
-	 * Filter. Die **Aufgabenliste** dagegen ist die Kopie des Bildschirms und
-	 * druckt genau die Zeilen der Werkliste, samt Filter und Verantwortlichem.
-	 * Die zwei getrennten Papiere in Plakat-Optik baut #126.
+	 * Beide Papiere bekommen genau das, was ihr Gegenstück am Bildschirm
+	 * zeichnet: der **Programmzettel** den ungefilterten Zettel, die
+	 * **Aufgabenliste** die gefilterte Werkliste samt ihrer Aufschrift. Ein
+	 * zweiter Auswahlweg könnte sonst anders wählen als die Ansicht.
 	 */
-	const handleExport = (entryTypeFilter: 'task' | 'program') => {
-		const printed = entryTypeFilter === 'task' ? shownDays : days;
-		exportScheduleToPdf({
-			festivalName: festivalName || 'Ablaufplan',
-			days: printed,
-			selectedDayIds: new Set(printed.map((day) => day.id)),
-			selectedPhaseIds: new Set(printed.flatMap((day) => day.phases.map((phase) => phase.id))),
-			entryTypeFilter
-		});
-	};
+	const paperName = festivalName || 'Ablaufplan';
 
 	if (isLoading || !initialized) {
 		return (
@@ -178,8 +156,10 @@ export default function ScheduleView({
 				counts={worklist.counts}
 				onAddTask={() => setDialogState({ type: 'entry', defaultType: 'task' })}
 				onAddProgram={() => setDialogState({ type: 'entry', defaultType: 'program' })}
-				onExportProgram={() => handleExport('program')}
-				onExportTasks={() => handleExport('task')}
+				onExportProgram={() =>
+					exportProgramSheetToPdf({ festivalName: paperName, sheet: programSheet })
+				}
+				onExportTasks={() => exportTaskListToPdf({ festivalName: paperName, worklist })}
 			/>
 
 			{/* Der Schreibtisch: Werkliste 1.5fr, Programmzettel 1fr. Unter 900px

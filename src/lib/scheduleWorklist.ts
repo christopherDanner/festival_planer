@@ -82,6 +82,15 @@ export interface Worklist {
 	/** Die beiden Zahlen der Fußzeile; die dritte („x von y erledigt") steht
 	in {@link Worklist.counts}. */
 	footer: WorklistFooter;
+	/**
+	 * Wonach gerade gefiltert ist, in Worten: „Offen · Verantwortlich: Auer Eva".
+	 *
+	 * Steht hier und nicht beim Drucken, weil die Aufgabenliste die Kopie des
+	 * Bildschirms ist (#126) — die Aufschrift muss von derselben Rechnung kommen,
+	 * die die Zeilen ausgewählt hat, sonst sagt der Kopf irgendwann etwas anderes,
+	 * als darunter steht.
+	 */
+	caption: string;
 }
 
 /**
@@ -170,6 +179,40 @@ function responsiblesOf(tasks: ScheduleEntryWithHelper[]): WorklistResponsible[]
 	return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
 }
 
+/** Die drei Segmente in Worten — dieselbe Reihenfolge wie am Schalter. */
+const FILTER_CAPTION: Record<TaskFilter, string> = {
+	all: 'Alle Aufgaben',
+	open: 'Offen',
+	done: 'Erledigt'
+};
+
+/**
+ * Wonach gefiltert ist: der Status, dahinter der Verantwortliche, wenn einer
+ * gewählt ist. Ein Verantwortlicher, den das Fest nicht (mehr) kennt, bleibt
+ * ungenannt — eine Aufschrift, die einen Namen ohne Aufgaben behauptet, wäre
+ * schlimmer als keine.
+ */
+function captionOf(
+	filter: TaskFilter,
+	responsibleId: string | null,
+	responsibles: WorklistResponsible[]
+): string {
+	const responsible = responsibles.find((candidate) => candidate.id === responsibleId);
+	const parts = [FILTER_CAPTION[filter]];
+	if (responsible) parts.push(`Verantwortlich: ${responsible.name}`);
+	return parts.join(' · ');
+}
+
+/**
+ * Der Zähler am Tages-Zwischentitel: „4 offen" oder „fertig".
+ *
+ * Steht hier, weil die Werkliste am Bildschirm und die gedruckte Aufgabenliste
+ * denselben Tag gleich zählen müssen (#126) — die Farbe wählt die Ansicht.
+ */
+export function worklistDayNote(day: Pick<WorklistDay, 'open'>): string {
+	return day.open > 0 ? `${day.open} offen` : 'fertig';
+}
+
 /**
  * Die Aufschrift eines Ablauf-Tags: ausgeschriebenes Datum wie im Schichtplan
  * (#68), dahinter das freie Label — „Donnerstag 23. Juli · Aufbau".
@@ -205,6 +248,7 @@ export function buildWorklist({
 }: WorklistInput): Worklist {
 	const all = days.flatMap((day) => day.entries.filter(isTask));
 	const open = all.filter(isOpenTask).length;
+	const responsibles = responsiblesOf(all);
 	const shows = (entry: ScheduleEntryWithHelper) =>
 		isTask(entry) &&
 		matchesFilter(entry, filter) &&
@@ -236,7 +280,8 @@ export function buildWorklist({
 			})
 			.filter((day) => day.groups.length > 0),
 		counts: { all: all.length, open, done: all.length - open },
-		responsibles: responsiblesOf(all),
-		footer: footerOf(days, festivalStart, festivalEnd)
+		responsibles,
+		footer: footerOf(days, festivalStart, festivalEnd),
+		caption: captionOf(filter, responsibleId, responsibles)
 	};
 }
