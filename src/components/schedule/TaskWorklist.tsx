@@ -223,8 +223,13 @@ function TaskRow({
 			<button
 				type="button"
 				onClick={onEdit}
-				className="min-w-0 flex-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte max-[899px]:py-2.5"
+				className="min-w-0 flex-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte max-[899px]:min-h-10 max-[899px]:break-words"
 			>
+				{/* Titel sind Freitext, und ein einziges langes Wort
+				(„Donaudampfschifffahrts…") schob die Zeile am Handy um 88px über
+				den Rand des Papiers. Der Bruch gilt nur dort: ab 900px fiele der
+				Knopf sonst auf ein Zeichen Breite zusammen, weil `flex-1` und
+				`min-w-0` ihn dann bis aufs kleinste Maß schrumpfen lassen. */}
 				<span className={cn('font-bold', done && 'text-tinte-soft line-through')}>
 					{entry.title}
 				</span>
@@ -236,9 +241,10 @@ function TaskRow({
 			</button>
 
 			{/* Die Nebenzeile des Handys — `order-1` schiebt sie hinter das ⋮, die
-			Einrückung stellt sie unter den Titel. `contents` löst den Kasten ab
+			Einrückung stellt sie unter den Titel: 50px sind das 40px-Tippziel des
+			Hakens plus die 10px Spalt der Zeile. `contents` löst den Kasten ab
 			900px auf: dort sind Uhrzeit und Marke wieder Glieder der Zeile. */}
-			<div className="order-1 flex w-full items-center gap-2.5 pb-2 pl-[50px] min-[900px]:contents">
+			<div className="order-1 flex w-full flex-wrap items-center gap-2.5 pb-2 pl-[50px] min-[900px]:contents">
 				{/* Feste, rechtsbündige Zeitspalte in der Akzentschrift — die Auflage
 				„Uhrzeiten prominent" aus der abgenommenen Variante C. In der
 				Nebenzeile steht sie vorne und braucht die feste Spalte nicht. */}
@@ -252,10 +258,13 @@ function TaskRow({
 					)}
 				</span>
 
-				{/* Am Handy darf die Marke schrumpfen: ein langer Name („Wiesenberger-
-				Hochleitner Maximilian") schob die Zeile sonst über den Rand. */}
+				{/* Am Handy darf die Marke schrumpfen und notfalls in eine eigene
+				Zeile rutschen: ein langer Name („Wiesenberger-Hochleitner
+				Maximilian") schob die Zeile sonst über den Rand. `break-words`
+				bricht auch das Wort, das selbst dann noch zu breit wäre — sonst
+				ragte ein einziger langer Name weiter hinaus. */}
 				{responsible && (
-					<NameChip className="shrink-0 max-[899px]:min-w-0 max-[899px]:shrink">
+					<NameChip className="shrink-0 max-[899px]:min-w-0 max-[899px]:shrink max-[899px]:break-words">
 						{responsible}
 					</NameChip>
 				)}

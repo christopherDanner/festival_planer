@@ -45,7 +45,10 @@ export interface ToolbarMetricProps {
  * Am Handy nimmt sie die **ganze erste Zeile**, die Griffe stehen darunter
  * (#125, DESIGN-VISION §6). Das ist eine Ansage, keine Folge der Mindestbreite:
  * knapp unter 900px passten Kennzahl und Griffe sonst noch nebeneinander, und
- * die Leiste bräche erst irgendwo dazwischen um.
+ * die Leiste bräche erst irgendwo dazwischen um. Es gilt für **beide** Leisten
+ * — §6 kennt keinen Bereichsvorbehalt, und zwei Rezepte liefen auseinander
+ * (ADR 0003 §2). Der Schichtplan (#102) sieht am Handy unverändert aus; neu ist
+ * nur, dass er zwischen ~500 und 899px genauso umbricht.
  */
 export function ToolbarMetric({ label, value, max, valueText }: ToolbarMetricProps) {
 	return (

@@ -6,15 +6,16 @@ import { scheduleDay as day, scheduleTask as task } from '@/lib/__tests__/schedu
 
 /* Seams dieses Tests (aus #125 abgeleitet, vor dem ersten Test festgehalten):
    Der **Schreibtisch** ist die öffentliche Fläche dieser Ansicht — unter 900px
-   fällt er auf *eine* Spalte `minmax(0, 1fr)`, die Werkliste steht darin vor
-   dem Programmzettel, und nichts klebt. Geprüft wird das gezeichnete Papier,
-   nicht der Zustand darunter: Filter, Dialog und Export sind #122 und bleiben
-   hier unberührt.
+   fällt er auf *eine* Spalte `minmax(0, 1fr)` und die Werkliste steht darin vor
+   dem Programmzettel. Geprüft wird das gezeichnete Papier, nicht der Zustand
+   darunter: Filter, Dialog und Export sind #122 und bleiben hier unberührt.
+
+   Nicht geprüft wird „`position: sticky` am Zettel entfällt" (#125): geklebt hat
+   dort nie etwas. Ein Test darauf könnte nie rot werden und stünde #123 im Weg,
+   sobald der fertige Zettel ab 900px ein legitimes `min-[900px]:sticky` bringt.
 
    Die Daten kommen aus Stummeln der beiden Haken — die Abfrage selbst gehört
    `useScheduleData` und ist nicht der Gegenstand dieses Tickets. */
-
-const initDays = vi.fn();
 
 vi.mock('./hooks/useScheduleData', () => ({
 	useScheduleData: () => ({
@@ -37,7 +38,7 @@ vi.mock('./hooks/useScheduleActions', () => ({
 		createEntry: { mutate: vi.fn() },
 		editEntry: { mutate: vi.fn() },
 		removeEntry: { mutate: vi.fn() },
-		initDays: { mutate: initDays }
+		initDays: { mutate: vi.fn() }
 	})
 }));
 
@@ -68,8 +69,11 @@ const mount = async () => {
 	return host;
 };
 
-/** Das Gitter des Schreibtischs: der einzige Kasten, der die Werkliste trägt. */
-const desk = (host: HTMLElement) => host.querySelector<HTMLElement>('.grid');
+/** Das Gitter des Schreibtischs — der Kasten, in dem die Werkliste liegt.
+Angesteuert über die Werkliste und nicht über `.grid`: ein zweites Gitter
+irgendwo darüber würde den Anker sonst still verschieben. */
+const desk = (host: HTMLElement) =>
+	host.querySelector('section')?.parentElement as HTMLElement | null;
 
 describe('ScheduleView — der Schreibtisch am Handy (#125)', () => {
 	it('fällt unter 900px auf eine Spalte, ab 900px bleibt es bei zwei', async () => {
@@ -87,11 +91,5 @@ describe('ScheduleView — der Schreibtisch am Handy (#125)', () => {
 		// Am Handy ist die Reihenfolge im Dokument die Lesereihenfolge: erst die
 		// Arbeit, dann der Aushang (Vision §6).
 		expect(html.indexOf('Aufgaben-Werkliste')).toBeLessThan(html.indexOf('Programmzettel'));
-	});
-
-	it('lässt nichts am Schreibtisch kleben', async () => {
-		// Der Zettel hing am Desktop als Sidebar fest; gestapelt wäre das Kleben
-		// ein Papier, das über der Arbeit stehen bleibt.
-		expect(desk(await mount())?.innerHTML).not.toContain('sticky');
 	});
 });

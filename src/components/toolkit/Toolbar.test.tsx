@@ -18,8 +18,8 @@ describe('Toolbar — der Rahmen', () => {
 
 describe('ToolbarMetric — die Kennzahl', () => {
 	const html = renderToStaticMarkup(<ToolbarMetric label="Aufgaben" value={8} max={20} />);
-	/** Nur der Kasten der Kennzahl selbst — das Maßband darin ist immer breit. */
-	const kasten = html.match(/class="([^"]*)"/)?.[1] ?? '';
+	/** Der öffnende Tag des Kastens selbst — das Maßband darin ist immer breit. */
+	const kasten = html.slice(0, html.indexOf('>'));
 
 	it('nimmt am Handy die ganze erste Zeile — die Griffe stehen darunter', () => {
 		expect(kasten).toContain('w-full');

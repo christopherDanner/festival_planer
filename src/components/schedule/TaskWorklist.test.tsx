@@ -124,13 +124,15 @@ describe('TaskWorklist — der Kopf', () => {
 	});
 });
 
-describe('TaskWorklist — der Kopf am Handy (#125)', () => {
-	/** Der öffnende Tag des Elements, das dieses Merkmal trägt. */
-	const tag = (html: string, merkmal: string) => {
-		const start = html.lastIndexOf('<', html.indexOf(merkmal));
-		return html.slice(start, html.indexOf('>', start));
-	};
+/** Der öffnende Tag des nächsten `element` über diesem Merkmal — der Anker der
+Aufmachungs-Prüfungen unten. Gesucht wird ein Merkmal, das die Komponente selbst
+setzt (ein `aria-label`, ein Text), nicht die Stellung im Markup. */
+const tag = (html: string, merkmal: string, element = '<') => {
+	const start = html.lastIndexOf(element, html.indexOf(merkmal));
+	return html.slice(start, html.indexOf('>', start));
+};
 
+describe('TaskWorklist — der Kopf am Handy (#125)', () => {
 	const schalter = (html: string) => tag(html, 'aria-label="Aufgaben-Filter"');
 	const feld = (html: string) => tag(html, 'aria-label="Verantwortlicher"');
 
@@ -151,11 +153,10 @@ describe('TaskWorklist — der Kopf am Handy (#125)', () => {
 });
 
 describe('TaskWorklist — die Zeile am Handy (#125)', () => {
-	/** Der öffnende Tag des Kastens, in dem die Uhrzeit steht. */
-	const nebenzeile = (html: string) => {
-		const start = html.lastIndexOf('<div', html.indexOf('08:00'));
-		return html.slice(start, html.indexOf('>', start));
-	};
+	/** Der Kasten, in dem die Uhrzeit steht — am Handy die zweite Zeile. */
+	const nebenzeile = (html: string) => tag(html, '>08:00', '<div');
+	/** Der Knopf, der den Titel trägt und den Eintrag öffnet. */
+	const titel = (html: string) => tag(html, '>Material-Inventur', '<button');
 
 	it('stellt Uhrzeit und Verantwortlichen unter den Titel, statt sie hinauszuschieben', () => {
 		// Fünf Spalten nebeneinander messen in 375px rund 445px — die Namens-Marke
@@ -168,10 +169,16 @@ describe('TaskWorklist — die Zeile am Handy (#125)', () => {
 	});
 
 	it('gibt auch dem Titel am Handy ein Tippziel von 40px', () => {
-		const html = render({ days: [AUFBAU] });
-		const start = html.lastIndexOf('<button', html.indexOf('>Material-Inventur'));
+		// Dieselbe Klasse wie an jedem anderen Handy-Tippziel des Repos; ein
+		// Padding, das rechnerisch auf 39,5px kommt, wäre knapp daneben.
+		expect(titel(render({ days: [AUFBAU] }))).toContain('max-[899px]:min-h-10');
+	});
 
-		expect(html.slice(start, html.indexOf('>', start))).toContain('max-[899px]:py-2.5');
+	it('bricht am Handy auch ein Wort, das allein zu breit ist', () => {
+		// Titel sind Freitext; „Donaudampfschifffahrts…" schob die Zeile am Handy
+		// um 88px über den Rand des Papiers. Ab 900px darf nicht gebrochen werden:
+		// dort fiele der Knopf auf ein Zeichen Breite zusammen.
+		expect(titel(render({ days: [AUFBAU] }))).toContain('max-[899px]:break-words');
 	});
 });
 
