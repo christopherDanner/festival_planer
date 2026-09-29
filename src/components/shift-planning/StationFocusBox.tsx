@@ -35,6 +35,13 @@ const COUNTER_TEXT = 'text-[11px] font-extrabold uppercase tracking-[.05em] tabu
 const TOUCH_TARGET = 'max-[899px]:min-h-10 max-[899px]:min-w-10';
 
 /**
+ * Ein Platz ist am Handy mindestens 42px hoch (#105). Er ist kein Knopf neben
+ * Text, sondern **das Ziel der Zuteilung** — auf ihn zielt der zweite von zwei
+ * Antippern, und daneben liegt beim belegten Platz noch das ×.
+ */
+const SLOT_HEIGHT = 'max-[899px]:min-h-[42px]';
+
+/**
  * Fokus-Kasten des Schichtplans (#102): **eine** Station in voller Breite —
  * grüner Halftone-Kopf, Tages-Zwischentitel, Schicht-Zeilen mit Platz-Raster,
  * darunter der Griff für eine neue Schicht und die Fußzeile der
@@ -93,14 +100,20 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 						/>
 					)}
 				</div>
-				<div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-[7px]">
+				{/* Einspaltig am Handy (#105): zwei 150px-Spalten auf 390px kürzen jeden
+				zweiten Namen weg, und das Raster ist das Einzige im Kasten, was quer
+				laufen könnte. */}
+				<div className="grid grid-cols-1 gap-[7px] min-[900px]:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
 					{row.slots.map((slot) =>
 						// Belegt ist der Platz am Namen, nicht am `helperId` — sonst
 						// stünde eine Zuteilung ohne Helfer-Verweis als frei da.
 						slot.name ? (
 							<span
 								key={slot.position}
-								className="flex items-center gap-[7px] border-1.5 border-tinte bg-papier px-2.5 py-[7px] text-[12.5px] font-semibold"
+								className={cn(
+									'flex items-center gap-[7px] border-1.5 border-tinte bg-papier px-2.5 py-[7px] text-[12.5px] font-semibold',
+									SLOT_HEIGHT
+								)}
 							>
 								<span className="font-display text-[11px] font-semibold text-tinte-soft">
 									{slot.position}
@@ -127,7 +140,7 @@ const StationFocusBox: React.FC<StationFocusBoxProps> = ({
 						) : (
 							<OpenSlot
 								key={slot.position}
-								className={cn('w-full justify-start gap-[7px]', TOUCH_TARGET)}
+								className={cn('w-full justify-start gap-[7px]', SLOT_HEIGHT)}
 								onClick={() => (shift ? onAssignToShift(shift.id) : onAssignToStation())}
 							>
 								<span className="font-display text-[11px] font-semibold">{slot.position}</span>+

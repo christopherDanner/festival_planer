@@ -6,12 +6,15 @@ import ShiftPlanningToolbar from './ShiftPlanningToolbar';
 import StationTabStrip from './StationTabStrip';
 import StationFocusBox from './StationFocusBox';
 import NoStationsNotice from './NoStationsNotice';
-import HelperRoster from './HelperRoster';
+import HelperRoster, { type HelperRosterProps } from './HelperRoster';
+import HelperDrawer from './HelperDrawer';
+import HelperSelectionBar from './HelperSelectionBar';
 import StationDialog from './dialogs/StationDialog';
 import StationShiftDialog from './dialogs/StationShiftDialog';
 import HelperDialog from './dialogs/HelperDialog';
 import AutoAssignDialog from './dialogs/AutoAssignDialog';
 import ShareDialog from './dialogs/ShareDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { exportToExcel, exportToPdf } from '@/lib/exportService';
 import { buildStationBoard, buildStationTabs, resolveFocusStationId } from '@/lib/shiftBoard';
 import { autoAssignScope } from '@/lib/autoAssignScope';
@@ -45,11 +48,17 @@ interface ShiftPlanningViewProps {
  * schmale Spalten nebeneinander — damit ist auch der Vollbild-Modus weg, der
  * nur dem Platzdruck dieser Spalten geschuldet war (Entscheid 9 aus #68).
  *
+ * Unter 900px hat die Werkbank eine zweite Gestalt (#105): die Helferliste
+ * liegt in einer **Schublade** hinter einem FAB, und ein **Auswahl-Streifen**
+ * klebt oben, solange ein Helfer gewählt ist. Gerechnet wird nichts anders —
+ * es sind dieselben Griffe in anderer Verpackung.
+ *
  * Gerechnet und gegliedert wird in `shiftBoard` bzw. `staffing`; diese Ansicht
  * hält den Zustand (Fokus-Station, Filter, Dialoge) und verdrahtet die Griffe.
  */
 const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festivalName, festivalDate }) => {
 	const { toast } = useToast();
+	const isMobile = useIsMobile();
 	const data = useShiftPlanningData(festivalId);
 	const actions = useShiftPlanningActions(festivalId);
 
@@ -263,8 +272,45 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 		);
 	}
 
+	/**
+	 * Die Helferliste hat zwei Gestalten und **einen** Satz Griffe: die
+	 * 264px-Spalte am Desktop, die Schublade am Handy (#105). Dass beide
+	 * dieselben Props nehmen, ist die Zusage „Inhalt ist dieselbe Helferliste".
+	 */
+	const rosterHandles: HelperRosterProps = {
+		roster,
+		focusStationName: focusStation?.name ?? null,
+		search: helperSearch,
+		onSearchChange: setHelperSearch,
+		filter: helperFilter,
+		onFilterChange: setHelperFilter,
+		selectedHelperId: selectedHelper?.id ?? null,
+		onSelectHelper: handleSelectHelper,
+		onDragStart: setDraggedHelper,
+		onDragEnd: () => setDraggedHelper(null),
+		onAddHelper: () => setDialogState({ type: 'helper' }),
+		onEditHelper: (helper) => setDialogState({ type: 'helper', helper }),
+		onRemoveHelper: (helper) => {
+			// Entfernen nimmt die Zuteilungen mit (ADR 0005) — die Rückfrage
+			// benennt das, sonst sähe die Geste aus wie „ausblenden".
+			if (confirm(removeHelperMessage(helper))) {
+				actions.deleteHelper.mutate(helper.id);
+				// Sonst bliebe ein gelöschter Helfer ausgewählt und ließe sich
+				// auf einen freien Platz setzen.
+				setSelectedHelper((current) => (current?.id === helper.id ? null : current));
+			}
+		}
+	};
+
 	return (
 		<div className="space-y-3 sm:space-y-4">
+			{/* Am Handy steht die gewählte Marke in der zugeschobenen Schublade —
+			der Streifen ist dort die einzige Anzeige der Auswahl und klebt darum
+			oben (#105). Am Desktop sagt die gelbe Marke in der Spalte dasselbe. */}
+			{isMobile && (
+				<HelperSelectionBar helper={selectedHelper} onCancel={() => setSelectedHelper(null)} />
+			)}
+
 			<ShiftPlanningToolbar
 				metric={metric}
 				onAddStation={() => setDialogState({ type: 'station' })}
@@ -273,8 +319,7 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 			/>
 
 			{/* Werkbank: Fokus links, Helferliste rechts in 264px (#103). Unter
-			900px bleibt eine Spalte — die Liste zeigt sich dort gar nicht erst,
-			die Schublade am Handy baut #105. */}
+			900px bleibt eine Spalte — die Liste steht dort in der Schublade (#105). */}
 			<div className="grid items-start gap-4 min-[900px]:grid-cols-[minmax(0,1fr)_264px]">
 				<div className="min-w-0 space-y-3 sm:space-y-4">
 					{data.stations.length === 0 ? (
@@ -328,31 +373,12 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 					)}
 				</div>
 
-				<HelperRoster
-					roster={roster}
-					focusStationName={focusStation?.name ?? null}
-					search={helperSearch}
-					onSearchChange={setHelperSearch}
-					filter={helperFilter}
-					onFilterChange={setHelperFilter}
-					selectedHelperId={selectedHelper?.id ?? null}
-					onSelectHelper={handleSelectHelper}
-					onDragStart={setDraggedHelper}
-					onDragEnd={() => setDraggedHelper(null)}
-					onAddHelper={() => setDialogState({ type: 'helper' })}
-					onEditHelper={(helper) => setDialogState({ type: 'helper', helper })}
-					onRemoveHelper={(helper) => {
-						// Entfernen nimmt die Zuteilungen mit (ADR 0005) — die Rückfrage
-						// benennt das, sonst sähe die Geste aus wie „ausblenden".
-						if (confirm(removeHelperMessage(helper))) {
-							actions.deleteHelper.mutate(helper.id);
-							// Sonst bliebe ein gelöschter Helfer ausgewählt und ließe sich
-							// auf einen freien Platz setzen.
-							setSelectedHelper((current) => (current?.id === helper.id ? null : current));
-						}
-					}}
-				/>
+				{!isMobile && <HelperRoster {...rosterHandles} />}
 			</div>
+
+			{/* Der FAB liegt fest am Fensterrand über der Tab-Leiste — darum außerhalb
+			des Werkbank-Rasters. */}
+			{isMobile && <HelperDrawer {...rosterHandles} />}
 
 			{/* Dialogs */}
 			<StationDialog

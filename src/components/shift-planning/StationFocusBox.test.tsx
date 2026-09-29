@@ -360,6 +360,28 @@ describe('StationFocusBox — Station mit Schichten', () => {
 	});
 });
 
+// --- Am Handy (#105) ---------------------------------------------------------
+
+describe('StationFocusBox — das Platz-Raster am Handy', () => {
+	const markup = () =>
+		render(station(), [shift({ required_people: 2 })], [assignment()], [member()]);
+
+	it('stellt die Plätze einspaltig, erst ab 900px nebeneinander', () => {
+		// Zwei 150px-Spalten auf einem 390px-Gerät kürzen jeden zweiten Namen weg;
+		// und sie sind das Einzige im Kasten, was quer laufen könnte (#105).
+		expect(markup()).toContain(
+			'grid-cols-1 gap-[7px] min-[900px]:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]'
+		);
+	});
+
+	it('gibt jedem Platz mindestens 42px Höhe — belegt wie frei', () => {
+		// Die Schicht hat zwei Plätze: Hochauer sitzt auf dem ersten, der zweite ist
+		// offen. Beide sind Antippziele — der freie nimmt den Helfer auf, der
+		// belegte trägt das ×.
+		expect(markup().split('max-[899px]:min-h-[42px]').length - 1).toBe(2);
+	});
+});
+
 // --- Station ohne Schichten --------------------------------------------------
 
 describe('StationFocusBox — Station ohne Schichten', () => {

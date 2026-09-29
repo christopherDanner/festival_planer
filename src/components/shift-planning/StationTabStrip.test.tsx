@@ -161,4 +161,11 @@ describe('StationTabStrip — der Streifen', () => {
 	it('rendert nichts, wenn das Fest keine Stationen hat', () => {
 		expect(render([])).toBe('');
 	});
+
+	it('steht am Handy zweispaltig (#105) — ein Reiter je Zeile wäre eine Liste', () => {
+		const html = render(drei);
+
+		expect(html).toContain('grid-cols-2');
+		expect(html).toContain('min-[900px]:grid-cols-[repeat(auto-fill,minmax(210px,1fr))]');
+	});
 });
