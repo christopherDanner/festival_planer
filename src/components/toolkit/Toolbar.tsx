@@ -41,10 +41,18 @@ export interface ToolbarMetricProps {
  *
  * Die **Ampel sitzt am Wert**: rot, solange etwas fehlt, grün wenn nichts mehr
  * fehlt. Gelb wäre als Text nicht lesbar — die Zwischenstufe trägt das Maßband.
+ *
+ * Am Handy nimmt sie die **ganze erste Zeile**, die Griffe stehen darunter
+ * (#125, DESIGN-VISION §6). Das ist eine Ansage, keine Folge der Mindestbreite:
+ * knapp unter 900px passten Kennzahl und Griffe sonst noch nebeneinander, und
+ * die Leiste bräche erst irgendwo dazwischen um. Es gilt für **beide** Leisten
+ * — §6 kennt keinen Bereichsvorbehalt, und zwei Rezepte liefen auseinander
+ * (ADR 0003 §2). Der Schichtplan (#102) sieht am Handy unverändert aus; neu ist
+ * nur, dass er zwischen ~500 und 899px genauso umbricht.
  */
 export function ToolbarMetric({ label, value, max, valueText }: ToolbarMetricProps) {
 	return (
-		<div className="flex min-w-[250px] flex-1 items-center gap-2.5">
+		<div className="flex w-full items-center gap-2.5 min-[900px]:w-auto min-[900px]:min-w-[250px] min-[900px]:flex-1">
 			<b className="whitespace-nowrap text-xs font-bold uppercase tracking-[.06em]">{label}</b>
 			<span
 				className={cn(

@@ -21,7 +21,10 @@ vi.mock('@/components/ui/select', async () => {
 	return {
 		Select: ({ onValueChange, children }: Kinder & { onValueChange: (v: string) => void }) =>
 			React.createElement(Pick.Provider, { value: onValueChange }, children),
-		SelectTrigger: ({ children }: Kinder) => React.createElement('div', null, children),
+		// Aufschrift und Aufmachung des Auslösers kommen durch — an ihnen hängt
+		// der Umbruch der Filterzeile am Handy (#125).
+		SelectTrigger: ({ className, children, ...rest }: Kinder & { className?: string }) =>
+			React.createElement('div', { ...rest, className }, children),
 		SelectValue: () => null,
 		SelectContent: ({ children }: Kinder) => React.createElement('div', null, children),
 		SelectItem: ({ value, children }: Kinder & { value: string }) => {
@@ -118,6 +121,64 @@ describe('TaskWorklist — der Kopf', () => {
 		expect(html).toContain('Verantwortlich: alle');
 		expect(html).toContain('Hochauer Franz');
 		expect(html.indexOf('Verantwortlich: alle')).toBeLessThan(html.indexOf('Hochauer Franz'));
+	});
+});
+
+/** Der öffnende Tag des nächsten `element` über diesem Merkmal — der Anker der
+Aufmachungs-Prüfungen unten. Gesucht wird ein Merkmal, das die Komponente selbst
+setzt (ein `aria-label`, ein Text), nicht die Stellung im Markup. */
+const tag = (html: string, merkmal: string, element = '<') => {
+	const start = html.lastIndexOf(element, html.indexOf(merkmal));
+	return html.slice(start, html.indexOf('>', start));
+};
+
+describe('TaskWorklist — der Kopf am Handy (#125)', () => {
+	const schalter = (html: string) => tag(html, 'aria-label="Aufgaben-Filter"');
+	const feld = (html: string) => tag(html, 'aria-label="Verantwortlicher"');
+
+	it('stellt den Segment-Schalter unter 900px über die volle Breite', () => {
+		expect(schalter(render({ days: [AUFBAU] }))).toMatch(/class="[^"]*\bw-full\b/);
+	});
+
+	it('stellt das Verantwortlichen-Feld darunter, ebenfalls über die volle Breite', () => {
+		expect(feld(render({ days: [AUFBAU] }))).toMatch(/class="[^"]*\bw-full\b/);
+	});
+
+	it('lässt beide ab 900px nebeneinander stehen wie bisher', () => {
+		const html = render({ days: [AUFBAU] });
+
+		expect(schalter(html)).toContain('min-[900px]:w-auto');
+		expect(feld(html)).toContain('min-[900px]:w-auto');
+	});
+});
+
+describe('TaskWorklist — die Zeile am Handy (#125)', () => {
+	/** Der Kasten, in dem die Uhrzeit steht — am Handy die zweite Zeile. */
+	const nebenzeile = (html: string) => tag(html, '>08:00', '<div');
+	/** Der Knopf, der den Titel trägt und den Eintrag öffnet. */
+	const titel = (html: string) => tag(html, '>Material-Inventur', '<button');
+
+	it('stellt Uhrzeit und Verantwortlichen unter den Titel, statt sie hinauszuschieben', () => {
+		// Fünf Spalten nebeneinander messen in 375px rund 445px — die Namens-Marke
+		// und das ⋮ standen außerhalb des Papiers.
+		expect(nebenzeile(render({ days: [AUFBAU] }))).toContain('w-full');
+	});
+
+	it('löst die Nebenzeile ab 900px wieder auf — die Zeile bleibt eine Zeile', () => {
+		expect(nebenzeile(render({ days: [AUFBAU] }))).toContain('min-[900px]:contents');
+	});
+
+	it('gibt auch dem Titel am Handy ein Tippziel von 40px', () => {
+		// Dieselbe Klasse wie an jedem anderen Handy-Tippziel des Repos; ein
+		// Padding, das rechnerisch auf 39,5px kommt, wäre knapp daneben.
+		expect(titel(render({ days: [AUFBAU] }))).toContain('max-[899px]:min-h-10');
+	});
+
+	it('bricht am Handy auch ein Wort, das allein zu breit ist', () => {
+		// Titel sind Freitext; „Donaudampfschifffahrts…" schob die Zeile am Handy
+		// um 88px über den Rand des Papiers. Ab 900px darf nicht gebrochen werden:
+		// dort fiele der Knopf auf ein Zeichen Breite zusammen.
+		expect(titel(render({ days: [AUFBAU] }))).toContain('max-[899px]:break-words');
 	});
 });
 

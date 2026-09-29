@@ -160,9 +160,11 @@ export default function ScheduleView({
 			/>
 
 			{/* Der Schreibtisch: Werkliste 1.5fr, Programmzettel 1fr. Unter 900px
-			bleibt eine Spalte — den Zettel unter die Werkliste zu legen ist der
-			Schnitt von #125. */}
-			<div className="grid items-start gap-4 min-[900px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+			eine Spalte, der Zettel unter der Werkliste (#125) — ausdrücklich
+			`minmax(0, 1fr)` statt der stillen Vorgabe `auto`, sonst sprengt eine
+			breite Zeile das Gitter (DESIGN-VISION §6). Geklebt wird nichts: der
+			Zettel ist gestapelt kein Randstreifen mehr. */}
+			<div className="grid items-start gap-4 grid-cols-[minmax(0,1fr)] min-[900px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
 				<TaskWorklist
 					worklist={worklist}
 					filter={filter}
