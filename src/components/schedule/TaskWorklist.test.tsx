@@ -21,7 +21,10 @@ vi.mock('@/components/ui/select', async () => {
 	return {
 		Select: ({ onValueChange, children }: Kinder & { onValueChange: (v: string) => void }) =>
 			React.createElement(Pick.Provider, { value: onValueChange }, children),
-		SelectTrigger: ({ children }: Kinder) => React.createElement('div', null, children),
+		// Aufschrift und Aufmachung des Auslösers kommen durch — an ihnen hängt
+		// der Umbruch der Filterzeile am Handy (#125).
+		SelectTrigger: ({ className, children, ...rest }: Kinder & { className?: string }) =>
+			React.createElement('div', { ...rest, className }, children),
 		SelectValue: () => null,
 		SelectContent: ({ children }: Kinder) => React.createElement('div', null, children),
 		SelectItem: ({ value, children }: Kinder & { value: string }) => {
@@ -118,6 +121,57 @@ describe('TaskWorklist — der Kopf', () => {
 		expect(html).toContain('Verantwortlich: alle');
 		expect(html).toContain('Hochauer Franz');
 		expect(html.indexOf('Verantwortlich: alle')).toBeLessThan(html.indexOf('Hochauer Franz'));
+	});
+});
+
+describe('TaskWorklist — der Kopf am Handy (#125)', () => {
+	/** Der öffnende Tag des Elements, das dieses Merkmal trägt. */
+	const tag = (html: string, merkmal: string) => {
+		const start = html.lastIndexOf('<', html.indexOf(merkmal));
+		return html.slice(start, html.indexOf('>', start));
+	};
+
+	const schalter = (html: string) => tag(html, 'aria-label="Aufgaben-Filter"');
+	const feld = (html: string) => tag(html, 'aria-label="Verantwortlicher"');
+
+	it('stellt den Segment-Schalter unter 900px über die volle Breite', () => {
+		expect(schalter(render({ days: [AUFBAU] }))).toMatch(/class="[^"]*\bw-full\b/);
+	});
+
+	it('stellt das Verantwortlichen-Feld darunter, ebenfalls über die volle Breite', () => {
+		expect(feld(render({ days: [AUFBAU] }))).toMatch(/class="[^"]*\bw-full\b/);
+	});
+
+	it('lässt beide ab 900px nebeneinander stehen wie bisher', () => {
+		const html = render({ days: [AUFBAU] });
+
+		expect(schalter(html)).toContain('min-[900px]:w-auto');
+		expect(feld(html)).toContain('min-[900px]:w-auto');
+	});
+});
+
+describe('TaskWorklist — die Zeile am Handy (#125)', () => {
+	/** Der öffnende Tag des Kastens, in dem die Uhrzeit steht. */
+	const nebenzeile = (html: string) => {
+		const start = html.lastIndexOf('<div', html.indexOf('08:00'));
+		return html.slice(start, html.indexOf('>', start));
+	};
+
+	it('stellt Uhrzeit und Verantwortlichen unter den Titel, statt sie hinauszuschieben', () => {
+		// Fünf Spalten nebeneinander messen in 375px rund 445px — die Namens-Marke
+		// und das ⋮ standen außerhalb des Papiers.
+		expect(nebenzeile(render({ days: [AUFBAU] }))).toContain('w-full');
+	});
+
+	it('löst die Nebenzeile ab 900px wieder auf — die Zeile bleibt eine Zeile', () => {
+		expect(nebenzeile(render({ days: [AUFBAU] }))).toContain('min-[900px]:contents');
+	});
+
+	it('gibt auch dem Titel am Handy ein Tippziel von 40px', () => {
+		const html = render({ days: [AUFBAU] });
+		const start = html.lastIndexOf('<button', html.indexOf('>Material-Inventur'));
+
+		expect(html.slice(start, html.indexOf('>', start))).toContain('max-[899px]:py-2.5');
 	});
 });
 

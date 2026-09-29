@@ -60,7 +60,11 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 				Aufgaben-Werkliste
 			</h3>
 			{/* Die Zahlen in den Segmenten nennen den Gesamtbestand, nicht die
-			gezeigten Zeilen — siehe `scheduleWorklist`. */}
+			gezeigten Zeilen — siehe `scheduleWorklist`.
+
+			Am Handy bricht die Filterzeile um: Schalter über Feld, beide über die
+			volle Breite (#125). Nebeneinander blieben in 375px drei Segmente mit
+			Zähler und ein Namensfeld, und keines wäre mehr zu treffen. */}
 			<SegmentedControl<TaskFilter>
 				options={[
 					{ value: 'all', label: `Alle (${worklist.counts.all})` },
@@ -70,6 +74,7 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 				value={filter}
 				onValueChange={onFilterChange}
 				aria-label="Aufgaben-Filter"
+				className="w-full min-[900px]:w-auto"
 			/>
 			<Select
 				value={responsibleId ?? ALL_RESPONSIBLES}
@@ -80,7 +85,10 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
 				<SelectTrigger
 					id="worklist-responsible"
 					aria-label="Verantwortlicher"
-					className={cn('h-10 w-auto gap-2 border-2 border-tinte bg-white text-[12px] font-bold text-tinte', FOCUS_INK)}
+					className={cn(
+						'h-10 w-full gap-2 border-2 border-tinte bg-white text-[12px] font-bold text-tinte min-[900px]:w-auto',
+						FOCUS_INK
+					)}
 				>
 					<SelectValue />
 				</SelectTrigger>
@@ -168,6 +176,13 @@ const TaskWorklist: React.FC<TaskWorklistProps> = ({
  * Haken und Titel sind zwei Knöpfe nebeneinander statt ineinander — ein Knopf
  * im Knopf wäre kein gültiges HTML. Der Haken ist 17px groß (DESIGN-VISION §4)
  * und sitzt in einem 40px-Tippziel (§6).
+ *
+ * **Am Handy sind es zwei Zeilen** (#125): oben Haken, Titel und ⋮, darunter —
+ * unter den Titel eingerückt — Uhrzeit und Verantwortlicher. Fünf Spalten
+ * nebeneinander messen in 375px rund 445px; die Namens-Marke und das ⋮ standen
+ * schlicht außerhalb des Papiers, und dem Titel blieben 38px. Ab 900px löst
+ * `contents` die Nebenzeile wieder auf: dort ist die Zeile Zeichen für Zeichen
+ * dieselbe wie vorher.
  */
 function TaskRow({
 	task,
@@ -183,7 +198,7 @@ function TaskRow({
 	const { entry, done, time, responsible } = task;
 
 	return (
-		<div className="flex items-center gap-2.5 border-b border-linie pl-1 pr-1 text-[13px] last:border-b-0">
+		<div className="flex flex-wrap items-center gap-x-2.5 border-b border-linie pl-1 pr-1 text-[13px] last:border-b-0 min-[900px]:flex-nowrap">
 			<button
 				type="button"
 				role="checkbox"
@@ -208,7 +223,7 @@ function TaskRow({
 			<button
 				type="button"
 				onClick={onEdit}
-				className="min-w-0 flex-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
+				className="min-w-0 flex-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte max-[899px]:py-2.5"
 			>
 				<span className={cn('font-bold', done && 'text-tinte-soft line-through')}>
 					{entry.title}
@@ -220,19 +235,31 @@ function TaskRow({
 				)}
 			</button>
 
-			{/* Feste, rechtsbündige Zeitspalte in der Akzentschrift — die Auflage
-			„Uhrzeiten prominent" aus der abgenommenen Variante C. */}
-			<span className="w-[62px] shrink-0 text-right leading-none">
-				{time ? (
-					<span className="font-display text-[17px] font-semibold tabular-nums tracking-[.02em]">
-						{time}
-					</span>
-				) : (
-					<span className="text-[11px] font-bold text-tinte-soft">ohne Zeit</span>
-				)}
-			</span>
+			{/* Die Nebenzeile des Handys — `order-1` schiebt sie hinter das ⋮, die
+			Einrückung stellt sie unter den Titel. `contents` löst den Kasten ab
+			900px auf: dort sind Uhrzeit und Marke wieder Glieder der Zeile. */}
+			<div className="order-1 flex w-full items-center gap-2.5 pb-2 pl-[50px] min-[900px]:contents">
+				{/* Feste, rechtsbündige Zeitspalte in der Akzentschrift — die Auflage
+				„Uhrzeiten prominent" aus der abgenommenen Variante C. In der
+				Nebenzeile steht sie vorne und braucht die feste Spalte nicht. */}
+				<span className="w-[62px] shrink-0 text-right leading-none max-[899px]:w-auto max-[899px]:text-left">
+					{time ? (
+						<span className="font-display text-[17px] font-semibold tabular-nums tracking-[.02em]">
+							{time}
+						</span>
+					) : (
+						<span className="text-[11px] font-bold text-tinte-soft">ohne Zeit</span>
+					)}
+				</span>
 
-			{responsible && <NameChip className="shrink-0">{responsible}</NameChip>}
+				{/* Am Handy darf die Marke schrumpfen: ein langer Name („Wiesenberger-
+				Hochleitner Maximilian") schob die Zeile sonst über den Rand. */}
+				{responsible && (
+					<NameChip className="shrink-0 max-[899px]:min-w-0 max-[899px]:shrink">
+						{responsible}
+					</NameChip>
+				)}
+			</div>
 
 			<ActionMenu
 				menuLabel={`Menü der Aufgabe ${entry.title}`}
