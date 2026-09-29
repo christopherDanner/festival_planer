@@ -76,8 +76,7 @@ import {
 	createHelpersBulk,
 	updateHelper,
 	deleteHelper,
-	updateHelperPreferences,
-	derivePreferenceMaps,
+	deriveStationPreferences,
 	removeHelperMessage,
 	type Helper
 } from '../helperService';
@@ -162,6 +161,25 @@ describe('createHelper', () => {
 		expect(lastCall().payload).not.toHaveProperty('user_id');
 		expect(lastCall().payload).not.toHaveProperty('is_active');
 	});
+
+	// Seit #107 legt **ein** Blatt Stammdaten und Wünsche an; ein frisch
+	// angelegter Helfer bringt seine Wünsche also schon mit.
+	it('nimmt die Wünsche des Anlege-Blatts gleich mit', async () => {
+		mocks.rows = [{ id: 'neu-1' }];
+
+		await createHelper('fest-7', {
+			first_name: 'Hans',
+			last_name: 'Huber',
+			station_preferences: ['st-1'],
+			shift_preferences: ['sh-1']
+		});
+
+		expect(mocks.calls).toHaveLength(1);
+		expect(lastCall().payload).toMatchObject({
+			station_preferences: ['st-1'],
+			shift_preferences: ['sh-1']
+		});
+	});
 });
 
 describe('createHelpersBulk', () => {
@@ -215,6 +233,30 @@ describe('updateHelper', () => {
 			['festival_id', 'fest-7']
 		]);
 	});
+
+	// Ein Blatt, ein Update (#107): Stammdaten und Wünsche stehen auf derselben
+	// Zeile, ein zweiter Schreibweg dafür wäre ein zweiter Rundgang zum Server.
+	it('schreibt Stammdaten und Wünsche mit demselben Update', async () => {
+		await updateHelper('fest-7', 'h1', {
+			first_name: 'Hans',
+			last_name: 'Huber',
+			station_preferences: ['st-1'],
+			shift_preferences: []
+		});
+
+		expect(mocks.calls).toHaveLength(1);
+		expect(lastCall().payload).toMatchObject({
+			last_name: 'Huber',
+			station_preferences: ['st-1'],
+			shift_preferences: []
+		});
+	});
+
+	it('fasst festival_member_preferences nicht mehr an', async () => {
+		await updateHelper('fest-7', 'h1', { station_preferences: [], shift_preferences: [] });
+
+		expect(mocks.calls.map((c) => c.table)).not.toContain('festival_member_preferences');
+	});
 });
 
 describe('deleteHelper', () => {
@@ -230,52 +272,22 @@ describe('deleteHelper', () => {
 	});
 });
 
-describe('updateHelperPreferences', () => {
-	it('schreibt beide Wunsch-Arrays mit einem Update auf die Helfer-Zeile', async () => {
-		await updateHelperPreferences('fest-7', 'h1', ['st-1'], ['sh-1', 'sh-2']);
-
-		expect(mocks.calls).toHaveLength(1);
-		expect(lastCall().table).toBe('festival_helpers');
-		expect(lastCall().op).toBe('update');
-		expect(lastCall().payload).toMatchObject({
-			station_preferences: ['st-1'],
-			shift_preferences: ['sh-1', 'sh-2']
-		});
-		expect(lastCall().filters).toEqual([
-			['id', 'h1'],
-			['festival_id', 'fest-7']
-		]);
-	});
-
-	it('fasst festival_member_preferences nicht mehr an', async () => {
-		await updateHelperPreferences('fest-7', 'h1', [], []);
-
-		expect(mocks.calls.map((c) => c.table)).not.toContain('festival_member_preferences');
-	});
-});
-
-describe('derivePreferenceMaps', () => {
-	it('legt die Wünsche der Helfer-Zeilen als Maps je Helfer aus', () => {
+describe('deriveStationPreferences', () => {
+	it('legt die Wunsch-Stationen der Helfer-Zeilen als Map je Helfer aus', () => {
 		const helpers = [
 			makeHelper({ id: 'h1', station_preferences: ['st-1'], shift_preferences: ['sh-1'] }),
 			makeHelper({ id: 'h2', station_preferences: [], shift_preferences: [] })
 		];
 
-		expect(derivePreferenceMaps(helpers)).toEqual({
-			stationPreferences: { h1: ['st-1'], h2: [] },
-			shiftPreferences: { h1: ['sh-1'], h2: [] }
-		});
+		expect(deriveStationPreferences(helpers)).toEqual({ h1: ['st-1'], h2: [] });
 	});
 
 	it('verträgt fehlende Arrays, ohne über undefined zu stolpern', () => {
 		const helpers = [
-			{ ...makeHelper({ id: 'h3' }), station_preferences: undefined, shift_preferences: undefined }
+			{ ...makeHelper({ id: 'h3' }), station_preferences: undefined }
 		] as unknown as Helper[];
 
-		expect(derivePreferenceMaps(helpers)).toEqual({
-			stationPreferences: { h3: [] },
-			shiftPreferences: { h3: [] }
-		});
+		expect(deriveStationPreferences(helpers)).toEqual({ h3: [] });
 	});
 });
 

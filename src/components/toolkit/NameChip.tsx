@@ -15,6 +15,11 @@ export interface NameChipProps extends Omit<React.HTMLAttributes<HTMLElement>, '
 	onSelect?: () => void;
 	/** Nur mit `onSelect`: gewählt. */
 	selected?: boolean;
+	/** Die Farbe des gewählten Zustands. `ink` ist die Tinte-Fläche mit gelber
+	Schrift (Teilen-Dialog). `gelb` dreht sie um — so markiert der **Schichtplan**
+	seine Auswahl, an der Helfer-Marke wie an der Wunsch-Station (#103, #107).
+	Ohne `selected` ändert sie nichts. */
+	selectedTone?: 'ink' | 'gelb';
 }
 
 const CHIP = 'inline-flex items-center gap-[7px] py-1 pl-[7px] pr-2.5 text-[12.5px] font-medium';
@@ -32,6 +37,7 @@ export function NameChip({
 	removeLabel,
 	onSelect,
 	selected,
+	selectedTone = 'ink',
 	...props
 }: NameChipProps) {
 	if (onSelect) {
@@ -47,7 +53,7 @@ export function NameChip({
 					FOCUS,
 					// Tippziel ≥ 40px am Handy (DESIGN-VISION §6).
 					'max-[899px]:min-h-10',
-					selected && 'bg-tinte text-gelb',
+					selected && (selectedTone === 'gelb' ? 'bg-gelb text-tinte' : 'bg-tinte text-gelb'),
 					className
 				)}>
 				{children}

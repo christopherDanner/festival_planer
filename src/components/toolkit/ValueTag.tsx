@@ -12,6 +12,9 @@ const valueTagVariants = cva(
 				green: 'border-gruen bg-white text-gruen',
 				/** Betrag ohne Standardwert (Freibetrag): Tinte-Rahmen auf Papiergrund. */
 				ink: 'border-tinte bg-papier text-tinte',
+				/** Gewählt: Tinte-Rahmen auf gelber Fläche — die Auswahl-Farbe des
+				Schichtplans, an der Wunsch-Schicht wie an der Helfer-Marke (#107). */
+				gelb: 'border-tinte bg-gelb text-tinte',
 				/** Nichts erfasst / Sachleistung: gestrichelt grau. */
 				muted: 'border-dashed border-tinte-soft bg-white text-tinte-soft'
 			},

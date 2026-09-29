@@ -233,6 +233,16 @@ const Werkstatt = () => (
 						<NameChip onSelect={() => {}}>Sepp Gruber</NameChip>
 					</div>
 				</Probe>
+				<Probe label="Wählbar in Gelb (Schichtplan, Wunsch-Station)">
+					<div className="flex flex-wrap gap-2">
+						<NameChip onSelect={() => {}} selected selectedTone="gelb">
+							Ausschank
+						</NameChip>
+						<NameChip onSelect={() => {}} selectedTone="gelb">
+							Grill
+						</NameChip>
+					</div>
+				</Probe>
 			</div>
 		</Abschnitt>
 
@@ -259,6 +269,16 @@ const Werkstatt = () => (
 				</Probe>
 				<Probe label="Tinte-Marke: Betrag ohne Standardwert (Freibetrag)">
 					<ValueTag tone="ink" value="€ 200" />
+				</Probe>
+				<Probe label="Gelb: gewählt (Schichtplan, Wunsch-Schicht)">
+					<div className="flex flex-wrap gap-2">
+						<ValueTag tone="gelb" value="11–15">
+							Sa 25. Juli · Frühschoppen
+						</ValueTag>
+						<ValueTag tone="ink" value="18–23">
+							Sa 25. Juli · Abend
+						</ValueTag>
+					</div>
 				</Probe>
 			</div>
 		</Abschnitt>

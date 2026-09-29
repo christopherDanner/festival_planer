@@ -134,13 +134,19 @@ vi.mock('../helperService', () => ({
 			return `h-neu-${mocks.nextHelperId}`;
 		});
 	},
-	updateHelperPreferences: async (
+	// Seit #107 schreibt **ein** Weg auf die Helfer-Zeile — Stammdaten und
+	// Wünsche stehen ohnehin nebeneinander (ADR 0005).
+	updateHelper: async (
 		festivalId: string,
 		helperId: string,
-		stationPreferences: string[],
-		shiftPreferences: string[]
+		updates: { station_preferences?: string[]; shift_preferences?: string[] }
 	) => {
-		mocks.preferenceUpdates.push({ festivalId, helperId, stationPreferences, shiftPreferences });
+		mocks.preferenceUpdates.push({
+			festivalId,
+			helperId,
+			stationPreferences: updates.station_preferences ?? [],
+			shiftPreferences: updates.shift_preferences ?? []
+		});
 	}
 }));
 

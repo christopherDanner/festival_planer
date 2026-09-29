@@ -398,10 +398,14 @@ const ShiftPlanningView: React.FC<ShiftPlanningViewProps> = ({ festivalId, festi
 				}}
 			/>
 
+			{/* Ein Blatt für Stammdaten und Wünsche (#107) — den zweiten Dialog gab
+			es nur, solange die Wünsche in einer eigenen Tabelle lagen (ADR 0005). */}
 			<HelperDialog
 				open={dialogState.type === 'helper'}
 				onOpenChange={(open) => !open && setDialogState({ type: 'none' })}
 				helper={dialogState.type === 'helper' ? dialogState.helper : null}
+				stations={data.stations}
+				stationShifts={data.stationShifts}
 				onSave={(formData) => {
 					if (dialogState.type === 'helper' && dialogState.helper) {
 						actions.updateHelper.mutate({ id: dialogState.helper.id, updates: formData });
