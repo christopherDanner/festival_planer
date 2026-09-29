@@ -1,130 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { UserPlus, Save } from 'lucide-react';
-import type { Helper, HelperInput } from '@/lib/helperService';
+import React, { useEffect, useState } from 'react';
 
-interface HelperDialogProps {
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import {
+	canSaveHelper,
+	emptyHelperForm,
+	helperFormFrom,
+	helperPayload,
+	type HelperForm,
+	type HelperPayload
+} from '@/lib/helperDialogForm';
+import type { Helper } from '@/lib/helperService';
+import type { Station, StationShift } from '@/lib/shiftService';
+import HelperZettel from './HelperZettel';
+
+export interface HelperDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	helper?: Helper | null;
-	onSave: (data: Required<HelperInput>) => void;
+	/**
+	 * Die **vollständigen** Listen des Fests — daran hängen nicht nur die
+	 * Wunsch-Marken, sondern auch das Sieb gegen Karteileichen: was hier fehlt,
+	 * gilt als gelöscht und verschwindet aus den Wünschen (ADR 0005). Der Dialog
+	 * gehört darum hinter das Laden, nicht daneben.
+	 */
+	stations: Station[];
+	stationShifts: StationShift[];
+	onSave: (data: HelperPayload) => void;
 }
 
 /**
- * Anlegen und Bearbeiten eines Helfers — nach dem Wegfall der Mitglieder-Seite
- * der einzige Weg dazu, aufgerufen aus der Helferliste des Schichtplans.
- * Der Aktiv-Haken ist mit ADR 0005 weg: wer nicht mitmacht, wird entfernt.
+ * Helfer-Dialog (#107): der Radix-Rahmen um den Helfer-Zettel. **Ein** Blatt für
+ * Anlegen, Bearbeiten und Wünsche-Setzen — der frühere `PreferenceDialog` ist
+ * damit weg. Er war nötig, solange die Wünsche in `festival_member_preferences`
+ * lagen; seit ADR 0005 sind sie zwei `uuid[]`-Spalten auf derselben Zeile, die
+ * auch die Stammdaten trägt.
+ *
+ * Der Dialog hält den Formularzustand und übergibt beim Speichern — Optik und
+ * Feldschnitt liegen im `HelperZettel`, die Regeln in `helperDialogForm`. Wie
+ * beim Station-Dialog (#106) ist der Rahmen reine Positionierung: Papier,
+ * Rahmen und Schatten bringt der Zettel mit.
  */
-const HelperDialog: React.FC<HelperDialogProps> = ({ open, onOpenChange, helper, onSave }) => {
-	const [form, setForm] = useState({
-		first_name: '',
-		last_name: '',
-		phone: '',
-		email: '',
-		notes: ''
-	});
+const HelperDialog: React.FC<HelperDialogProps> = ({
+	open,
+	onOpenChange,
+	helper,
+	stations,
+	stationShifts,
+	onSave
+}) => {
+	const [form, setForm] = useState<HelperForm>(emptyHelperForm);
 
 	useEffect(() => {
-		if (helper) {
-			setForm({
-				first_name: helper.first_name,
-				last_name: helper.last_name,
-				phone: helper.phone || '',
-				email: helper.email || '',
-				notes: helper.notes || ''
-			});
-		} else {
-			setForm({
-				first_name: '',
-				last_name: '',
-				phone: '',
-				email: '',
-				notes: ''
-			});
-		}
+		setForm(helper ? helperFormFrom(helper, { stations, stationShifts }) : emptyHelperForm());
+		// Stationen und Schichten stehen hier nur als Sieb für Karteileichen
+		// (ADR 0005). Ein Nachladen der Liste darf kein Getipptes zurücksetzen —
+		// darum hängt das Blatt am Helfer und am Öffnen, nicht an den Listen.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [helper, open]);
 
 	const handleSave = () => {
-		if (!form.first_name || !form.last_name) return;
-		onSave(form);
+		if (!canSaveHelper(form)) return;
+		onSave(helperPayload(form));
 		onOpenChange(false);
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2">
-						<UserPlus className="h-5 w-5" />
-						{helper ? 'Helfer bearbeiten' : 'Neuen Helfer hinzufügen'}
-					</DialogTitle>
-				</DialogHeader>
-				<div className="space-y-4">
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<Label htmlFor="first_name">Vorname *</Label>
-							<Input
-								id="first_name"
-								value={form.first_name}
-								onChange={(e) => setForm((prev) => ({ ...prev, first_name: e.target.value }))}
-								placeholder="Vorname eingeben"
-							/>
-						</div>
-						<div>
-							<Label htmlFor="last_name">Nachname *</Label>
-							<Input
-								id="last_name"
-								value={form.last_name}
-								onChange={(e) => setForm((prev) => ({ ...prev, last_name: e.target.value }))}
-								placeholder="Nachname eingeben"
-							/>
-						</div>
-					</div>
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<Label htmlFor="phone">Telefon</Label>
-							<Input
-								id="phone"
-								value={form.phone}
-								onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-								placeholder="Telefonnummer eingeben"
-							/>
-						</div>
-						<div>
-							<Label htmlFor="email">E-Mail</Label>
-							<Input
-								id="email"
-								type="email"
-								value={form.email}
-								onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-								placeholder="E-Mail eingeben"
-							/>
-						</div>
-					</div>
-					<div>
-						<Label htmlFor="notes">Notizen</Label>
-						<Textarea
-							id="notes"
-							value={form.notes}
-							onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-							placeholder="Notizen eingeben"
-							rows={3}
-						/>
-					</div>
-					<div className="flex justify-end gap-2 pt-4">
-						<Button variant="outline" onClick={() => onOpenChange(false)}>
-							Abbrechen
-						</Button>
-						<Button onClick={handleSave} disabled={!form.first_name || !form.last_name}>
-							<Save className="h-4 w-4 mr-2" />
-							{helper ? 'Aktualisieren' : 'Hinzufügen'}
-						</Button>
-					</div>
-				</div>
+			{/* Der Zettel bringt Rahmen, Papier und Versatz-Schatten mit — die
+			Shell bleibt reine Positionierung. */}
+			<DialogContent
+				hideClose
+				// Der Zettel erklärt sich über seine Feldbeschriftungen; eine
+				// Beschreibungszeile darüber wäre Füllwerk (Radix-Opt-out).
+				aria-describedby={undefined}
+				className="max-w-[620px] border-0 bg-transparent p-0 shadow-none sm:p-0">
+				<HelperZettel
+					mode={helper ? 'edit' : 'create'}
+					form={form}
+					source={{ stations, stationShifts }}
+					onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+					onCancel={() => onOpenChange(false)}
+					onSave={handleSave}
+					TitleTag={DialogTitle}
+				/>
 			</DialogContent>
 		</Dialog>
 	);

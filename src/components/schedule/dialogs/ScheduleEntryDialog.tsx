@@ -45,6 +45,11 @@ interface ScheduleEntryDialogProps {
 	/** Alle Ablauf-Tage des Fests zur Wahl — auch die ohne Eintrag, die in der
 	Werkliste gar nicht erscheinen (#122). */
 	days: Array<{ id: string; date: string; label: string | null }>;
+	/** Der Griff kennt den Tag schon: „+ PROGRAMMPUNKT" am Tagesblock des
+	Programmzettels legt für genau diesen Tag an (#123), da wäre ein Feld mit
+	genau einer richtigen Antwort nur ein zweiter Handgriff. Die Knöpfe der
+	Werkzeugleiste kennen ihn nicht und lassen ihn darum wählen. */
+	dayLocked?: boolean;
 	/** Optionaler Feinschnitt; `null` heißt „direkt unter dem Tag". */
 	schedulePhaseId: string | null;
 	festivalId: string;
@@ -60,6 +65,7 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 	defaultType = 'task',
 	scheduleDayId,
 	days,
+	dayLocked = false,
 	schedulePhaseId,
 	festivalId,
 	helpers,
@@ -99,6 +105,11 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 		}
 	}, [entry, open, defaultType, scheduleDayId]);
 
+	/** Der mitgebrachte Tag, wenn der Griff ihn kennt — und er unter den Tagen des
+	Fests auch wirklich steht. Fehlt er, bleibt das Auswahlfeld stehen: lieber
+	wählen lassen als einen Eintrag ins Leere legen. */
+	const lockedDay = dayLocked ? days.find((day) => day.id === form.schedule_day_id) : undefined;
+
 	const handleSave = () => {
 		if (!form.title || !form.schedule_day_id) return;
 		if (form.start_time && form.end_time && form.start_time >= form.end_time) return;
@@ -114,7 +125,12 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 			type,
 			start_time: form.start_time || null,
 			end_time: form.end_time || null,
-			responsible_helper_id: form.responsible_helper_id && form.responsible_helper_id !== '__none__' ? form.responsible_helper_id : null,
+			// Status und Verantwortlicher hängen beide an der Aufgabe (ADR 0007) —
+			// wer den Typ nach dem Namen umstellt, lässt den Namen zurück.
+			responsible_helper_id:
+				type === 'task' && form.responsible_helper_id && form.responsible_helper_id !== '__none__'
+					? form.responsible_helper_id
+					: null,
 			status: type === 'task' ? (entry?.status || 'open') : null,
 			description: form.description || null
 		});
@@ -140,24 +156,33 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 					{/* Der Tag ist die Pflichtebene (ADR 0007) und seit #122 hier zu
 					wählen: mit dem Akkordeon ist der tagesbezogene „+"-Griff entfallen.
 					Zur Wahl stehen auch Tage ohne Eintrag, die in der Werkliste gar
-					nicht erscheinen. */}
-					<div>
-						<Label htmlFor="entry-day">Tag *</Label>
-						<Select
-							value={form.schedule_day_id}
-							onValueChange={(value) => setForm((prev) => ({ ...prev, schedule_day_id: value }))}>
-							<SelectTrigger id="entry-day">
-								<SelectValue placeholder="Tag auswählen" />
-							</SelectTrigger>
-							<SelectContent>
-								{days.map((day) => (
-									<SelectItem key={day.id} value={day.id}>
-										{scheduleDayTitle(day)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
+					nicht erscheinen. Wo der Griff den Tag mitbringt (#123), steht er
+					nur noch da — zu wählen gibt es nichts, aber wo der Eintrag landet,
+					muss der Zettel trotzdem sagen. */}
+					{dayLocked && lockedDay ? (
+						<p className="text-sm">
+							<span className="font-bold">Tag: </span>
+							{scheduleDayTitle(lockedDay)}
+						</p>
+					) : (
+						<div>
+							<Label htmlFor="entry-day">Tag *</Label>
+							<Select
+								value={form.schedule_day_id}
+								onValueChange={(value) => setForm((prev) => ({ ...prev, schedule_day_id: value }))}>
+								<SelectTrigger id="entry-day">
+									<SelectValue placeholder="Tag auswählen" />
+								</SelectTrigger>
+								<SelectContent>
+									{days.map((day) => (
+										<SelectItem key={day.id} value={day.id}>
+											{scheduleDayTitle(day)}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					)}
 
 					<div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
 						<div>
@@ -194,26 +219,30 @@ const ScheduleEntryDialog: React.FC<ScheduleEntryDialogProps> = ({
 						</div>
 					</div>
 
-					<div>
-						<Label htmlFor="entry-responsible">Verantwortlich</Label>
-						<Select
-							value={form.responsible_helper_id || '__none__'}
-							onValueChange={(value) =>
-								setForm((prev) => ({ ...prev, responsible_helper_id: value === '__none__' ? '' : value }))
-							}>
-							<SelectTrigger id="entry-responsible">
-								<SelectValue placeholder="Kein Verantwortlicher" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
-								{helpers.map((helper) => (
-									<SelectItem key={helper.id} value={helper.id}>
-										{helper.last_name} {helper.first_name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
+					{/* Nur die Aufgabe trägt einen Verantwortlichen (ADR 0007): der
+					Programmpunkt steht auf dem Aushang, und der nennt keinen Namen. */}
+					{form.type === 'task' && (
+						<div>
+							<Label htmlFor="entry-responsible">Verantwortlich</Label>
+							<Select
+								value={form.responsible_helper_id || '__none__'}
+								onValueChange={(value) =>
+									setForm((prev) => ({ ...prev, responsible_helper_id: value === '__none__' ? '' : value }))
+								}>
+								<SelectTrigger id="entry-responsible">
+									<SelectValue placeholder="Kein Verantwortlicher" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
+									{helpers.map((helper) => (
+										<SelectItem key={helper.id} value={helper.id}>
+											{helper.last_name} {helper.first_name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					)}
 
 					<div>
 						<Label htmlFor="entry-description">Beschreibung</Label>

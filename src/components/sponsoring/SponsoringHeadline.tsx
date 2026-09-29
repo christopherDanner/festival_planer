@@ -1,11 +1,14 @@
 import React from 'react';
 import { Ruler } from '@/components/toolkit/Ruler';
 import { formatEuro } from '@/lib/money';
+import { sponsoringStandLabel } from '@/lib/sponsoringLeerzustand';
 
 export interface SponsoringHeadlineProps {
 	/** Geld-Gesamtsumme des Fests. */
 	total: number;
 	sponsorCount: number;
+	/** Umfang der *Preisliste* — die zweite Achse der Matrix (#152). */
+	categoryCount: number;
 	/** Sachwert — steht neben dem Geld, nie darin (ADR 0008). */
 	inKindTotal: number;
 	/**
@@ -23,11 +26,12 @@ export interface SponsoringHeadlineProps {
 const SponsoringHeadline: React.FC<SponsoringHeadlineProps> = ({
 	total,
 	sponsorCount,
+	categoryCount,
 	inKindTotal,
 	previousFestivalTotal
 }) => {
 	const subline = [
-		`${sponsorCount} ${sponsorCount === 1 ? 'Sponsor' : 'Sponsoren'}`,
+		sponsoringStandLabel(categoryCount, sponsorCount),
 		previousFestivalTotal != null ? `Vorjahr ${formatEuro(previousFestivalTotal)}` : null,
 		inKindTotal > 0 ? `+ ${formatEuro(inKindTotal)} Sachwert` : null
 	]

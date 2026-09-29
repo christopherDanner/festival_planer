@@ -134,19 +134,34 @@ vi.mock('../helperService', () => ({
 			return `h-neu-${mocks.nextHelperId}`;
 		});
 	},
-	updateHelperPreferences: async (
+	// Seit #107 schreibt **ein** Weg auf die Helfer-Zeile — Stammdaten und
+	// Wünsche stehen ohnehin nebeneinander (ADR 0005).
+	updateHelper: async (
 		festivalId: string,
 		helperId: string,
-		stationPreferences: string[],
-		shiftPreferences: string[]
+		updates: { station_preferences?: string[]; shift_preferences?: string[] }
 	) => {
-		mocks.preferenceUpdates.push({ festivalId, helperId, stationPreferences, shiftPreferences });
+		mocks.preferenceUpdates.push({
+			festivalId,
+			helperId,
+			stationPreferences: updates.station_preferences ?? [],
+			shiftPreferences: updates.shift_preferences ?? []
+		});
 	}
 }));
 
 vi.mock('../materialService', () => ({
 	getMaterials: async () => [],
 	createMaterialsBulk: async () => []
+}));
+
+// Der Ablaufplan hat seine eigene Suite (`festivalCopySchedule.test.ts`), samt
+// der Umschlüsselung seiner Verantwortlichen.
+vi.mock('../scheduleService', () => ({
+	getScheduleDays: async () => [],
+	createScheduleDaysBulk: async () => [],
+	createSchedulePhasesBulk: async () => [],
+	createScheduleEntriesBulk: async () => []
 }));
 
 // Das Sponsoring hat eine eigene Suite (`festivalCopySponsoring`); hier steht es
@@ -164,6 +179,7 @@ const options = (over: Partial<CopyFestivalOptions> = {}): CopyFestivalOptions =
 	stationIds: ['st-alt'],
 	copyHelpers: false,
 	copyAssignments: false,
+	copySchedule: false,
 	materialIds: [],
 	materialQuantitySource: 'ordered',
 	copySponsoringCategories: false,

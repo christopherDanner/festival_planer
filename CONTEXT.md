@@ -121,6 +121,8 @@ _Avoid_: Zeitplan, Regieplan.
 
 Ein Tag im Ablaufplan (`schedule_days`) mit Datum und freiem Label („Aufbau", „Nachbereitung"). Die eigentlichen Festtage (`start_date` bis `end_date`) entstehen automatisch beim ersten Öffnen; jeder weitere Tag davor oder danach wird von Hand angelegt. Ändert sich später das Fest-Datum, ziehen bestehende Tage **nicht** nach.
 
+Die automatische Erzeugung greift nur, solange das Fest **keinen einzigen** Tag hat: ein Fest aus einer *Ablaufplan-Übernahme* bringt seine Tage schon mit, und ein zweiter Durchgang stellte neben den übernommenen Aufbau-Donnerstag einen leeren Festtag.
+
 ## Phase
 
 Optionale Untergruppe innerhalb eines *Ablauf-Tags* (`schedule_phases`), z.B. „Anlieferung", „Frühschoppen", „Abendprogramm". Sie ordnet die Arbeit eines Tages in Blöcke und ist **nur in der Aufgaben-Werkliste sichtbar** — auf dem Programmzettel nicht, weil sie ein Planungsbegriff ist. Eine Phase löschen nimmt ihre Einträge mit. Entscheidung in ADR 0007.
@@ -141,6 +143,20 @@ Das linke, interne Papier des Ablaufplans: alle *Aufgaben* eines Fests, gegliede
 
 Das rechte Papier des Ablaufplans und zugleich der **Aushang**: nur *Programmpunkte*, nach *Ablauf-Tag* gruppiert, je Zeile Uhrzeit und Titel. Er wird direkt bearbeitet, zeigt aber keine Haken, keine Phasen und keine Verantwortlichen — er geht ans Publikum. Als PDF in Plakat-Optik druckbar.
 _Avoid_: Programmliste, Aushangplan.
+
+## Ablaufplan-Übernahme
+
+Vorgang, den *Ablaufplan* eines vergangenen Fests (Quellfest) in ein neues Fest (Zielfest) zu holen — Schritt 4 des Kopierwerks. Gerade er trägt das Jahresgedächtnis: „Feuerwehr-Abnahme", „Fassanstich", „Leergut-Rückgabe" sind jedes Jahr dieselben Zeilen.
+
+**Ein Schalter für den ganzen Plan**, keine Auswahl je Tag — der Wert liegt in der Vollständigkeit der Liste, ausgemistet wird danach im Bereich. Mit ihm kommen *Ablauf-Tage*, *Phasen* und *Ablauf-Einträge* zusammen mit; ein Eintrag ohne Phase bleibt ohne.
+
+Drei Regeln unterscheiden sie vom bloßen Duplizieren:
+
+- **Datums-Versatz wie bei den Schichten** — jeder Tag rückt um denselben Abstand zum Fest-Start weiter, der Aufbau-Donnerstag fällt also wieder auf einen Donnerstag, solange beide Feste am selben Wochentag starten. Tun sie das nicht, rückt der Wochentag mit: Ablauf-Tage und Schichten desselben Fests dürfen nicht auseinanderlaufen. Der Schritt zeigt vorher je Tag alten und neuen Termin samt Wochentag.
+- **Aufgaben kommen offen herein** — der Haken des Vorjahrs ist wertlos.
+- **Verantwortliche nur mit übernommenen Helfern** — ein *Helfer* gehört dem Fest (ADR 0005); ohne die kopierte *Helferliste* gibt es im Zielfest keine Zeile, auf die ein Verantwortlicher zeigen könnte, und das Feld bleibt leer.
+
+_Avoid_: Ablaufplan-Kopie, Zeitplan übernehmen.
 
 ## Sponsor
 

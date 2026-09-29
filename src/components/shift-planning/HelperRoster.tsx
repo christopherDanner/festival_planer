@@ -196,8 +196,8 @@ function HelperMark({
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
-					{/* Stammdaten und Wünsche sind seit ADR 0005 dasselbe Blatt; zu
-					einem Dialog verschmolzen werden sie in #107. */}
+					{/* Stammdaten und Wünsche sind seit ADR 0005 dieselbe Zeile und
+					seit #107 dasselbe Blatt — ein Eintrag führt auf beides. */}
 					<DropdownMenuItem className="gap-2" onClick={onEdit}>
 						<Pencil className="h-4 w-4" />
 						Bearbeiten &amp; Wünsche …

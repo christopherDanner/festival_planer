@@ -18,7 +18,6 @@ import {
 	createHelper,
 	updateHelper,
 	deleteHelper,
-	updateHelperPreferences,
 	type HelperInput
 } from '@/lib/helperService';
 import {
@@ -296,32 +295,6 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		}
 	});
 
-	const savePreferencesMutation = useMutation({
-		mutationFn: ({
-			helperId,
-			stationPrefs,
-			shiftPrefs
-		}: {
-			helperId: string;
-			stationPrefs: string[];
-			shiftPrefs: string[];
-		}) => updateHelperPreferences(festivalId, helperId, stationPrefs, shiftPrefs),
-		onSuccess: () => {
-			invalidateAll();
-			toast({
-				title: 'Präferenzen gespeichert',
-				description: 'Station- und Schichtwünsche wurden erfolgreich gespeichert.'
-			});
-		},
-		onError: () => {
-			toast({
-				title: 'Fehler',
-				description: 'Präferenzen konnten nicht gespeichert werden.',
-				variant: 'destructive'
-			});
-		}
-	});
-
 	const assignHelperToStationMutation = useMutation({
 		mutationFn: ({ stationId, helperId }: { stationId: string; helperId: string }) =>
 			assignHelperToStation(festivalId, stationId, helperId),
@@ -368,7 +341,6 @@ export const useShiftPlanningActions = (festivalId: string) => {
 		updateHelper: updateHelperMutation,
 		deleteHelper: deleteHelperMutation,
 		autoAssign: autoAssignMutation,
-		clearAssignments: clearAssignmentsMutation,
-		savePreferences: savePreferencesMutation
+		clearAssignments: clearAssignmentsMutation
 	};
 };

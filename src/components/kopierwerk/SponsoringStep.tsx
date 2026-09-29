@@ -1,8 +1,8 @@
 import { Stamp } from '@/components/toolkit/Stamp';
 import { Button } from '@/components/ui/button';
-import { countLabel } from '@/lib/plural';
 
-import { CopySwitch } from './CopySwitch';
+import CopySwitch from './CopySwitch';
+import { plural } from './plural';
 
 export interface SponsoringStepProps {
 	/** Kategorien der *Preisliste* der Vorlage — beziffert den ersten Schalter. */
@@ -67,7 +67,7 @@ export default function SponsoringStep({
 							// „Die ganze" ist die Ansage gegen den Einzel-Dialog, der nur
 							// anlegt, was eine gewählte Firma genommen hatte: was voriges Jahr
 							// niemand gekauft hat, bietet der Verein heuer trotzdem an.
-							hint={`Die ganze Preisliste: ${countLabel(categoryCount, 'Kategorie', 'Kategorien')} — auch die, die voriges Jahr niemand genommen hat.`}
+							hint={`Die ganze Preisliste: ${plural(categoryCount, 'Kategorie', 'Kategorien')} — auch die, die voriges Jahr niemand genommen hat.`}
 							checked={copySponsoringCategories}
 							onChange={onCopyCategoriesChange}
 						/>
@@ -77,7 +77,7 @@ export default function SponsoringStep({
 							id="sponsoren-uebernehmen"
 							label="Sponsoren übernehmen"
 							// Ohne diesen Satz liest sich die leere Summe wie ein Fehler.
-							hint={`${countLabel(sponsorCount, 'Firma', 'Firmen')} als Verknüpfung, ohne Beträge — die trägst du beim Zusagen ein.`}
+							hint={`${plural(sponsorCount, 'Firma', 'Firmen')} als Verknüpfung, ohne Beträge — die trägst du beim Zusagen ein.`}
 							checked={copySponsorings}
 							onChange={onCopySponsoringsChange}
 						/>
@@ -87,7 +87,7 @@ export default function SponsoringStep({
 
 			<div className="flex flex-wrap justify-between gap-3 border-t-2.5 border-tinte px-4 py-3">
 				<Button variant="outline" onClick={onBack} className="h-10 px-4 text-[12.5px]">
-					← Material
+					← Ablaufplan
 				</Button>
 				<Button onClick={onSubmit} disabled={saving} className="h-10 px-4 text-[12.5px]">
 					{saving ? 'LEGE FEST AN …' : 'FEST ANLEGEN'}

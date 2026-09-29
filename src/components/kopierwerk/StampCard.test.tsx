@@ -12,7 +12,15 @@ const heading = stampCardHeading(
 const steps = kopierwerkSteps({
 	current: 'stations',
 	hasTemplate: true,
-	scope: { stations: 4, shifts: 11, materials: 86, sponsoringCategories: 6, sponsors: 9 },
+	scope: {
+		stations: 4,
+		shifts: 11,
+		materials: 86,
+		scheduleDays: 4,
+		scheduleEntries: 17,
+		sponsoringCategories: 6,
+		sponsors: 9
+	},
 	festivalName: 'Musikfest Steinbach 2027'
 });
 
@@ -31,8 +39,12 @@ describe('Stempelkarte (≥900px)', () => {
 		expect(html).toContain('Name &amp; Datum');
 		expect(html).toContain('Stationen &amp; Schichten');
 		expect(html).toContain('Material');
+		expect(html).toContain('Ablaufplan');
+		expect(html).toContain('Sponsoring');
 		expect(html).toContain('4 Stationen · 11 Schichten');
 		expect(html).toContain('86 Positionen · Mengenquelle');
+		expect(html).toContain('4 Tage · 17 Einträge');
+		expect(html).toContain('6 Kategorien · 9 Firmen');
 	});
 
 	it('markiert erledigt mit dem Häkchen, aktiv gelb und offen grau', () => {
@@ -52,24 +64,25 @@ describe('Stempelkarte (≥900px)', () => {
 		expect(html).not.toContain('overflow-x-auto');
 	});
 
-	// Das Sponsoring (#146) steht schon in der Liste; dieser Test hält fest,
-	// dass auch der nächste Eintrag keiner wird, den die Karte kennen müsste —
-	// sie zählt, was sie bekommt.
+	// Datengetrieben heißt: der Ablaufplan (#127) und das Sponsoring (#146) waren
+	// je ein Eintrag mehr, keine Layout-Änderung — die Karte zählt die Liste, sie
+	// kennt keine Schritte. Dieser Test hält fest, dass auch der nächste Eintrag
+	// keiner wird, den sie kennen müsste.
 	it('rendert einen Eintrag, von dem sie nichts weiß', () => {
 		const html = render([
 			...steps,
 			{
-				key: 'ablaufplan',
-				number: 5,
-				title: 'Ablaufplan',
-				shortTitle: 'Ablauf',
-				subtitle: '3 Tage · 12 Aufgaben',
+				key: 'abrechnung',
+				number: 6,
+				title: 'Abrechnung',
+				shortTitle: 'Abrechnung',
+				subtitle: '12 Belege',
 				state: 'open'
 			}
 		]);
-		expect(html).toContain('Ablaufplan');
-		expect(html).toContain('3 Tage · 12 Aufgaben');
-		expect(html).toContain('>5<');
+		expect(html).toContain('Abrechnung');
+		expect(html).toContain('12 Belege');
+		expect(html).toContain('>6<');
 	});
 
 	it('zeigt ohne Vorlage nur Schritt 1', () => {

@@ -603,3 +603,43 @@ describe('SponsoringMatrix — gefilterter Fuß (ADR 0006)', () => {
 		expect(html).not.toContain('Keine Firma passt zu');
 	});
 });
+
+describe('SponsoringMatrix — Leerzustand L2: Preisliste steht, keine Firma', () => {
+	const preise = [makeCategory('Plakat', 200), makeCategory('Transparent', 300)];
+
+	it('sagt in der Tabelle selbst, dass noch keine Firma erfasst ist', () => {
+		const html = render([], preise, { totalRowCount: 0 });
+		const koerper = html.split('<tbody>')[1].split('</tbody>')[0];
+
+		expect(koerper).toContain('Noch keine Sponsorings erfasst');
+	});
+
+	it('lässt die Spaltenköpfe mit ihren Standardwerten stehen', () => {
+		// Die Preisliste ist ja da — sie ist das Ergebnis des halben Kopierwerks.
+		const html = render([], preise, { totalRowCount: 0 });
+
+		expect(html).toContain('Plakat');
+		expect(html).toContain('€ 200');
+		expect(html).toContain('Transparent');
+		expect(html).toContain('€ 300');
+	});
+
+	it('lässt den Σ-Fuß weg — sechs korrekte Nullen sehen wie ein Fehler aus', () => {
+		const html = render([], preise, { totalRowCount: 0 });
+
+		expect(html).not.toContain('Σ je Kategorie');
+		expect(html).not.toContain('<tfoot>');
+	});
+
+	it('schweigt, sobald eine Firma steht', () => {
+		const rows = buildSponsoringOverviewRows([makeSponsoring({ companyName: 'Taxi Brandl' })]);
+		expect(render(rows, preise)).not.toContain('Noch keine Sponsorings erfasst');
+	});
+
+	it('nennt bei gefilterter Leere den Suchbegriff statt des Leerzustands', () => {
+		const html = render([], preise, { totalRowCount: 3, searchTerm: 'gibtsnicht' });
+
+		expect(html).toContain('Keine Firma passt zu');
+		expect(html).not.toContain('Noch keine Sponsorings erfasst');
+	});
+});

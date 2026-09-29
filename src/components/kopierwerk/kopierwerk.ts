@@ -1,9 +1,9 @@
 import { festYear, formatFestDateRange } from '@/lib/festDates';
 import type { CopyFestivalOptions } from '@/lib/festivalCopyService';
 import type { FestivalData } from '@/lib/festivalService';
-import { countLabel } from '@/lib/plural';
 
 import type { QuantitySource } from './materialChoice';
+import { plural } from './plural';
 
 /**
  * Was Schritt 1 des Kopierwerks sammelt, bevor das Fest existiert (#93).
@@ -30,13 +30,17 @@ export interface TemplateScope {
 	stations: number;
 	shifts: number;
 	materials: number;
+	/** Ablauf-Tage der Vorlage — Festtage samt Aufbau und Nachbereitung. */
+	scheduleDays: number;
+	/** Aufgaben und Programmpunkte zusammen; die Karte zählt Zeilen, nicht Arten. */
+	scheduleEntries: number;
 	/** Die *Preisliste* der Vorlage — Kategorien, nicht Zuweisungen. */
 	sponsoringCategories: number;
 	/** Die Firmen, die bei der Vorlage erfasst waren. */
 	sponsors: number;
 }
 
-export type KopierwerkStepKey = 'basics' | 'stations' | 'materials' | 'sponsoring';
+export type KopierwerkStepKey = 'basics' | 'stations' | 'materials' | 'schedule' | 'sponsoring';
 
 /** Erledigt (✓, grün), aktiv (gelb hinterlegt), offen (grau). */
 export type KopierwerkStepState = 'done' | 'active' | 'open';
@@ -65,10 +69,9 @@ export interface KopierwerkProgress {
 
 /**
  * Die Schritte des Kopierwerks als Liste (Spec #64). Die Nummer im Eintrag
- * zählt die Liste ab, sie steht nirgends fest: das Sponsoring ist hier der
- * letzte Eintrag und damit heute Schritt 4 — kommt der Ablaufplan (#127)
- * zwischen Material und Sponsoring dazu, rückt es von selbst auf Schritt 5,
- * wie ADR 0008 es vorzeichnet.
+ * zählt die Liste ab, sie steht nirgends fest — das Sponsoring ist der fünfte
+ * Eintrag, weil der Ablaufplan (#127) davor steht, und war ein Eintrag mehr
+ * hier statt eines Layout-Umbaus in der Stempelkarte.
  */
 const STEP_BLUEPRINT: {
 	key: KopierwerkStepKey;
@@ -92,15 +95,23 @@ const STEP_BLUEPRINT: {
 		needsTemplate: true,
 		subtitle: ({ scope }) =>
 			scope &&
-			`${countLabel(scope.stations, 'Station', 'Stationen')} · ${countLabel(scope.shifts, 'Schicht', 'Schichten')}`
+			`${plural(scope.stations, 'Station', 'Stationen')} · ${plural(scope.shifts, 'Schicht', 'Schichten')}`
 	},
 	{
 		key: 'materials',
 		title: 'Material',
 		shortTitle: 'Material',
 		needsTemplate: true,
+		subtitle: ({ scope }) => scope && `${plural(scope.materials, 'Position', 'Positionen')} · Mengenquelle`
+	},
+	{
+		key: 'schedule',
+		title: 'Ablaufplan',
+		shortTitle: 'Ablaufplan',
+		needsTemplate: true,
 		subtitle: ({ scope }) =>
-			scope && `${countLabel(scope.materials, 'Position', 'Positionen')} · Mengenquelle`
+			scope &&
+			`${plural(scope.scheduleDays, 'Tag', 'Tage')} · ${plural(scope.scheduleEntries, 'Eintrag', 'Einträge')}`
 	},
 	{
 		key: 'sponsoring',
@@ -111,7 +122,7 @@ const STEP_BLUEPRINT: {
 		// mitkommt, entscheidet der Schritt; beziffert wird, was zur Wahl steht.
 		subtitle: ({ scope }) =>
 			scope &&
-			`${countLabel(scope.sponsoringCategories, 'Kategorie', 'Kategorien')} · ${countLabel(scope.sponsors, 'Firma', 'Firmen')}`
+			`${plural(scope.sponsoringCategories, 'Kategorie', 'Kategorien')} · ${plural(scope.sponsors, 'Firma', 'Firmen')}`
 	}
 ];
 
@@ -176,9 +187,9 @@ export function stampCardHeading(
 	return { title: draft.name.trim() || 'Neues Fest', sub: parts.join(' · ') };
 }
 
-/** Was die Schritte 2 bis 4 zusammengetragen haben. Stationen und Material sind
-Mengen — auf dem Bildschirm dieselbe Art von Häkchen —, Helfer und Sponsoring
-sind Schalter über alles oder nichts. */
+/** Was die Schritte 2 bis 5 zusammengetragen haben. Stationen und Positionen
+sind Mengen — auf dem Bildschirm ist es dieselbe Art von Häkchen; Helfer,
+Ablaufplan und Sponsoring sind je ein Schalter für das Ganze. */
 export interface CopySelection {
 	stationIds: ReadonlySet<string>;
 	/** Die ganze Helferliste der Vorlage ins neue Fest (ADR 0005, #100). */
@@ -186,6 +197,8 @@ export interface CopySelection {
 	copyAssignments: boolean;
 	materialIds: ReadonlySet<string>;
 	quantitySource: QuantitySource;
+	/** Tage, Phasen und Einträge des Ablaufplans, versetzt (#127). */
+	copySchedule: boolean;
 	/** Die *Preisliste* der Vorlage vollständig mit Werten (ADR 0008). */
 	copySponsoringCategories: boolean;
 	/** Die Firmen als nackte Verknüpfung ohne Beträge (ADR 0008). */
@@ -194,9 +207,9 @@ export interface CopySelection {
 
 /**
  * Der Auftrag an `copyFestivalData`: die Auswahl aller Kopier-Schritte plus die
- * beiden Fest-Startdaten, aus denen der Termin-Versatz der Schichten kommt.
- * Sie stehen hier zusammen, damit Vorlage und neues Fest nicht an einer
- * Aufrufstelle vertauscht werden können.
+ * beiden Fest-Startdaten, aus denen der Termin-Versatz von Schichten und
+ * Ablauf-Tagen kommt. Sie stehen hier zusammen, damit Vorlage und neues Fest
+ * nicht an einer Aufrufstelle vertauscht werden können.
  */
 export function copyFestivalOptions(
 	template: { start_date: string },
@@ -207,6 +220,7 @@ export function copyFestivalOptions(
 		stationIds: [...selection.stationIds],
 		copyHelpers: selection.copyHelpers,
 		copyAssignments: selection.copyAssignments,
+		copySchedule: selection.copySchedule,
 		materialIds: [...selection.materialIds],
 		materialQuantitySource: selection.quantitySource,
 		copySponsoringCategories: selection.copySponsoringCategories,

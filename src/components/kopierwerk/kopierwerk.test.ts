@@ -69,6 +69,8 @@ describe('Stempelkarte — Schritt-Liste', () => {
 		stations: 4,
 		shifts: 11,
 		materials: 86,
+		scheduleDays: 4,
+		scheduleEntries: 17,
 		sponsoringCategories: 6,
 		sponsors: 9
 	};
@@ -79,21 +81,29 @@ describe('Stempelkarte — Schritt-Liste', () => {
 		expect(steps[0].state).toBe('active');
 	});
 
-	it('zeigt mit Vorlage die Schritte in ihrer Reihenfolge', () => {
+	// Der Ablaufplan ist Schritt 4 (#127), das Sponsoring Schritt 5 (#146).
+	it('zeigt mit Vorlage die fünf Schritte in ihrer Reihenfolge', () => {
 		const steps = kopierwerkSteps({ current: 'basics', hasTemplate: true, scope });
-		expect(steps.map((s) => s.key)).toEqual(['basics', 'stations', 'materials', 'sponsoring']);
-		expect(steps.map((s) => s.number)).toEqual([1, 2, 3, 4]);
+		expect(steps.map((s) => s.key)).toEqual([
+			'basics',
+			'stations',
+			'materials',
+			'schedule',
+			'sponsoring'
+		]);
+		expect(steps.map((s) => s.number)).toEqual([1, 2, 3, 4, 5]);
 		expect(steps.map((s) => s.title)).toEqual([
 			'Name & Datum',
 			'Stationen & Schichten',
 			'Material',
+			'Ablaufplan',
 			'Sponsoring'
 		]);
 	});
 
 	it('stempelt erledigt / aktiv / offen entlang des aktuellen Schritts', () => {
 		const steps = kopierwerkSteps({ current: 'stations', hasTemplate: true, scope });
-		expect(steps.map((s) => s.state)).toEqual(['done', 'active', 'open', 'open']);
+		expect(steps.map((s) => s.state)).toEqual(['done', 'active', 'open', 'open', 'open']);
 	});
 
 	it('beziffert die Schritte in ihrer Untertitel-Zeile', () => {
@@ -107,6 +117,7 @@ describe('Stempelkarte — Schritt-Liste', () => {
 			'Musikfest Steinbach 2027',
 			'4 Stationen · 11 Schichten',
 			'86 Positionen · Mengenquelle',
+			'4 Tage · 17 Einträge',
 			'6 Kategorien · 9 Firmen'
 		]);
 	});
@@ -115,16 +126,31 @@ describe('Stempelkarte — Schritt-Liste', () => {
 		const steps = kopierwerkSteps({
 			current: 'basics',
 			hasTemplate: true,
-			scope: { stations: 1, shifts: 1, materials: 1, sponsoringCategories: 1, sponsors: 1 }
+			scope: {
+				stations: 1,
+				shifts: 1,
+				materials: 1,
+				scheduleDays: 1,
+				scheduleEntries: 1,
+				sponsoringCategories: 1,
+				sponsors: 1
+			}
 		});
 		expect(steps[1].subtitle).toBe('1 Station · 1 Schicht');
 		expect(steps[2].subtitle).toBe('1 Position · Mengenquelle');
-		expect(steps[3].subtitle).toBe('1 Kategorie · 1 Firma');
+		expect(steps[3].subtitle).toBe('1 Tag · 1 Eintrag');
+		expect(steps[4].subtitle).toBe('1 Kategorie · 1 Firma');
 	});
 
 	it('lässt die Untertitel weg, solange die Vorlage noch lädt', () => {
 		const steps = kopierwerkSteps({ current: 'basics', hasTemplate: true });
-		expect(steps.map((s) => s.subtitle)).toEqual([undefined, undefined, undefined, undefined]);
+		expect(steps.map((s) => s.subtitle)).toEqual([
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined
+		]);
 	});
 
 	it('trägt eine Kurzform für die waagrechte Schritt-Leiste', () => {
@@ -133,6 +159,7 @@ describe('Stempelkarte — Schritt-Liste', () => {
 			'Name & Datum',
 			'Stationen',
 			'Material',
+			'Ablaufplan',
 			'Sponsoring'
 		]);
 	});
@@ -176,18 +203,19 @@ describe('Fußzeile von Schritt 1', () => {
 	});
 });
 
-describe('Kopier-Auftrag aus den Schritten 2 bis 4', () => {
+describe('Kopier-Auftrag aus den Schritten 2 bis 5', () => {
 	const selection = {
 		stationIds: new Set(['s-ausschank', 's-grill']),
 		copyHelpers: true,
 		copyAssignments: true,
 		materialIds: new Set(['m-bier', 'm-kohle']),
 		quantitySource: 'actual' as const,
+		copySchedule: true,
 		copySponsoringCategories: true,
 		copySponsorings: true
 	};
 
-	it('trägt Stationen, Material, Mengenquelle und Sponsoring zusammen', () => {
+	it('trägt Stationen, Material, Mengenquelle, Ablaufplan und Sponsoring zusammen', () => {
 		expect(
 			copyFestivalOptions(
 				{ start_date: '2026-07-24' },
@@ -198,14 +226,25 @@ describe('Kopier-Auftrag aus den Schritten 2 bis 4', () => {
 			stationIds: ['s-ausschank', 's-grill'],
 			copyHelpers: true,
 			copyAssignments: true,
+			copySchedule: true,
 			materialIds: ['m-bier', 'm-kohle'],
 			materialQuantitySource: 'actual',
 			copySponsoringCategories: true,
 			copySponsorings: true,
 			// Der Versatz rechnet vom Start der Vorlage auf den Start des neuen
-			// Fests — vertauscht schöbe er die Schichten um ein Jahr zurück.
+			// Fests — vertauscht schöbe er Schichten und Ablauf-Tage um ein Jahr
+			// zurück.
 			sourceFestivalStartDate: '2026-07-24',
 			targetFestivalStartDate: '2027-07-23'
 		});
+	});
+
+	it('reicht den abgeschalteten Ablaufplan genauso durch', () => {
+		expect(
+			copyFestivalOptions({ start_date: '2026-07-24' }, draft({ startDate: '2027-07-23' }), {
+				...selection,
+				copySchedule: false
+			}).copySchedule
+		).toBe(false);
 	});
 });

@@ -156,7 +156,7 @@ export default function MaterialStep({
 					← Stationen &amp; Schichten
 				</Button>
 				<Button onClick={onNext} className="h-10 px-4 text-[12.5px]">
-					WEITER: SPONSORING →
+					WEITER: ABLAUFPLAN →
 				</Button>
 			</div>
 		</div>

@@ -4,9 +4,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import FestivalBasicsStep from '@/components/kopierwerk/FestivalBasicsStep';
 import KopierwerkMast from '@/components/kopierwerk/KopierwerkMast';
 import MaterialStep from '@/components/kopierwerk/MaterialStep';
+import ScheduleStep from '@/components/kopierwerk/ScheduleStep';
 import SponsoringStep from '@/components/kopierwerk/SponsoringStep';
 import StampCard from '@/components/kopierwerk/StampCard';
 import StationsShiftsStep from '@/components/kopierwerk/StationsShiftsStep';
+import { schedulePreviewRows, scheduleScope } from '@/components/kopierwerk/scheduleChoice';
 import {
 	stationPreviewRows,
 	withAssignmentCopy,
@@ -38,9 +40,10 @@ import { createFestival, getUserFestivals, type Festival } from '@/lib/festivalS
  * Browser-Zurück führt auf die Wand.
  *
  * Links (bzw. unter 900px oben) die Stempelkarte, rechts die Werkbank des
- * aktuellen Schritts. Die Auswahl der Schritte 2 und 3 liegt hier und nicht in
+ * aktuellen Schritts. Die Auswahl der Schritte 2 bis 5 liegt hier und nicht in
  * den Werkbänken: Schritt 3 braucht die gewählten Stationen für die Warnung
- * „ohne Station" (#95), und ein Rücksprung darf keine Auswahl vergessen.
+ * „ohne Station" (#95), Schritt 4 den Helfer-Schalter aus Schritt 2 (#127), und
+ * ein Rücksprung darf keine Auswahl vergessen.
  */
 export default function Kopierwerk() {
 	const [searchParams] = useSearchParams();
@@ -72,9 +75,13 @@ export default function Kopierwerk() {
 	});
 	const [materialIds, setMaterialIds] = useState<ReadonlySet<string>>(new Set());
 	const [quantitySource, setQuantitySource] = useState<QuantitySource>('ordered');
-	// Die zwei Sponsoring-Schalter starten aus, wie jeder Übernahme-Schalter des
-	// Kopierwerks: vorausgewählt sind allein die Mengen der Schritte 2 und 3,
-	// deren Häkchen man abwählt. Ein „alles mitnehmen" wäre hier auch das
+	// Voreingestellt an, wie Stationen und Material: eine Vorlage wird gewählt,
+	// um sie zu übernehmen, und der Ablaufplan trägt das Jahresgedächtnis des
+	// Fests (#127). Schritt 4 zeigt vorher jeden Tag — es kommt nichts ungesehen
+	// mit.
+	const [copySchedule, setCopySchedule] = useState(true);
+	// Die zwei Sponsoring-Schalter starten dagegen aus (#146): die Spec sagt nur
+	// „beide einzeln an/abwählbar", und ein „alles mitnehmen" wäre hier das
 	// falsche Versprechen — was die Firmen betrifft, hat noch niemand gefragt.
 	const [copySponsoringCategories, setCopySponsoringCategories] = useState(false);
 	const [copySponsorings, setCopySponsorings] = useState(false);
@@ -139,6 +146,7 @@ export default function Kopierwerk() {
 					stations: template.stations.length,
 					shifts: template.shifts.length,
 					materials: template.materials.length,
+					...scheduleScope(template.scheduleDays),
 					sponsoringCategories: template.sponsoringCategories.length,
 					sponsors: template.sponsorIds.length
 				}
@@ -177,6 +185,7 @@ export default function Kopierwerk() {
 							...copySwitches,
 							materialIds,
 							quantitySource,
+							copySchedule,
 							copySponsoringCategories,
 							copySponsorings
 						})
@@ -202,6 +211,7 @@ export default function Kopierwerk() {
 			}
 		},
 		[
+			copySchedule,
 			copySponsoringCategories,
 			copySponsorings,
 			copySwitches,
@@ -229,6 +239,18 @@ export default function Kopierwerk() {
 				? stationPreviewRows({
 						stations: template.stations,
 						shifts: template.shifts,
+						sourceStartDate: template.festival.start_date,
+						targetStartDate: draft.startDate
+					})
+				: [],
+		[template, draft.startDate]
+	);
+
+	const scheduleRows = useMemo(
+		() =>
+			template
+				? schedulePreviewRows({
+						days: template.scheduleDays,
 						sourceStartDate: template.festival.start_date,
 						targetStartDate: draft.startDate
 					})
@@ -281,6 +303,19 @@ export default function Kopierwerk() {
 				onQuantitySourceChange={setQuantitySource}
 				onSelectionChange={setMaterialIds}
 				onBack={() => setStep('stations')}
+				onNext={() => setStep('schedule')}
+			/>
+		);
+	} else if (currentStep === 'schedule' && template) {
+		workbench = (
+			<ScheduleStep
+				rows={scheduleRows}
+				copySchedule={copySchedule}
+				// Der Verantwortliche eines Ablauf-Eintrags hängt an „Helfer
+				// übernehmen" aus Schritt 2 (ADR 0005) — der Schalter sagt es hier.
+				copyHelpers={copySwitches.copyHelpers}
+				onCopyScheduleChange={setCopySchedule}
+				onBack={() => setStep('materials')}
 				onNext={() => setStep('sponsoring')}
 			/>
 		);
@@ -294,7 +329,7 @@ export default function Kopierwerk() {
 				saving={saving}
 				onCopyCategoriesChange={setCopySponsoringCategories}
 				onCopySponsoringsChange={setCopySponsorings}
-				onBack={() => setStep('materials')}
+				onBack={() => setStep('schedule')}
 				onSubmit={() => void createNewFestival(true)}
 			/>
 		);

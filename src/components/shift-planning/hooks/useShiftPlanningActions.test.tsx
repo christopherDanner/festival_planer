@@ -24,10 +24,17 @@ vi.mock('@/lib/automaticAssignmentService', () => ({
 	clearAssignments: vi.fn(async () => true)
 }));
 
+vi.mock('@/lib/helperService', () => ({
+	createHelper: vi.fn(async () => 'h-neu'),
+	updateHelper: vi.fn(async () => {}),
+	deleteHelper: vi.fn(async () => {})
+}));
+
 // Die übrigen Dienste hängt der Hook nur ein; berührt werden sie hier nicht.
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
 
 import { clearAssignments, performAutomaticAssignment } from '@/lib/automaticAssignmentService';
+import { updateHelper } from '@/lib/helperService';
 import { useShiftPlanningActions } from './useShiftPlanningActions';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -70,6 +77,7 @@ beforeEach(async () => {
 	toast.mockClear();
 	vi.mocked(clearAssignments).mockClear().mockResolvedValue(true);
 	vi.mocked(performAutomaticAssignment).mockClear();
+	vi.mocked(updateHelper).mockClear();
 	await mount();
 });
 
@@ -146,5 +154,39 @@ describe('useShiftPlanningActions — die Zähler rechnen sofort neu', () => {
 		});
 
 		expect(invalidated).toEqual(QUERY_KEYS.map((key) => `${key}:fest-7`));
+	});
+});
+
+/* Seam dieses Blocks (aus dem dritten Abnahmekriterium von #107 abgeleitet):
+   „Die Gruppierung ‚Wünschen sich diese Station' reagiert sofort auf geänderte
+   Wünsche." Die Gruppierung rechnet in `buildHelperRoster` über
+   `helper.station_preferences` — sie ist also genau dann sofort richtig, wenn
+   das Speichern des Helfer-Blatts die Helfer-Abfrage verwirft. */
+describe('useShiftPlanningActions — das Helfer-Blatt (#107)', () => {
+	const BLATT = {
+		first_name: 'Franz',
+		last_name: 'Hochauer',
+		email: '',
+		phone: '',
+		notes: '',
+		station_preferences: ['st-1'],
+		shift_preferences: ['sh-1']
+	};
+
+	it('schreibt Stammdaten und Wünsche mit einem Zug', async () => {
+		await act(async () => {
+			await actions.updateHelper.mutateAsync({ id: 'h1', updates: BLATT });
+		});
+
+		expect(updateHelper).toHaveBeenCalledTimes(1);
+		expect(updateHelper).toHaveBeenCalledWith('fest-7', 'h1', BLATT);
+	});
+
+	it('lässt die Helferliste danach neu gruppieren', async () => {
+		await act(async () => {
+			await actions.updateHelper.mutateAsync({ id: 'h1', updates: BLATT });
+		});
+
+		expect(invalidated).toContain('helpers:fest-7');
 	});
 });

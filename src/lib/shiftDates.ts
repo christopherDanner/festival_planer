@@ -2,11 +2,11 @@ import { festDayStart } from './festDates';
 import type { StationShift } from './shiftService';
 
 /**
- * Termine einer Schicht — Versatz und Beschriftung an einer Stelle.
+ * Termine der Fest-Kopie — Versatz und Beschriftung an einer Stelle.
  *
- * Der Versatz liegt hier, weil ihn zwei Seiten brauchen: der Kopier-Service
- * schreibt die neuen Termine, die Vorschau in Schritt 2 des Kopierwerks (#94)
- * zeigt sie an. Zwei Rechnungen liefen unweigerlich auseinander.
+ * Der Versatz liegt hier, weil ihn mehrere Seiten brauchen: der Kopier-Service
+ * schreibt die neuen Termine, die Vorschauen der Kopierwerk-Schritte 2 (#94)
+ * und 4 (#127) zeigen sie an. Zwei Rechnungen liefen unweigerlich auseinander.
  */
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -33,6 +33,17 @@ function dateParts(date: string): { day: string; month: string; year: string } {
 		month: String(d.getMonth() + 1).padStart(2, '0'),
 		year: String(d.getFullYear())
 	};
+}
+
+/**
+ * Ein Tag mit Wochentag und vollem Datum — „Sa 25.07.2026".
+ *
+ * Alter und neuer Termin eines *Ablauf-Tags* stehen so nebeneinander (Schritt 4,
+ * #127); dieselbe Form trägt der neue Termin einer Schicht innerhalb eines Tages.
+ */
+export function formatDayLabel(date: string): string {
+	const { day, month, year } = dateParts(date);
+	return `${weekday(date)} ${day}.${month}.${year}`;
 }
 
 /** Schicht als kompakte Zeitspanne, z. B. „Sa 15–19" (mehrtägig: „Sa 22–So 02"). */
@@ -72,10 +83,10 @@ export function copiedShiftDateLabel(
 	targetStart: string
 ): string {
 	const start = shiftFestivalDate(sourceStart, shift.start_date, targetStart);
-	const from = dateParts(start);
 	const crossesDay = shift.end_date && shift.end_date !== shift.start_date;
-	if (!crossesDay) return `${weekday(start)} ${from.day}.${from.month}.${from.year}`;
+	if (!crossesDay) return formatDayLabel(start);
 
+	const from = dateParts(start);
 	const end = shiftFestivalDate(sourceStart, shift.end_date as string, targetStart);
 	const to = dateParts(end);
 	// Innerhalb eines Monats steht der Monat nur einmal („24.–25.07.2027"); über

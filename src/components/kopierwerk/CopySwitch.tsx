@@ -16,17 +16,24 @@ export interface CopySwitchProps {
 }
 
 /**
- * Ein Übernahme-Schalter des Kopierwerks (Prototyp `.row` mit `.cbx`): ein
+ * Ein Übernahme-Schalter einer Kopier-Werkbank (Prototyp `.row` mit `.cbx`): ein
  * An/Aus über *alles* eines Bereichs, im Unterschied zu den Häkchen-Mengen der
- * Stationen und Positionen. Ausgegraut bleibt die Zeile lesbar — der Hinweis
- * daneben sagt dann, was fehlt, statt den Schalter kommentarlos totzustellen.
+ * Stationen und Positionen. „Helfer übernehmen" und „Zuteilungen übernehmen" in
+ * Schritt 2, „Ablaufplan übernehmen" in Schritt 4 (#127), Preisliste und
+ * Sponsoren in Schritt 5 (#146). Ein Rezept für alle — ein zweites wäre der
+ * Verstoß gegen ADR 0003 §2.
  *
- * Steht hier und nicht bei einem seiner Schritte, weil ihn inzwischen zwei
- * tragen: Helfer und Zuteilungen in Schritt 2, Preisliste und Sponsoren im
- * Sponsoring-Schritt (#146). Ein zweites Rezept wäre der Verstoß gegen
- * ADR 0003 §2.
+ * Ausgegraut bleibt die Zeile lesbar — der Hinweis daneben sagt dann, was fehlt,
+ * statt den Schalter kommentarlos totzustellen.
  */
-export function CopySwitch({ id, label, hint, checked, disabled, onChange }: CopySwitchProps) {
+export default function CopySwitch({
+	id,
+	label,
+	hint,
+	checked,
+	disabled,
+	onChange
+}: CopySwitchProps) {
 	return (
 		<div className="flex flex-wrap items-center gap-x-5 gap-y-1">
 			{/* Gedimmt wird nur der Schalter selbst — der Hinweis daneben sagt

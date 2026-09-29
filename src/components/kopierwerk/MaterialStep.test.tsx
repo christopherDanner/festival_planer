@@ -185,12 +185,13 @@ describe('MaterialStep — Warnung „ohne Station"', () => {
 });
 
 describe('MaterialStep — Leerzustand und Fußzeile', () => {
-	// Angelegt wird seit #146 im Sponsoring-Schritt, der hinter diesem liegt.
-	it('führt zurück zu den Stationen und weiter zum Sponsoring', () => {
+	// Der Ablaufplan ist seit #127 Schritt 4 — angelegt wird das Fest seit #146
+	// im Sponsoring-Schritt dahinter, nicht mehr hier.
+	it('führt zurück zu den Stationen und weiter zum Ablaufplan', () => {
 		const html = render();
 
 		expect(html).toContain('← Stationen &amp; Schichten');
-		expect(html).toContain('WEITER: SPONSORING →');
+		expect(html).toContain('WEITER: ABLAUFPLAN →');
 		expect(html).not.toContain('FEST ANLEGEN');
 	});
 
@@ -199,7 +200,7 @@ describe('MaterialStep — Leerzustand und Fußzeile', () => {
 
 		expect(html).toContain('border-dashed');
 		expect(html).toContain('KEIN MATERIAL');
-		expect(html).toContain('WEITER: SPONSORING →');
+		expect(html).toContain('WEITER: ABLAUFPLAN →');
 		expect(html).not.toContain('disabled=""');
 	});
 

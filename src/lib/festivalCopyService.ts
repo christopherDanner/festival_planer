@@ -2,8 +2,14 @@ import {
 	getStations, getStationShifts, getStationHelpers, getShiftAssignments,
 	createStationsBulk, createStationShiftsBulk, assignHelperToStation, assignHelperToStationShift
 } from '@/lib/shiftService';
-import { getHelpers, createHelpersBulk, updateHelperPreferences } from '@/lib/helperService';
+import { getHelpers, createHelpersBulk, updateHelper } from '@/lib/helperService';
 import { getMaterials, createMaterialsBulk } from '@/lib/materialService';
+import {
+	getScheduleDays,
+	createScheduleDaysBulk,
+	createSchedulePhasesBulk,
+	createScheduleEntriesBulk
+} from '@/lib/scheduleService';
 import {
 	createBareSponsorings,
 	createCategoriesBulk,
@@ -22,6 +28,12 @@ export interface CopyFestivalOptions {
 	copyHelpers: boolean;
 	/** Setzt `copyHelpers` voraus — ohne Helfer hängt keine Zuteilung an etwas. */
 	copyAssignments: boolean;
+	/**
+	 * Tage, Phasen und Einträge des Ablaufplans mit Datums-Versatz ins Zielfest
+	 * (#127). Ein Schalter für den ganzen Plan — der Wert liegt in der
+	 * Vollständigkeit der Liste, ausgemistet wird danach im Bereich.
+	 */
+	copySchedule: boolean;
 	materialIds: string[];
 	materialQuantitySource: 'ordered' | 'actual';
 	/**
@@ -43,6 +55,42 @@ export interface CopyFestivalOptions {
 /** IDs auf ihre Entsprechung im Zielfest; was dort nicht existiert, fällt weg. */
 const remapIds = (ids: string[] | null | undefined, idMap: Record<string, string>): string[] =>
 	(ids || []).map(id => idMap[id]).filter(Boolean);
+
+/**
+ * Quell-Zeile → ihre neue Zeile im Zielfest, zugeordnet über einen **fachlichen
+ * Schlüssel** statt über die Reihenfolge: `INSERT … RETURNING` sagt über die
+ * Reihenfolge der zurückgegebenen Zeilen nichts zu. Beim Ablaufplan wäre ein
+ * Verrutschen still — Einträge landeten am falschen Tag und in der falschen
+ * Phase, ohne dass irgendwo ein Fehler stünde.
+ *
+ * Jede getroffene Zeile wird **verbraucht**. Nur der Tag trägt einen Schlüssel,
+ * den die Datenbank eindeutig hält (UNIQUE auf dem Datum); zwei Phasen desselben
+ * Tages *könnten* gleich heißen und gleich gereiht sein. Ohne Verbrauch zeigten
+ * beide Quell-Phasen auf dieselbe neue Zeile und zögen ihre Einträge zusammen —
+ * so bekommt jede ihre eigene, und welche welche ist, ist bei zwei
+ * ununterscheidbaren Phasen ohnehin keine Frage mit Antwort.
+ */
+function remapByKey<S extends { id: string }, N extends { id: string }>(
+	sources: readonly S[],
+	created: readonly N[],
+	sourceKey: (row: S) => string,
+	createdKey: (row: N) => string
+): Record<string, string> {
+	const byKey = new Map<string, string[]>();
+	for (const row of created) {
+		const key = createdKey(row);
+		const queue = byKey.get(key);
+		if (queue) queue.push(row.id);
+		else byKey.set(key, [row.id]);
+	}
+
+	const idMap: Record<string, string> = {};
+	for (const source of sources) {
+		const id = byKey.get(sourceKey(source))?.shift();
+		if (id) idMap[source.id] = id;
+	}
+	return idMap;
+}
 
 export async function copyFestivalData(
 	sourceFestivalId: string,
@@ -141,12 +189,10 @@ export async function copyFestivalData(
 			// Eine frische Helfer-Zeile trägt ohnehin zwei leere Arrays — ein
 			// Update, das nichts setzt, wäre eine Abfrage ohne Wirkung.
 			if (stationPreferences.length === 0 && shiftPreferences.length === 0) continue;
-			await updateHelperPreferences(
-				targetFestivalId,
-				helperIdMap[helper.id],
-				stationPreferences,
-				shiftPreferences
-			);
+			await updateHelper(targetFestivalId, helperIdMap[helper.id], {
+				station_preferences: stationPreferences,
+				shift_preferences: shiftPreferences
+			});
 		}
 
 		// Step 5: Copy assignments if requested
@@ -207,7 +253,91 @@ export async function copyFestivalData(
 		await createMaterialsBulk(materialsToInsert);
 	}
 
-	// Step 7: Sponsoring (ADR 0008, #146). Zwei unabhängige Schalter, weil
+	// Step 7: Copy the schedule — Tage, dann Phasen, dann Einträge (#127). Der
+	// Ablaufplan trägt das Jahresgedächtnis des Fests: „Feuerwehr-Abnahme,
+	// Fassanstich, Leergut-Rückgabe" sind jedes Jahr dieselben Zeilen. Er steht
+	// hinter den Helfern, weil er auf sie aufsetzt und sonst auf nichts.
+	if (options.copySchedule) {
+		const sourceDays = await getScheduleDays(sourceFestivalId);
+
+		// Dieselbe Versatz-Funktion wie bei den Schichten (#94): jeder Tag behält
+		// seinen Abstand zum Fest-Start, der Aufbau-Donnerstag fällt also wieder
+		// auf einen Donnerstag, solange beide Feste am selben Wochentag starten.
+		// Tun sie das nicht, rückt der Wochentag mit — das ist gewollt, weil sonst
+		// Ablauf-Tage und Schichten desselben Fests auseinanderliefen. Die Vorschau
+		// in Schritt 4 nennt genau dieses Datum samt Wochentag.
+		const newDate = (date: string) =>
+			shiftFestivalDate(options.sourceFestivalStartDate, date, options.targetFestivalStartDate);
+
+		const createdDays = await createScheduleDaysBulk(
+			sourceDays.map(day => ({
+				festival_id: targetFestivalId,
+				date: newDate(day.date),
+				label: day.label,
+				// Der gelesene Wert ist der einzige wahre: ein von Hand angelegter
+				// Aufbau-Tag war auch im Quellfest keiner, den die Tages-Erzeugung
+				// gemacht hat.
+				is_auto_generated: day.is_auto_generated,
+				sort_order: day.sort_order
+			}))
+		);
+		// Das Datum ist der fachliche Schlüssel des Tages — `schedule_days` trägt
+		// darauf ohnehin ein UNIQUE(festival_id, date).
+		const dayIdMap = remapByKey(
+			sourceDays,
+			createdDays,
+			day => newDate(day.date),
+			day => day.date
+		);
+
+		const sourcePhases = sourceDays.flatMap(day => day.phases);
+		const createdPhases = await createSchedulePhasesBulk(
+			sourcePhases.map(phase => ({
+				festival_id: targetFestivalId,
+				schedule_day_id: dayIdMap[phase.schedule_day_id],
+				name: phase.name,
+				sort_order: phase.sort_order
+			}))
+		);
+		// Eine Phase trägt keinen eigenen Schlüssel; Tag, Platz und Name zusammen
+		// benennen sie eindeutig genug, um sie wiederzuerkennen.
+		const phaseKey = (dayId: string, sortOrder: number, name: string) =>
+			`${dayId}\u0000${sortOrder}\u0000${name}`;
+		const phaseIdMap = remapByKey(
+			sourcePhases,
+			createdPhases,
+			phase => phaseKey(dayIdMap[phase.schedule_day_id], phase.sort_order, phase.name),
+			phase => phaseKey(phase.schedule_day_id, phase.sort_order, phase.name)
+		);
+
+		await createScheduleEntriesBulk(
+			sourceDays
+				.flatMap(day => day.entries)
+				.map(entry => ({
+					festival_id: targetFestivalId,
+					schedule_day_id: dayIdMap[entry.schedule_day_id],
+					// Ein Eintrag ohne Phase bleibt ohne (ADR 0007).
+					schedule_phase_id: entry.schedule_phase_id
+						? phaseIdMap[entry.schedule_phase_id] ?? null
+						: null,
+					title: entry.title,
+					type: entry.type,
+					start_time: entry.start_time,
+					end_time: entry.end_time,
+					// Der Verantwortliche hängt an „Helfer übernehmen": ein Helfer
+					// gehört dem Fest (ADR 0005), ohne kopierte Liste gibt es im
+					// Zielfest keine Zeile, auf die er zeigen könnte.
+					responsible_helper_id:
+						(entry.responsible_helper_id && helperIdMap[entry.responsible_helper_id]) || null,
+					// Der Haken des Vorjahrs ist wertlos — jede Aufgabe kommt offen
+					// herein, ein Programmpunkt trägt gar keinen Status (ADR 0007).
+					status: entry.type === 'task' ? ('open' as const) : null,
+					description: entry.description
+				}))
+		);
+	}
+
+	// Step 8: Sponsoring (ADR 0008, #146). Zwei unabhängige Schalter, weil
 	// „Werte werden kopiert, wo sie unsere Entscheidung sind, nicht wo sie das
 	// Versprechen eines anderen wären": die Preisliste ist, was der Verein heuer
 	// anbietet — sie kommt vollständig mit Werten. Ein Sponsoring dagegen trägt

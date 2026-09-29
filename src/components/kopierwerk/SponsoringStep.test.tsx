@@ -112,10 +112,10 @@ describe('Leerzustand', () => {
 });
 
 describe('Fußzeile', () => {
-	it('führt zurück zum Material und legt das Fest an', () => {
+	it('führt zurück zum Ablaufplan und legt das Fest an', () => {
 		const html = render();
 
-		expect(html).toContain('← Material');
+		expect(html).toContain('← Ablaufplan');
 		expect(html).toContain('FEST ANLEGEN');
 	});
 

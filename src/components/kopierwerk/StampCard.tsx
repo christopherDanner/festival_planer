@@ -6,9 +6,8 @@ import type { KopierwerkStep, KopierwerkStepState } from './kopierwerk';
 /**
  * Ein Eintrag der Stempelkarte — ein `KopierwerkStep`, dessen Schlüssel hier
  * nur noch `string` ist: die Karte zählt die Liste, die sie bekommt, und weiß
- * nicht, welche Schritte es gibt. Das Sponsoring (#146) war darum ein Eintrag
- * mehr in `kopierwerk.ts`, kein Umbau hier — und der Ablaufplan (#127) wird es
- * genauso sein.
+ * nicht, welche Schritte es gibt. Der Ablaufplan (#127) und das Sponsoring
+ * (#146) waren darum je ein Eintrag mehr in `kopierwerk.ts`, kein Umbau hier.
  */
 export interface StampCardStep extends Omit<KopierwerkStep, 'key'> {
 	key: string;
