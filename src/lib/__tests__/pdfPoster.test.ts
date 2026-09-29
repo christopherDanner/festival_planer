@@ -215,14 +215,7 @@ describe('drawSectionHeading', () => {
 		const doc = createPosterDoc({ orientation: 'portrait' });
 		const calls = recordStrokes(doc);
 
-		drawSectionHeading(doc, {
-			x: 12,
-			y: 40,
-			width: 100,
-			label: 'Freitag 24. Juli',
-			accent: true,
-			tone: 'gruen'
-		});
+		drawSectionHeading(doc, { x: 12, y: 40, width: 100, label: 'Freitag 24. Juli', variant: 'day' });
 
 		expect(argsOf(calls, 'text')[0][0]).toBe('FREITAG 24. JULI');
 		expect(argsOf(calls, 'setFont')).toContainEqual([POSTER_FONT.accent, 'normal']);

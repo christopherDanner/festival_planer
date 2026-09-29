@@ -121,15 +121,9 @@ export default function ScheduleView({
 		});
 	};
 
-	/**
-	 * Gedruckt wird ohne Auswahl-Dialog — „was du siehst, kommt raus" (#126).
-	 *
-	 * Beide Papiere bekommen genau das, was ihr Gegenstück am Bildschirm
-	 * zeichnet: der **Programmzettel** den ungefilterten Zettel, die
-	 * **Aufgabenliste** die gefilterte Werkliste samt ihrer Aufschrift. Ein
-	 * zweiter Auswahlweg könnte sonst anders wählen als die Ansicht.
-	 */
-	const paperName = festivalName || 'Ablaufplan';
+	/** Der Festname im Plakat-Kopf beider Papiere; ohne ihn steht dort der
+	Bereich, damit das Blatt überhaupt eine Aufschrift trägt. */
+	const posterTitle = festivalName || 'Ablaufplan';
 
 	if (isLoading || !initialized) {
 		return (
@@ -152,14 +146,17 @@ export default function ScheduleView({
 
 	return (
 		<div className="space-y-3 sm:space-y-4">
+			{/* Gedruckt wird ohne Auswahl-Dialog — „was du siehst, kommt raus" (#126):
+			beide Papiere bekommen genau das Objekt, das ihr Gegenstück am Bildschirm
+			zeichnet. Ein zweiter Auswahlweg könnte sonst anders wählen als die Ansicht. */}
 			<ScheduleToolbar
 				counts={worklist.counts}
 				onAddTask={() => setDialogState({ type: 'entry', defaultType: 'task' })}
 				onAddProgram={() => setDialogState({ type: 'entry', defaultType: 'program' })}
 				onExportProgram={() =>
-					exportProgramSheetToPdf({ festivalName: paperName, sheet: programSheet })
+					exportProgramSheetToPdf({ festivalName: posterTitle, sheet: programSheet })
 				}
-				onExportTasks={() => exportTaskListToPdf({ festivalName: paperName, worklist })}
+				onExportTasks={() => exportTaskListToPdf({ festivalName: posterTitle, worklist })}
 			/>
 
 			{/* Der Schreibtisch: Werkliste 1.5fr, Programmzettel 1fr. Unter 900px

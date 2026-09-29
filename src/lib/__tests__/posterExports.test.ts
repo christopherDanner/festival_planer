@@ -411,7 +411,9 @@ describe('buildProgramSheetPdf — der Programmzettel als Aushang', () => {
 			expect.anything(),
 			expect.objectContaining({ title: 'Stadlfest 2026', subtitle: 'Programm' })
 		);
-		expect(printed().map((p) => p.text)).toContain('Stadlfest 2026 — Programm — Seite 1/1');
+		// Der Kopf trägt die Aufschrift des Aushangs, die Fußzeile den Namen des
+		// Papiers (CONTEXT.md, *Programmzettel*).
+		expect(printed().map((p) => p.text)).toContain('Stadlfest 2026 — Programmzettel — Seite 1/1');
 	});
 
 	it('druckt dieselben Punkte in derselben Reihenfolge wie der Bildschirm', () => {
@@ -435,18 +437,17 @@ describe('buildProgramSheetPdf — der Programmzettel als Aushang', () => {
 		expect(texts.some((t) => t.includes('Gruber'))).toBe(false);
 	});
 
-	it('setzt die Tage als grüne Zwischentitel in der Akzentschrift', () => {
+	it('setzt die Tage als Tages-Zwischentitel — dieselbe Sorte wie am Bildschirm', () => {
 		sheetPdf();
 
 		expect(
 			vi.mocked(poster.drawSectionHeading).mock.calls.map(([, options]) => [
 				options.label,
-				options.accent,
-				options.tone
+				options.variant
 			])
 		).toEqual([
-			['Samstag 8. August · Festtag', true, 'gruen'],
-			['Sonntag 9. August', true, 'gruen']
+			['Samstag 8. August · Festtag', 'day'],
+			['Sonntag 9. August', 'day']
 		]);
 	});
 
@@ -460,13 +461,13 @@ describe('buildProgramSheetPdf — der Programmzettel als Aushang', () => {
 		expect(beschreibung?.y).toBeGreaterThan(titel!.y);
 	});
 
-	it('stempelt die Anzahl der Punkte ans Ende', () => {
+	it('nennt die Anzahl der Punkte leise am Fuß, wie am Bildschirm', () => {
 		sheetPdf();
 
-		expect(poster.drawStamp).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({ label: '2 Punkte' })
-		);
+		const zahl = printed().find((p) => p.text === '2 Punkte');
+		expect(zahl?.color).toBe(inkOf(poster.POSTER_COLOR.tinteSoft));
+		// Kein Stempel: der Aushang schlägt nichts ab, er zählt nur.
+		expect(poster.drawStamp).not.toHaveBeenCalled();
 	});
 
 	it('sagt es, wenn das Fest noch kein Programm hat', () => {
@@ -597,16 +598,48 @@ describe('buildTaskListPdf — die Aufgabenliste als Kopie des Bildschirms', () 
 		);
 	});
 
-	it('sagt es, wenn der Filter nichts übrig lässt', () => {
+	it('sagt es mit dem Satz des Bildschirms, wenn der Filter nichts übrig lässt', () => {
 		listPdf({ filter: 'open', responsibleId: 'm-1' });
 
-		expect(printed().map((p) => p.text)).toContain('Keine Aufgabe passt zu diesem Filter.');
+		expect(printed().map((p) => p.text)).toContain(
+			'Keine Aufgabe passt zu Filter und Verantwortlichem.'
+		);
 	});
 
 	it('sagt es, wenn das Fest noch keine Aufgabe hat', () => {
 		buildTaskListPdf({ festivalName: 'Stadlfest 2026', worklist: buildWorklist({ days: [] }) });
 
-		expect(printed().map((p) => p.text)).toContain('Noch keine Aufgabe erfasst.');
+		expect(printed().map((p) => p.text)).toContain('Noch keine Aufgabe in diesem Fest.');
+	});
+
+	it('wiederholt Tag und Phase am Kopf der Folgeseite', () => {
+		// Der Spaltenkopf wandert von selbst mit, der Zwischentitel nicht — ohne
+		// ihn stünden die Aufgaben auf Seite 2 ohne Zuordnung.
+		const days = [
+			scheduleDay({
+				id: 'd-1',
+				date: '2026-08-08',
+				label: 'Festtag',
+				phases: [schedulePhase({ id: 'p-1', schedule_day_id: 'd-1', name: 'Aufbau' })],
+				entries: Array.from({ length: 60 }, (_, k) =>
+					scheduleEntry({
+						id: `t-${k}`,
+						schedule_day_id: 'd-1',
+						schedule_phase_id: 'p-1',
+						title: `Aufgabe ${k}`,
+						type: 'task',
+						start_time: '08:00:00',
+						status: 'open'
+					})
+				)
+			})
+		];
+
+		buildTaskListPdf({ festivalName: 'Stadlfest 2026', worklist: buildWorklist({ days }) });
+
+		expect(printed().map((p) => p.text)).toContain(
+			'Samstag 8. August · Festtag · Aufbau (Fortsetzung)'
+		);
 	});
 
 	it('bricht die Seite um, statt in die Fußzeile zu drucken', () => {

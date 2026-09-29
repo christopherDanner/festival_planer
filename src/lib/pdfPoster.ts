@@ -371,30 +371,31 @@ export interface PosterSectionHeadingOptions {
 	/** Rechte Beisatz-Zeile, z. B. eine Zählung. */
 	note?: string;
 	/**
-	 * Akzentschrift statt Arbeitsschrift. Die Tages-Zwischentitel der beiden
-	 * Ablaufplan-Papiere stehen so — Oswald in Grün, wie am Bildschirm
-	 * (DESIGN-VISION §4).
+	 * Welche der beiden Zwischentitel-Sorten der Handschrift das ist:
+	 *
+	 * - `'section'` (Standard) — Public Sans 700 in Tinte, etwa der Stationskopf.
+	 * - `'day'` — der Tages-Zwischentitel: Oswald in Grün, wie ihn Werkliste und
+	 *   Programmzettel am Bildschirm tragen (DESIGN-VISION §4).
 	 */
-	accent?: boolean;
-	/** Farbe der Aufschrift; Standard Tinte. */
-	tone?: 'tinte' | 'gruen';
+	variant?: 'section' | 'day';
 }
 
 /**
- * Sektionsüberschrift: Public Sans 700 in Versalien mit Sperrung, dahinter die
- * Punktraster-Linie (DESIGN-VISION §4).
+ * Sektionsüberschrift: Versalien mit Sperrung, dahinter die Punktraster-Linie
+ * (DESIGN-VISION §4).
  *
  * @returns y-Kante unter der Zeile.
  */
 export function drawSectionHeading(doc: jsPDF, options: PosterSectionHeadingOptions): number {
-	const { x, y, width, label, note, accent = false, tone = 'tinte' } = options;
+	const { x, y, width, label, note, variant = 'section' } = options;
+	const day = variant === 'day';
 	const text = label.toUpperCase();
 
 	// Die Akzentschrift ist nur in einem Schnitt eingebettet (Oswald 600).
-	doc.setFont(accent ? POSTER_FONT.accent : POSTER_FONT.body, accent ? 'normal' : 'bold');
-	doc.setFontSize(accent ? 12 : 10.5);
+	doc.setFont(day ? POSTER_FONT.accent : POSTER_FONT.body, day ? 'normal' : 'bold');
+	doc.setFontSize(day ? 12 : 10.5);
 	letterSpace(doc, HEADING_LETTER_SPACE);
-	ink(doc, POSTER_COLOR[tone]);
+	ink(doc, day ? POSTER_COLOR.gruen : POSTER_COLOR.tinte);
 	const textWidth = spacedTextWidth(doc, text, HEADING_LETTER_SPACE);
 	doc.text(text, x, y);
 	letterSpace(doc, 0);
@@ -408,16 +409,17 @@ export function drawSectionHeading(doc: jsPDF, options: PosterSectionHeadingOpti
 		ruleEnd = x + width - doc.getTextWidth(note) - 2;
 	}
 
-	// Punktraster-Linie im 8px-Raster (2.1mm) auf Grundlinienhöhe.
+	// Punktraster-Linie im 8px-Raster (2.1mm), auf halber Versalhöhe der
+	// Aufschrift — die größere Akzentschrift zieht sie mit nach oben.
 	fill(doc, POSTER_COLOR.linie);
 	for (let dx = x + textWidth + 2; dx < ruleEnd; dx += 2.1) {
-		doc.circle(dx, y - 1, 0.29, 'F');
+		doc.circle(dx, y - (day ? 1.4 : 1), 0.29, 'F');
 	}
 
 	doc.setFont(POSTER_FONT.body, 'normal');
 	doc.setFontSize(9);
 	ink(doc, POSTER_COLOR.tinte);
-	return y + 4;
+	return y + (day ? 5 : 4);
 }
 
 export interface PosterCheckboxOptions {
@@ -425,14 +427,14 @@ export interface PosterCheckboxOptions {
 	x: number;
 	/** Obere Kante. */
 	y: number;
-	/** Kantenlänge in mm; 17px der Vision sind rund 4.5mm. */
+	/** Kantenlänge in mm; der 17px-Kasten der Werkliste sind rund 4.5mm. */
 	size: number;
 	done: boolean;
 }
 
 /**
- * Das Kästchen der Aufgaben-Werkliste auf Papier (DESIGN-VISION §4): offen ein
- * harter Tinte-Rahmen, erledigt grün gefüllt mit weißem Haken.
+ * Das Kästchen der Aufgaben-Werkliste auf Papier: offen ein harter
+ * Tinte-Rahmen, erledigt grün gefüllt mit weißem Haken — wie in `TaskWorklist`.
  *
  * Der Haken sind zwei Striche und keine Glyphe — ✓ steht nicht im Latin-Subset
  * der eingebetteten Schriften (ADR 0012).

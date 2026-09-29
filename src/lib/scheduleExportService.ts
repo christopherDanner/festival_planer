@@ -16,7 +16,6 @@ import {
 	drawPosterFooter,
 	drawPosterHead,
 	drawSectionHeading,
-	drawStamp,
 	posterTableEnd,
 	posterTableTheme,
 	setPosterInk
@@ -24,8 +23,8 @@ import {
 import type { ProgramSheet, ProgramSheetRow } from '@/lib/scheduleProgramSheet';
 import {
 	worklistDayNote,
+	worklistEmptyText,
 	type Worklist,
-	type WorklistPhaseGroup,
 	type WorklistTask
 } from '@/lib/scheduleWorklist';
 
@@ -51,8 +50,50 @@ function sanitizeFilename(name: string): string {
 	return name.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim();
 }
 
+/**
+ * Eine leise Zeile in Tinte-soft — Leerzustände, Zählungen, Fortsetzungen.
+ * Beide Papiere sprechen ihre Nebensätze so.
+ *
+ * @returns y-Kante unter der Zeile.
+ */
+function drawQuietLine(doc: jsPDF, text: string, y: number, align: 'left' | 'right' = 'left'): number {
+	doc.setFont(POSTER_FONT.body, 'normal');
+	doc.setFontSize(8.5);
+	setPosterInk(doc, POSTER_COLOR.tinteSoft);
+	doc.text(text, align === 'right' ? POSTER_MARGIN + contentWidth(doc) : POSTER_MARGIN, y + 3, {
+		align
+	});
+	setPosterInk(doc, POSTER_COLOR.tinte);
+	return y + 6;
+}
+
+/**
+ * Der Zwischentitel eines Ablauf-Tags, auf beiden Papieren derselbe: Oswald in
+ * Grün mit gepunktetem Lineal, davor ein Seitenumbruch, wenn der Titel sonst
+ * allein am Fuß stünde.
+ *
+ * @returns y-Kante unter dem Titel.
+ */
+function drawDayHeading(doc: jsPDF, day: { title: string; note?: string }, y: number): number {
+	const top = breakIfTight(doc, y, 24);
+	return (
+		drawSectionHeading(doc, {
+			x: POSTER_MARGIN,
+			y: top + 2,
+			width: contentWidth(doc),
+			label: day.title,
+			note: day.note,
+			variant: 'day'
+		}) + 2
+	);
+}
+
 // ── Programmzettel ────────────────────────────────────────────
 
+/** Wie das Papier heißt — in der Fußzeile und im Dateinamen (CONTEXT.md). */
+const PROGRAM_PAPER = 'Programmzettel';
+
+/** Was im Kopf steht: die Aufschrift des Aushangs, wie am Bildschirm (#123). */
 const PROGRAM_TITLE = 'Programm';
 
 /** Zeilenhöhe von Titel und Beschreibung in mm. */
@@ -129,18 +170,7 @@ export function buildProgramSheetPdf({
 	let y = drawPosterHead(doc, { title: festivalName, subtitle: PROGRAM_TITLE });
 
 	for (const day of sheet.days) {
-		// Ein Tages-Zwischentitel allein am Seitenfuß hilft niemandem — er nimmt
-		// seine erste Zeile mit.
-		y = breakIfTight(doc, y, 22);
-		y =
-			drawSectionHeading(doc, {
-				x: POSTER_MARGIN,
-				y: y + 2,
-				width: contentWidth(doc),
-				label: day.title,
-				accent: true,
-				tone: 'gruen'
-			}) + 2;
+		y = drawDayHeading(doc, day, y);
 
 		for (const row of day.rows) {
 			y = drawProgramRow(doc, row, y);
@@ -152,29 +182,22 @@ export function buildProgramSheetPdf({
 	if (sheet.days.length === 0) {
 		// Der Bildschirm sagt hier, wo der erste Punkt entsteht — auf Papier führt
 		// kein Knopf mehr irgendwohin.
-		doc.setFontSize(9);
-		setPosterInk(doc, POSTER_COLOR.tinteSoft);
-		doc.text('Noch kein Programmpunkt erfasst.', POSTER_MARGIN, y + 3);
-		setPosterInk(doc, POSTER_COLOR.tinte);
-		y += 8;
+		y = drawQuietLine(doc, 'Noch kein Programmpunkt erfasst.', y + 2);
 	}
 
-	y = breakIfTight(doc, y, 8);
-	drawStamp(doc, {
-		x: POSTER_MARGIN,
-		y: y + 2,
-		label: sheet.count === 1 ? '1 Punkt' : `${sheet.count} Punkte`,
-		tone: 'tinte'
-	});
+	// Die Anzahl steht am Fuß, leise — wie am Bildschirm. Ein Stempel wäre die
+	// lautere Geste und gehört dort keinem Punkt.
+	y = breakIfTight(doc, y, 6);
+	drawQuietLine(doc, sheet.count === 1 ? '1 Punkt' : `${sheet.count} Punkte`, y, 'right');
 
-	drawPosterFooter(doc, `${festivalName} — ${PROGRAM_TITLE}`);
+	drawPosterFooter(doc, `${festivalName} — ${PROGRAM_PAPER}`);
 	return doc;
 }
 
 /** Lädt den Programmzettel als PDF herunter. */
 export function exportProgramSheetToPdf(options: ProgramSheetExportOptions): void {
 	buildProgramSheetPdf(options).save(
-		`${sanitizeFilename(options.festivalName)}_${PROGRAM_TITLE}.pdf`
+		`${sanitizeFilename(options.festivalName)}_${PROGRAM_PAPER}.pdf`
 	);
 }
 
@@ -197,31 +220,47 @@ export interface TaskListExportOptions {
 }
 
 /** Der leise Zwischentitel einer Phase mit `erledigt/gesamt`, wie am Bildschirm. */
-function drawPhaseHeading(doc: jsPDF, group: WorklistPhaseGroup, y: number): number {
-	const width = contentWidth(doc);
+function drawPhaseHeading(doc: jsPDF, phase: string, note: string, y: number): number {
+	const top = breakIfTight(doc, y, 20);
 
 	doc.setFont(POSTER_FONT.body, 'bold');
 	doc.setFontSize(8);
 	setPosterInk(doc, POSTER_COLOR.tinteSoft);
-	doc.text(group.phase!.name.toUpperCase(), POSTER_MARGIN, y + 3);
-	doc.text(`${group.done}/${group.total}`, POSTER_MARGIN + width, y + 3, { align: 'right' });
+	doc.text(phase.toUpperCase(), POSTER_MARGIN, top + 3);
+	doc.text(note, POSTER_MARGIN + contentWidth(doc), top + 3, { align: 'right' });
 
 	setPosterInk(doc, POSTER_COLOR.tinte);
-	return y + 5;
+	return top + 5;
 }
 
 /**
  * Die Aufgaben eines Blocks als Frachtbrief-Tabelle: Kästchen, Uhrzeit, Titel,
- * Verantwortlicher — die vier Spalten der Werkliste.
+ * Verantwortlicher — die vier Spalten, die die Spec aufzählt. Die leise
+ * Subzeile der Werkliste bleibt weg: sie ist die Notiz zur Aufgabe, und auf
+ * einem Arbeitszettel zählt die Zeile, die man abhakt.
+ *
+ * @param continued Tag und Phase in Worten — sie stehen oben auf jeder
+ * Folgeseite noch einmal, sonst hängen die Aufgaben dort ohne Zuordnung.
  *
  * @returns y-Kante unter der Tabelle.
  */
-function drawTaskRows(doc: jsPDF, tasks: WorklistTask[], startY: number): number {
+function drawTaskRows(
+	doc: jsPDF,
+	tasks: WorklistTask[],
+	continued: string,
+	startY: number
+): number {
 	const theme = posterTableTheme();
 	autoTable(doc, {
 		...theme,
 		startY,
-		margin: { left: POSTER_MARGIN, right: POSTER_MARGIN, top: POSTER_MARGIN, bottom: FOOTER_SPACE },
+		margin: {
+			left: POSTER_MARGIN,
+			right: POSTER_MARGIN,
+			// Platz für die Fortsetzungszeile am Kopf der Folgeseiten.
+			top: POSTER_MARGIN + 6,
+			bottom: FOOTER_SPACE
+		},
 		head: [['', 'Zeit', 'Aufgabe', 'Verantwortlich']],
 		body: tasks.map((task) => [
 			'',
@@ -258,6 +297,12 @@ function drawTaskRows(doc: jsPDF, tasks: WorklistTask[], startY: number): number
 				size: CHECKBOX_SIZE,
 				done: task.done
 			});
+		},
+		didDrawPage: (hookData) => {
+			// Der Spaltenkopf wiederholt sich von selbst, der Tages- und
+			// Phasentitel nicht — ohne diese Zeile stünden die Aufgaben auf der
+			// Folgeseite ohne Zuordnung.
+			if (hookData.pageNumber > 1) drawQuietLine(doc, `${continued} (Fortsetzung)`, POSTER_MARGIN - 3);
 		}
 	});
 	return posterTableEnd(doc) + 4;
@@ -275,57 +320,38 @@ export function buildTaskListPdf({ festivalName, worklist }: TaskListExportOptio
 	});
 
 	for (const day of worklist.days) {
-		y = breakIfTight(doc, y, 30);
-		y =
-			drawSectionHeading(doc, {
-				x: POSTER_MARGIN,
-				y: y + 2,
-				width: contentWidth(doc),
-				label: day.title,
-				note: worklistDayNote(day),
-				accent: true,
-				tone: 'gruen'
-			}) + 2;
+		y = drawDayHeading(doc, { title: day.title, note: worklistDayNote(day) }, y);
 
 		for (const group of day.groups) {
 			// Aufgaben ohne Phase stehen direkt unter dem Tag, ohne Ersatztitel
 			// (ADR 0007).
 			if (group.phase) {
-				y = breakIfTight(doc, y, 20);
-				y = drawPhaseHeading(doc, group, y);
+				y = drawPhaseHeading(doc, group.phase.name, `${group.done}/${group.total}`, y);
 			}
-			y = drawTaskRows(doc, group.tasks, y);
+			y = drawTaskRows(
+				doc,
+				group.tasks,
+				group.phase ? `${day.title} · ${group.phase.name}` : day.title,
+				y
+			);
 		}
 
 		y += 3;
 	}
 
+	// Derselbe Satz wie am Bildschirm, wenn nichts übrig bleibt.
 	if (worklist.days.length === 0) {
-		doc.setFontSize(9);
-		setPosterInk(doc, POSTER_COLOR.tinteSoft);
-		doc.text(
-			worklist.counts.all === 0
-				? 'Noch keine Aufgabe erfasst.'
-				: 'Keine Aufgabe passt zu diesem Filter.',
-			POSTER_MARGIN,
-			y + 3
-		);
-		setPosterInk(doc, POSTER_COLOR.tinte);
-		y += 8;
+		y = drawQuietLine(doc, worklistEmptyText(worklist), y + 2);
 	}
 
 	// Dieselben drei Zahlen wie am Fuß der Werkliste — sie zählen den
 	// Gesamtbestand des Fests, nicht die gedruckten Zeilen.
 	y = breakIfTight(doc, y, 6);
-	doc.setFont(POSTER_FONT.body, 'bold');
-	doc.setFontSize(8.5);
-	setPosterInk(doc, POSTER_COLOR.tinteSoft);
-	doc.text(
+	drawQuietLine(
+		doc,
 		`${worklist.footer.openBefore} offen vor dem Fest · ${worklist.footer.openAfter} in der Nachbereitung · ${worklist.counts.done} von ${worklist.counts.all} erledigt`,
-		POSTER_MARGIN,
-		y + 3
+		y
 	);
-	setPosterInk(doc, POSTER_COLOR.tinte);
 
 	drawPosterFooter(doc, `${festivalName} — ${TASK_TITLE}`);
 	return doc;

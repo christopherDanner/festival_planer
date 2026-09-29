@@ -214,6 +214,20 @@ export function worklistDayNote(day: Pick<WorklistDay, 'open'>): string {
 }
 
 /**
+ * Was statt der Liste dasteht, wenn keine Zeile übrig bleibt. Zwei Fälle, die
+ * verschiedene Auskünfte sind: ein Fest ohne Aufgaben und ein Filter, der nichts
+ * trifft.
+ *
+ * Steht hier, damit das gedruckte Papier denselben Satz sagt wie der Bildschirm
+ * — es ist dessen Kopie (#126).
+ */
+export function worklistEmptyText(worklist: Pick<Worklist, 'counts'>): string {
+	return worklist.counts.all === 0
+		? 'Noch keine Aufgabe in diesem Fest.'
+		: 'Keine Aufgabe passt zu Filter und Verantwortlichem.';
+}
+
+/**
  * Die Aufschrift eines Ablauf-Tags: ausgeschriebenes Datum wie im Schichtplan
  * (#68), dahinter das freie Label — „Donnerstag 23. Juli · Aufbau".
  *
