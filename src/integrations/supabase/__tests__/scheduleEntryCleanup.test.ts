@@ -38,11 +38,13 @@ const columnsOf = async (table: string): Promise<string[]> =>
 	).rows.map((row) => row.column_name);
 
 // Vor der Aufräum-Migration angehalten: der Bestand entsteht so, wie ihn der
-// alte Codestand hinterlassen haben kann, und erst dann läuft sie.
-let rescued: { entryId: string; helperId: string };
-let ambiguous: { entryId: string };
+// alte Codestand hinterlassen haben kann, und erst dann läuft sie. Die
+// Migration droppt nur — den alten Zeiger liest sie nicht mehr. Der heutige
+// Code schreibt responsible_member_id nie und löscht ihn also auch nie; ein
+// noch gesetzter Member-Zeiger sagt nichts darüber, wen der Nutzer heute will.
+let cleared: { entryId: string };
+let program: { entryId: string };
 let alreadySet: { entryId: string; helperId: string };
-let noHelper: { entryId: string };
 
 const seedFestival = async (name: string) => {
 	const { id: festivalId } = await one<{ id: string }>(
@@ -77,14 +79,15 @@ const entry = async (
 	festivalId: string,
 	dayId: string,
 	memberId: string | null,
-	helperId: string | null = null
+	helperId: string | null = null,
+	type: 'task' | 'program' = 'task'
 ) =>
 	(
 		await one<{ id: string }>(
 			`INSERT INTO schedule_entries
-			   (festival_id, schedule_day_id, title, ${LEGACY_POINTER}, responsible_helper_id)
-			 VALUES ($1, $2, 'Bierwagen anschließen', $3, $4) RETURNING id`,
-			[festivalId, dayId, memberId, helperId]
+			   (festival_id, schedule_day_id, title, type, ${LEGACY_POINTER}, responsible_helper_id)
+			 VALUES ($1, $2, 'Bierwagen anschließen', $5, $3, $4) RETURNING id`,
+			[festivalId, dayId, memberId, helperId, type]
 		)
 	).id;
 
@@ -99,21 +102,22 @@ const responsibleHelperOf = async (entryId: string) =>
 beforeAll(async () => {
 	db = await createSponsoringSchemaDb({ stopBefore: SCHEDULE_ENTRY_CLEANUP_MIGRATION });
 
-	// Nachzügler: nach dem Backfill von 20260815 noch mit dem alten Zeiger
-	// geschrieben; im Fest gibt es genau einen Helfer mit dem Namen.
+	// Aufgabe aus der Zeit vor 20260815: der alte Member-Zeiger steht noch, den
+	// Helfer-Zeiger hat der Nutzer im Zettel geleert. Ein gleichnamiger Helfer
+	// im Fest darf ihn nicht zurückbringen.
 	{
 		const { festivalId, dayId } = await seedFestival('Zeltfest 2026');
 		const memberId = await member('Hans', 'Huber');
-		const helperId = await helper(festivalId, 'Hans', 'Huber');
-		rescued = { entryId: await entry(festivalId, dayId, memberId), helperId };
+		await helper(festivalId, 'Hans', 'Huber');
+		cleared = { entryId: await entry(festivalId, dayId, memberId) };
 	}
-	// Zwei Helfer gleichen Namens: welcher gemeint war, weiß niemand.
+	// Programmpunkt mit altem Member-Zeiger: trägt keinen Verantwortlichen
+	// (ADR 0007), auch wenn der Name im Fest eindeutig ist.
 	{
 		const { festivalId, dayId } = await seedFestival('Sommerfest 2026');
 		const memberId = await member('Eva', 'Ebner');
 		await helper(festivalId, 'Eva', 'Ebner');
-		await helper(festivalId, 'Eva', 'Ebner');
-		ambiguous = { entryId: await entry(festivalId, dayId, memberId) };
+		program = { entryId: await entry(festivalId, dayId, memberId, null, 'program') };
 	}
 	// Schon umgestellt: der Helfer-Zeiger gilt, der alte wird nicht gelesen.
 	{
@@ -125,12 +129,6 @@ beforeAll(async () => {
 			entryId: await entry(festivalId, dayId, memberId, otherHelperId),
 			helperId: otherHelperId
 		};
-	}
-	// Die Person ist nie Helfer des Fests geworden.
-	{
-		const { festivalId, dayId } = await seedFestival('Winterfest 2026');
-		const memberId = await member('Franz', 'Fuchs');
-		noHelper = { entryId: await entry(festivalId, dayId, memberId) };
 	}
 
 	await applyMigration(db, SCHEDULE_ENTRY_CLEANUP_MIGRATION);
@@ -170,17 +168,13 @@ describe('was stehen bleibt', () => {
 	});
 });
 
-describe('Nachzügler mit altem Zeiger', () => {
-	it('bekommen den gleichnamigen Helfer des Fests, bevor der alte Zeiger fällt', async () => {
-		expect(await responsibleHelperOf(rescued.entryId)).toBe(rescued.helperId);
+describe('Einträge mit altem Member-Zeiger', () => {
+	it('eine Aufgabe mit geleertem Helfer-Zeiger bleibt leer, auch bei gleichnamigem Helfer', async () => {
+		expect(await responsibleHelperOf(cleared.entryId)).toBeNull();
 	});
 
-	it('bleiben leer, wenn der Name im Fest nicht eindeutig ist', async () => {
-		expect(await responsibleHelperOf(ambiguous.entryId)).toBeNull();
-	});
-
-	it('bleiben leer, wenn die Person nie Helfer des Fests wurde', async () => {
-		expect(await responsibleHelperOf(noHelper.entryId)).toBeNull();
+	it('ein Programmpunkt bekommt keinen Verantwortlichen', async () => {
+		expect(await responsibleHelperOf(program.entryId)).toBeNull();
 	});
 
 	it('behalten einen schon gesetzten Helfer-Zeiger', async () => {

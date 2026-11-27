@@ -133,6 +133,7 @@ const PLATFORM_PRELUDE = `
     schedule_phase_id UUID NOT NULL REFERENCES schedule_phases(id) ON DELETE CASCADE,
     festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
     title TEXT,
+    type TEXT NOT NULL DEFAULT 'task' CHECK (type IN ('task', 'program')),
     responsible_member_id UUID REFERENCES members(id) ON DELETE SET NULL,
     sort_order INTEGER NOT NULL DEFAULT 0
   );

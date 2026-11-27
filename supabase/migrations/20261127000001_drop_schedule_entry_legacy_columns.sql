@@ -7,55 +7,21 @@
 -- Voraussetzung: der Datenzugriff läuft auf der neuen Form und die Dialoge
 -- schreiben responsible_helper_id. Vorher darf diese Migration nicht laufen.
 
--- 1. Nachzügler einsammeln, dann erst etwas wegwerfen
+-- 1. Kein Rettungs-Backfill
 --
--- Der Backfill in 20260815000001 lief über die Migrations-Brücke
--- festival_helpers.source_member_id. Was der alte Codestand danach noch mit
--- responsible_member_id geschrieben hat, trägt keinen Helfer — und die Brücke
--- ist seit 20260817000001 weg. Übrig bleibt der Name: der Fan-out (#97) hat
--- Vor- und Nachname aus members übernommen. Genommen wird nur ein eindeutiger
--- Treffer im selben Fest; bei zwei Gleichnamigen bleibt die Spalte leer,
--- statt zu raten. Danach ist der Verweis verloren — die Person selbst steht
--- weiter in members (Schritt 3).
---
--- Im DO-Block mit dynamischem SQL, wie in 20260817000001: nach Schritt 2 gibt
--- es responsible_member_id nicht mehr, ein zweiter Durchlauf soll nichts tun
--- statt an dem Namen zu scheitern.
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_schema = 'public'
-       AND table_name = 'schedule_entries'
-       AND column_name = 'responsible_member_id'
-  ) THEN
-    RETURN;
-  END IF;
-
-  EXECUTE $sql$
-    UPDATE schedule_entries e
-       SET responsible_helper_id = (
-         SELECT fh.id
-           FROM festival_helpers fh
-          WHERE fh.festival_id = e.festival_id
-            AND fh.first_name = m.first_name
-            AND fh.last_name = m.last_name
-       )
-      FROM members m
-     WHERE m.id = e.responsible_member_id
-       AND e.responsible_helper_id IS NULL
-       AND (
-         SELECT count(*)
-           FROM festival_helpers fh
-          WHERE fh.festival_id = e.festival_id
-            AND fh.first_name = m.first_name
-            AND fh.last_name = m.last_name
-       ) = 1
-  $sql$;
-END
-$$;
+-- Bewusst nicht: responsible_member_id wird ungelesen weggeworfen. Der heutige
+-- Code schreibt den alten Zeiger nie und löscht ihn auch nie — er steht noch
+-- an jedem Eintrag aus der Zeit vor 20260815, auch wo der Nutzer den
+-- Verantwortlichen seither entfernt oder die Aufgabe zum Programmpunkt gemacht
+-- hat (der trägt keinen Verantwortlichen, ADR 0007). Ein Abgleich über den
+-- Namen könnte das von einem echten Nachzügler nicht unterscheiden. Preis:
+-- Einträge, die der alte Codestand nach 20260815 noch nur mit
+-- responsible_member_id geschrieben hat, verlieren ihren Verantwortlichen.
+-- Die Person selbst steht weiter in members (Schritt 3).
 
 -- 2. Die abgelösten Spalten droppen
+--
+-- IF EXISTS: ein zweiter Durchlauf tut nichts.
 --
 -- Mit responsible_member_id fallen der letzte Fremdschlüssel auf members und
 -- sein Index idx_schedule_entries_responsible_member_id. Auf
