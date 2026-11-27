@@ -9,23 +9,35 @@ export interface OpenSlotProps extends React.HTMLAttributes<HTMLElement> {
 	 */
 	as?: 'button' | 'span';
 	/**
-	 * **Scharf**: es ist gewählt, wer hier hineingehört — der Platz ist jetzt ein
-	 * Ziel und keine Klage mehr (#105). Rot heißt „hier fehlt jemand"; sobald
-	 * jemand danebensteht, heißt Tinte-auf-Gelb „hier hin".
+	 * **Scharf**: eine Marke wartet darauf, hier abgelegt zu werden — gewählt
+	 * (#105) oder im Zug (#104). Gelber Innenschein, Rahmen von gestrichelt-rot
+	 * auf durchgezogen-Tinte — so im abgenommenen Prototyp
+	 * `entscheid-schichtplan-mobil.html` (`.armed .bslot.free`). Aus Rot wird
+	 * Tinte, weil der Platz in diesem Augenblick kein Mangel mehr ist, sondern
+	 * ein Angebot.
 	 */
 	armed?: boolean;
 }
 
+/**
+ * Der **scharfe** Zustand als reine Fläche: gelber Innenschein auf aufgehelltem
+ * Gelbgrund, Werte aus dem abgenommenen `entscheid-schichtplan-mobil.html`.
+ *
+ * `<OpenSlot armed>` tauscht zusätzlich den Rahmen von gestrichelt-rot auf
+ * durchgezogen-Tinte. Flächen, die schon einen eigenen Rahmen tragen — die
+ * Stationsmitglieder-Fußzeile des Schichtplans —, nehmen nur diesen Teil,
+ * damit das Rezept nur an einer Stelle steht.
+ */
+export const ARMED_SURFACE =
+	'bg-[oklch(0.97_0.03_92)] shadow-[inset_0_0_0_2px_oklch(var(--gelb))]';
+
 /** Freier Platz: gestrichelte rote Outline, rote Versalien („+1 OFFEN",
 „HIER EINTRAGEN") — klickbar zum Besetzen (DESIGN-VISION.md §4). */
-export function OpenSlot({ className, as = 'button', armed = false, ...props }: OpenSlotProps) {
+export function OpenSlot({ className, as = 'button', armed, ...props }: OpenSlotProps) {
 	const recipe = cn(
 		'inline-flex items-center justify-center gap-1.5 border-1.5 border-dashed border-rot bg-white px-2.5 py-[7px] text-[11.5px] font-bold uppercase tracking-[.03em] text-rot',
 		as === 'button' && 'hover:bg-[oklch(0.97_0.02_30)]',
-		// Blasses Gelb wie im Prototyp (`.armed .bslot.free`) — als Wert und nicht
-		// als Token, weil es nur hier vorkommt und ADR 0003 §3 keine Tokens auf
-		// Vorrat duldet; dieselbe Schreibweise wie der Hover eine Zeile darüber.
-		armed && 'border-solid border-tinte bg-[oklch(0.97_0.03_92)] text-tinte ring-2 ring-inset ring-gelb',
+		armed && cn('border-solid border-tinte text-tinte hover:bg-[oklch(0.94_0.05_92)]', ARMED_SURFACE),
 		className,
 	);
 

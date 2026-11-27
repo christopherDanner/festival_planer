@@ -2,8 +2,14 @@ import React from 'react';
 
 import HelperRosterBody, { type HelperListProps } from './HelperRosterBody';
 import { rosterTitle } from '@/lib/helperRoster';
+import { helperName, type Helper } from '@/lib/helperService';
 
-export type HelperRosterProps = HelperListProps;
+export interface HelperRosterProps extends HelperListProps {
+	/** Die gewählte Marke (#104) — sie steht gelb da und nennt sich im Hinweis. */
+	selected: Helper | null;
+	/** „Abbrechen" — der zweite Weg zurück neben dem zweiten Antippen der Marke. */
+	onCancelSelection: () => void;
+}
 
 /**
  * Die **Helferliste** rechts an der Werkbank (#103, Variante C des Prototyps
@@ -18,7 +24,12 @@ export type HelperRosterProps = HelperListProps;
  * `HelperRosterBody`; diese Datei ist nur die **Spalten-Gestalt**. Unter 900px
  * trägt dieselbe Liste die Schublade (`HelperDrawer`, #105).
  */
-const HelperRoster: React.FC<HelperRosterProps> = ({ focusStationName, ...body }) => (
+const HelperRoster: React.FC<HelperRosterProps> = ({
+	focusStationName,
+	selected,
+	onCancelSelection,
+	...body
+}) => (
 	// Die Spalte klebt oben und **scrollt in sich**: bei 40 Helfern liefe sie
 	// sonst unter den Fensterrand und nähme den Anlege-Knopf mit (DESIGN-VISION
 	// §6 — was scrollt, scrollt im eigenen Rahmen).
@@ -32,6 +43,26 @@ const HelperRoster: React.FC<HelperRosterProps> = ({ focusStationName, ...body }
 		<h3 className="shrink-0 border-b-2 border-tinte bg-papier-getoent px-3 py-2.5 text-xs font-extrabold uppercase tracking-[.07em]">
 			{rosterTitle(focusStationName)}
 		</h3>
+		{/* Der Auswahl-Hinweis (#104): er sagt, was die gelbe Marke bedeutet, und
+		trägt den zweiten Weg zurück. Ohne ihn wäre das zweite Antippen derselben
+		Marke die einzige Rücknahme — und die findet niemand von selbst. Als
+		`aria-live`-Bereich ist er zugleich die Ansage für alle, die das Gelb nicht
+		sehen (Research #54). Am Handy sagt dasselbe der Auswahl-Streifen (#105). */}
+		<div aria-live="polite" className="shrink-0 px-3">
+			{selected && (
+				<p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-1.5 border-tinte bg-gelb px-2 py-1.5 text-[11.5px] font-semibold">
+					<b className="font-bold">{helperName(selected)}</b>
+					<span>— freien Platz wählen</span>
+					<button
+						type="button"
+						onClick={onCancelSelection}
+						className="ml-auto text-[11px] font-bold uppercase tracking-[.04em] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
+					>
+						Abbrechen
+					</button>
+				</p>
+			)}
+		</div>
 		<HelperRosterBody {...body} />
 	</aside>
 );

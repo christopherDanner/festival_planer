@@ -8,6 +8,7 @@ nur und beschriftet. */
 
 import { formatFestDayLong } from '@/lib/festDates';
 import { helperName } from '@/lib/helperService';
+import { targetKey, type AssignTarget } from '@/lib/shiftAssignment';
 import { stationStaffing } from '@/lib/staffing';
 import { statusColor, type AmpelStatus } from '@/components/toolkit/status';
 import type {
@@ -41,8 +42,13 @@ export interface BoardSlot {
 Schichten, die Pseudo-Zeile „GANZES FEST" über `stations.required_people`
 (Entscheid 1 aus #68: gleiche Optik, gleiche Geste, eine Ebene tiefer). */
 export interface BoardRow {
-	/** Schicht-Id bzw. `station:<id>` — Schlüssel der Liste. */
+	/** Schicht-Id bzw. `station:<id>` — Schlüssel der Liste und zugleich der
+	Schlüssel, unter dem sich scharfer Zustand, Ziel-Hervorhebung und Rot-Puls
+	diese Zeile merken (#104). Er fällt aus `target`, damit er nicht zweimal
+	unabhängig entsteht. */
 	id: string;
+	/** Wohin eine Marke fällt, die auf dieser Zeile landet (#104). */
+	target: AssignTarget;
 	/** Oswald-Zeit: `11–15`, `23–02 +1`, `GANZES FEST`. */
 	time: string;
 	/** „Frühschoppen · 4 Plätze" bzw. „Keine Schichten · 3 Plätze". */
@@ -221,7 +227,7 @@ function buildSlots(occupants: Occupant[], required: number): BoardSlot[] {
 }
 
 function row(
-	id: string,
+	target: AssignTarget,
 	time: string,
 	label: string,
 	required: number,
@@ -231,7 +237,8 @@ function row(
 	const assigned = occupants.length;
 	const plaetze = `${required} ${required === 1 ? 'Platz' : 'Plätze'}`;
 	return {
-		id,
+		id: targetKey(target),
+		target,
 		time,
 		subtitle: label ? `${label} · ${plaetze}` : plaetze,
 		required,
@@ -283,7 +290,7 @@ export function buildStationBoard(
 			hasShifts: false,
 			days: [],
 			wholeFestRow: row(
-				`station:${station.id}`,
+				{ kind: 'station', stationId: station.id },
 				'GANZES FEST',
 				'Keine Schichten',
 				station.required_people,
@@ -305,7 +312,16 @@ export function buildStationBoard(
 
 		const rows = days.get(shift.start_date) ?? [];
 		// Die Schicht über Mitternacht steht beim Starttag (Entscheid 4 aus #68).
-		rows.push(row(shift.id, shiftTimeLabel(shift), shift.name, shift.required_people, occupants, shift));
+		rows.push(
+			row(
+				{ kind: 'shift', shiftId: shift.id },
+				shiftTimeLabel(shift),
+				shift.name,
+				shift.required_people,
+				occupants,
+				shift
+			)
+		);
 		days.set(shift.start_date, rows);
 	}
 

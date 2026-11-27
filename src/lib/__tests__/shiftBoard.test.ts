@@ -12,6 +12,7 @@ import {
 	resolveFocusStationId,
 	shiftTimeLabel
 } from '@/lib/shiftBoard';
+import { targetKey } from '@/lib/shiftAssignment';
 
 /** Die Ableitungen der Fokus-Werkbank (#102): der Ampel-Reiter-Streifen, der
 Fokus-Kasten einer Station und die Zeit-Aufschrift einer Schicht. */
@@ -358,5 +359,29 @@ describe('buildStationBoard — Station ohne Schichten', () => {
 		const b = buildStationBoard(station({ id: 's1', required_people: 0 }), [], [], []);
 		expect(b.wholeFestRow?.slots).toEqual([]);
 		expect(b.wholeFestRow?.subtitle).toBe('Keine Schichten · 0 Plätze');
+	});
+});
+
+// --- Das Ziel hinter der Zeile (#104) ----------------------------------------
+
+describe('buildStationBoard — jede Zeile nennt ihr Zuteil-Ziel', () => {
+	it('zeigt bei einer Schicht-Zeile auf die Schicht', () => {
+		const board = buildStationBoard(station(), [shift({ id: 'sh1' })], [], []);
+
+		expect(board.days[0].rows[0].target).toEqual({ kind: 'shift', shiftId: 'sh1' });
+	});
+
+	it('zeigt bei der Pseudo-Zeile „GANZES FEST" auf die Station', () => {
+		const board = buildStationBoard(station({ id: 's1', required_people: 2 }), [], [], []);
+
+		expect(board.wholeFestRow?.target).toEqual({ kind: 'station', stationId: 's1' });
+	});
+
+	it('nimmt die Kennung der Zeile aus genau diesem Ziel', () => {
+		// Scharfer Zustand, Ziel-Hervorhebung und Rot-Puls merken sich den
+		// Schlüssel — er darf nicht zweimal unabhängig entstehen.
+		const board = buildStationBoard(station({ id: 's1', required_people: 1 }), [], [], []);
+
+		expect(board.wholeFestRow?.id).toBe(targetKey(board.wholeFestRow!.target));
 	});
 });

@@ -122,6 +122,10 @@ export default {
           from: { backgroundColor: "oklch(var(--gruen) / 0.15)" },
           to: { backgroundColor: "transparent" },
         },
+        "puls-rot": {
+          from: { boxShadow: "inset 0 0 0 3px oklch(var(--rot))" },
+          to: { boxShadow: "inset 0 0 0 3px transparent" },
+        },
         "accordion-up": {
           from: {
             height: "var(--radix-accordion-content-height)",
@@ -139,6 +143,11 @@ export default {
         // selben Bild wie die Farbe dazukommt, nicht anspringt — die Zeile
         // blendete langsam *nach* Grün und spränge dann hart zurück.
         "blitz-gruen": "blitz-gruen 0.9s ease-out forwards",
+        // Die abgelehnte Zuteilung (#104): 0,5 s Rot-Puls am Ziel statt eines
+        // Toasts oben rechts (DESIGN-VISION §4) — der Grund ist am Ort
+        // selbsterklärend. Als `inset`-Schatten, damit er die Zeile umfasst,
+        // ohne sie zu verrücken.
+        "puls-rot": "puls-rot 0.5s ease-out",
       },
     },
   },

@@ -152,8 +152,9 @@ const HelperRosterBody: React.FC<HelperRosterBodyProps> = ({
 /**
  * Eine Marke: Stanzloch-Punkt, Name, Zähler-Plakette, ⋮ — Variante C aus #68.
  *
- * Der Name ist ein **button** (WCAG 2.1.1): daran hängt das Zuteilen per
- * Tastatur und am Handy der ganze Weg (FAB → Marke → Platz, #105). Das ⋮ steht
+ * Der Name ist ein **button** und zugleich `draggable`: **beides an jedem
+ * Gerät** (#104) — Tastatur (WCAG 2.1.1) und Einzelzeiger (WCAG 2.5.7) ohne
+ * Extra-Code; am Handy hängt daran der ganze Weg (FAB → Marke → Platz, #105). Das ⋮ steht
  * daneben statt darin — ein Knopf im Knopf wäre kein gültiges HTML — und ist
  * **dauerhaft sichtbar**, weil es am Touchgerät sonst unauffindbar ist (Auflage
  * zu Variante C).
@@ -182,7 +183,14 @@ function HelperMark({
 			<button
 				type="button"
 				draggable
-				onDragStart={onDragStart}
+				aria-pressed={selected}
+				onDragStart={(e) => {
+					// Firefox startet ohne Nutzlast gar keinen Zug; welche Marke hängt,
+					// weiß der Store — die Kennung steht hier nur, damit es losgeht
+					// (Research #54).
+					e.dataTransfer.setData('text/plain', chip.helper.id);
+					onDragStart();
+				}}
 				onDragEnd={onDragEnd}
 				onClick={onSelect}
 				className="-my-1 cursor-grab py-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinte"
