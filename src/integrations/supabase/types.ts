@@ -620,10 +620,8 @@ export type Database = {
 					festival_id: string;
 					id: string;
 					responsible_helper_id: string | null;
-					responsible_member_id: string | null;
 					schedule_day_id: string;
 					schedule_phase_id: string | null;
-					sort_order: number;
 					start_time: string | null;
 					status: string | null;
 					title: string;
@@ -637,10 +635,8 @@ export type Database = {
 					festival_id: string;
 					id?: string;
 					responsible_helper_id?: string | null;
-					responsible_member_id?: string | null;
 					schedule_day_id: string;
 					schedule_phase_id?: string | null;
-					sort_order?: number;
 					start_time?: string | null;
 					status?: string | null;
 					title: string;
@@ -654,10 +650,8 @@ export type Database = {
 					festival_id?: string;
 					id?: string;
 					responsible_helper_id?: string | null;
-					responsible_member_id?: string | null;
 					schedule_day_id?: string;
 					schedule_phase_id?: string | null;
-					sort_order?: number;
 					start_time?: string | null;
 					status?: string | null;
 					title?: string;
@@ -677,13 +671,6 @@ export type Database = {
 						columns: ['responsible_helper_id'];
 						isOneToOne: false;
 						referencedRelation: 'festival_helpers';
-						referencedColumns: ['id'];
-					},
-					{
-						foreignKeyName: 'schedule_entries_responsible_member_id_fkey';
-						columns: ['responsible_member_id'];
-						isOneToOne: false;
-						referencedRelation: 'members';
 						referencedColumns: ['id'];
 					},
 					{

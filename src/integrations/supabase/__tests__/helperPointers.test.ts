@@ -65,10 +65,14 @@ const seedFestivalWithHelper = async () => {
 		 VALUES ($1, $2, $3, $4, 1)`,
 		[festivalId, shiftId, stationId, helperId]
 	);
+	const { id: dayId } = await one<{ id: string }>(
+		`INSERT INTO schedule_days (festival_id, date) VALUES ($1, '2026-07-24') RETURNING id`,
+		[festivalId]
+	);
 	const { id: entryId } = await one<{ id: string }>(
-		`INSERT INTO schedule_entries (festival_id, title, responsible_helper_id)
-		 VALUES ($1, 'Bierwagen anschließen', $2) RETURNING id`,
-		[festivalId, helperId]
+		`INSERT INTO schedule_entries (festival_id, schedule_day_id, title, responsible_helper_id)
+		 VALUES ($1, $2, 'Bierwagen anschließen', $3) RETURNING id`,
+		[festivalId, dayId, helperId]
 	);
 
 	return { festivalId, helperId, stationId, entryId };
