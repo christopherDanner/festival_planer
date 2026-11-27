@@ -15,9 +15,10 @@ import path from 'node:path';
  *   * Der Schutz gegen die doppelte Stations-Zuteilung hing an
  *     `UNIQUE(station_id, member_id)`. Ohne ein Gegenstück auf `helper_id`
  *     wäre er beim Umschalten still verloren.
- *   * `schedule_entries.responsible_member_id` zeigt per Fremdschlüssel auf
+ *   * Der Verantwortliche eines Ablauf-Eintrags zeigte per Fremdschlüssel auf
  *     `members`; der Schema-Slice (#97) hat den Ablaufplan übersehen. Ohne
- *     eigene Helfer-Spalte könnte er keinen Helfer eintragen.
+ *     eigene Helfer-Spalte könnte er keinen Helfer eintragen. (Der alte
+ *     Zeiger ist seit #128 weg.)
  *
  * Gelesen wird der Migrationsstand als Ganzes, in Dateireihenfolge — was
  * zählt, ist der Zustand, in dem eine frische Datenbank landet.
