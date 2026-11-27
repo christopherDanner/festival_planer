@@ -33,6 +33,9 @@ const SPONSORING_SCHEMA_START = '20260609000002_create_sponsors.sql';
 /** Die Migration, die den Fremdschlüssel auf ON DELETE RESTRICT zieht (#156). */
 export const SPONSOR_RESTRICT_MIGRATION = '20260805000001_sponsor_delete_restrict.sql';
 
+/** Die Migration, die die abgelösten Spalten aus schedule_entries räumt (#128). */
+export const SCHEDULE_ENTRY_CLEANUP_MIGRATION = '20261127000001_drop_schedule_entry_legacy_columns.sql';
+
 const PLATFORM_PRELUDE = `
   CREATE ROLE anon;
   CREATE ROLE authenticated;
@@ -105,19 +108,45 @@ const PLATFORM_PRELUDE = `
     position INTEGER
   );
 
-  CREATE TABLE schedule_entries (
+  -- Der Ablaufplan so, wie 20260315000001 ihn anlegt: der Eintrag hängt an der
+  -- Phase, trägt den Member-Zeiger und eine Hand-Reihenfolge. Was danach kommt
+  -- (Tag als Pflicht-Ebene, Helfer-Zeiger, Aufräumen), spielen die Migrationen
+  -- selbst ein.
+  CREATE TABLE schedule_days (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
-    title TEXT,
-    responsible_member_id UUID REFERENCES members(id) ON DELETE SET NULL
+    date DATE NOT NULL,
+    label TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
   );
+
+  CREATE TABLE schedule_phases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    schedule_day_id UUID NOT NULL REFERENCES schedule_days(id) ON DELETE CASCADE,
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE schedule_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    schedule_phase_id UUID NOT NULL REFERENCES schedule_phases(id) ON DELETE CASCADE,
+    festival_id UUID NOT NULL REFERENCES festivals(id) ON DELETE CASCADE,
+    title TEXT,
+    responsible_member_id UUID REFERENCES members(id) ON DELETE SET NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX idx_schedule_entries_responsible_member_id ON schedule_entries(responsible_member_id);
 `;
 
-/** Migrationsdateien ab `from`, in Dateinamen-Reihenfolge (= Ausführungsreihenfolge). */
-const migrationFilesFrom = (from: string): string[] =>
+/**
+ * Migrationsdateien ab `from` (und vor `before`, falls gesetzt), in
+ * Dateinamen-Reihenfolge (= Ausführungsreihenfolge).
+ */
+const migrationFiles = (from: string, before?: string): string[] =>
 	fs
 		.readdirSync(MIGRATIONS_DIR)
-		.filter((file) => file.endsWith('.sql') && file >= from)
+		.filter((file) => file.endsWith('.sql') && file >= from && (!before || file < before))
 		.sort();
 
 /** Spielt eine Migrationsdatei so ein, wie sie auf der Platte liegt. */
@@ -133,12 +162,17 @@ export const applyMigration = async (db: PGlite, file: string): Promise<void> =>
 /**
  * Frisches Postgres mit dem Sponsoring-Schema. Der Aufrufer schließt es mit
  * `db.close()`.
+ *
+ * `stopBefore` hält vor dieser Migration an — für Tests, die den Bestand
+ * *vor* einer Migration anlegen und dann sehen wollen, was sie daraus macht.
  */
-export const createSponsoringSchemaDb = async (): Promise<PGlite> => {
+export const createSponsoringSchemaDb = async (
+	options: { stopBefore?: string } = {}
+): Promise<PGlite> => {
 	const db = await PGlite.create();
 	await db.exec(PLATFORM_PRELUDE);
 
-	for (const file of migrationFilesFrom(SPONSORING_SCHEMA_START)) {
+	for (const file of migrationFiles(SPONSORING_SCHEMA_START, options.stopBefore)) {
 		await applyMigration(db, file);
 	}
 
