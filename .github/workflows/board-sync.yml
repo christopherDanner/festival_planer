@@ -1,0 +1,111 @@
+# Hält das Projekt-Board „Board" im Gleichschritt mit den Labels: jede Spalte
+# ist ein Label, wie im GitLab-Board der Firma. Die Labels bleiben die Wahrheit
+# (der Sandcastle-Worker liest nur sie); das Board ist ihre Ansicht.
+#
+# Einrichtung (einmalig):
+#   1. Projekt anlegen (github.com/christopherDanner → Projects → New project → Board).
+#      Seine Nummer steht in der URL (…/projects/<Nummer>) → Repo-Variable
+#      BOARD_PROJECT_NUMBER (Settings → Secrets and variables → Actions → Variables).
+#   2. Im Feld „Status" genau diese Optionen, in dieser Reihenfolge:
+#      Offen, needs-prototype, ready-for-human, needs-info, needs-triage,
+#      agent-backlog, ready-for-agent, wontfix, Closed
+#   3. Classic Token mit Scope `project` → Repo-Secret PROJECT_TOKEN.
+#   4. Einmal von Hand starten (Actions → Board-Sync → Run workflow): ordnet alle
+#      bestehenden Issues ein.
+
+name: Board-Sync
+
+on:
+  issues:
+    types: [opened, reopened, closed, labeled, unlabeled]
+  workflow_dispatch:
+
+concurrency:
+  group: board-sync-${{ github.event.issue.number || 'all' }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          PROJECT_NUMBER: ${{ vars.BOARD_PROJECT_NUMBER }}
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const COLUMNS = ['Offen', 'needs-prototype', 'ready-for-human', 'needs-info',
+              'needs-triage', 'agent-backlog', 'ready-for-agent', 'wontfix', 'Closed'];
+            // Trägt ein Issue mehrere Spalten-Labels, gewinnt das, was zuerst
+            // einen Menschen braucht: wer auf einen Prototyp wartet, ist nicht
+            // „bereit", auch wenn das Label noch dran hängt.
+            const PRECEDENCE = ['wontfix', 'ready-for-human', 'needs-prototype', 'needs-info',
+              'needs-triage', 'ready-for-agent', 'agent-backlog'];
+
+            const columnOf = (issue) => {
+              if (issue.state === 'closed') return 'Closed';
+              const labels = issue.labels.map((l) => (typeof l === 'string' ? l : l.name));
+              return PRECEDENCE.find((name) => labels.includes(name)) ?? 'Offen';
+            };
+
+            const number = Number(process.env.PROJECT_NUMBER);
+            if (!number) {
+              core.setFailed('Repo-Variable BOARD_PROJECT_NUMBER fehlt (Nummer aus der Projekt-URL).');
+              return;
+            }
+
+            const { user } = await github.graphql(
+              `query($login: String!, $number: Int!) {
+                user(login: $login) {
+                  projectV2(number: $number) {
+                    id
+                    field(name: "Status") {
+                      ... on ProjectV2SingleSelectField { id options { id name } }
+                    }
+                  }
+                }
+              }`,
+              { login: context.repo.owner, number }
+            );
+            const project = user?.projectV2;
+            if (!project?.field) {
+              core.setFailed(`Projekt ${number} oder sein Feld „Status" nicht gefunden.`);
+              return;
+            }
+            const options = Object.fromEntries(project.field.options.map((o) => [o.name, o.id]));
+            const missing = COLUMNS.filter((name) => !options[name]);
+            if (missing.length > 0) {
+              core.setFailed(`Im Feld „Status" fehlen die Optionen: ${missing.join(', ')}`);
+              return;
+            }
+
+            const place = async (issue) => {
+              const { addProjectV2ItemById: added } = await github.graphql(
+                `mutation($project: ID!, $content: ID!) {
+                  addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } }
+                }`,
+                { project: project.id, content: issue.node_id }
+              );
+              const column = columnOf(issue);
+              await github.graphql(
+                `mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $project, itemId: $item, fieldId: $field,
+                    value: { singleSelectOptionId: $option }
+                  }) { projectV2Item { id } }
+                }`,
+                { project: project.id, item: added.item.id, field: project.field.id, option: options[column] }
+              );
+              core.info(`#${issue.number} → ${column}`);
+            };
+
+            if (context.eventName === 'issues') {
+              await place(context.payload.issue);
+              return;
+            }
+
+            // Von Hand gestartet: alle Issues des Repos, offen und geschlossen.
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo, state: 'all', per_page: 100
+            });
+            for (const issue of issues.filter((i) => !i.pull_request)) await place(issue);
