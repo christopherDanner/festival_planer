@@ -11,6 +11,7 @@ import {
 	updateScheduleEntry,
 	deleteScheduleEntry,
 	initializeScheduleDays,
+	reorderSchedulePhases,
 	type ScheduleDay,
 	type SchedulePhase,
 	type ScheduleEntry
@@ -122,6 +123,21 @@ export const useScheduleActions = (festivalId: string) => {
 		}
 	});
 
+	/** Verschoben wird um einen Platz; welche Zahlen danach gelten, rechnet
+	`movePhase` aus. Kein Erfolgs-Toast: die Phase springt sichtbar, eine
+	Meldung dazu wäre bei jedem Klick im Weg. */
+	const reorderPhasesMutation = useMutation({
+		mutationFn: (order: { id: string; sort_order: number }[]) => reorderSchedulePhases(order),
+		onSuccess: invalidateAll,
+		onError: () => {
+			toast({
+				title: 'Fehler',
+				description: 'Reihenfolge konnte nicht geändert werden.',
+				variant: 'destructive'
+			});
+		}
+	});
+
 	// --- Entry mutations ---
 
 	const createEntryMutation = useMutation({
@@ -195,12 +211,12 @@ export const useScheduleActions = (festivalId: string) => {
 		createPhase: createPhaseMutation,
 		editPhase: editPhaseMutation,
 		removePhase: removePhaseMutation,
+		reorderPhases: reorderPhasesMutation,
 		createEntry: createEntryMutation,
 		editEntry: editEntryMutation,
 		removeEntry: removeEntryMutation,
-		initDays: initDaysMutation,
-		// Gereiht wird von Hand gar nichts mehr: die Uhrzeit sortiert die Einträge
-		// (ADR 0007), und die Reihenfolge der Phasen verwaltet ab #124 ihr eigenes
-		// ⋮-Menü über `reorderSchedulePhases`.
+		initDays: initDaysMutation
+		// Einträge reiht die Uhrzeit (ADR 0007); von Hand gereiht werden nur die
+		// Phasen, über `reorderPhases` und das ⋮ an ihrem Zwischentitel (#124).
 	};
 };

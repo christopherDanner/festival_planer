@@ -319,7 +319,9 @@ export function buildTaskListPdf({ festivalName, worklist }: TaskListExportOptio
 		note: worklist.caption
 	});
 
-	for (const day of worklist.days) {
+	// Ein Tag ohne Aufgabe steht seit #124 in der Werkliste, damit man ihn über
+	// sein ⋮ verwalten kann — auf dem Papier gibt es nichts zu verwalten.
+	for (const day of worklist.days.filter((d) => d.total > 0)) {
 		y = drawDayHeading(doc, { title: day.title, note: worklistDayNote(day) }, y);
 
 		for (const group of day.groups) {
@@ -340,7 +342,7 @@ export function buildTaskListPdf({ festivalName, worklist }: TaskListExportOptio
 	}
 
 	// Derselbe Satz wie am Bildschirm, wenn nichts übrig bleibt.
-	if (worklist.days.length === 0) {
+	if (worklist.shown === 0) {
 		y = drawQuietLine(doc, worklistEmptyText(worklist), y + 2);
 	}
 

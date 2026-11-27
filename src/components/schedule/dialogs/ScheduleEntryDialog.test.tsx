@@ -27,13 +27,16 @@ vi.mock('@/components/ui/select', async () => {
 	};
 });
 
-import ScheduleEntryDialog, { type ScheduleEntryFormData } from './ScheduleEntryDialog';
+import type { Helper } from '@/lib/helperService';
+import { entryPayload, type ScheduleEntryForm } from '@/lib/scheduleDialogForm';
+import ScheduleEntryDialog from './ScheduleEntryDialog';
 
 /**
- * Seam dieses Tests: der Eintrag-Dialog liefert einen fertigen Ablauf-Eintrag
- * ab. Eingeklagt wird hier nur, was #123 an ihm braucht — der **Modus
- * Programmpunkt**: der tagesbezogene Griff am Zettel legt ohne Tagesauswahl an,
- * und ein Programmpunkt trägt weder Status noch Verantwortlichen (ADR 0007).
+ * Seam dieses Tests: der Eintrag-Dialog liefert sein Formular ab, die
+ * Nutzlast baut `entryPayload` (#124). Eingeklagt wird hier, was #123 an ihm
+ * braucht — der **Modus Programmpunkt**: der tagesbezogene Griff am Zettel legt
+ * ohne Tagesauswahl an, und ein Programmpunkt trägt weder Status noch
+ * Verantwortlichen (ADR 0007).
  */
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -61,12 +64,13 @@ const TAGE = [
 	{ id: 'sa', date: '2026-07-25', label: null }
 ];
 
-const HELFER = [{ id: 'h1', first_name: 'Franz', last_name: 'Hochauer' }];
+const HELFER = [{ id: 'h1', first_name: 'Franz', last_name: 'Hochauer' }] as Helper[];
 
 type Props = React.ComponentProps<typeof ScheduleEntryDialog>;
+type Prefill = Props['prefill'];
 
-const mount = async (over: Partial<Props> = {}) => {
-	const onSave = vi.fn<(data: ScheduleEntryFormData) => void>();
+const mount = async (prefill: Partial<Prefill> = {}, over: Partial<Props> = {}) => {
+	const onSave = vi.fn<(form: ScheduleEntryForm) => void>();
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -77,11 +81,8 @@ const mount = async (over: Partial<Props> = {}) => {
 				open
 				onOpenChange={() => {}}
 				entry={null}
-				defaultType="program"
-				scheduleDayId="sa"
+				prefill={{ type: 'program', schedule_day_id: 'sa', ...prefill }}
 				days={TAGE}
-				schedulePhaseId={null}
-				festivalId="f1"
 				helpers={HELFER}
 				onSave={onSave}
 				{...over}
@@ -111,7 +112,7 @@ const klick = async (element: Element | null | undefined) => {
 
 const speichern = async () =>
 	klick(
-		[...document.querySelectorAll('button')].find((knopf) => knopf.textContent === 'Hinzufügen')
+		[...document.querySelectorAll('button')].find((knopf) => knopf.textContent === 'Anlegen')
 	);
 
 describe('ScheduleEntryDialog — der tagesbezogene Griff', () => {
@@ -128,7 +129,7 @@ describe('ScheduleEntryDialog — der tagesbezogene Griff', () => {
 	});
 
 	it('lässt wählen, wenn der mitgebrachte Tag gar nicht im Fest steht', async () => {
-		await mount({ dayLocked: true, scheduleDayId: 'weg' });
+		await mount({ dayLocked: true, schedule_day_id: 'weg' });
 
 		expect(document.querySelector('#entry-day')).not.toBeNull();
 	});
@@ -167,23 +168,25 @@ describe('ScheduleEntryDialog — Programmpunkt trägt weder Status noch Verantw
 		await tippe('entry-title', 'Frühschoppen');
 		await speichern();
 
-		expect(onSave.mock.calls[0][0]).toMatchObject({
-			type: 'program',
+		const form = onSave.mock.calls[0][0];
+		expect(form.type).toBe('program');
+		expect(entryPayload(form, { festivalId: 'f1', status: null })).toMatchObject({
 			status: null,
 			responsible_helper_id: null
 		});
 	});
 
 	it('lässt der Aufgabe beides', async () => {
-		const { onSave } = await mount({ defaultType: 'task' });
+		const { onSave } = await mount({ type: 'task' });
 
 		expect(document.querySelector('#entry-responsible')).not.toBeNull();
 		await tippe('entry-title', 'Zeltabbau');
 		await klick(document.querySelector('[data-wahl="h1"]'));
 		await speichern();
 
-		expect(onSave.mock.calls[0][0]).toMatchObject({
-			type: 'task',
+		const form = onSave.mock.calls[0][0];
+		expect(form.type).toBe('task');
+		expect(entryPayload(form, { festivalId: 'f1', status: null })).toMatchObject({
 			status: 'open',
 			responsible_helper_id: 'h1'
 		});

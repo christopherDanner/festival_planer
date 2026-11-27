@@ -20,12 +20,18 @@ import {
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
-/** Ein harmloser Eintrag des Menüs — er wirkt sofort, ohne Rückfrage. */
+/**
+ * Ein harmloser Eintrag des Menüs — er wirkt sofort, ohne Rückfrage; die
+ * Rückfrage gehört allein dem Löschen.
+ */
 export interface ActionMenuEntry {
 	label: string;
 	/** Symbol vor der Aufschrift, in derselben Größe wie das Löschen. */
-	icon: LucideIcon;
+	icon?: LucideIcon;
 	onSelect: () => void;
+	/** Grau statt versteckt, wo der Griff gerade nichts bewirken kann — ein
+	 * verschwindender Eintrag ließe das Menü unter der Hand springen (#124). */
+	disabled?: boolean;
 }
 
 export interface ActionMenuProps {
@@ -102,10 +108,16 @@ export function ActionMenu({
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align={align}>
-					{entries.map((entry) => (
-						<DropdownMenuItem key={entry.label} className="gap-2" onClick={entry.onSelect}>
-							<entry.icon className="h-4 w-4" />
-							{entry.label}
+					{entries.map(({ label, icon: Icon, onSelect, disabled }) => (
+						<DropdownMenuItem
+							key={label}
+							className="gap-2"
+							disabled={disabled}
+							// `onSelect` statt `onClick`: nur der Radix-Griff prüft das
+							// `disabled` mit — `onClick` liefe auch am grauen Eintrag.
+							onSelect={onSelect}>
+							{Icon && <Icon className="h-4 w-4" />}
+							{label}
 						</DropdownMenuItem>
 					))}
 					<DropdownMenuItem className="gap-2 text-rot" onClick={() => setConfirmOpen(true)}>
