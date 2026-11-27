@@ -1,4 +1,5 @@
 import React from 'react';
+import { Pencil } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { ActionMenu } from '@/components/toolkit/ActionMenu';
@@ -274,11 +275,10 @@ function TaskRow({
 
 			<ActionMenu
 				menuLabel={`Menü der Aufgabe ${entry.title}`}
-				editLabel="Bearbeiten …"
+				entries={[{ label: 'Bearbeiten …', icon: Pencil, onSelect: onEdit }]}
 				deleteLabel="Aufgabe löschen"
 				confirmTitle="Aufgabe löschen"
 				confirmMessage={`„${entry.title}" wird aus dem Ablaufplan entfernt.`}
-				onEdit={onEdit}
 				onDelete={onDelete}
 				className="h-10 w-8 shrink-0"
 			/>

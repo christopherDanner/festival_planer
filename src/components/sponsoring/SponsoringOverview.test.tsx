@@ -48,6 +48,8 @@ const overview = (props: Partial<SponsoringOverviewProps> = {}) => (
 		onCreate={noop}
 		onTransfer={noop}
 		onExportPdf={noop}
+		onOpenNote={noop}
+		onOpenSponsor={noop}
 		onDelete={noop}
 		onApply={noop}
 		onRemove={noop}

@@ -1,3 +1,5 @@
+import { Pencil } from 'lucide-react';
+
 import { ActionMenu } from '@/components/toolkit/ActionMenu';
 
 export interface FocusBoxMenuProps {
@@ -34,11 +36,10 @@ export default function FocusBoxMenu({
 	return (
 		<ActionMenu
 			menuLabel={label}
-			editLabel={`${subject} bearbeiten …`}
+			entries={[{ label: `${subject} bearbeiten …`, icon: Pencil, onSelect: onEdit }]}
 			deleteLabel={deleteLabel}
 			confirmTitle={deleteLabel}
 			confirmMessage={deleteMessage}
-			onEdit={onEdit}
 			onDelete={onDelete}
 			tone={onPoster ? 'white' : 'ink'}
 			// In einer Zeile mit 13 Geschwistern ist 40px am Desktop zu breit; am

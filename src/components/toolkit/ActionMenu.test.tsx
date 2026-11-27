@@ -1,12 +1,13 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Pencil } from 'lucide-react';
 
 import { ActionMenu } from './ActionMenu';
 
 /* Seam dieses Tests (aus #106 abgeleitet, vor dem ersten Test festgehalten):
-   `ActionMenu` ist das ⋮ der Handschrift — zwei Einträge, Menü-Optik und die
-   Rückfrage vor dem Löschen. Den *Wortlaut* bringt der Aufrufer mit; hier
+   `ActionMenu` ist das ⋮ der Handschrift — die Einträge des Aufrufers, Menü-Optik
+   und die Rückfrage vor dem Löschen. Den *Wortlaut* bringt der Aufrufer mit; hier
    zählt, dass ohne Rückfrage nichts gelöscht wird. */
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -35,11 +36,10 @@ const mount = async (over: Partial<React.ComponentProps<typeof ActionMenu>> = {}
 		createRoot(host).render(
 			<ActionMenu
 				menuLabel="Menü der Station"
-				editLabel="Station bearbeiten …"
+				entries={[{ label: 'Station bearbeiten …', icon: Pencil, onSelect: () => {} }]}
 				deleteLabel="Station löschen"
 				confirmTitle="Station löschen"
 				confirmMessage={TRAGWEITE}
-				onEdit={() => {}}
 				onDelete={() => {}}
 				{...over}
 			/>
@@ -88,13 +88,29 @@ describe('ActionMenu — die zwei Einträge', () => {
 		expect(document.body.textContent).toContain('Station löschen');
 	});
 
-	it('führt das Bearbeiten unmittelbar aus', async () => {
-		const onEdit = vi.fn();
-		await mount({ onEdit });
+	it('führt einen Eintrag des Aufrufers unmittelbar aus', async () => {
+		const onSelect = vi.fn();
+		await mount({
+			entries: [{ label: 'Station bearbeiten …', icon: Pencil, onSelect }]
+		});
 		await oeffneMenue();
 		await klick(eintrag('bearbeiten'));
 
-		expect(onEdit).toHaveBeenCalledTimes(1);
+		expect(onSelect).toHaveBeenCalledTimes(1);
+	});
+
+	it('reiht mehrere Einträge in der Reihenfolge des Aufrufers, Löschen zuletzt', async () => {
+		await mount({
+			entries: [
+				{ label: 'Notiz …', icon: Pencil, onSelect: () => {} },
+				{ label: 'Firmendaten …', icon: Pencil, onSelect: () => {} }
+			]
+		});
+		await oeffneMenue();
+
+		expect([...document.querySelectorAll('[role="menuitem"]')].map((el) => el.textContent)).toEqual(
+			['Notiz …', 'Firmendaten …', 'Station löschen']
+		);
 	});
 
 	it('zeichnet das Löschen rot', async () => {

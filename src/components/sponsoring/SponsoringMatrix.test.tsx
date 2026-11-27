@@ -34,7 +34,7 @@ type MatrixFilter = {
 type MatrixHandlers = Partial<
 	Pick<
 		SponsoringMatrixProps,
-		'onApply' | 'onRemove' | 'onDelete' | 'onCategoryApply' | 'onCategoryDelete'
+		'onApply' | 'onRemove' | 'onDelete' | 'onOpenNote' | 'onOpenSponsor' | 'onCategoryApply' | 'onCategoryDelete'
 	>
 >;
 
@@ -51,6 +51,8 @@ const matrix = (
 		totalRowCount={filter.totalRowCount ?? rows.length}
 		searchTerm={filter.searchTerm ?? ''}
 		categoryImpacts={filter.categoryImpacts ?? ohneZusagen(categories)}
+		onOpenNote={handlers.onOpenNote ?? (() => {})}
+		onOpenSponsor={handlers.onOpenSponsor ?? (() => {})}
 		onDelete={handlers.onDelete ?? (() => {})}
 		onApply={handlers.onApply ?? (() => {})}
 		onRemove={handlers.onRemove ?? (() => {})}

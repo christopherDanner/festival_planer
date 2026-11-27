@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Trash2, type LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import {
@@ -20,16 +20,27 @@ import {
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
+/** Ein harmloser Eintrag des Menüs — er wirkt sofort, ohne Rückfrage. */
+export interface ActionMenuEntry {
+	label: string;
+	/** Symbol vor der Aufschrift, in derselben Größe wie das Löschen. */
+	icon: LucideIcon;
+	onSelect: () => void;
+}
+
 export interface ActionMenuProps {
 	/** Aufschrift des ⋮ für Screenreader: „Menü der Schicht 11–15". */
 	menuLabel: string;
-	editLabel: string;
+	/**
+	 * Die harmlosen Einträge von oben nach unten. Zerstörerisches steht nie
+	 * darin — es hat seinen festen, roten Platz am Fuß des Menüs.
+	 */
+	entries: ActionMenuEntry[];
 	deleteLabel: string;
 	/** Überschrift der Rückfrage; üblich derselbe Wortlaut wie `deleteLabel`. */
 	confirmTitle: ReactNode;
 	/** Was das Löschen mitreißt — ein Satz, der die Tragweite benennt. */
 	confirmMessage: ReactNode;
-	onEdit: () => void;
 	onDelete: () => void;
 	/** `white` für grüne Plakatflächen, `ink` für Papier und getönte Flächen. */
 	tone?: 'ink' | 'white';
@@ -40,10 +51,15 @@ export interface ActionMenuProps {
 }
 
 /**
- * Das ⋮-Menü der Handschrift: **Bearbeiten** und ein rotes **Löschen**, das
- * erst nach einer Rückfrage ausgeführt wird. Es ist der abgenommene Ersatz für
- * den Hover-Papierkorb (Festliste #64/#90, Schichtplan Entscheid 5 aus #68) —
- * Zerstörerisches liegt eine Ebene tiefer, die Zeilen bleiben ruhig.
+ * Das ⋮-Menü der Handschrift: die Einträge des Aufrufers und darunter ein rotes
+ * **Löschen**, das erst nach einer Rückfrage ausgeführt wird. Es ist der
+ * abgenommene Ersatz für den Hover-Papierkorb (Festliste #64/#90, Schichtplan
+ * Entscheid 5 aus #68) — Zerstörerisches liegt eine Ebene tiefer, die Zeilen
+ * bleiben ruhig.
+ *
+ * Die harmlosen Einträge sind eine Liste, seit das Sponsoring drei braucht
+ * (Notiz · Firmendaten · Entfernen, #150); der rote bleibt der eine feste Platz
+ * am Fuß, damit kein Aufrufer ihn irgendwo dazwischen einreihen kann.
  *
  * Das ⋮ erscheint **dauerhaft**, nicht erst bei Hover: es ist der einzige Weg
  * zu beiden Griffen und wäre am Touchgerät sonst unauffindbar. Sein Tippziel
@@ -56,11 +72,10 @@ export interface ActionMenuProps {
  */
 export function ActionMenu({
 	menuLabel,
-	editLabel,
+	entries,
 	deleteLabel,
 	confirmTitle,
 	confirmMessage,
-	onEdit,
 	onDelete,
 	tone = 'ink',
 	align = 'end',
@@ -87,10 +102,12 @@ export function ActionMenu({
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align={align}>
-					<DropdownMenuItem className="gap-2" onClick={onEdit}>
-						<Pencil className="h-4 w-4" />
-						{editLabel}
-					</DropdownMenuItem>
+					{entries.map((entry) => (
+						<DropdownMenuItem key={entry.label} className="gap-2" onClick={entry.onSelect}>
+							<entry.icon className="h-4 w-4" />
+							{entry.label}
+						</DropdownMenuItem>
+					))}
 					<DropdownMenuItem className="gap-2 text-rot" onClick={() => setConfirmOpen(true)}>
 						<Trash2 className="h-4 w-4" />
 						{deleteLabel}

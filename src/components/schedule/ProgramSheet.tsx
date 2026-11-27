@@ -1,4 +1,5 @@
 import React from 'react';
+import { Pencil } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { ActionMenu } from '@/components/toolkit/ActionMenu';
@@ -170,11 +171,10 @@ function ProgramRow({
 
 			<ActionMenu
 				menuLabel={`Menü des Programmpunkts ${entry.title}`}
-				editLabel="Bearbeiten …"
+				entries={[{ label: 'Bearbeiten …', icon: Pencil, onSelect: onEdit }]}
 				deleteLabel="Programmpunkt löschen"
 				confirmTitle="Programmpunkt löschen"
 				confirmMessage={`„${entry.title}" wird vom Programmzettel entfernt.`}
-				onEdit={onEdit}
 				onDelete={onDelete}
 				// 40px hoch wie in der Werkliste nebenan (DESIGN-VISION §6); schmaler
 				// darf es sein, der Zettel führt keine zweite Spalte daneben.
