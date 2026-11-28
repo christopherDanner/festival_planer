@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, FileDown, Import, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SponsoringCardList from '@/components/sponsoring/SponsoringCardList';
 import SponsoringAnleitung from '@/components/sponsoring/SponsoringAnleitung';
 import SponsoringHeadline from '@/components/sponsoring/SponsoringHeadline';
 import SponsoringHinweisstreifen from '@/components/sponsoring/SponsoringHinweisstreifen';
@@ -17,11 +18,8 @@ import {
 	buildSponsoringOverviewRows,
 	festivalInKindTotal,
 	festivalSponsoringTotal,
-	filterSponsoringOverviewRows,
-	sponsoringEmptyNotice,
-	sponsoringFooterLabel
+	filterSponsoringOverviewRows
 } from '@/lib/sponsoringTotals';
-import { formatEuro } from '@/lib/money';
 
 export interface SponsoringOverviewProps {
 	/** Alle Sponsorings des Fests — die Grundlage der Fest-Kennzahl. */
@@ -95,7 +93,6 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	Achsen; fehlt eine, steht ein Hinweisstreifen daneben, fehlen beide, steht an
 	ihrer Stelle die Anleitung. */
 	const leerzustand = sponsoringLeerzustand(categories.length, sponsorings.length);
-	const emptyNotice = sponsoringEmptyNotice(allRows.length, searchTerm);
 
 	const hinweis = sponsoringHinweis(leerzustand);
 
@@ -187,75 +184,35 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 				/>
 			) : (
 				<>
-					{/* Mobile: Karten-Liste. Bedient wird sie noch nicht — die Karten-Form
-					des Zettels ist ein eigener Slice (ADR 0009). Das betrifft seit #149 auch
-					die Preisliste: ohne Spaltenköpfe lässt sich am Handy nur anlegen
-					(„+ KATEGORIE" steht in der Werkzeugleiste), nicht umbenennen, ändern
-					oder löschen. Die abgelöste zweite Tabelle konnte das — bewusst in
-					Kauf genommen, weil der Bereich genau eine Tabelle haben soll.
+					{/* Ein Breakpoint bei 900px (Vision §6): darunter die Karte je Firma
+					(#155), darüber die Matrix. Unter 900px bräuchte die Matrix bei 375px
+					876px Breite, und beim Querscrollen wanderte die Summe weg.
 
 					Die Leerzustände gelten hier genauso, nur in Kartenform (#152); der
-					Streifen rahmt sich dabei rundum, weil er an keiner Tabelle klebt. */}
-					<div className="md:hidden space-y-2">
+					Streifen rahmt sich dabei rundum, weil er an keiner Tabelle klebt.
+					Die Preisliste lässt sich am Handy weiter nur anlegen („+ KATEGORIE"
+					in der Werkzeugleiste) — ihre Spaltenköpfe gibt es hier nicht. */}
+					<div className="space-y-2 min-[900px]:hidden">
 						{streifenAn('above')}
-						{rows.length === 0 ? (
-							emptyNotice && (
-								<div className="border bg-card py-8 text-center text-sm text-muted-foreground">
-									{emptyNotice}
-								</div>
-							)
-						) : (
-							<>
-								{rows.map((row) => (
-									<div key={row.sponsoringId} className="border bg-card p-3">
-										<div className="flex items-start justify-between gap-2">
-											<div className="flex-1 min-w-0">
-												<div className="font-medium truncate">{row.companyName}</div>
-												<div className="text-sm font-semibold mt-0.5">
-													{formatEuro(row.total)}
-												</div>
-											</div>
-											{/* Am Handy dasselbe ⋮ wie in der Matrix (#150) — der frühere
-											Papierkorb war ein zweiter Weg zu einer der drei Sachen und
-											blieb unter 40px. */}
-											<SponsoringRowMenu
-												companyName={row.companyName}
-												onOpenNote={() => onOpenNote(row.sponsoringId)}
-												onOpenSponsor={() => onOpenSponsor(row.sponsoringId)}
-												onDelete={() => onDelete(row.sponsoringId)}
-												className="shrink-0"
-											/>
-										</div>
-										{(row.positions.length > 0 || row.freeAmount != null) && (
-											<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1.5">
-												{row.positions.map((p, i) => (
-													<span key={i}>
-														{p.label} ({formatEuro(p.value)})
-													</span>
-												))}
-												{row.freeAmount != null && (
-													<span>Freibetrag ({formatEuro(row.freeAmount)})</span>
-												)}
-											</div>
-										)}
-									</div>
-								))}
-								{/* Derselbe Fuß, dieselbe Regel: sichtbare Zeilen, beschriftet. */}
-								<div className="border bg-card p-3 flex items-center justify-between gap-2">
-									<span className="font-semibold text-sm">
-										{sponsoringFooterLabel('Gesamtsumme', rows.length, allRows.length)}
-									</span>
-									<span className="font-semibold">{formatEuro(footer.total)}</span>
-								</div>
-							</>
-						)}
+						<SponsoringCardList
+							categories={categories}
+							rows={rows}
+							footer={footer}
+							totalRowCount={allRows.length}
+							searchTerm={searchTerm}
+							onOpenNote={onOpenNote}
+							onOpenSponsor={onOpenSponsor}
+							onDelete={onDelete}
+							onApply={onApply}
+							onRemove={onRemove}
+						/>
 						{streifenAn('below')}
 					</div>
 
 					{/* Desktop: Paket-Matrix. Der Streifen verschweißt sich mit ihrem
 					Rahmen — er ist ein Streifen *an* der Tabelle, kein zweiter Kasten
 					daneben; die Kante zwischen beiden zieht die Tabelle. */}
-					<div className="hidden md:block">
+					<div className="hidden min-[900px]:block">
 						{streifenAn('above', 'border-b-0')}
 						<SponsoringMatrix
 							categories={categories}

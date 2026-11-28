@@ -173,8 +173,31 @@ describe('SponsoringOverview — ADR 0006: Kennzahl über alle, Fuß über die s
 
 /* Die Bereichshälften stehen beide im Markup; welche gilt, entscheidet die
 Breite. Für Reihenfolge-Fragen muss der Test darum die richtige greifen. */
-const desktop = (html: string) => html.split('class="hidden md:block"')[1];
-const mobile = (html: string) => html.split('class="md:hidden')[1].split('class="hidden md:block"')[0];
+const DESKTOP = 'class="hidden min-[900px]:block"';
+const MOBILE = 'min-[900px]:hidden"';
+const desktop = (html: string) => html.split(DESKTOP)[1];
+const mobile = (html: string) => html.split(MOBILE)[1].split(DESKTOP)[0];
+
+describe('SponsoringOverview — ein Breakpoint bei 900px (#155, Vision §6)', () => {
+	it('zeigt die Matrix erst ab 900px und darunter die Karten', () => {
+		const html = render();
+
+		expect(html).toContain(DESKTOP);
+		expect(html).toContain(MOBILE);
+		expect(desktop(html)).toContain('<table');
+		expect(mobile(html)).not.toContain('<table');
+		expect(mobile(html)).toContain('data-sponsoring-card');
+	});
+
+	it('zeigt am Handy je Firma eine Karte — auch gefiltert', () => {
+		expect(mobile(render()).match(/data-sponsoring-card/g)).toHaveLength(3);
+		expect(mobile(render({ searchTerm: 'bäckerei' })).match(/data-sponsoring-card/g)).toHaveLength(1);
+	});
+
+	it('kennt keinen md-Breakpoint mehr — zwischen 768 und 900px gäbe es sonst beide nicht', () => {
+		expect(render()).not.toMatch(/\bmd:(hidden|block)\b/);
+	});
+});
 
 describe('SponsoringOverview — L1: nichts da', () => {
 	const leer = { sponsorings: [], categories: [] };
@@ -197,8 +220,8 @@ describe('SponsoringOverview — L1: nichts da', () => {
 	it('gilt am Handy genauso — die Anleitung hängt an keiner Breite', () => {
 		const html = render(leer);
 
-		expect(html).not.toContain('class="hidden md:block"');
-		expect(html).not.toContain('class="md:hidden');
+		expect(html).not.toContain(DESKTOP);
+		expect(html).not.toContain(MOBILE);
 	});
 
 	it('sagt im Kopf, dass noch nichts erfasst ist', () => {
