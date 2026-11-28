@@ -61,6 +61,8 @@ export interface SponsoringMatrixProps {
 	onCategoryApply: (category: SponsoringCategory, input: CategoryZettelInput) => void;
 	/** „Kategorie löschen" — die Rückfrage hat der Zettel schon gestellt. */
 	onCategoryDelete: (category: SponsoringCategory) => void;
+	/** Das eben angelegte Sponsoring (#153) — seine Zeile blitzt auf. */
+	newSponsoringId?: string | null;
 }
 
 /** Eindeutig je Zelle — sagt, welcher Zettel offen ist. */
@@ -166,7 +168,8 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 	onApply,
 	onRemove,
 	onCategoryApply,
-	onCategoryDelete
+	onCategoryDelete,
+	newSponsoringId = null
 }) => {
 	/* Höchstens ein Zettel ist offen: der Klick auf eine andere Zelle schließt
 	den alten, ohne zu speichern (ADR 0009). */
@@ -280,7 +283,12 @@ const SponsoringMatrix: React.FC<SponsoringMatrixProps> = ({
 
 				<tbody>
 					{rows.map((row) => (
-						<tr key={row.sponsoringId} className={`${ROW_HEIGHT} border-b border-linie`}>
+						<tr
+							key={row.sponsoringId}
+							className={`${ROW_HEIGHT} border-b border-linie${
+								row.sponsoringId === newSponsoringId ? ' animate-blitz-gruen' : ''
+							}`}
+							data-sponsoring-id={row.sponsoringId}>
 							<td className={`${BODY_CELL} ${STICKY_LEFT} z-10 truncate bg-white font-bold`}>
 								{row.companyName}
 							</td>

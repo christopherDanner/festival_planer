@@ -36,9 +36,10 @@ const trimmedOrNull = (value: string): string | null => (value.trim() === '' ? n
 /**
  * Die *Firmendaten* eines globalen *Sponsors*. Gebaut als eigene Komponente,
  * damit sie **mehrere Einstiege** tragen kann (#150): heute hängt sie am ⋮ der
- * Sponsoring-Matrix; „+ SPONSOR → Neue Firma" und die Sponsoren-Stammdatenseite
- * holen sie mit ihren eigenen Slices dazu (#101/#159) — die Seite bringt bis
- * dahin ihr eigenes Formular mit, samt Löschweg, den es hier nicht gibt.
+ * Sponsoring-Matrix und hinter „+ SPONSOR → Neue Firma" (#153); die
+ * Sponsoren-Stammdatenseite holt sie mit ihrem eigenen Slice dazu (#101/#159) —
+ * sie bringt bis dahin ihr eigenes Formular mit, samt Löschweg, den es hier
+ * nicht gibt.
  *
  * Es kennt darum **keinen Fest-Kontext**: der Sponsor lebt über allen Festen
  * (ADR 0011). Und es kennt keinen Datenzugriff — geschrieben wird über

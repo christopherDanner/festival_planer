@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { SponsoringCategory, SponsoringWithDetails } from '@/lib/sponsorService';
-import { makeAssignment, makeCategory, makeSponsoring } from '@/lib/__tests__/sponsoringFactories';
+import {
+	makeAssignment,
+	makeCategory,
+	makeSponsor,
+	makeSponsoring
+} from '@/lib/__tests__/sponsoringFactories';
 import { buttonByLabel, fieldByLabel, typeInto } from '@/lib/__tests__/domTesting';
 
 /* Der Alarm-Dialog des ⋮ rendert außerhalb der Ereignisschleife nach; ohne
@@ -15,6 +20,17 @@ const social = makeCategory('Social', 100);
 const { service } = vi.hoisted(() => ({
 	service: {
 		sponsorings: [] as unknown[],
+		getSponsors: vi.fn((): Promise<unknown[]> => Promise.resolve([])),
+		createSponsor: vi.fn((_values: unknown): Promise<string> => Promise.resolve('sp-neu')),
+		createSponsoring: vi.fn(
+			(
+				_festivalId: string,
+				_sponsorId: string,
+				_freeAmount: unknown,
+				_assignments: unknown,
+				_notes?: unknown
+			): Promise<string> => Promise.resolve('spo-neu')
+		),
 		getSponsorings: vi.fn(),
 		getCategories: vi.fn(),
 		updateSponsoring: vi.fn(
@@ -34,7 +50,9 @@ vi.mock('@/lib/sponsorService', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('@/lib/sponsorService')>();
 	return {
 		...actual,
-		getSponsors: () => Promise.resolve([]),
+		getSponsors: service.getSponsors,
+		createSponsor: service.createSponsor,
+		createSponsoring: service.createSponsoring,
 		getCategories: service.getCategories,
 		getSponsorings: service.getSponsorings,
 		updateSponsoring: service.updateSponsoring,
@@ -278,21 +296,6 @@ describe('SponsoringsSection — Zellklick schreibt', () => {
 		expect(document.body.textContent).not.toContain('Bearbeiten');
 	});
 
-	it('legt ein Sponsoring als nackte Verknüpfung an, ohne Häkchenliste', async () => {
-		serves([makeSponsoring({ companyName: 'Taxi Brandl' })]);
-
-		const view = await mount();
-		await view.press('Sponsoring');
-		const dialog = document.querySelector('[role="dialog"]')!;
-
-		expect(dialog.textContent).toContain('Neues Sponsoring');
-		expect(dialog.querySelector('[role="checkbox"]')).toBeNull();
-		expect(dialog.textContent).not.toContain('Leer lassen');
-		expect(dialog.querySelector('#free_amount')).toBeNull();
-		// Auch die Notiz nicht: sie hat seit #150 ihren Ort im ⋮, und zwei Felder
-		// für `sponsorings.notes` liefen auseinander.
-		expect(dialog.querySelector('#sponsoring_notes')).toBeNull();
-	});
 });
 
 describe('SponsoringsSection — das ⋮ je Zeile (#150)', () => {
@@ -484,5 +487,172 @@ describe('SponsoringsSection — die Preisliste wird am Spaltenkopf verwaltet', 
 
 		expect(view.container.querySelectorAll('table')).toHaveLength(1);
 		expect(view.container.textContent).not.toContain('Sponsoring-Kategorien');
+	});
+});
+
+describe('SponsoringsSection — „+ SPONSOR" minimal (#153)', () => {
+	const brandl = makeSponsoring({ companyName: 'Taxi Brandl' });
+	const leitner = makeSponsor('Bäckerei Leitner');
+	const wieselburger = makeSponsor('Brauerei Wieselburger');
+
+	beforeEach(() => {
+		service.getSponsors.mockReset();
+		// Der Stammsatz der Firma, die schon sponsert — unter der Id, auf die ihr
+		// Sponsoring zeigt.
+		service.getSponsors.mockResolvedValue([
+			{ ...brandl.sponsor, id: brandl.sponsor_id },
+			leitner,
+			wieselburger
+		]);
+		service.createSponsor.mockClear();
+		service.createSponsoring.mockClear();
+		Element.prototype.scrollIntoView = vi.fn();
+	});
+
+	const firmen = () =>
+		[...document.querySelectorAll('[role="dialog"] [data-firma]')].map((el) => el.textContent);
+
+	it('zeigt eine durchsuchbare Firmenliste ohne die Firmen, die schon sponsern', async () => {
+		serves([brandl]);
+		const view = await mount();
+		await view.press('Sponsor');
+
+		expect(firmen()).toEqual(['Bäckerei Leitner', 'Brauerei Wieselburger']);
+		// Das Suchfeld der Werkzeugleiste heißt genauso — gemeint ist das im Dialog.
+		const search = document.querySelector<HTMLInputElement>(
+			'[role="dialog"] [aria-label="Firma suchen"]'
+		)!;
+		await act(async () => {
+			typeInto(search, 'brau');
+		});
+		expect(firmen()).toEqual(['Brauerei Wieselburger']);
+	});
+
+	it('sagt beim leeren Sponsorenbestand „Noch keine Firma erfasst"', async () => {
+		// Erstes Fest: noch gar keine Firma im Bestand (#69 Punkt 12).
+		service.getSponsors.mockResolvedValue([]);
+		serves([]);
+		const view = await mount();
+		await view.press('Sponsor');
+		expect(document.querySelector('[role="dialog"]')!.textContent).toContain(
+			'Noch keine Firma erfasst'
+		);
+	});
+
+	it('sagt „alle sponsern schon" nur, wenn es Firmen gibt', async () => {
+		service.getSponsors.mockResolvedValue([{ ...brandl.sponsor, id: brandl.sponsor_id }]);
+		serves([brandl]);
+		const view = await mount();
+		await view.press('Sponsor');
+		expect(document.querySelector('[role="dialog"]')!.textContent).toContain(
+			'Alle Firmen sponsern dieses Fest schon'
+		);
+	});
+
+	it('führt keine Kategorien-Häkchenliste, keinen Freibetrag und keine Notiz', async () => {
+		serves([brandl]);
+		const view = await mount();
+		await view.press('Sponsor');
+		const dialog = document.querySelector('[role="dialog"]')!;
+
+		expect(dialog.querySelector('[role="checkbox"]')).toBeNull();
+		expect(dialog.querySelector('#free_amount')).toBeNull();
+		expect(dialog.querySelector('#sponsoring_notes')).toBeNull();
+		expect(dialog.querySelector('textarea')).toBeNull();
+	});
+
+	it('legt für eine gewählte Firma ein leeres Sponsoring an', async () => {
+		// € 0, keine Zuweisungen, kein Freibetrag, keine Sachleistung, kein
+		// Quellfest — also auch kein Vorjahresbeitrag.
+		const neu = makeSponsoring({ companyName: 'Brauerei Wieselburger' });
+		service.createSponsoring.mockResolvedValueOnce(neu.id);
+		serves([brandl], [brandl, neu]);
+
+		const view = await mount();
+		await view.press('Sponsor');
+		await view.press('Brauerei Wieselburger');
+
+		expect(service.createSponsoring).toHaveBeenCalledTimes(1);
+		const args = service.createSponsoring.mock.calls[0];
+		expect(args.slice(0, 5)).toEqual(['f1', wieselburger.id, null, [], null]);
+		// Kein sechstes Argument: Sachleistung und `copied_from_festival_id`
+		// bleiben bei diesem Weg NULL — nur die Übernahme setzt sie (#145).
+		expect(args).toHaveLength(5);
+		expect(service.createSponsor).not.toHaveBeenCalled();
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+	});
+
+	it('macht die neue Zeile sichtbar und hebt eine Suche auf, die sie verdeckte', async () => {
+		const neu = makeSponsoring({ companyName: 'Brauerei Wieselburger' });
+		service.createSponsoring.mockResolvedValueOnce(neu.id);
+		serves([brandl], [brandl, neu]);
+		const scrollIntoView = vi.fn();
+		Element.prototype.scrollIntoView = scrollIntoView;
+
+		const view = await mount();
+		const toolbarSearch = view.container.querySelector<HTMLInputElement>(
+			'[aria-label="Firma suchen"]'
+		)!;
+		await act(async () => {
+			typeInto(toolbarSearch, 'taxi');
+		});
+		await view.press('Sponsor');
+		await view.press('Brauerei Wieselburger');
+
+		expect(toolbarSearch.value).toBe('');
+		expect(scrollIntoView).toHaveBeenCalled();
+		const row = scrollIntoView.mock.contexts.at(-1) as Element;
+		expect(row.getAttribute('data-sponsoring-id')).toBe(neu.id);
+		expect(row.textContent).toContain('Brauerei Wieselburger');
+		expect(view.container.querySelector('.animate-blitz-gruen')).not.toBeNull();
+		// Die Lücken-Optik ist gewollt — kein Hinweis deckt sie zu.
+		expect(row.textContent).toContain('€ 0');
+	});
+
+	it('legt eine neue Firma mit Ansprechpartner und Telefon in einem Durchgang an', async () => {
+		const neu = makeSponsoring({ companyName: 'Fleischerei Berger' });
+		service.createSponsor.mockResolvedValueOnce(neu.sponsor_id);
+		service.createSponsoring.mockResolvedValueOnce(neu.id);
+		serves([brandl], [brandl, neu]);
+
+		const view = await mount();
+		await view.press('Sponsor');
+		await view.press('Neue Firma');
+
+		// Dasselbe Firmendaten-Formular wie hinter ⋮ → Firmendaten (#150).
+		expect(document.querySelector('[role="dialog"]')!.textContent).toContain('Neue Firma anlegen');
+		await act(async () => {
+			typeInto(view.formField('Firmenname'), 'Fleischerei Berger');
+			typeInto(view.formField('Ansprechpartner'), 'Fr. Berger');
+			typeInto(view.formField('Telefon'), '0664 222');
+		});
+		await view.press('Speichern');
+
+		// Der globale Stammsatz trägt alle Felder — darum steht die Firma danach
+		// auch auf der Sponsoren-Seite vollständig (ADR 0011).
+		expect(service.createSponsor).toHaveBeenCalledWith({
+			company_name: 'Fleischerei Berger',
+			contact_person: 'Fr. Berger',
+			email: null,
+			phone: '0664 222',
+			address: null,
+			website: null,
+			notes: null
+		});
+		expect(service.createSponsoring).toHaveBeenCalledWith('f1', neu.sponsor_id, null, [], null);
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+	});
+
+	it('meldet einen Fehlschlag und lässt den Dialog offen', async () => {
+		serves([brandl]);
+		service.createSponsoring.mockRejectedValueOnce(new Error('duplicate key'));
+
+		const view = await mount();
+		await view.press('Sponsor');
+		await view.press('Brauerei Wieselburger');
+
+		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+		expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
 	});
 });
