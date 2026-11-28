@@ -81,6 +81,10 @@ afterEach(async () => {
 	roots.length = 0;
 });
 
+/* Die zwei Hälften der Übersicht — Karten unter, Matrix ab 900px (#155). */
+const MOBILE = '.min-\\[900px\\]\\:hidden';
+const DESKTOP = '.hidden.min-\\[900px\\]\\:block';
+
 async function mount() {
 	const container = document.createElement('div');
 	document.body.appendChild(container);
@@ -101,8 +105,12 @@ async function mount() {
 		fuss: () => container.querySelector('tfoot')?.textContent ?? '',
 		field: (label: string) =>
 			document.body.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!,
+		/* Zellklick in der Matrix — die Karte am Handy trägt für dieselbe Sache
+		dieselbe Aufschrift (#155), darum greift der Test in der Desktop-Hälfte. */
 		click: async (label: string) => {
-			const target = container.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
+			const target = container
+				.querySelector(DESKTOP)!
+				.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
 			await act(async () => {
 				target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
 				target.click();
@@ -120,7 +128,7 @@ async function mount() {
 		Breite eine; der Test sagt darum, welche er bedient. */
 		openMenu: async (companyName: string, wo: 'matrix' | 'karte' = 'matrix') => {
 			const scope = container.querySelector(
-				wo === 'karte' ? '.md\\:hidden' : '.hidden.md\\:block'
+				wo === 'karte' ? MOBILE : DESKTOP
 			)!;
 			const trigger = scope.querySelector<HTMLElement>(`[aria-label="Menü für ${companyName}"]`)!;
 			await act(async () => {
@@ -484,5 +492,93 @@ describe('SponsoringsSection — die Preisliste wird am Spaltenkopf verwaltet', 
 
 		expect(view.container.querySelectorAll('table')).toHaveLength(1);
 		expect(view.container.textContent).not.toContain('Sponsoring-Kategorien');
+	});
+});
+
+describe('SponsoringsSection — die Karte am Handy schreibt (#155)', () => {
+	beforeEach(() => {
+		service.updateSponsoring.mockClear();
+		/* Das Blatt von unten (vaul) misst und horcht im Browser; jsdom kennt
+		beides nicht. */
+		globalThis.ResizeObserver ??= class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		};
+		window.matchMedia ??= ((query: string) => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addListener: () => {},
+			removeListener: () => {},
+			addEventListener: () => {},
+			removeEventListener: () => {},
+			dispatchEvent: () => false
+		})) as typeof window.matchMedia;
+	});
+
+	const tippe = async (el: Element | null | undefined) => {
+		if (!el) throw new Error('Nichts zum Antippen');
+		await act(async () => {
+			el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+		await act(async () => {});
+	};
+
+	const plus = (view: Awaited<ReturnType<typeof mount>>, companyName: string) =>
+		view.container.querySelector(MOBILE)!.querySelector(`[aria-label="Hinzufügen bei ${companyName}"]`);
+
+	const eintrag = (label: string) =>
+		[...document.querySelectorAll('[data-vaul-drawer] button')].find(
+			(b) => b.querySelector('[data-addable-label]')?.textContent === label
+		);
+
+	it('weist über „+" eine Kategorie sofort zum Standardwert zu', async () => {
+		const leer = makeSponsoring({ companyName: 'Taxi Brandl' });
+		serves([leer], [{ ...leer, assignments: [makeAssignment({ category: plakat })] }]);
+
+		const view = await mount();
+		await tippe(plus(view, 'Taxi Brandl'));
+		await tippe(eintrag('Plakat'));
+
+		expect(service.updateSponsoring).toHaveBeenCalledWith(leer.id, {}, [
+			{ category_id: plakat.id, value: null }
+		]);
+		expect(view.kopfzahl()).toContain('€ 200');
+	});
+
+	it('legt über „+" einen Freibetrag an', async () => {
+		const leer = makeSponsoring({ companyName: 'Taxi Brandl' });
+		serves([leer], [{ ...leer, free_amount: 150 }]);
+
+		const view = await mount();
+		await tippe(plus(view, 'Taxi Brandl'));
+		await tippe(eintrag('Freibetrag'));
+		await act(async () => {
+			typeInto(view.field('Betrag'), '150');
+		});
+		await view.press('Übernehmen');
+
+		expect(service.updateSponsoring).toHaveBeenCalledWith(leer.id, { free_amount: 150 }, []);
+	});
+
+	it('legt über „+" eine Sachleistung an', async () => {
+		const leer = makeSponsoring({ companyName: 'Taxi Brandl' });
+		serves([leer]);
+
+		const view = await mount();
+		await tippe(plus(view, 'Taxi Brandl'));
+		await tippe(eintrag('Sachleistung'));
+		await act(async () => {
+			typeInto(view.field('Bezeichnung'), 'Gutschein');
+			typeInto(view.field('Schätzwert'), '40');
+		});
+		await view.press('Übernehmen');
+
+		expect(service.updateSponsoring).toHaveBeenCalledWith(
+			leer.id,
+			{ in_kind_description: 'Gutschein', in_kind_value: 40 },
+			[]
+		);
 	});
 });
