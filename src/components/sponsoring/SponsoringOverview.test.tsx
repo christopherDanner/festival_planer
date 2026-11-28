@@ -344,3 +344,48 @@ describe('SponsoringOverview — „+ KATEGORIE" legt die Preisliste an', () => 
 		expect(view.zettel()).toBeNull();
 	});
 });
+
+describe('SponsoringOverview — die eben angelegte Zeile (#153)', () => {
+	const brauerei = sponsorings[1];
+
+	it('heißt „+ SPONSOR" in der Werkzeugleiste', async () => {
+		const onCreate = vi.fn();
+		const view = await mount({ onCreate });
+		await view.press('Sponsor');
+		expect(onCreate).toHaveBeenCalled();
+	});
+
+	it('hebt die neue Zeile in Matrix und Karte hervor — und nur sie', async () => {
+		Element.prototype.scrollIntoView = vi.fn();
+		const view = await mount({ newSponsoringId: brauerei.id });
+
+		const marked = [...view.container.querySelectorAll('.animate-blitz-gruen')];
+		expect(marked).toHaveLength(2);
+		marked.forEach((el) => {
+			const row = el.closest('[data-sponsoring-id]')!;
+			expect(row.getAttribute('data-sponsoring-id')).toBe(brauerei.id);
+			expect(row.textContent).toContain('Brauerei Wieselburger');
+		});
+	});
+
+	it('rollt die neue Zeile ins Bild', async () => {
+		// Sonst landet sie alphabetisch irgendwo, und der Klick scheint nichts
+		// getan zu haben (#153).
+		const scrollIntoView = vi.fn();
+		Element.prototype.scrollIntoView = scrollIntoView;
+		await mount({ newSponsoringId: brauerei.id });
+
+		expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		const row = scrollIntoView.mock.contexts[0] as Element;
+		expect(row.getAttribute('data-sponsoring-id')).toBe(brauerei.id);
+	});
+
+	it('rollt nichts und hebt nichts hervor, solange nichts angelegt wurde', async () => {
+		const scrollIntoView = vi.fn();
+		Element.prototype.scrollIntoView = scrollIntoView;
+		const view = await mount();
+
+		expect(view.container.querySelector('.animate-blitz-gruen')).toBeNull();
+		expect(scrollIntoView).not.toHaveBeenCalled();
+	});
+});

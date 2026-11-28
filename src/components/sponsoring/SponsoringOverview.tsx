@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Building2, FileDown, Import, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SponsoringAnleitung from '@/components/sponsoring/SponsoringAnleitung';
@@ -51,6 +51,12 @@ export interface SponsoringOverviewProps {
 	onCategoryApply: (category: SponsoringCategory | null, input: CategoryZettelInput) => void;
 	/** „Kategorie löschen" — die bezifferte Rückfrage hat der Zettel schon gestellt. */
 	onCategoryDelete: (category: SponsoringCategory) => void;
+	/**
+	 * Das eben über „+ SPONSOR" angelegte Sponsoring (#153): seine Zeile blitzt
+	 * auf und rollt ins Bild. Sonst landet sie alphabetisch irgendwo, und der
+	 * Klick scheint nichts getan zu haben.
+	 */
+	newSponsoringId?: string | null;
 }
 
 /**
@@ -80,8 +86,11 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	onRemove,
 	categoryImpacts,
 	onCategoryApply,
-	onCategoryDelete
+	onCategoryDelete,
+	newSponsoringId = null
 }) => {
+	const rootRef = useRef<HTMLDivElement>(null);
+
 	/* Vorjahresbeitrag je Sponsoring und Geldsumme des vorigen Fests kommen aus
 	`getPreviousSponsorings()` / `getPreviousFestivalTotal()` (#145). Solange es
 	den Leseweg nicht gibt, zeigt die Matrix den Leerfall: keine Vorjahr-Unterzeile
@@ -98,6 +107,18 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 	const emptyNotice = sponsoringEmptyNotice(allRows.length, searchTerm);
 
 	const hinweis = sponsoringHinweis(leerzustand);
+
+	/* Die Zeile steht zweimal im Baum — als Karte und als Matrix-Zeile; sichtbar
+	ist je nach Breite eine. Gerollt wird die, die Fläche hat; ohne Layout (Test)
+	die erste. */
+	useEffect(() => {
+		if (!newSponsoringId || !rootRef.current) return;
+		const candidates = [...rootRef.current.querySelectorAll('[data-sponsoring-id]')].filter(
+			(el) => el.getAttribute('data-sponsoring-id') === newSponsoringId
+		);
+		const row = candidates.find((el) => el.getClientRects().length > 0) ?? candidates[0];
+		row?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+	}, [newSponsoringId]);
 
 	/*
 	 * Der Streifen steht an genau einer der beiden Kanten der Tabelle, und beide
@@ -118,7 +139,7 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 		) : null;
 
 	return (
-		<div className="space-y-4">
+		<div ref={rootRef} className="space-y-4">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
@@ -162,9 +183,10 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 							</Button>
 						}
 					/>
+					{/* „+ SPONSOR" (#153): Firma wählen oder neu anlegen, fertig. */}
 					<Button onClick={onCreate} size="sm">
 						<Plus className="h-4 w-4 mr-2" />
-						<span>Sponsoring</span>
+						<span>Sponsor</span>
 					</Button>
 				</div>
 			</div>
@@ -207,7 +229,16 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 						) : (
 							<>
 								{rows.map((row) => (
-									<div key={row.sponsoringId} className="border bg-card p-3">
+									<div
+										key={row.sponsoringId}
+										data-sponsoring-id={row.sponsoringId}
+										className="border bg-card">
+										{/* Der Blitz liegt innen: er endet durchsichtig und nähme der
+										Karte sonst ihren Grund. */}
+										<div
+											className={`p-3 ${
+												row.sponsoringId === newSponsoringId ? 'animate-blitz-gruen' : ''
+											}`}>
 										<div className="flex items-start justify-between gap-2">
 											<div className="flex-1 min-w-0">
 												<div className="font-medium truncate">{row.companyName}</div>
@@ -238,6 +269,7 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 												)}
 											</div>
 										)}
+										</div>
 									</div>
 								))}
 								{/* Derselbe Fuß, dieselbe Regel: sichtbare Zeilen, beschriftet. */}
@@ -271,6 +303,7 @@ const SponsoringOverview: React.FC<SponsoringOverviewProps> = ({
 							onRemove={onRemove}
 							onCategoryApply={onCategoryApply}
 							onCategoryDelete={onCategoryDelete}
+							newSponsoringId={newSponsoringId}
 						/>
 						{streifenAn('below', 'border-t-0')}
 					</div>

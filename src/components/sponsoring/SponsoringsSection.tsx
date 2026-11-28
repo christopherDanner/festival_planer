@@ -1,20 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue
-} from '@/components/ui/select';
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle
-} from '@/components/ui/dialog';
+import FirmenwahlDialog from '@/components/sponsoring/FirmenwahlDialog';
 import SponsorUebernahmeDialog from '@/components/sponsoring/SponsorUebernahmeDialog';
 import SponsoringNoteDialog from '@/components/sponsoring/SponsoringNoteDialog';
 import SponsoringOverview from '@/components/sponsoring/SponsoringOverview';
@@ -58,8 +43,6 @@ interface SponsoringsSectionProps {
 	festivalName: string;
 }
 
-const NEW_SPONSOR_VALUE = '__new__';
-
 const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, festivalName }) => {
 	const { toast } = useToast();
 
@@ -68,7 +51,12 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 	const [categories, setCategories] = useState<SponsoringCategory[]>([]);
 	const [loading, setLoading] = useState(true);
 
-	const [showDialog, setShowDialog] = useState(false);
+	/* „+ SPONSOR" (#153) hat zwei Schritte: die Firmenwahl, und — nur wenn die
+	Firma fehlt — das Firmendaten-Formular für eine neue. */
+	const [showFirmenwahl, setShowFirmenwahl] = useState(false);
+	const [showNewCompany, setShowNewCompany] = useState(false);
+	/** Das eben angelegte Sponsoring — seine Zeile wird sichtbar gemacht. */
+	const [newSponsoringId, setNewSponsoringId] = useState<string | null>(null);
 	const [showTransferDialog, setShowTransferDialog] = useState(false);
 	/* Die zwei Dialoge hinter dem ⋮ (#150) hängen an der *Sponsoring*-Id, nicht an
 	einer Kopie der Zeile: nach jedem Schreibvorgang lädt der Bereich neu, und der
@@ -81,8 +69,6 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 	/* Suchzustand der Werkzeugleiste; er filtert nur die Zeilen der Übersicht
 	(ADR 0006, #151) — die Fest-Kennzahl im Bereichskopf sieht ihn nie. */
 	const [searchTerm, setSearchTerm] = useState('');
-	const [sponsorChoice, setSponsorChoice] = useState('');
-	const [newCompanyName, setNewCompanyName] = useState('');
 	const [saving, setSaving] = useState(false);
 
 	/* Der Stand, aus dem der nächste Schreibvorgang seine Zuweisungsliste baut —
@@ -116,44 +102,65 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		loadData();
 	}, [loadData]);
 
-	const openCreate = () => {
-		setSponsorChoice('');
-		setNewCompanyName('');
-		setShowDialog(true);
+	/* Ein leeres Sponsoring ist ein gültiger Zustand (#153): € 0, lauter Lücken —
+	derselbe, den die Übernahme (#146) massenhaft erzeugt. Gefüllt wird in der
+	Matrix per Zettel (ADR 0009), die Notiz kommt übers ⋮ (#150).
+	`copied_from_festival_id` bleibt NULL, nur die Übernahme setzt es (#145) —
+	ein hier angelegtes Sponsoring hat darum keinen Vorjahresbeitrag.
+
+	Danach ist die Suche leer: eine, die die neue Firma nicht trifft, verdeckte
+	sonst gerade die Zeile, die sichtbar werden soll. */
+	const addSponsoring = async (sponsorId: string) => {
+		const sponsoringId = await createSponsoring(festivalId, sponsorId, null, [], null);
+		setSearchTerm('');
+		await loadData();
+		setNewSponsoringId(sponsoringId);
+		toast({ title: 'Erfolg', description: 'Sponsor wurde hinzugefügt.' });
 	};
 
-	const handleSave = async () => {
-		const isNewSponsor = sponsorChoice === NEW_SPONSOR_VALUE;
-		if (!sponsorChoice) {
-			toast({ title: 'Fehler', description: 'Bitte eine Firma wählen.', variant: 'destructive' });
-			return;
-		}
-		if (isNewSponsor && !newCompanyName.trim()) {
-			toast({
-				title: 'Fehler',
-				description: 'Firmenname ist erforderlich.',
-				variant: 'destructive'
-			});
-			return;
-		}
+	const reportError = (error: unknown) =>
+		toast({
+			title: 'Fehler',
+			description: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
+			variant: 'destructive'
+		});
 
+	const handleChooseSponsor = async (sponsorId: string) => {
 		setSaving(true);
 		try {
-			const sponsorId = isNewSponsor
-				? await createSponsor({ company_name: newCompanyName.trim() })
-				: sponsorChoice;
-			/* Nackte Verknüpfung: Kategorien, Freibetrag und Sachleistung setzt
-			danach der Zettel in der Matrix (ADR 0009), die Notiz das ⋮ (#150). */
-			await createSponsoring(festivalId, sponsorId, null, []);
-			toast({ title: 'Erfolg', description: 'Sponsoring wurde angelegt.' });
-			setShowDialog(false);
-			loadData();
+			await addSponsoring(sponsorId);
+			setShowFirmenwahl(false);
 		} catch (error) {
-			toast({
-				title: 'Fehler',
-				description: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
-				variant: 'destructive'
-			});
+			reportError(error);
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	/* Die neue Firma kommt mit vollen Stammdaten an den **globalen** Sponsor
+	(ADR 0011) — Ansprechpartner und Telefon hat man beim Anlegen zur Hand, und
+	die Sponsoren-Seite zeigt sie danach ohne Nachtragen. `createSponsor` stempelt
+	`user_id` mit `auth.uid()` (RLS `shared_insert`).
+
+	Scheitert erst das Sponsoring, steht die Firma schon im Bestand: das Formular
+	schließt trotzdem, und die Firmenliste bietet sie beim nächsten Versuch an —
+	ein zweites „Neue Firma" legte sie doppelt an. */
+	const handleCreateSponsor = async (values: SponsorFormValues) => {
+		setSaving(true);
+		let sponsorId: string;
+		try {
+			sponsorId = await createSponsor(values);
+		} catch (error) {
+			reportError(error);
+			setSaving(false);
+			return;
+		}
+		setShowNewCompany(false);
+		try {
+			await addSponsoring(sponsorId);
+		} catch (error) {
+			reportError(error);
+			loadData();
 		} finally {
 			setSaving(false);
 		}
@@ -298,7 +305,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 		categories.map((c) => [c.id, categoryImpact(sponsorings, c.id)])
 	);
 
-	// Beim Anlegen nur Firmen anbieten, die das Fest noch nicht sponsern (UNIQUE).
+	// „+ SPONSOR" bietet nur Firmen an, die das Fest noch nicht sponsern (UNIQUE).
 	const availableSponsors = sponsors.filter(
 		(s) => !sponsorings.some((sp) => sp.sponsor_id === s.id)
 	);
@@ -332,7 +339,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				categories={categories}
 				searchTerm={searchTerm}
 				onSearchChange={setSearchTerm}
-				onCreate={openCreate}
+				onCreate={() => setShowFirmenwahl(true)}
 				onTransfer={() => setShowTransferDialog(true)}
 				onExportPdf={handleExportPdf}
 				onOpenNote={setNoteForSponsoringId}
@@ -343,6 +350,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				categoryImpacts={categoryImpacts}
 				onCategoryApply={handleCategoryApply}
 				onCategoryDelete={handleCategoryDelete}
+				newSponsoringId={newSponsoringId}
 			/>
 
 			{/* Notiz und Firmendaten — die zwei Dinge hinter dem ⋮, die kein Zettel
@@ -376,63 +384,28 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				onTransferred={loadData}
 			/>
 
-			{/* Nur noch die Anlage: die Firmenwahl wandert mit einem eigenen Slice
-			ins „+ SPONSOR", die Notiz ins ⋮. Ein „Bearbeiten" gibt es nicht mehr —
-			es doppelte die Matrix als Häkchenliste (ADR 0009). */}
-			<Dialog open={showDialog} onOpenChange={setShowDialog}>
-				<DialogContent className="max-h-[90vh] overflow-y-auto">
-					<DialogHeader>
-						<DialogTitle>Neues Sponsoring</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4">
-						<div>
-							<Label>Firma *</Label>
-							<Select value={sponsorChoice} onValueChange={setSponsorChoice}>
-								<SelectTrigger>
-									<SelectValue placeholder="Firma wählen" />
-								</SelectTrigger>
-								<SelectContent>
-									{availableSponsors.map((s) => (
-										<SelectItem key={s.id} value={s.id}>
-											{s.company_name}
-										</SelectItem>
-									))}
-									<SelectItem value={NEW_SPONSOR_VALUE}>+ Neue Firma erfassen</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
+			<FirmenwahlDialog
+				open={showFirmenwahl}
+				onOpenChange={setShowFirmenwahl}
+				sponsors={availableSponsors}
+				saving={saving}
+				onChoose={handleChooseSponsor}
+				onNewCompany={() => {
+					setShowFirmenwahl(false);
+					setShowNewCompany(true);
+				}}
+			/>
 
-						{sponsorChoice === NEW_SPONSOR_VALUE && (
-							<div>
-								<Label htmlFor="new_company_name">Firmenname *</Label>
-								<Input
-									id="new_company_name"
-									value={newCompanyName}
-									onChange={(e) => setNewCompanyName(e.target.value)}
-									placeholder="z.B. Brauerei Schremser"
-								/>
-							</div>
-						)}
-
-						{/* Die Notiz stand hier als zweites Feld für `sponsorings.notes` —
-						mit dem ⋮ (#150) hat sie ihren Ort, und zwei Wege zu demselben Feld
-						liefen auseinander (hier ein einzeiliges Feld, das '' schrieb). */}
-						<p className="text-xs text-muted-foreground">
-							Kategorien, Freibetrag, Sachleistung und Notiz werden danach in der Matrix gesetzt —
-							die Werte per Zellklick, die Notiz über das ⋮ der Zeile.
-						</p>
-
-						<div className="flex justify-end gap-2">
-							<Button variant="outline" onClick={() => setShowDialog(false)}>
-								Abbrechen
-							</Button>
-							<Button onClick={handleSave} disabled={saving}>
-								Anlegen
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+			{/* „Neue Firma" — dasselbe Formular wie ⋮ → Firmendaten, nur leer (#150). */}
+			{showNewCompany && (
+				<SponsorFormDialog
+					open
+					onOpenChange={(open) => !open && setShowNewCompany(false)}
+					sponsor={null}
+					saving={saving}
+					onSave={handleCreateSponsor}
+				/>
+			)}
 		</div>
 	);
 };
