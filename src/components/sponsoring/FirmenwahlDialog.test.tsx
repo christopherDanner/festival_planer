@@ -47,6 +47,7 @@ async function open(props: Partial<FirmenwahlDialogProps> = {}) {
 				open
 				onOpenChange={() => {}}
 				sponsors={[leitner, wieselburger, raiffeisen]}
+				bestandLeer={false}
 				onChoose={onChoose}
 				onNewCompany={onNewCompany}
 				{...props}
@@ -103,8 +104,36 @@ describe('FirmenwahlDialog — „+ SPONSOR" minimal (#153)', () => {
 	});
 
 	it('sagt, wenn schon alle Firmen dieses Fest sponsern', async () => {
-		const view = await open({ sponsors: [] });
+		const view = await open({ sponsors: [], bestandLeer: false });
 		expect(view.dialog().textContent).toContain('Alle Firmen sponsern dieses Fest schon');
+		expect(view.dialog().textContent).not.toContain('Noch keine Firma erfasst');
+	});
+
+	it('sagt beim leeren Sponsorenbestand, dass es noch keine Firma gibt', async () => {
+		// Erstes Fest, neue Installation: der Normalfall (#69 Punkt 12) — „Alle
+		// Firmen sponsern schon" wäre hier falsch.
+		const view = await open({ sponsors: [], bestandLeer: true });
+		expect(view.dialog().textContent).toContain('Noch keine Firma erfasst');
+		expect(view.dialog().textContent).not.toContain('Alle Firmen sponsern');
+		expect(() => buttonByLabel(view.dialog(), 'Neue Firma')).not.toThrow();
+	});
+
+	it('zeigt beim Tastaturfokus einen 2px-Tinte-Rahmen auf den Firmen', async () => {
+		// DESIGN-VISION §6: Fokus als 2px-Tinte-Outline mit Versatz — die Liste
+		// wird nach dem Suchfeld per Tab bedient.
+		const view = await open();
+		for (const el of view.dialog().querySelectorAll('[data-firma]')) {
+			const cls = el.className.split(/\s+/);
+			expect(cls).toEqual(
+				expect.arrayContaining([
+					'focus-visible:outline',
+					'focus-visible:outline-2',
+					'focus-visible:outline-tinte'
+				])
+			);
+			expect(cls.some((c) => /^focus-visible:-?outline-offset-\d/.test(c))).toBe(true);
+			expect(cls).not.toContain('focus-visible:outline-none');
+		}
 	});
 
 	it('wählt eine Firma mit einem Klick', async () => {

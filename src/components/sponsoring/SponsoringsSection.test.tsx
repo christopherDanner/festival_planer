@@ -528,6 +528,27 @@ describe('SponsoringsSection — „+ SPONSOR" minimal (#153)', () => {
 		expect(firmen()).toEqual(['Brauerei Wieselburger']);
 	});
 
+	it('sagt beim leeren Sponsorenbestand „Noch keine Firma erfasst"', async () => {
+		// Erstes Fest: noch gar keine Firma im Bestand (#69 Punkt 12).
+		service.getSponsors.mockResolvedValue([]);
+		serves([]);
+		const view = await mount();
+		await view.press('Sponsor');
+		expect(document.querySelector('[role="dialog"]')!.textContent).toContain(
+			'Noch keine Firma erfasst'
+		);
+	});
+
+	it('sagt „alle sponsern schon" nur, wenn es Firmen gibt', async () => {
+		service.getSponsors.mockResolvedValue([{ ...brandl.sponsor, id: brandl.sponsor_id }]);
+		serves([brandl]);
+		const view = await mount();
+		await view.press('Sponsor');
+		expect(document.querySelector('[role="dialog"]')!.textContent).toContain(
+			'Alle Firmen sponsern dieses Fest schon'
+		);
+	});
+
 	it('führt keine Kategorien-Häkchenliste, keinen Freibetrag und keine Notiz', async () => {
 		serves([brandl]);
 		const view = await mount();

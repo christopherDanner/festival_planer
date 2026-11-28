@@ -388,6 +388,7 @@ const SponsoringsSection: React.FC<SponsoringsSectionProps> = ({ festivalId, fes
 				open={showFirmenwahl}
 				onOpenChange={setShowFirmenwahl}
 				sponsors={availableSponsors}
+				bestandLeer={sponsors.length === 0}
 				saving={saving}
 				onChoose={handleChooseSponsor}
 				onNewCompany={() => {

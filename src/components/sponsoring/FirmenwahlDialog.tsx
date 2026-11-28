@@ -20,6 +20,12 @@ export interface FirmenwahlDialogProps {
 	 * Aufrufers, der die Sponsorings des Fests kennt.
 	 */
 	sponsors: Sponsor[];
+	/**
+	 * Der globale Sponsorenbestand ist leer (erstes Fest, neue Installation).
+	 * Nur so unterscheidet der Dialog „noch keine Firma" von „alle Firmen
+	 * sponsern schon" — beides ergibt eine leere `sponsors`-Liste.
+	 */
+	bestandLeer: boolean;
 	/** Eine Firma gewählt — der Aufrufer legt das leere Sponsoring an. */
 	onChoose: (sponsorId: string) => void;
 	/** „Neue Firma" — der Aufrufer öffnet das Firmendaten-Formular (#150). */
@@ -43,6 +49,7 @@ const FirmenwahlDialog: React.FC<FirmenwahlDialogProps> = ({
 	open,
 	onOpenChange,
 	sponsors,
+	bestandLeer,
 	onChoose,
 	onNewCompany,
 	saving = false
@@ -59,6 +66,7 @@ const FirmenwahlDialog: React.FC<FirmenwahlDialogProps> = ({
 			{/* Erst ab dem Öffnen im Baum — jedes Öffnen beginnt mit leerer Suche. */}
 			<FirmenListe
 				sponsors={sponsors}
+				bestandLeer={bestandLeer}
 				onChoose={onChoose}
 				onNewCompany={onNewCompany}
 				saving={saving}
@@ -68,14 +76,18 @@ const FirmenwahlDialog: React.FC<FirmenwahlDialogProps> = ({
 );
 
 const FirmenListe: React.FC<
-	Pick<FirmenwahlDialogProps, 'sponsors' | 'onChoose' | 'onNewCompany'> & { saving: boolean }
-> = ({ sponsors, onChoose, onNewCompany, saving }) => {
+	Pick<FirmenwahlDialogProps, 'sponsors' | 'bestandLeer' | 'onChoose' | 'onNewCompany'> & {
+		saving: boolean;
+	}
+> = ({ sponsors, bestandLeer, onChoose, onNewCompany, saving }) => {
 	const [searchTerm, setSearchTerm] = useState('');
 	const hits = filterSponsors(sponsors, searchTerm);
 
 	const leer =
 		sponsors.length === 0
-			? 'Alle Firmen sponsern dieses Fest schon.'
+			? bestandLeer
+				? 'Noch keine Firma erfasst — neu anlegen.'
+				: 'Alle Firmen sponsern dieses Fest schon.'
 			: hits.length === 0
 				? `Keine Firma passt zu „${searchTerm.trim()}".`
 				: null;
@@ -107,7 +119,7 @@ const FirmenListe: React.FC<
 								data-firma
 								disabled={saving}
 								onClick={() => onChoose(s.id)}
-								className="w-full min-h-[42px] px-3 py-2 text-left font-bold hover:bg-papier focus-visible:bg-papier focus-visible:outline-none disabled:opacity-50">
+								className="w-full min-h-[42px] px-3 py-2 text-left font-bold hover:bg-papier focus-visible:bg-papier focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tinte disabled:opacity-50">
 								{s.company_name}
 							</button>
 						</li>
