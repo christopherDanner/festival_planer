@@ -58,7 +58,8 @@ const render = (props: Partial<SponsorsViewProps> = {}) =>
 			onOpenFestivalList={noop}
 			onAddSponsor={noop}
 			onSignOut={noop}
-			onSelectSponsor={noop}
+			onEditSponsor={noop}
+			onDeleteSponsor={noop}
 			{...props}
 		/>
 	);

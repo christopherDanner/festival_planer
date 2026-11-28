@@ -6,6 +6,7 @@ import type { Festival } from '@/lib/festivalService';
 import {
 	buildSponsorHistory,
 	countSponsorSegments,
+	deleteBlockedReason,
 	filterSponsorsBySegment,
 	referenceFestival,
 	sponsorHistoryOf,
@@ -239,5 +240,16 @@ describe('Segment-Filter', () => {
 			sponsert: 1,
 			'nicht-gefragt': 1
 		});
+	});
+});
+
+describe('deleteBlockedReason', () => {
+	it('ist für eine Firma ohne Historie leer', () => {
+		expect(deleteBlockedReason(0)).toBeUndefined();
+	});
+
+	it('zählt die Feste in der richtigen Einzahl und Mehrzahl', () => {
+		expect(deleteBlockedReason(1)).toBe('hängt an 1 Fest');
+		expect(deleteBlockedReason(3)).toBe('hängt an 3 Festen');
 	});
 });

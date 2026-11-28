@@ -24,7 +24,7 @@ function sponsor(name: string, id = name): Sponsor {
 
 const render = (sponsors: Sponsor[], history: SponsorHistoryMap = {}) =>
 	renderToStaticMarkup(
-		<SponsorsCardList sponsors={sponsors} history={history} onSelect={() => {}} />
+		<SponsorsCardList sponsors={sponsors} history={history} onEdit={() => {}} onDelete={() => {}} />
 	);
 
 describe('SponsorsCardList — der Bestand am Handy (#160)', () => {

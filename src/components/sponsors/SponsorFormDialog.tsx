@@ -35,10 +35,10 @@ const trimmedOrNull = (value: string): string | null => (value.trim() === '' ? n
 
 /**
  * Die *Firmendaten* eines globalen *Sponsors*. Gebaut als eigene Komponente,
- * damit sie **mehrere Einstiege** tragen kann (#150): heute hängt sie am ⋮ der
- * Sponsoring-Matrix; „+ SPONSOR → Neue Firma" und die Sponsoren-Stammdatenseite
- * holen sie mit ihren eigenen Slices dazu (#101/#159) — die Seite bringt bis
- * dahin ihr eigenes Formular mit, samt Löschweg, den es hier nicht gibt.
+ * damit sie **mehrere Einstiege** tragen kann (#150): das ⋮ der
+ * Sponsoring-Matrix, „+ SPONSOR → Neue Firma" (#153) und die
+ * Sponsoren-Stammdatenseite mit „+ FIRMA" und ⋮ → Bearbeiten (#159). Einen
+ * Löschweg hat sie nicht — der liegt auf der Seite im ⋮ (ADR 0010).
  *
  * Es kennt darum **keinen Fest-Kontext**: der Sponsor lebt über allen Festen
  * (ADR 0011). Und es kennt keinen Datenzugriff — geschrieben wird über
@@ -182,7 +182,7 @@ const SponsorFields: React.FC<{
 			</div>
 
 			<div>
-				<Label htmlFor="sponsor_notes">Notizen</Label>
+				<Label htmlFor="sponsor_notes">Notizen zur Firma</Label>
 				{/* Die Notiz der **Firma** (`sponsors.notes`) — nicht die des
 				Sponsorings, die im ⋮ daneben liegt (`sponsorings.notes`). */}
 				<Textarea

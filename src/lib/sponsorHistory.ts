@@ -153,3 +153,14 @@ export function countSponsorSegments<T extends { id: string }>(
 
 	return counts;
 }
+
+/**
+ * Warum eine Firma nicht löschbar ist — oder `undefined`, wenn sie es ist
+ * (ADR 0010). Dieselbe Zahl wie die Spalte *Zuletzt*: „NOCH NIE" heißt
+ * zugleich „löschbar". Die Datenbank hält die Regel zusätzlich (`RESTRICT`),
+ * siehe den Hinweis an `buildSponsorHistory`.
+ */
+export function deleteBlockedReason(festivalCount: number): string | undefined {
+	if (festivalCount === 0) return undefined;
+	return `hängt an ${festivalCount} ${festivalCount === 1 ? 'Fest' : 'Festen'}`;
+}

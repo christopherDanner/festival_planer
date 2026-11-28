@@ -2,14 +2,17 @@ import { MissingValue } from '@/components/toolkit/PaperTable';
 import type { SponsorHistory } from '@/lib/sponsorHistory';
 import type { Sponsor } from '@/lib/sponsorService';
 import SponsorHistoryLine from './SponsorHistoryLine';
+import SponsorRowMenu from './SponsorRowMenu';
+import { sponsorAnchorId } from './sponsorAnchor';
 
 export interface SponsorCardProps {
 	sponsor: Sponsor;
 	/** Historie dieser Firma; ohne Eintrag die leere (siehe `sponsorHistoryOf`). */
 	history: SponsorHistory;
-	/** Übergangsweg ins Firmendaten-Formular, bis #159 das ⋮ bringt — derselbe
-	Griff, den die Tabellenzeile am Desktop heute anbietet. */
-	onSelect: (sponsor: Sponsor) => void;
+	/** ⋮ → Bearbeiten — derselbe Griff wie an der Tabellenzeile am Desktop. */
+	onEdit: (sponsor: Sponsor) => void;
+	/** ⋮ → Löschen, nach der Rückfrage — nur für Firmen ohne Historie frei. */
+	onDelete: (sponsor: Sponsor) => void;
 }
 
 /** Eine Angabe der Definitionsliste: Versalien-Kürzel, daneben der Wert. Fehlt
@@ -48,30 +51,27 @@ function Angabe({ label, value }: { label: string; value: string | null }) {
  * der App führt 12px-Text mit 18px Zeilenhöhe, der Prototyp mit der
  * Browser-Vorgabe von 14px. Dieselben Felder, andere Zeilenhöhe.
  */
-export default function SponsorCard({ sponsor, history, onSelect }: SponsorCardProps) {
+export default function SponsorCard({ sponsor, history, onEdit, onDelete }: SponsorCardProps) {
 	return (
-		// Die ganze Karte öffnet die Firmendaten — DESIGN-VISION §6 will am Handy
-		// 40px, und der Firmenname allein ist knapp 17px hoch. Dieselbe Lösung wie
-		// die Tabellenzeile am Desktop, die deshalb auch klickbar ist.
+		// `tabIndex={-1}`: nach dem Anlegen holt die Seite die neue Karte ins Bild
+		// und setzt den Fokus darauf (#159).
 		<article
-			onClick={() => onSelect(sponsor)}
-			className="relative cursor-pointer border-2 border-tinte bg-white px-2.5 py-2 hover:bg-fusszeile">
-			{/* Der Firmenname hält den 42px-Rand für das ⋮ frei, das #159 wie im
-			Prototyp absolut in die Ecke hängt — sonst liefe eine lange Firma darunter. */}
-			<h3 className="pr-[42px] leading-[1.15] [overflow-wrap:anywhere]">
-				{/* Die Schrift steht am Knopf, nicht nur an der Überschrift: Tailwinds
-				Preflight setzt `button { text-transform: none; font: inherit }` und
-				nähme die Versalien sonst zurück. Der Knopf ist der Tastaturweg zum
-				selben Griff, darum hält er den Klick der Karte an. */}
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						onSelect(sponsor);
-					}}
-					className="text-left font-display text-[14.5px] font-semibold uppercase leading-[1.15] tracking-[.015em] hover:underline">
-					{sponsor.company_name}
-				</button>
+			id={sponsorAnchorId(sponsor.id)}
+			tabIndex={-1}
+			className="relative border-2 border-tinte bg-white px-2.5 py-2 outline-none focus:bg-gelb/30">
+			{/* Das ⋮ hängt wie im Prototyp absolut in der Ecke; seine 40px trägt es
+			selbst (DESIGN-VISION §6). */}
+			<SponsorRowMenu
+				companyName={sponsor.company_name}
+				festivalCount={history.festivalCount}
+				onEdit={() => onEdit(sponsor)}
+				onDelete={() => onDelete(sponsor)}
+				className="absolute right-0.5 top-0.5"
+			/>
+			{/* Der Firmenname hält den 42px-Rand für das ⋮ frei — sonst liefe eine
+			lange Firma darunter. */}
+			<h3 className="pr-[42px] font-display text-[14.5px] font-semibold uppercase leading-[1.15] tracking-[.015em] [overflow-wrap:anywhere]">
+				{sponsor.company_name}
 			</h3>
 
 			<dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[12px]">

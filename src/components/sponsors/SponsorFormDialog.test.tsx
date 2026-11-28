@@ -81,7 +81,8 @@ describe('SponsorFormDialog — lesen', () => {
 		expect(feld('Telefon').value).toBe('0664 111');
 		expect(feld('Adresse').value).toBe('Hauptstraße 1');
 		expect(feld('Website').value).toBe('https://brandl.at');
-		expect(feld('Notizen').value).toBe('Zahlt immer pünktlich');
+		// „zur Firma": die Sponsoring-Notiz im ⋮ der Matrix heißt auch „Notiz" (#159).
+		expect(feld('Notizen zur Firma').value).toBe('Zahlt immer pünktlich');
 	});
 
 	it('steht ohne Firma leer da — derselbe Weg legt eine neue an', async () => {

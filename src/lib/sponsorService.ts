@@ -76,11 +76,30 @@ export const updateSponsor = async (
 	if (error) throw new Error(error.message);
 };
 
+/**
+ * Der Satz der Löschregel (ADR 0010). Ihn bekommt zu sehen, wer trotz der
+ * Sperre im ⋮ in den Fremdschlüssel läuft — etwa weil jemand die Firma gerade
+ * in einem anderen Fest erfasst hat, oder weil ihre Sponsorings nur an
+ * gelöschten Festen hängen (die zählt die Historie nicht, siehe
+ * `buildSponsorHistory`).
+ */
+export const SPONSOR_HAS_HISTORY_MESSAGE =
+	'Die Firma kann nicht gelöscht werden: sie ist als Sponsor eines Fests erfasst. Löschbar ist nur eine Firma, die noch nie gesponsert hat.';
+
+/** 23001 = restrict_violation (`ON DELETE RESTRICT`), 23503 = foreign_key_violation. */
+const FOREIGN_KEY_CODES = new Set(['23001', '23503']);
+
 // Delete a sponsor. Seit dem RLS-Nachzug (ADR 0002) darf das jeder
-// angemeldete Benutzer, nicht mehr nur der Ersteller.
+// angemeldete Benutzer, nicht mehr nur der Ersteller — aber nur, solange kein
+// Sponsoring auf ihn zeigt (ADR 0010). Den Fremdschlüsselfehler übersetzt
+// diese Stelle, damit keine Oberfläche die Postgres-Meldung zeigt.
 export const deleteSponsor = async (sponsorId: string): Promise<void> => {
 	const { error } = await supabase.from('sponsors').delete().eq('id', sponsorId);
-	if (error) throw new Error(error.message);
+	if (!error) return;
+	if (error.code && FOREIGN_KEY_CODES.has(error.code)) {
+		throw new Error(SPONSOR_HAS_HISTORY_MESSAGE);
+	}
+	throw new Error(error.message);
 };
 
 // --- Sponsoring categories (per festival) -------------------------------

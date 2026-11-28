@@ -36,7 +36,10 @@ export interface SponsorsViewProps {
 	onOpenFestivalList: () => void;
 	onAddSponsor: () => void;
 	onSignOut: () => void;
-	onSelectSponsor: (sponsor: Sponsor) => void;
+	/** ⋮ → Bearbeiten: öffnet das Firmendaten-Formular. */
+	onEditSponsor: (sponsor: Sponsor) => void;
+	/** ⋮ → Löschen, nach der Rückfrage des Menüs. */
+	onDeleteSponsor: (sponsor: Sponsor) => void;
 }
 
 /**
@@ -60,7 +63,8 @@ export default function SponsorsView({
 	onOpenFestivalList,
 	onAddSponsor,
 	onSignOut,
-	onSelectSponsor
+	onEditSponsor,
+	onDeleteSponsor
 }: SponsorsViewProps) {
 	// Ohne Bezugsfest gibt es kein „heuer" — ein stehengebliebenes Segment würde
 	// den Frachtbrief zuschneiden, ohne dass noch ein Schalter das erklärt.
@@ -97,9 +101,19 @@ export default function SponsorsView({
 				<SponsorsEmptyState onAddSponsor={onAddSponsor} />
 			) : compact ? (
 				// Unter 900px Karten statt der querscrollenden Tabelle (#160).
-				<SponsorsCardList sponsors={shown} history={history} onSelect={onSelectSponsor} />
+				<SponsorsCardList
+					sponsors={shown}
+					history={history}
+					onEdit={onEditSponsor}
+					onDelete={onDeleteSponsor}
+				/>
 			) : (
-				<SponsorsTable sponsors={shown} history={history} onSelect={onSelectSponsor} />
+				<SponsorsTable
+					sponsors={shown}
+					history={history}
+					onEdit={onEditSponsor}
+					onDelete={onDeleteSponsor}
+				/>
 			)}
 		</div>
 	);

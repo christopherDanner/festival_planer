@@ -8,8 +8,10 @@ export interface SponsorsCardListProps {
 	sponsors: Sponsor[];
 	/** Sponsoren-Historie je Firma; fehlt eine, hat sie keine. */
 	history: SponsorHistoryMap;
-	/** Übergangsweg ins Firmendaten-Formular, bis #159 das ⋮ bringt. */
-	onSelect: (sponsor: Sponsor) => void;
+	/** ⋮ → Bearbeiten einer Firma. */
+	onEdit: (sponsor: Sponsor) => void;
+	/** ⋮ → Löschen einer Firma, nach der Rückfrage. */
+	onDelete: (sponsor: Sponsor) => void;
 }
 
 /**
@@ -25,7 +27,8 @@ export interface SponsorsCardListProps {
 export default function SponsorsCardList({
 	sponsors,
 	history,
-	onSelect
+	onEdit,
+	onDelete
 }: SponsorsCardListProps) {
 	return (
 		<MastPanel className="space-y-2 p-3">
@@ -38,7 +41,8 @@ export default function SponsorsCardList({
 						key={sponsor.id}
 						sponsor={sponsor}
 						history={sponsorHistoryOf(history, sponsor.id)}
-						onSelect={onSelect}
+						onEdit={onEdit}
+						onDelete={onDelete}
 					/>
 				))
 			)}

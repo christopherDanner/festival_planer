@@ -6,14 +6,18 @@ import type { Sponsor } from '@/lib/sponsorService';
 import { MissingValue } from '@/components/toolkit/PaperTable';
 import MastPanel from './MastPanel';
 import SponsorHistoryLine from './SponsorHistoryLine';
+import SponsorRowMenu from './SponsorRowMenu';
+import { sponsorAnchorId } from './sponsorAnchor';
 
 export interface SponsorsTableProps {
 	/** Bereits gefilterter Ausschnitt des Sponsorenbestands, alphabetisch. */
 	sponsors: Sponsor[];
 	/** Sponsoren-Historie je Firma; fehlt eine, hat sie keine. */
 	history: SponsorHistoryMap;
-	/** Zeilenklick — Übergangsweg ins Firmendaten-Formular, bis #159 das ⋮ bringt. */
-	onSelect: (sponsor: Sponsor) => void;
+	/** ⋮ → Bearbeiten: öffnet das Firmendaten-Formular dieser Firma. */
+	onEdit: (sponsor: Sponsor) => void;
+	/** ⋮ → Löschen, nach der Rückfrage — nur für Firmen ohne Historie frei. */
+	onDelete: (sponsor: Sponsor) => void;
 }
 
 const CellValue = ({ children }: { children: string | null }) =>
@@ -51,9 +55,14 @@ function HeaderCell({ children, className }: { children?: ReactNode; className?:
  * eine Angabe des Aufrufers, und der erste Anstrich, bevor `useIsMobile`
  * geantwortet hat, ist keine. Sie kosten am Desktop nichts.
  */
-export default function SponsorsTable({ sponsors, history, onSelect }: SponsorsTableProps) {
-	// Am Handy ist die Zeile das Trefferfeld — DESIGN-VISION §6 will dafür
-	// 40px, deshalb dort mehr Luft als am Desktop.
+export default function SponsorsTable({
+	sponsors,
+	history,
+	onEdit,
+	onDelete
+}: SponsorsTableProps) {
+	// Unter 900px mehr Luft: dort steht die Tabelle nur im ersten Anstrich
+	// (siehe oben), und das ⋮ braucht seine 40px Zeilenhöhe (DESIGN-VISION §6).
 	const cell = 'px-3 py-3 align-middle min-[900px]:py-2';
 
 	return (
@@ -68,7 +77,7 @@ export default function SponsorsTable({ sponsors, history, onSelect }: SponsorsT
 							<HeaderCell>Email</HeaderCell>
 							<HeaderCell>Adresse</HeaderCell>
 							<HeaderCell>Zuletzt</HeaderCell>
-							{/* Siebte Spalte: das ⋮ bleibt leer, bis #159 das Menü bringt. */}
+							{/* Siebte Spalte: das ⋮ (#159). */}
 							<HeaderCell className="w-10" />
 						</tr>
 					</thead>
@@ -80,48 +89,51 @@ export default function SponsorsTable({ sponsors, history, onSelect }: SponsorsT
 								</td>
 							</tr>
 						) : (
-							sponsors.map((sponsor) => (
-								<tr
-									key={sponsor.id}
-									onClick={() => onSelect(sponsor)}
-									className="cursor-pointer border-b border-linie hover:bg-fusszeile">
-									<td className={cn(cell, 'font-bold')}>
-										{/* Der Firmenname ist zusätzlich ein echter Knopf, damit der
-										Zeilenklick auch mit der Tastatur erreichbar ist. */}
-										<button
-											type="button"
-											onClick={(e) => {
-												e.stopPropagation();
-												onSelect(sponsor);
-											}}
-											className="text-left font-bold hover:underline">
+							sponsors.map((sponsor) => {
+								const entry = sponsorHistoryOf(history, sponsor.id);
+								return (
+									// `tabIndex={-1}`: nach dem Anlegen holt die Seite die neue Zeile
+									// ins Bild und setzt den Fokus darauf (#159).
+									<tr
+										key={sponsor.id}
+										id={sponsorAnchorId(sponsor.id)}
+										tabIndex={-1}
+										className="border-b border-linie outline-none focus:bg-gelb/30">
+										<td className={cn(cell, 'font-bold')}>
 											{sponsor.company_name}
-										</button>
-										{sponsor.website && (
-											<span className="block text-[11.5px] font-medium text-tinte-soft">
-												{sponsor.website}
-											</span>
-										)}
-									</td>
-									<td className={cell}>
-										<CellValue>{sponsor.contact_person}</CellValue>
-									</td>
-									<td className={cn(cell, 'whitespace-nowrap')}>
-										<CellValue>{sponsor.phone}</CellValue>
-									</td>
-									<td className={cell}>
-										<CellValue>{sponsor.email}</CellValue>
-									</td>
-									<td className={cell}>
-										<CellValue>{sponsor.address}</CellValue>
-									</td>
-									<td className={cn(cell, 'whitespace-nowrap tabular-nums')}>
-										<SponsorHistoryLine history={sponsorHistoryOf(history, sponsor.id)} />
-									</td>
-									{/* Das ⋮ füllt #159. */}
-									<td className={cn(cell, 'w-10')} />
-								</tr>
-							))
+											{sponsor.website && (
+												<span className="block text-[11.5px] font-medium text-tinte-soft">
+													{sponsor.website}
+												</span>
+											)}
+										</td>
+										<td className={cell}>
+											<CellValue>{sponsor.contact_person}</CellValue>
+										</td>
+										<td className={cn(cell, 'whitespace-nowrap')}>
+											<CellValue>{sponsor.phone}</CellValue>
+										</td>
+										<td className={cell}>
+											<CellValue>{sponsor.email}</CellValue>
+										</td>
+										<td className={cell}>
+											<CellValue>{sponsor.address}</CellValue>
+										</td>
+										<td className={cn(cell, 'whitespace-nowrap tabular-nums')}>
+											<SponsorHistoryLine history={entry} />
+										</td>
+										{/* Das ⋮ trägt seine 40px selbst; die Zelle gibt ihm nur Luft. */}
+										<td className="w-10 px-1 align-middle">
+											<SponsorRowMenu
+												companyName={sponsor.company_name}
+												festivalCount={entry.festivalCount}
+												onEdit={() => onEdit(sponsor)}
+												onDelete={() => onDelete(sponsor)}
+											/>
+										</td>
+									</tr>
+								);
+							})
 						)}
 					</tbody>
 				</table>

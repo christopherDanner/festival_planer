@@ -1,21 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import MastPanel from '@/components/sponsors/MastPanel';
+import SponsorFormDialog, { type SponsorFormValues } from '@/components/sponsors/SponsorFormDialog';
 import SponsorsMast from '@/components/sponsors/SponsorsMast';
 import SponsorsView from '@/components/sponsors/SponsorsView';
+import { sponsorAnchorId } from '@/components/sponsors/sponsorAnchor';
 import type { SponsorHistoryMap, SponsorSegment } from '@/lib/sponsorHistory';
 import { getSponsorHistory } from '@/lib/sponsorHistoryService';
 import {
@@ -26,23 +18,19 @@ import {
 	type Sponsor
 } from '@/lib/sponsorService';
 
-const emptyForm = {
-	company_name: '',
-	contact_person: '',
-	email: '',
-	phone: '',
-	address: '',
-	website: '',
-	notes: ''
-};
+/** Was das Firmendaten-Formular gerade zeigt: zu (`null`), eine neue Firma
+oder die Stammdaten einer bestehenden. */
+type SponsorForm = null | { sponsor: Sponsor | null };
 
 /**
  * Sponsoren-Stammdaten (`/sponsors`) — der Sponsorenbestand über alle Feste
  * hinweg (ADR 0011). Kein Fest-Arbeitsbereich: eigener Mast statt Tab-Leiste,
  * Zurück-Weg ist der Wordmark (#101).
  *
- * Der Dialog unten ist der Übergangsweg zum Anlegen/Bearbeiten/Löschen, bis
- * #159 das geteilte Firmendaten-Formular hinter das ⋮ hängt.
+ * „+ FIRMA" und ⋮ → Bearbeiten öffnen **dasselbe** Firmendaten-Formular wie
+ * ⋮ → Firmendaten in der Sponsoring-Matrix (`SponsorFormDialog`, #150) — es ist
+ * derselbe globale Stammsatz, also auch dasselbe Formular (#159). Gelöscht wird
+ * über das ⋮, und nur, solange die Firma nie gesponsert hat (ADR 0010).
  */
 const Sponsors = () => {
 	const { toast } = useToast();
@@ -56,12 +44,13 @@ const Sponsors = () => {
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [segment, setSegment] = useState<SponsorSegment>('alle');
-	const [showDialog, setShowDialog] = useState(false);
-	const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
-	const [formData, setFormData] = useState(emptyForm);
+	const [form, setForm] = useState<SponsorForm>(null);
+	const [saving, setSaving] = useState(false);
+	/** Die eben angelegte Firma, die nach dem Neuladen ins Bild geholt wird. */
+	const [revealSponsorId, setRevealSponsorId] = useState<string | null>(null);
 
 	// Bestand und Historie gehören zusammen: ohne Historie stünde an jeder Zeile
-	// „NOCH NIE" — eine falsche Auskunft, auf der auch die Löschsperre (#159)
+	// „NOCH NIE" — eine falsche Auskunft, auf der auch die Löschsperre im ⋮
 	// steht. Scheitert eine der beiden Abfragen, scheitert das Laden.
 	const loadSponsors = useCallback(async () => {
 		try {
@@ -84,57 +73,61 @@ const Sponsors = () => {
 		loadSponsors();
 	}, [loadSponsors]);
 
+	// Eine neue Firma landet alphabetisch irgendwo — ohne Sprung schiene der
+	// Klick auf „Speichern" nichts getan zu haben (#159, wie #153). Gesucht wird,
+	// sobald der neu geladene Bestand gezeichnet ist.
+	useEffect(() => {
+		if (!revealSponsorId) return;
+		const anchor = document.getElementById(sponsorAnchorId(revealSponsorId));
+		if (!anchor) return;
+		anchor.scrollIntoView({ block: 'center' });
+		anchor.focus({ preventScroll: true });
+		setRevealSponsorId(null);
+	}, [revealSponsorId, sponsors]);
+
 	const handleSignOut = async () => {
 		await signOut();
 		navigate('/auth');
 	};
 
-	const resetForm = () => {
-		setFormData(emptyForm);
-		setEditingSponsor(null);
-	};
-
-	const handleSave = async () => {
-		if (!formData.company_name.trim()) {
-			toast({
-				title: 'Fehler',
-				description: 'Firmenname ist erforderlich.',
-				variant: 'destructive'
-			});
-			return;
-		}
-
+	const handleSave = async (values: SponsorFormValues) => {
+		if (!form) return;
+		setSaving(true);
 		try {
-			if (editingSponsor) {
-				await updateSponsor(editingSponsor.id, formData);
-				toast({ title: 'Erfolg', description: 'Sponsor wurde aktualisiert.' });
+			if (form.sponsor) {
+				await updateSponsor(form.sponsor.id, values);
+				toast({ title: 'Erfolg', description: 'Firmendaten wurden gespeichert.' });
 			} else {
-				await createSponsor(formData);
-				toast({ title: 'Erfolg', description: 'Sponsor wurde hinzugefügt.' });
+				// `createSponsor` stempelt `user_id = auth.uid()` (RLS `shared_insert`).
+				const id = await createSponsor(values);
+				toast({ title: 'Erfolg', description: 'Firma wurde angelegt.' });
+				// Suche und Segment könnten die neue Firma verbergen — dann gäbe es
+				// nichts, wohin der Sprung führt.
+				setSearchTerm('');
+				setSegment('alle');
+				setRevealSponsorId(id);
 			}
-			resetForm();
-			setShowDialog(false);
-			loadSponsors();
+			setForm(null);
+			await loadSponsors();
 		} catch (error) {
 			toast({
 				title: 'Fehler',
 				description: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
 				variant: 'destructive'
 			});
+		} finally {
+			setSaving(false);
 		}
 	};
 
+	/* Die Rückfrage stellt das ⋮ (`ActionMenu`). Läuft das Löschen trotz Sperre
+	in den Fremdschlüssel, kommt aus `deleteSponsor` schon der Satz der Regel.
+	Neu geladen wird in beiden Fällen: nach einer Ablehnung hat die Firma meist
+	inzwischen eine Historie, und das ⋮ soll sie gesperrt zeigen. */
 	const handleDelete = async (sponsor: Sponsor) => {
-		if (!confirm(`Möchten Sie ${sponsor.company_name} wirklich löschen?`)) {
-			return;
-		}
-
 		try {
 			await deleteSponsor(sponsor.id);
-			toast({ title: 'Erfolg', description: 'Sponsor wurde gelöscht.' });
-			resetForm();
-			setShowDialog(false);
-			loadSponsors();
+			toast({ title: 'Erfolg', description: `${sponsor.company_name} wurde gelöscht.` });
 		} catch (error) {
 			toast({
 				title: 'Fehler',
@@ -142,26 +135,10 @@ const Sponsors = () => {
 				variant: 'destructive'
 			});
 		}
+		await loadSponsors();
 	};
 
-	const handleEdit = (sponsor: Sponsor) => {
-		setFormData({
-			company_name: sponsor.company_name,
-			contact_person: sponsor.contact_person || '',
-			email: sponsor.email || '',
-			phone: sponsor.phone || '',
-			address: sponsor.address || '',
-			website: sponsor.website || '',
-			notes: sponsor.notes || ''
-		});
-		setEditingSponsor(sponsor);
-		setShowDialog(true);
-	};
-
-	const openAddSponsor = () => {
-		resetForm();
-		setShowDialog(true);
-	};
+	const openAddSponsor = () => setForm({ sponsor: null });
 
 	return (
 		<div className="min-h-screen">
@@ -198,117 +175,21 @@ const Sponsors = () => {
 						onOpenFestivalList={() => navigate('/dashboard')}
 						onAddSponsor={openAddSponsor}
 						onSignOut={handleSignOut}
-						onSelectSponsor={handleEdit}
+						onEditSponsor={(sponsor) => setForm({ sponsor })}
+						onDeleteSponsor={handleDelete}
 					/>
 				)}
 			</div>
 
-			<Dialog open={showDialog} onOpenChange={setShowDialog}>
-				<DialogContent className="max-w-2xl">
-					<DialogHeader>
-						<DialogTitle>
-							{editingSponsor ? 'Firma bearbeiten' : 'Neue Firma anlegen'}
-						</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4">
-						<div>
-							<Label htmlFor="company_name">Firmenname *</Label>
-							<Input
-								id="company_name"
-								value={formData.company_name}
-								onChange={(e) =>
-									setFormData((prev) => ({ ...prev, company_name: e.target.value }))
-								}
-								placeholder="Firmenname"
-							/>
-						</div>
-
-						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<Label htmlFor="contact_person">Ansprechpartner</Label>
-								<Input
-									id="contact_person"
-									value={formData.contact_person}
-									onChange={(e) =>
-										setFormData((prev) => ({ ...prev, contact_person: e.target.value }))
-									}
-									placeholder="Ansprechpartner"
-								/>
-							</div>
-							<div>
-								<Label htmlFor="email">E-Mail</Label>
-								<Input
-									id="email"
-									type="email"
-									value={formData.email}
-									onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-									placeholder="E-Mail Adresse"
-								/>
-							</div>
-						</div>
-
-						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<Label htmlFor="phone">Telefon</Label>
-								<Input
-									id="phone"
-									value={formData.phone}
-									onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-									placeholder="Telefonnummer"
-								/>
-							</div>
-							<div>
-								<Label htmlFor="website">Website</Label>
-								<Input
-									id="website"
-									value={formData.website}
-									onChange={(e) => setFormData((prev) => ({ ...prev, website: e.target.value }))}
-									placeholder="https://..."
-								/>
-							</div>
-						</div>
-
-						<div>
-							<Label htmlFor="address">Adresse</Label>
-							<Input
-								id="address"
-								value={formData.address}
-								onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
-								placeholder="Adresse"
-							/>
-						</div>
-
-						<div>
-							<Label htmlFor="notes">Notizen</Label>
-							<Textarea
-								id="notes"
-								value={formData.notes}
-								onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-								placeholder="Zusätzliche Notizen"
-								rows={3}
-							/>
-						</div>
-
-						<div className="flex items-center justify-between gap-2">
-							{editingSponsor ? (
-								<Button variant="destructive" onClick={() => handleDelete(editingSponsor)}>
-									Löschen
-								</Button>
-							) : (
-								<span />
-							)}
-							<div className="flex gap-2">
-								<Button variant="outline" onClick={() => setShowDialog(false)}>
-									Abbrechen
-								</Button>
-								<Button onClick={handleSave}>
-									{editingSponsor ? 'Aktualisieren' : 'Hinzufügen'}
-								</Button>
-							</div>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<SponsorFormDialog
+				open={form !== null}
+				onOpenChange={(open) => {
+					if (!open) setForm(null);
+				}}
+				sponsor={form?.sponsor ?? null}
+				onSave={handleSave}
+				saving={saving}
+			/>
 		</div>
 	);
 };

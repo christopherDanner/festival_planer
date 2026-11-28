@@ -48,6 +48,13 @@ export interface ActionMenuProps {
 	/** Was das Löschen mitreißt — ein Satz, der die Tragweite benennt. */
 	confirmMessage: ReactNode;
 	onDelete: () => void;
+	/**
+	 * Verbietet eine Regel das Löschen, steht hier der Grund („hängt an 3
+	 * Festen"). Der rote Eintrag bleibt dann **sichtbar, aber gesperrt**, mit dem
+	 * Grund daran — ein fehlender Eintrag erklärt nichts, ein gesperrter erklärt
+	 * die Regel (#159, ADR 0010).
+	 */
+	deleteDisabledReason?: string;
 	/** `white` für grüne Plakatflächen, `ink` für Papier und getönte Flächen. */
 	tone?: 'ink' | 'white';
 	/** Wohin das Menü aufklappt — am rechten Rand einer Zeile nach innen
@@ -83,6 +90,7 @@ export function ActionMenu({
 	confirmTitle,
 	confirmMessage,
 	onDelete,
+	deleteDisabledReason,
 	tone = 'ink',
 	align = 'end',
 	className
@@ -120,9 +128,22 @@ export function ActionMenu({
 							{label}
 						</DropdownMenuItem>
 					))}
-					<DropdownMenuItem className="gap-2 text-rot" onClick={() => setConfirmOpen(true)}>
-						<Trash2 className="h-4 w-4" />
-						{deleteLabel}
+					<DropdownMenuItem
+						className="gap-2 text-rot"
+						disabled={deleteDisabledReason !== undefined}
+						// `onSelect` wie oben: nur so greift die Sperre.
+						onSelect={() => setConfirmOpen(true)}>
+						<Trash2 className="h-4 w-4 shrink-0" />
+						{deleteDisabledReason === undefined ? (
+							deleteLabel
+						) : (
+							<span className="flex flex-col">
+								{deleteLabel}
+								<span className="text-[11px] font-medium text-tinte-soft">
+									{deleteDisabledReason}
+								</span>
+							</span>
+						)}
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

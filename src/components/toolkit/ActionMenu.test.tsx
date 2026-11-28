@@ -225,3 +225,34 @@ describe('ActionMenu — die Rückfrage vor dem Löschen', () => {
 		expect(document.querySelector('[role="alertdialog"]')).toBeNull();
 	});
 });
+
+describe('ActionMenu — ein gesperrtes Löschen (#159)', () => {
+	/* Wo eine Regel das Löschen verbietet, bleibt der rote Eintrag stehen — grau,
+	   mit dem Grund daran. Ein fehlender Eintrag erklärt nichts, ein gesperrter
+	   erklärt die Regel (ADR 0010). */
+
+	it('zeigt das Löschen weiter, gesperrt und mit Begründung', async () => {
+		await mount({ deleteDisabledReason: 'hängt an 3 Festen' });
+		await oeffneMenue();
+
+		expect(eintrag('löschen')?.getAttribute('data-disabled')).not.toBeNull();
+		expect(eintrag('löschen')?.textContent).toContain('hängt an 3 Festen');
+	});
+
+	it('fragt am gesperrten Eintrag nicht zurück und löscht nichts', async () => {
+		const onDelete = vi.fn();
+		await mount({ onDelete, deleteDisabledReason: 'hängt an 3 Festen' });
+		await oeffneMenue();
+		await klick(eintrag('löschen'));
+
+		expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+		expect(onDelete).not.toHaveBeenCalled();
+	});
+
+	it('bleibt ohne Begründung frei', async () => {
+		await mount();
+		await oeffneMenue();
+
+		expect(eintrag('löschen')?.getAttribute('data-disabled')).toBeNull();
+	});
+});

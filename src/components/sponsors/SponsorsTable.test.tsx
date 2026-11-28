@@ -23,7 +23,7 @@ function sponsor(over: Partial<Sponsor> = {}): Sponsor {
 
 const render = (sponsors: Sponsor[], history: SponsorHistoryMap = {}) =>
 	renderToStaticMarkup(
-		<SponsorsTable sponsors={sponsors} history={history} onSelect={() => {}} />
+		<SponsorsTable sponsors={sponsors} history={history} onEdit={() => {}} onDelete={() => {}} />
 	);
 
 /** Historie aus echten Verknüpfungen, nicht von Hand gestellt. */
@@ -36,7 +36,7 @@ const historieVon = (...jahre: [id: string, start_date: string][]) =>
 
 describe('SponsorsTable', () => {
 	it('trägt die sieben Frachtbrief-Spalten', () => {
-		// Sechs beschriftete plus die leere ⋮-Spalte.
+		// Sechs beschriftete plus die ⋮-Spalte.
 		for (const kopf of ['Firma', 'Ansprechpartner', 'Telefon', 'Email', 'Adresse', 'Zuletzt']) {
 			expect(render([sponsor()])).toContain(kopf);
 		}
@@ -114,6 +114,22 @@ describe('SponsorsTable', () => {
 	it('sagt es, wenn die Suche nichts trifft', () => {
 		const html = render([]);
 		expect(html).toContain('Keine Firma gefunden');
+	});
+
+	it('gibt jeder Zeile ein dauerhaft sichtbares ⋮ statt eines Knopfpaars (#159)', () => {
+		const html = render([
+			sponsor({ id: 'a', company_name: 'Autohaus Wieselburg' }),
+			sponsor({ id: 'z', company_name: 'Zeltverleih Festkultur' })
+		]);
+		expect(html).toContain('aria-label="Menü für Autohaus Wieselburg"');
+		expect(html).toContain('aria-label="Menü für Zeltverleih Festkultur"');
+		// Nur die zwei ⋮ — kein ✎/🗑, kein Firmenname als Übergangs-Knopf.
+		expect(html.match(/<button/g)).toHaveLength(2);
+		expect(html).not.toContain('cursor-pointer');
+	});
+
+	it('lässt jede Zeile ansprechen, damit eine neu angelegte Firma ins Bild kommt', () => {
+		expect(render([sponsor()])).toMatch(/<tr[^>]*id="sponsor-s1"/);
 	});
 
 	it('bleibt ohne runde Ecken', () => {

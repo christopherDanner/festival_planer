@@ -42,7 +42,7 @@ const historieVon = (...feste: [id: string, start_date: string][]) =>
 	);
 
 const render = (s: Sponsor = sponsor(), history: SponsorHistory = OHNE_HISTORIE) =>
-	renderToStaticMarkup(<SponsorCard sponsor={s} history={history} onSelect={() => {}} />);
+	renderToStaticMarkup(<SponsorCard sponsor={s} history={history} onEdit={() => {}} onDelete={() => {}} />);
 
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
@@ -98,31 +98,27 @@ describe('SponsorCard — der volle Stammsatz am Handy (#160)', () => {
 	});
 
 	it('setzt den Firmennamen in Akzentschrift-Versalien', () => {
-		// Am Knopf selbst, nicht nur an der Überschrift: Tailwinds Preflight setzt
-		// `button { text-transform: none }` und nähme die Versalien sonst zurück.
-		const knopf = render().match(/<button[^>]*>/)?.[0] ?? '';
-		expect(knopf).toContain('font-display');
-		expect(knopf).toContain('uppercase');
+		const titel = render().match(/<h3[^>]*>/)?.[0] ?? '';
+		expect(titel).toContain('font-display');
+		expect(titel).toContain('uppercase');
 	});
 
-	it('öffnet über den Firmennamen die Firmendaten', () => {
+	it('trägt das ⋮ der Firma dauerhaft — kein Zeilenklick, kein Knopfpaar (#159)', () => {
 		const html = render();
-		// Der Name ist ein echter Knopf, damit er auch mit der Tastatur erreichbar
-		// ist — dasselbe Muster wie in der Tabellenzeile.
-		expect(html).toMatch(/<button[^>]*>Bäckerei Grünsteidl<\/button>/);
+		expect(html).toContain('aria-label="Menü für Bäckerei Grünsteidl"');
+		// Der Übergangsweg (ganze Karte, Name als Knopf) ist mit dem ⋮ weg: ein
+		// Griff, ein Weg.
+		expect(html).not.toContain('cursor-pointer');
+		expect(html.match(/<button/g)).toHaveLength(1);
 	});
 
-	it('macht die ganze Karte zum Trefferfeld, nicht nur den 17px hohen Namen', () => {
-		// DESIGN-VISION §6 will am Handy 40px; der Firmenname allein ist bei
-		// 14.5px/1.15 knapp 17px hoch. Also dieselbe Lösung wie die Tabellenzeile
-		// am Desktop: die ganze Karte öffnet, der Name bleibt der Tastaturweg.
-		const html = render();
-		expect(html).toMatch(/<article[^>]*cursor-pointer/);
+	it('kann angesprungen werden, damit eine neu angelegte Firma ins Bild kommt', () => {
+		expect(render()).toMatch(/<article[^>]*id="sponsor-s1"/);
 	});
 
 	it('hält oben rechts den Rand für das ⋮ frei', () => {
-		// Das Menü aus #159 hängt sich wie im Prototyp absolut in die Ecke — es
-		// braucht keine eigene Höhe, aber der Name darf nicht darunter laufen.
+		// Das ⋮ hängt sich wie im Prototyp absolut in die Ecke — es braucht keine
+		// eigene Höhe, aber der Name darf nicht darunter laufen.
 		expect(render()).toMatch(/<h3[^>]*pr-\[42px\]/);
 	});
 
