@@ -232,6 +232,39 @@ describe('Sponsoren-Seite — ein Formular, drei Einstiege (#159)', () => {
 		expect(dialog()).toBeNull();
 	});
 
+	/* jsdom kennt keine Animationen — Radix (`Presence`) hängt den Dialog dort
+	sofort aus. Dieses Stylesheet gibt dem geschlossenen Zustand eine eigene
+	Animation, wie `animate-out` im Browser; da jsdom kein `animationend` feuert,
+	bleibt der schließende Dialog stehen, so wie während der 200 ms im Browser. */
+	const mitSchliessAnimation = () => {
+		const style = document.createElement('style');
+		style.textContent =
+			'[role="dialog"][data-state="open"]{animation-name:rein}' +
+			'[role="dialog"][data-state="closed"]{animation-name:raus}';
+		document.head.appendChild(style);
+		return () => style.remove();
+	};
+
+	it.each([
+		['Abbrechen', 'Abbrechen'],
+		['Speichern', 'Speichern']
+	])(
+		'zeigt beim Schließen eines Bearbeitens (%s) nie „Neue Firma anlegen"',
+		async (_fall, knopf) => {
+			const entferne = mitSchliessAnimation();
+			try {
+				await mount();
+				await oeffneMenue('Taxi Brandl');
+				await klick(eintrag('Bearbeiten'));
+				await klick(buttonByLabel(dialog()!, knopf));
+
+				expect(document.body.textContent).not.toContain('Neue Firma anlegen');
+			} finally {
+				entferne();
+			}
+		}
+	);
+
 	it('hat keinen Löschweg mehr im Formular — der lebt im ⋮', async () => {
 		await mount();
 		await oeffneMenue('Elektro Pichler');

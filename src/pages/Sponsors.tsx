@@ -181,15 +181,20 @@ const Sponsors = () => {
 				)}
 			</div>
 
-			<SponsorFormDialog
-				open={form !== null}
-				onOpenChange={(open) => {
-					if (!open) setForm(null);
-				}}
-				sponsor={form?.sponsor ?? null}
-				onSave={handleSave}
-				saving={saving}
-			/>
+			{/* Eingehängt nur, solange ein Formular offen ist — wie in der Matrix
+			(`SponsoringsSection`). Bliebe der Dialog stehen, zeigte er während der
+			Schließanimation `sponsor = null`, also „Neue Firma anlegen". */}
+			{form && (
+				<SponsorFormDialog
+					open
+					onOpenChange={(open) => {
+						if (!open) setForm(null);
+					}}
+					sponsor={form.sponsor}
+					onSave={handleSave}
+					saving={saving}
+				/>
+			)}
 		</div>
 	);
 };
